@@ -7,7 +7,7 @@ export interface LabelProps extends React.ComponentProps<typeof RadixLabel> {}
 export const Label = React.forwardRef<HTMLLabelElement, LabelProps>(({ className, ...props }, ref) => (
   <RadixLabel
     ref={ref}
-    className={cn('text-xs font-semibold uppercase tracking-[0.2em] text-[#808080]', className)}
+    className={cn('text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground', className)}
     {...props}
   />
 ));

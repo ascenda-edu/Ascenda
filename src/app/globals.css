@@ -287,3 +287,17 @@
 [data-theme='dark'] .rbc-toolbar button.rbc-active {
   @apply bg-primary text-primary-foreground hover:bg-primary/90;
 }
+
+/* Respect the user's reduced-motion preference.
+   Framer Motion is gated in-component via useReducedMotion(); this quiets
+   CSS-driven transitions/animations (e.g. surface-card and button hover lifts). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

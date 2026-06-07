@@ -9,7 +9,7 @@ export default function SearchLoading() {
         <Skeleton className="h-8 w-64" />
       </div>
 
-      <div className="glass-panel rounded-2xl p-4 sm:p-5">
+      <div className="panel rounded-2xl p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Skeleton className="h-11 w-full sm:w-[420px]" />
           <div className="flex flex-wrap items-center gap-3">

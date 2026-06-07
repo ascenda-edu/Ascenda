@@ -18,14 +18,12 @@ function addVariablesForColors({ addBase, theme }: { addBase: (styles: Record<st
 // Plugin to add the glass and form utilities
 const customUtilitiesPlugin = plugin(function ({ addComponents, theme }) {
   addComponents({
-    '.glass-panel': {
+    // Opaque elevated surface (not actual glassmorphism — no backdrop blur).
+    '.panel': {
       '@apply border border-border bg-card shadow-sm dark:bg-card dark:border-white/10': {},
     },
-    '.glass-card': {
+    '.panel-card': {
       '@apply border border-border bg-card shadow-sm dark:bg-card dark:border-white/10': {},
-    },
-    '.glass': {
-      '@apply glass-panel': {},
     },
     '.text-glow': {
       'text-shadow': '0 0 20px rgba(90, 88, 238, 0.35)',

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useState, useEffect, useRef } from 'react';
-import { motion, useMotionValue, useSpring, useInView } from 'framer-motion';
+import { motion, useMotionValue, useSpring, useInView, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface HeroStat {
@@ -61,6 +61,7 @@ function AnimatedNumber({ value }: { value: string }) {
     return (Math.round(n * 10) / 10).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   };
 
+  const reduced = useReducedMotion();
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true });
   const motionVal = useMotionValue(0);
@@ -79,6 +80,9 @@ function AnimatedNumber({ value }: { value: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spring, isNumeric, numeric, prefix, suffix, isInteger]);
 
+  // With reduced motion, skip the count-up and show the final value immediately.
+  if (reduced) return <span>{value}</span>;
+
   return <span ref={ref}>{display}</span>;
 }
 
@@ -94,6 +98,8 @@ export const PageHero = ({
   tone = 'counsellor'
 }: PageHeroProps) => {
   const isStudent = tone === 'student';
+  const reduced = useReducedMotion();
+  const initial = reduced ? false : 'hidden';
   // Only render the small eyebrow row when the caller actually provided
   // content — no default "Live focus" / "Today" pill noise on every page.
   const showEyebrowRow = Boolean(eyebrow || highlight);
@@ -104,7 +110,7 @@ export const PageHero = ({
         className
       )}
       variants={containerVariants}
-      initial="hidden"
+      initial={initial}
       animate="show"
     >
       <div className="relative flex flex-col gap-1.5">
@@ -157,7 +163,7 @@ export const PageHero = ({
                   stats.length >= 4 ? 'flex-wrap' : 'flex-row'
                 )}
                 variants={statsContainerVariants}
-                initial="hidden"
+                initial={initial}
                 animate="show"
               >
                 {stats.map((stat) => {

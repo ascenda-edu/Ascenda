@@ -101,7 +101,7 @@ export function ApplicationList({ rows }: Props) {
               <div className="flex items-center gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="truncate text-sm font-semibold text-foreground">
+                    <p className="truncate text-sm font-semibold text-foreground" title={row.university}>
                       {row.university}
                     </p>
                     {row.tier ? (
@@ -115,7 +115,7 @@ export function ApplicationList({ rows }: Props) {
                       </span>
                     ) : null}
                   </div>
-                  <p className="truncate text-xs text-muted-foreground">{row.program}</p>
+                  <p className="truncate text-xs text-muted-foreground" title={row.program}>{row.program}</p>
                 </div>
 
                 <div className="hidden shrink-0 text-right sm:block">

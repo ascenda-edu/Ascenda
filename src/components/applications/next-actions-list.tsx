@@ -72,10 +72,10 @@ export function NextActionsList({ items }: Props) {
                 aria-hidden
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-foreground">
+                <p className="truncate text-sm font-semibold text-foreground" title={item.taskName}>
                   {item.taskName}
                 </p>
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="truncate text-xs text-muted-foreground" title={`${item.university} · ${item.program}`}>
                   {item.university} · {item.program}
                 </p>
               </div>
