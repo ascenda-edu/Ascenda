@@ -94,7 +94,7 @@ export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
   return (
     <div className="space-y-5">
       {/* Filter bar */}
-      <div className="glass-panel flex flex-col gap-3 rounded-2xl px-4 py-3 sm:flex-row sm:items-center">
+      <div className="panel flex flex-col gap-3 rounded-2xl px-4 py-3 sm:flex-row sm:items-center">
         <input
           type="text"
           placeholder="Filter by student name…"

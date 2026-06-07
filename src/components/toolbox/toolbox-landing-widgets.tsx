@@ -22,7 +22,7 @@ export function ToolboxProgressRing({ value }: { value: number }) {
         <motion.span
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className={cn('text-sm font-bold', value >= 80 ? 'text-emerald-600' : value >= 50 ? 'text-amber-600' : 'text-rose-600')}
+          className={cn('text-sm font-bold tabular-nums', value >= 80 ? 'text-emerald-600' : value >= 50 ? 'text-amber-600' : 'text-rose-600')}
         >
           {value}%
         </motion.span>
@@ -42,7 +42,7 @@ export function ToolboxCountdown({ days }: { days: number }) {
       )}
     >
       <span className={cn(
-        'text-lg font-bold leading-none',
+        'text-lg font-bold leading-none tabular-nums',
         days <= 3 ? 'text-rose-600' : days <= 7 ? 'text-amber-600' : 'text-primary'
       )}>
         {days}
