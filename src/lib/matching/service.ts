@@ -191,6 +191,7 @@ const buildStudentPayload = (params: {
   lifestyle: StudentLifestyleRow | null;
   subjects: StudentSubjectRow[];
   admissionsTests: StudentAdmissionsTestRow[];
+  activities: StudentProfilePayload['activities_list'];
 }): StudentProfilePayload => {
   const programmeType = params.academic.programme_type ?? 'IB';
   const subjectList = params.subjects.map((subject) => {
@@ -267,7 +268,7 @@ const buildStudentPayload = (params: {
       epq_subject: (params.lifestyle as any)?.epq_subject ?? null,
       epq_title: (params.lifestyle as any)?.epq_title ?? null,
     },
-    activities_list: (params as any).activities_list ?? [],
+    activities_list: params.activities ?? [],
   };
 };
 
@@ -405,13 +406,27 @@ export const loadMatchesForProfile = async (
     { data: academicData, error: academicError },
     { data: lifestyleData, error: lifestyleError },
     { data: subjectsData, error: subjectsError },
-    { data: admissionsData, error: admissionsError }
+    { data: admissionsData, error: admissionsError },
+    activitiesResponse
   ] = await Promise.all([
     supabase.from('student_academic_input').select('*').eq('profile_id', profileId).maybeSingle(),
     supabase.from('student_lifestyle_preference').select('*').eq('profile_id', profileId).maybeSingle(),
     supabase.from('student_subjects').select('*').eq('profile_id', profileId),
-    supabase.from('student_admissions_tests').select('*').eq('profile_id', profileId)
+    supabase.from('student_admissions_tests').select('*').eq('profile_id', profileId),
+    // student_activities postdates the generated types — cast like the score loader does.
+    (supabase as any).from('student_activities').select('*').eq('profile_id', profileId).order('sort_order')
   ]);
+
+  const activitiesList: StudentProfilePayload['activities_list'] = (
+    ((activitiesResponse as any)?.data ?? []) as any[]
+  ).map((a, i) => ({
+    id: a.id,
+    category: a.category ?? '',
+    level: a.level ?? null,
+    duration: a.duration ?? null,
+    highlight: a.highlight ?? null,
+    sort_order: a.sort_order ?? i
+  }));
 
   const profileErrors = [academicError, lifestyleError, subjectsError, admissionsError].filter(
     (err) => err && err.code !== 'PGRST116'
@@ -442,7 +457,10 @@ export const loadMatchesForProfile = async (
     academicData?.updated_at,
     lifestyleData?.updated_at,
     ...((subjectsData ?? []).map((subject) => subject.created_at) as Array<string | null | undefined>),
-    ...((admissionsData ?? []).map((test) => test.created_at) as Array<string | null | undefined>)
+    ...((admissionsData ?? []).map((test) => test.created_at) as Array<string | null | undefined>),
+    ...((((activitiesResponse as any)?.data ?? []) as any[]).map((a) => a.created_at) as Array<
+      string | null | undefined
+    >)
   ]);
 
   const latestMatchMeta = await supabase
@@ -745,7 +763,8 @@ export const loadMatchesForProfile = async (
     academic: academicData!,
     lifestyle: lifestyleData ?? null,
     subjects: (subjectsData ?? []) as StudentSubjectRow[],
-    admissionsTests: (admissionsData ?? []) as StudentAdmissionsTestRow[]
+    admissionsTests: (admissionsData ?? []) as StudentAdmissionsTestRow[],
+    activities: activitiesList
   });
   const studentScore = scoreStudentProfile(studentPayload);
   const { error: scorePersistError } = await supabase.from('student_scores').upsert({

@@ -82,9 +82,15 @@ const isSuspiciousScore = (course: EnrichedCourseRecord): boolean => {
   if (instType.includes('for-profit') || instType.includes('for profit')) return true;
   const qs = (course as any).qs_world_rank_raw ?? '';
   const the = (course as any).the_world_rank_raw ?? '';
-  const score = course.university_score;
-  if ((qs === '' || qs === 'N/A') && (the === '' || the === 'N/A') && score > 88) return true;
-  return false;
+  // Production rows carry rank evidence as university_rank_overall (mapped from
+  // QS World rank by the all-countries import); the raw rank strings only exist
+  // in simulation fixtures.
+  const rankOverall = (course as any).university_rank_overall;
+  const hasRank =
+    (qs !== '' && qs !== 'N/A') ||
+    (the !== '' && the !== 'N/A') ||
+    (typeof rankOverall === 'number' && Number.isFinite(rankOverall));
+  return !hasRank && course.university_score > 88;
 };
 
 // ── Field-of-study synonym map ─────────────────────────────────────────────
@@ -623,7 +629,7 @@ export const aLevelToIbEquivalent = (
 ): number => {
   if (!predictedGrades) return 33; // population median fallback
   const pts = Object.values(predictedGrades)
-    .map((g) => A_LEVEL_GRADE_POINTS[g.trim()] ?? 4)
+    .map((g) => A_LEVEL_GRADE_POINTS[g.trim().toUpperCase()] ?? 4)
     .sort((a, b) => b - a)   // descending
     .slice(0, 3);             // top 3 subjects
   if (pts.length === 0) return 33;
@@ -676,8 +682,18 @@ export const rankCourseMatches = (
 
   // Resolve student's academic level to an IB equivalent for the classifier.
   // Priority: explicit IB total → A-level predicted grades → ACT score → population median (33).
+  // The wizard stores ib_total_points as the subject sum (/42) with core points
+  // (TOK + EE, max 3) in ib_core_points — course minima are on the /45 scale,
+  // so the two must be summed here, mirroring scoreStudentProfile.
+  const ibTotal =
+    student.academic_input.ib_total_points != null
+      ? Math.min(
+          45,
+          student.academic_input.ib_total_points + (student.academic_input.ib_core_points ?? 0)
+        )
+      : null;
   const studentIb =
-    student.academic_input.ib_total_points ??
+    ibTotal ??
     (student.academic_input.a_level_predicted_grades
       ? aLevelToIbEquivalent(student.academic_input.a_level_predicted_grades)
       : student.academic_input.programme_type === 'ACT'

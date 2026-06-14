@@ -68,9 +68,8 @@ export const saveStudentIntake = async (payload: StudentProfilePayload) => {
 
     const { error: academicError } = await supabase.from('student_academic_input').upsert({
       profile_id: userId,
-      // ACT is a new programme_type not yet in the DB schema — store as A_LEVEL
-      // for now until a migration adds the enum value.
-      programme_type: (academic_input.programme_type === 'ACT' ? 'A_LEVEL' : academic_input.programme_type) as any,
+      // Cast: generated DB types lag the schema (ACT added by migration 20260611120000).
+      programme_type: academic_input.programme_type as any,
       school_name: academic_input.school_name,
       school_country: academic_input.school_country,
       school_city: academic_input.school_city,
@@ -153,8 +152,8 @@ export const saveStudentIntake = async (payload: StudentProfilePayload) => {
       const subjectRows = academic_input.subject_list.map((subject) => ({
         profile_id: userId,
         subject_name: subject.subject_name,
-        // AP is a new level not yet in the DB schema — store as A_LEVEL for now.
-        level: (subject.level === 'AP' ? 'A_LEVEL' : subject.level) as any,
+        // Cast: generated DB types lag the schema (AP added by migration 20260611120000).
+        level: subject.level as any,
         grade_value: subject.grade_value === null ? null : String(subject.grade_value)
       }));
       const { error: subjectInsertError } = await supabase.from('student_subjects').insert(subjectRows);

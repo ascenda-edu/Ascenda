@@ -64,7 +64,7 @@ const basePayload: StudentProfilePayload = {
 };
 
 describe('student scoring', () => {
-  it('scores Sofia (IB medicine) with an exceptional band', () => {
+  it('scores Sofia (IB medicine) with a very strong band', () => {
     const sofia: StudentProfilePayload = {
       ...basePayload,
       personal_information: {
@@ -104,8 +104,11 @@ describe('student scoring', () => {
 
     const result = scoreStudentProfile(sofia);
     console.log('Sofia breakdown', result.breakdown);
-    expect(result.total_score).toBe(183);
-    expect(result.student_band).toBe('Exceptional');
+    // 164 after the HL-strength recalibration (max 40 → 16): IB 44 still maxes
+    // academic_performance (80), but a 85th-pct UCAT keeps Sofia below the
+    // 168 'Exceptional' cutoff.
+    expect(result.total_score).toBe(164);
+    expect(result.student_band).toBe('Very strong');
     expect(result.eligibility_flags.length).toBe(0);
     expect(result.readiness_flags.length).toBe(0);
   });
