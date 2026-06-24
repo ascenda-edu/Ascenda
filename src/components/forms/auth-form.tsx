@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AuthError } from '@supabase/supabase-js';
-import { loginSchema, signupSchema, type LoginFormValues, type SignupFormValues } from '@/lib/validation/auth';
+import { loginSchema, type LoginFormValues } from '@/lib/validation/auth';
 import { RETURNING_USER_STORAGE_KEY } from '@/lib/constants';
 import { useSupabase } from '@/hooks/useSupabase';
 import { Button } from '@/components/ui/button';
@@ -13,32 +13,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { isProfileComplete } from '@/lib/profile/completion';
 
-export type AuthMode = 'login' | 'signup';
-
-const GoogleIcon = () => (
-  <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
-    <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path>
-  </svg>
-);
-
-interface AuthFormProps {
-  mode: AuthMode;
-}
-
-export const AuthForm = ({ mode }: AuthFormProps) => {
+export const AuthForm = () => {
   const router = useRouter();
   const supabase = useSupabase();
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [authServiceReady, setAuthServiceReady] = useState(true);
   const [isPending, startTransition] = useTransition();
 
-  type FormValues = LoginFormValues & Partial<Pick<SignupFormValues, 'confirmPassword'>>;
-  const form = useForm<FormValues>({
-    resolver: zodResolver(mode === 'signup' ? signupSchema : loginSchema),
-    defaultValues: mode === 'signup'
-      ? { email: '', password: '', confirmPassword: '' }
-      : { email: '', password: '' }
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' }
   });
 
   useEffect(() => {
@@ -58,28 +42,6 @@ export const AuthForm = ({ mode }: AuthFormProps) => {
       isMounted = false;
     };
   }, [supabase]);
-
-  const buildAuthCallbackUrl = (nextPath?: string) => {
-    const envUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    const baseUrl =
-      envUrl && envUrl.length
-        ? envUrl
-        : typeof window !== 'undefined'
-          ? window.location.origin
-          : '';
-    if (!baseUrl) {
-      return undefined;
-    }
-    const normalizedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    const callbackUrl = `${normalizedBase}/auth/callback`;
-    if (!nextPath) {
-      return callbackUrl;
-    }
-    return `${callbackUrl}?next=${encodeURIComponent(nextPath)}`;
-  };
-
-  const onboardingRedirectUrl = buildAuthCallbackUrl('/profile/wizard');
-  const authCallbackUrl = buildAuthCallbackUrl('/dashboard');
 
   const determineRedirectTarget = async (userId?: string | null) => {
     if (!userId) {
@@ -123,9 +85,6 @@ export const AuthForm = ({ mode }: AuthFormProps) => {
 
   const formatAuthError = (authError: AuthError) => {
     const message = authError.message || 'Something went wrong.';
-    if (/already registered/i.test(message)) {
-      return 'This email is already registered. Try signing in instead or reset your password.';
-    }
     if (/invalid login credentials/i.test(message)) {
       return 'Email or password looks incorrect. Double-check and try again.';
     }
@@ -135,94 +94,29 @@ export const AuthForm = ({ mode }: AuthFormProps) => {
     return message;
   };
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = (values: LoginFormValues) => {
     setError(null);
-    setSuccess(null);
     if (!authServiceReady) {
       setError('Sign-in service is temporarily unavailable. Please refresh and try again.');
       return;
     }
     startTransition(async () => {
-      let authError: AuthError | null = null;
-      let shouldRedirect = false;
-      let redirectTarget = '/dashboard';
+      const { error: signInError, data } = await supabase.auth.signInWithPassword(values);
 
-      if (mode === 'login') {
-        const { error: signInError, data } = await supabase.auth.signInWithPassword(values);
-        authError = signInError;
-        if (!signInError) {
-          redirectTarget = await determineRedirectTarget(data.user?.id);
-          shouldRedirect = true;
-        }
-      } else {
-        const { error: signUpError, data } = await supabase.auth.signUp({
-          ...values,
-          options: onboardingRedirectUrl ? { emailRedirectTo: onboardingRedirectUrl } : undefined
-        });
-        authError = signUpError;
-        if (!signUpError) {
-          if (data.user?.identities?.length === 0) {
-            setError('This email is already registered. Try signing in instead.');
-            return;
-          }
-          if (data.session) {
-            shouldRedirect = true;
-          } else {
-            setSuccess('Almost there! Confirm the link we sent to your email to finish setting up your account.');
-            form.reset();
-            return;
-          }
-        }
-      }
-
-      if (authError) {
-        setError(formatAuthError(authError));
+      if (signInError) {
+        setError(formatAuthError(signInError));
         return;
       }
+
+      const redirectTarget = await determineRedirectTarget(data.user?.id);
 
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(RETURNING_USER_STORAGE_KEY, 'true');
       }
 
-      if (shouldRedirect) {
-        router.refresh();
-        const target = mode === 'signup' ? '/profile/wizard' : redirectTarget;
-        router.push(target);
-      }
+      router.refresh();
+      router.push(redirectTarget);
     });
-  };
-
-  const handleGoogle = () => {
-    setError(null);
-    setSuccess(null);
-    if (!authServiceReady) {
-      setError('Sign-in service is temporarily unavailable. Please refresh and try again.');
-      return;
-    }
-
-    // We don't use startTransition here because we're initiating a top-level redirect to Google.
-    // Always target the dashboard — middleware's onboarding check (getOnboardingStatus) will
-    // bounce new users to /profile/wizard automatically. Hard-coding the wizard for signup-mode
-    // breaks existing Google users who happen to click "Sign in with Google" on /signup.
-    const redirectTo =
-      authCallbackUrl ?? (typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined);
-
-    const initiation = async () => {
-      const { error: signInError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectTo
-        }
-      });
-
-      if (signInError) {
-        setError(formatAuthError(signInError));
-      } else if (typeof window !== 'undefined') {
-        window.localStorage.setItem(RETURNING_USER_STORAGE_KEY, 'true');
-      }
-    };
-
-    void initiation();
   };
 
   return (
@@ -246,12 +140,12 @@ export const AuthForm = ({ mode }: AuthFormProps) => {
           <Input
             id="password"
             type="password"
-            autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+            autoComplete="current-password"
             className="form-input pr-28"
             {...form.register('password')}
           />
           <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            {mode === 'signup' ? '8+ characters' : 'Secure login'}
+            Secure login
           </div>
         </div>
         {form.formState.errors.password ? (
@@ -260,33 +154,9 @@ export const AuthForm = ({ mode }: AuthFormProps) => {
           </p>
         ) : null}
       </div>
-      {mode === 'signup' ? (
-        <div className="form-field">
-          <Label className="form-label" htmlFor="confirmPassword">
-            Confirm password
-          </Label>
-          <Input
-            id="confirmPassword"
-            type="password"
-            autoComplete="new-password"
-            className="form-input"
-            {...form.register('confirmPassword')}
-          />
-          {form.formState.errors.confirmPassword ? (
-            <p className="form-feedback form-feedback--error" role="alert">
-              {form.formState.errors.confirmPassword.message}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
       {error ? (
         <p className="form-feedback form-feedback--error" role="alert">
           {error}
-        </p>
-      ) : null}
-      {success ? (
-        <p className="form-feedback form-feedback--success" role="status">
-          {success}
         </p>
       ) : null}
       <Button
@@ -295,26 +165,10 @@ export const AuthForm = ({ mode }: AuthFormProps) => {
         disabled={isPending || !authServiceReady}
         data-loading={isPending ? 'true' : undefined}
       >
-        {isPending ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
-      </Button>
-
-      <div className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-        <span className="h-px flex-1 bg-border" aria-hidden />
-        <span>Or continue with</span>
-        <span className="h-px flex-1 bg-border" aria-hidden />
-      </div>
-      <Button
-        type="button"
-        variant="outline"
-        className="form-action w-full flex items-center justify-center gap-2 border-border/50 hover:bg-muted/10"
-        onClick={handleGoogle}
-        disabled={isPending || !authServiceReady}
-      >
-        <GoogleIcon />
-        <span>Continue with Google</span>
+        {isPending ? 'Please wait…' : 'Sign in'}
       </Button>
       <p className="text-center text-xs text-muted-foreground">
-        We keep your session secure and let you know if you already have an account with this email.
+        Access is invite-only. If you need an account, contact your Ascenda administrator.
       </p>
     </form>
   );

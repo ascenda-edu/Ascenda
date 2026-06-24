@@ -93,7 +93,7 @@ export function CTASection() {
                             className="h-12 px-8 text-base bg-background text-foreground shadow-xl hover:bg-background/90 hover:shadow-2xl transition-all group"
                         >
                             <Link href={ctaHref} className="flex items-center gap-2">
-                                {ctaHref === '/dashboard' ? 'Go to dashboard' : 'Create free account'}
+                                {ctaHref === '/dashboard' ? 'Go to dashboard' : 'Sign in'}
                                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                             </Link>
                         </Button>
@@ -109,15 +109,15 @@ export function CTASection() {
                     >
                         <span className="flex items-center gap-2">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                            Free to start
+                            Invite-only access
                         </span>
                         <span className="flex items-center gap-2">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                            No credit card required
+                            Secure &amp; private
                         </span>
                         <span className="flex items-center gap-2">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                            Cancel anytime
+                            Built with design partners
                         </span>
                     </motion.div>
                 </motion.div>

@@ -67,7 +67,7 @@ export function DemoSection() {
                         <Button asChild size="lg" className="rounded-full shadow-lg hover:shadow-xl transition-all group">
                             <Link href={tryHref} className="flex items-center gap-2">
                                 <Play className="h-4 w-4" />
-                                Try it free
+                                Sign in
                                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                             </Link>
                         </Button>

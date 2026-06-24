@@ -44,8 +44,20 @@ export async function middleware(req: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = req.nextUrl;
+
+  // Registration is disabled for the design-partner build. Any visit to the
+  // legacy /signup route is redirected to the login page.
+  if (pathname.startsWith('/signup')) {
+    const redirectUrl = req.nextUrl.clone();
+    redirectUrl.pathname = '/login';
+    redirectUrl.search = '';
+    const redirectResponse = NextResponse.redirect(redirectUrl);
+    res.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie));
+    return redirectResponse;
+  }
+
   const isProtected = PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-  const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/signup');
+  const isAuthRoute = pathname.startsWith('/login');
 
   // Helper to carry over cookies to redirects
   const applyCookies = (source: NextResponse, target: NextResponse) => {

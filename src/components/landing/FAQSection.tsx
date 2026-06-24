@@ -17,9 +17,9 @@ const faqs = [
         answer: 'Students, families, and universities craving one modern, polished planning space.'
     },
     {
-        question: 'Is there a free plan?',
+        question: 'How do I get access?',
         answer:
-            'Students start free with vibe profiles, five program boards, and scholarship tracking. Teams can invite collaborators on flexible plans.'
+            'Ascenda is currently invite-only while we work closely with design partners. Reach out to your Ascenda contact to have an account set up for you.'
     },
     {
         question: 'Is my data private?',
