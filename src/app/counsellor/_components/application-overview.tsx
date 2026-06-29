@@ -6,7 +6,6 @@ import { LayoutGrid, List, ChevronRight, Filter } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { stagger, cardFade } from '@/lib/motion';
-import { getAllApplicationsWithPlatform } from '@/lib/data/counsellor-dummy-data';
 import type { ApplicationStatus, ApplicationPlatform, EnrichedApplication } from '@/lib/data/counsellor-dummy-data';
 
 const STATUS_CONFIG: Record<ApplicationStatus, { label: string; color: string; bg: string; border: string }> = {
@@ -28,8 +27,8 @@ const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 
 
 const STATUSES: ApplicationStatus[] = ['planning', 'in_progress', 'submitted', 'decision'];
 
-export function ApplicationOverview() {
-  const allApps = useMemo(() => getAllApplicationsWithPlatform(), []);
+export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
+  const allApps = apps;
   const [view, setView] = useState<'kanban' | 'list'>('kanban');
   const [filterPlatform, setFilterPlatform] = useState<ApplicationPlatform | null>(null);
   const [searchStudent, setSearchStudent] = useState('');

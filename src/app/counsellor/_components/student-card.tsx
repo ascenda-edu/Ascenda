@@ -177,8 +177,8 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
             : 'border-sky-200/60 bg-sky-500/10 text-sky-700 dark:text-sky-300'
         )}>
           {student.academic.programmeType === 'IB'
-            ? `IB · ${student.academic.ibPoints} pts`
-            : `A-Level · ${student.academic.aLevelGrades}`}
+            ? student.academic.ibPoints ? `IB · ${student.academic.ibPoints} pts` : 'IB'
+            : student.academic.aLevelGrades ? `A-Level · ${student.academic.aLevelGrades}` : 'A-Level'}
         </span>
         <span className="rounded-full border border-border/60 bg-muted/40 px-3 py-0.5 text-xs text-muted-foreground">
           {student.academic.clusters[0]?.replace(/_/g, ' ')}

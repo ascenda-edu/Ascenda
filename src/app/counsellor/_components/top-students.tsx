@@ -190,8 +190,8 @@ export const TopStudents = ({ students }: TopStudentsProps) => {
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {student.academic.programmeType === 'IB'
-                        ? `IB ${student.academic.ibPoints} pts`
-                        : `A-Level ${student.academic.aLevelGrades}`}
+                        ? student.academic.ibPoints ? `IB ${student.academic.ibPoints} pts` : 'IB'
+                        : student.academic.aLevelGrades ? `A-Level ${student.academic.aLevelGrades}` : 'A-Level'}
                     </p>
                   </div>
                   <div className="text-right">

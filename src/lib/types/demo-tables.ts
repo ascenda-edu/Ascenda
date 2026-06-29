@@ -89,3 +89,76 @@ export type HelpMeetingInsert = Pick<
   'request_id' | 'counsellor_profile_id' | 'student_profile_id' | 'title' | 'scheduled_for'
 > &
   Partial<Pick<HelpMeeting, 'duration_minutes' | 'location' | 'status'>>;
+
+// ── Tables added in 20260628120000_counsellor_real_data.sql ──────────────────
+
+// New columns on the existing `applications` table (database.ts lags these).
+export type ApplicationDecision = 'accepted' | 'rejected' | 'waitlisted' | 'withdrawn';
+
+export interface ApplicationOutcomeColumns {
+  platform: string | null;
+  decision: ApplicationDecision | null; // null = pending
+  decision_at: string | null;
+  decision_conditions: string | null;
+}
+
+export type CounsellorNoteType = 'session' | 'flag' | 'update';
+
+export interface CounsellorNoteRow {
+  id: string;
+  student_profile_id: string;
+  author_profile_id: string;
+  body: string;
+  note_type: CounsellorNoteType;
+  created_at: string;
+}
+
+export type CounsellorNoteInsert = Pick<
+  CounsellorNoteRow,
+  'student_profile_id' | 'author_profile_id' | 'body'
+> &
+  Partial<Pick<CounsellorNoteRow, 'note_type'>>;
+
+export type ParentContactStatus = 'active' | 'needs-response' | 'resolved';
+
+export interface ParentContactRow {
+  id: string;
+  student_profile_id: string;
+  parent_name: string;
+  relationship: string | null;
+  email: string | null;
+  phone: string | null;
+  status: ParentContactStatus;
+  last_contacted: string | null;
+  created_at: string;
+}
+
+export type ParentMessageSender = 'counsellor' | 'parent';
+
+export interface ParentMessageRow {
+  id: string;
+  contact_id: string;
+  sender: ParentMessageSender;
+  body: string;
+  template: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+export type ParentMessageInsert = Pick<ParentMessageRow, 'contact_id' | 'sender' | 'body'> &
+  Partial<Pick<ParentMessageRow, 'template' | 'read_at'>>;
+
+export type StudentDocumentType = 'transcript' | 'recommendation' | 'essay' | 'certificate' | 'other';
+export type StudentDocumentStatus = 'received' | 'pending' | 'overdue';
+
+export interface StudentDocumentRow {
+  id: string;
+  student_profile_id: string;
+  document_name: string;
+  doc_type: StudentDocumentType;
+  status: StudentDocumentStatus;
+  uploaded_at: string | null;
+  due_date: string | null;
+  notes: string | null;
+  created_at: string;
+}

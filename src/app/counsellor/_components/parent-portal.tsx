@@ -4,7 +4,6 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Send, Check, CheckCheck, MessageSquare, Clock, Mail, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getParentContacts, getParentMessages } from '@/lib/data/counsellor-dummy-data';
 import type { ParentContact, ParentMessage } from '@/lib/data/counsellor-dummy-data';
 
 const STATUS_CONFIG = {
@@ -22,8 +21,12 @@ const TEMPLATES = [
 const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
 const fullDateFormatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-export function ParentPortal() {
-  const contacts = useMemo(() => getParentContacts(), []);
+interface ParentPortalProps {
+  contacts: ParentContact[];
+  messagesByContact: Record<string, ParentMessage[]>;
+}
+
+export function ParentPortal({ contacts, messagesByContact }: ParentPortalProps) {
   const [selectedId, setSelectedId] = useState<string | null>(contacts[0]?.id ?? null);
   const [search, setSearch] = useState('');
   const [composeText, setComposeText] = useState('');
@@ -39,29 +42,48 @@ export function ParentPortal() {
 
   const messages = useMemo(() => {
     if (!selectedId) return [];
-    const stored = getParentMessages(selectedId);
+    const stored = messagesByContact[selectedId] ?? [];
     const local = localMessages.filter((m) => m.parentContactId === selectedId);
     return [...stored, ...local].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [selectedId, localMessages]);
+  }, [selectedId, localMessages, messagesByContact]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);
 
-  const handleSend = () => {
-    if (!composeText.trim() || !selectedId || !selectedContact) return;
-    const newMsg: ParentMessage = {
+  const handleSend = async () => {
+    const body = composeText.trim();
+    if (!body || !selectedId || !selectedContact) return;
+    const optimistic: ParentMessage = {
       id: `pm-local-${Date.now()}`,
       parentContactId: selectedId,
       studentId: selectedContact.studentId,
       sender: 'counsellor',
-      content: composeText.trim(),
-      date: new Date().toISOString().slice(0, 10),
-      read: true,
+      content: body,
+      date: new Date().toISOString(),
+      read: false,
       template: null,
     };
-    setLocalMessages((prev) => [...prev, newMsg]);
+    setLocalMessages((prev) => [...prev, optimistic]);
     setComposeText('');
+
+    try {
+      const res = await fetch('/api/counsellor/parent-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactId: selectedId, body }),
+      });
+      if (res.ok) {
+        const { message } = await res.json();
+        setLocalMessages((prev) =>
+          prev.map((m) => (m.id === optimistic.id ? { ...message, studentId: selectedContact.studentId } : m))
+        );
+      } else {
+        setLocalMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+      }
+    } catch {
+      setLocalMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+    }
   };
 
   const applyTemplate = (template: typeof TEMPLATES[number]) => {

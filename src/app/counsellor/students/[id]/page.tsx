@@ -2,9 +2,13 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, Clock, BookOpen, FileText, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { DUMMY_STUDENTS } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorStudent } from '@/lib/data/counsellor-dummy-data';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { loadStudentById, loadStudentEvolution } from '@/lib/counsellor/data';
 import { StudentDetailTabs } from '../../_components/student-detail-tabs';
 import { MessageStudentButton } from '../../_components/message-student-button';
+
+export const dynamic = 'force-dynamic';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -36,7 +40,7 @@ function getAvgMatchScore(matches: { score: number }[]) {
   return Math.round(matches.reduce((acc, m) => acc + m.score, 0) / matches.length);
 }
 
-function getNextDeadlineDays(student: typeof DUMMY_STUDENTS[0]) {
+function getNextDeadlineDays(student: CounsellorStudent) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const upcoming = student.deadlines
@@ -48,10 +52,12 @@ function getNextDeadlineDays(student: typeof DUMMY_STUDENTS[0]) {
 
 export default async function StudentDetailPage({ params }: Props) {
   const { id } = await params;
-  const student = DUMMY_STUDENTS.find((s) => s.id === id);
+  const supabase = createServerSupabaseClient();
+  const student = await loadStudentById(supabase, id);
   if (!student) notFound();
+  const evolution = await loadStudentEvolution(supabase, id);
 
-  const initials = `${student.personal.firstName[0]}${student.personal.lastName[0]}`.toUpperCase();
+  const initials = `${student.personal.firstName[0] ?? ''}${student.personal.lastName[0] ?? ''}`.toUpperCase() || '–';
   const avColor = avatarColor(student.id);
   const avgScore = getAvgMatchScore(student.matches);
   const nextDeadlineDays = getNextDeadlineDays(student);
@@ -109,8 +115,8 @@ export default async function StudentDetailPage({ params }: Props) {
                   : 'border-sky-200/60 bg-sky-500/10 text-sky-700 dark:text-sky-300'
               )}>
                 {student.academic.programmeType === 'IB'
-                  ? `IB · ${student.academic.ibPoints} pts`
-                  : `A-Level · ${student.academic.aLevelGrades}`}
+                  ? student.academic.ibPoints ? `IB · ${student.academic.ibPoints} pts` : 'IB'
+                  : student.academic.aLevelGrades ? `A-Level · ${student.academic.aLevelGrades}` : 'A-Level'}
               </span>
               {student.academic.clusters.map((c) => (
                 <span key={c} className="rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs capitalize text-muted-foreground">
@@ -195,11 +201,7 @@ export default async function StudentDetailPage({ params }: Props) {
       </div>
 
       {/* Tabbed detail view */}
-      <StudentDetailTabs student={student} />
+      <StudentDetailTabs student={student} evolution={evolution} />
     </div>
   );
-}
-
-export function generateStaticParams() {
-  return DUMMY_STUDENTS.map((s) => ({ id: s.id }));
 }

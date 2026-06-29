@@ -2,14 +2,20 @@ import type { Metadata } from 'next';
 import { PageHero } from '@/components/layout/page-hero';
 import { ParentPortal } from '../_components/parent-portal';
 import { AnimatedSection } from '@/components/layout/animated-section';
-import { getParentContacts } from '@/lib/data/counsellor-dummy-data';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { loadParentContacts, loadParentMessagesByContact } from '@/lib/counsellor/data';
 
 export const metadata: Metadata = { title: 'Parents · Counsellor' };
+export const dynamic = 'force-dynamic';
 
-const contacts = getParentContacts();
-const needsResponse = contacts.filter((c) => c.status === 'needs-response').length;
+export default async function CounsellorParentsPage() {
+  const supabase = createServerSupabaseClient();
+  const [contacts, messagesByContact] = await Promise.all([
+    loadParentContacts(supabase),
+    loadParentMessagesByContact(supabase),
+  ]);
+  const needsResponse = contacts.filter((c) => c.status === 'needs-response').length;
 
-export default function CounsellorParentsPage() {
   return (
     <div className="space-y-6">
       <PageHero
@@ -24,7 +30,7 @@ export default function CounsellorParentsPage() {
         ]}
       />
       <AnimatedSection>
-        <ParentPortal />
+        <ParentPortal contacts={contacts} messagesByContact={messagesByContact} />
       </AnimatedSection>
     </div>
   );

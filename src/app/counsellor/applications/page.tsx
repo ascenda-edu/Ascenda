@@ -2,15 +2,20 @@ import type { Metadata } from 'next';
 import { PageHero } from '@/components/layout/page-hero';
 import { ApplicationOverview } from '../_components/application-overview';
 import { AnimatedSection } from '@/components/layout/animated-section';
-import { getAllApplicationsWithPlatform } from '@/lib/data/counsellor-dummy-data';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { loadCohort, deriveApplicationsWithPlatform } from '@/lib/counsellor/data';
 
 export const metadata: Metadata = { title: 'Applications · Counsellor' };
+export const dynamic = 'force-dynamic';
 
-const allApps = getAllApplicationsWithPlatform();
-const submitted = allApps.filter((a) => a.status === 'submitted').length;
-const planning = allApps.filter((a) => a.status === 'planning' || a.status === 'in_progress').length;
+export default async function CounsellorApplicationsPage() {
+  const supabase = createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const cohort = await loadCohort(supabase, { excludeId: user?.id });
+  const allApps = deriveApplicationsWithPlatform(cohort);
+  const submitted = allApps.filter((a) => a.status === 'submitted').length;
+  const planning = allApps.filter((a) => a.status === 'planning' || a.status === 'in_progress').length;
 
-export default function CounsellorApplicationsPage() {
   return (
     <div className="space-y-6">
       <PageHero
@@ -25,7 +30,7 @@ export default function CounsellorApplicationsPage() {
         ]}
       />
       <AnimatedSection>
-        <ApplicationOverview />
+        <ApplicationOverview apps={allApps} />
       </AnimatedSection>
     </div>
   );

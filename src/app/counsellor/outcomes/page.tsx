@@ -2,13 +2,18 @@ import type { Metadata } from 'next';
 import { PageHero } from '@/components/layout/page-hero';
 import { OutcomeDashboard } from '../_components/outcome-dashboard';
 import { AnimatedSection } from '@/components/layout/animated-section';
-import { getOutcomeStats } from '@/lib/data/counsellor-dummy-data';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { loadOutcomes, deriveOutcomeStats } from '@/lib/counsellor/data';
 
 export const metadata: Metadata = { title: 'Outcomes · Counsellor' };
+export const dynamic = 'force-dynamic';
 
-const stats = getOutcomeStats();
+export default async function CounsellorOutcomesPage() {
+  const supabase = createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const outcomes = await loadOutcomes(supabase, { excludeId: user?.id });
+  const stats = deriveOutcomeStats(outcomes);
 
-export default function CounsellorOutcomesPage() {
   return (
     <div className="space-y-6">
       <PageHero
@@ -23,7 +28,7 @@ export default function CounsellorOutcomesPage() {
         ]}
       />
       <AnimatedSection>
-        <OutcomeDashboard />
+        <OutcomeDashboard outcomes={outcomes} stats={stats} />
       </AnimatedSection>
     </div>
   );
