@@ -109,6 +109,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
   const remove = async (id: string) => {
     const target = tasks.find((t) => t.id === id);
     if (!target) return;
+    if (typeof window !== 'undefined' && !window.confirm(`Remove "${target.name}"?`)) return;
     setTasks((prev) => prev.filter((t) => t.id !== id));
     if (isTempId(id)) {
       // The POST may still be in flight — mark for deletion; add() cleans up.
@@ -306,7 +307,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
                             type="button"
                             onClick={() => remove(task.id)}
                             aria-label="Remove task"
-                            className="rounded-full p-1 text-muted-foreground/60 opacity-0 transition hover:bg-muted/80 hover:text-foreground group-hover:opacity-100"
+                            className="rounded-full p-1 text-muted-foreground/60 opacity-0 transition hover:bg-muted/80 hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
                           >
                             <XCircle className="h-3.5 w-3.5" />
                           </button>

@@ -107,9 +107,19 @@ export const useHelpThread = (requestId: string | null): UseHelpThreadResult => 
     let pollHandle: number | null = null;
     const startPoll = (intervalMs: number) => {
       if (pollHandle !== null) window.clearInterval(pollHandle);
-      pollHandle = window.setInterval(() => refresh(), intervalMs);
+      pollHandle = window.setInterval(() => {
+        // Each poll is 4 queries — skip them in hidden tabs and let the
+        // visibilitychange handler below catch up on return.
+        if (document.hidden) return;
+        refresh();
+      }, intervalMs);
     };
     startPoll(POLL_MS_FAST);
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) refresh();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     const channel = (supabase as any)
       .channel(`help_thread:${requestId}`)
@@ -142,6 +152,7 @@ export const useHelpThread = (requestId: string | null): UseHelpThreadResult => 
 
     return () => {
       if (pollHandle !== null) window.clearInterval(pollHandle);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       try {
         (supabase as any).removeChannel(channel);
       } catch {

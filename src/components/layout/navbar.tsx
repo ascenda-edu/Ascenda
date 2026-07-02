@@ -80,6 +80,7 @@ export const Navbar = () => {
               onClick={handleSignOut}
               className="rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
               title="Sign out"
+              aria-label="Sign out"
             >
               <LogOut className="h-4 w-4" />
             </Button>

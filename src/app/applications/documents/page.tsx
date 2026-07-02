@@ -105,10 +105,6 @@ export default async function DocumentsPage() {
     }));
   }
 
-  const completedLetters = DEMO_REC_LETTERS.filter(
-    (l) => l.status === 'uploaded' || l.status === 'signed'
-  ).length;
-
   return (
     <DashboardShell>
       <SectionNav items={PLANNER_SECTION_ITEMS} />
@@ -119,7 +115,8 @@ export default async function DocumentsPage() {
         description="Keep your recommendation letters, transcripts, and other application docs in one tidy place."
         accent="Files"
         stats={[
-          { label: 'Letters', value: `${completedLetters}/${DEMO_REC_LETTERS.length}`, detail: 'Received' },
+          // Letters intentionally absent: the tracker below is sample data, so a
+          // hero "Letters 2/4" stat would misread as the user's real progress.
           { label: 'Documents', value: `${documents.length}`, detail: 'Uploaded' },
           { label: 'Applications', value: `${managerApps.length}`, detail: 'Tracked' }
         ]}
@@ -131,7 +128,7 @@ export default async function DocumentsPage() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Recommendation letters</p>
             <p className="text-lg font-semibold text-foreground mb-1">Letter tracker</p>
             <p className="text-xs text-muted-foreground mb-6">
-              Track the status of each recommendation letter from request to upload.
+              Track the status of each recommendation letter from request to upload. Sample data — shown as a preview of the workflow.
             </p>
             <RecLetterWorkflow letters={DEMO_REC_LETTERS} />
           </div>

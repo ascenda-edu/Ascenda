@@ -10,6 +10,8 @@ interface DocumentUploaderProps {
   applicationId?: string | null;
   taskId?: string | null;
   onUpload?: (file: File) => Promise<void>;
+  /** Fires after a file is successfully uploaded and recorded via the built-in path. */
+  onUploaded?: () => void;
 }
 
 const allowedMimeTypes = new Set([
@@ -18,18 +20,19 @@ const allowedMimeTypes = new Set([
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ]);
 
-export const DocumentUploader = ({ applicationId, taskId, onUpload }: DocumentUploaderProps) => {
+export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }: DocumentUploaderProps) => {
   const supabase = useSupabase();
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploaded, setUploaded] = useState<{ name: string; url?: string }[]>([]);
+  const [isDragActive, setIsDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const bucket = useMemo(() => process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ?? 'application-documents', []);
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
+  // Shared validation + upload path for both the file input and drag-drop.
+  const processFiles = async (files: File[]) => {
     if (!files.length || isUploading) return;
     setError(null);
 
@@ -103,6 +106,7 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload }: DocumentUp
         }
 
         setStatus(`Uploaded ${files.length} file${files.length > 1 ? 's' : ''}`);
+        if (applicationId) onUploaded?.();
       } catch (uploadError) {
         const message = uploadError instanceof Error ? uploadError.message : 'Unable to upload document.';
         setError(message);
@@ -113,6 +117,7 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload }: DocumentUp
       return;
     }
 
+    setIsUploading(true);
     setStatus('Uploading…');
     try {
       for (const file of files) {
@@ -124,7 +129,37 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload }: DocumentUp
       const message = customError instanceof Error ? customError.message : 'Upload failed.';
       setError(message);
       setStatus(null);
+    } finally {
+      setIsUploading(false);
     }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    // Reset the input so selecting the same file again (e.g. after a failed
+    // upload) still fires a change event.
+    event.target.value = '';
+    await processFiles(files);
+  };
+
+  const handleDragOver = (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isUploading) setIsDragActive(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragActive(false);
+  };
+
+  const handleDrop = async (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragActive(false);
+    if (isUploading) return;
+    await processFiles(Array.from(event.dataTransfer.files ?? []));
   };
 
   return (
@@ -135,10 +170,19 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload }: DocumentUp
       </div>
       <label
         htmlFor="document-upload"
-        className="group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[26px] border border-dashed border-border bg-muted/60 p-8 text-center transition hover:border-muted-foreground hover:bg-card"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[26px] border border-dashed p-8 text-center transition ${
+          isDragActive
+            ? 'border-primary bg-primary/5'
+            : 'border-border bg-muted/60 hover:border-muted-foreground hover:bg-card'
+        }`}
       >
         <span className="text-2xl">⬆️</span>
-        <p className="text-sm font-semibold text-foreground">Drag & drop or click to browse</p>
+        <p className="text-sm font-semibold text-foreground">
+          {isDragActive ? 'Drop files to upload' : 'Drag & drop or click to browse'}
+        </p>
         <p className="text-xs text-muted-foreground">We auto-tag the document to the right checklist item.</p>
       </label>
       <input
@@ -150,7 +194,9 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload }: DocumentUp
         onChange={handleFileChange}
         disabled={isUploading}
       />
-      {status ? <p className="text-xs text-muted-foreground">{status}</p> : <p className="text-xs text-muted-foreground">No document selected yet.</p>}
+      <p className="text-xs text-muted-foreground" aria-live="polite">
+        {status ?? 'No document selected yet.'}
+      </p>
       {error ? (
         <p className="text-xs text-red-500" role="alert">
           {error}

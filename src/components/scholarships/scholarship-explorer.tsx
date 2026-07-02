@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, Globe, GraduationCap, DollarSign, Calendar, ExternalLink, Bookmark, BookmarkCheck, Filter, CheckCircle2 } from 'lucide-react';
+import { Search, X, Globe, GraduationCap, DollarSign, Calendar, ExternalLink, Bookmark, BookmarkCheck, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/toast';
 import { trackEvent } from '@/lib/analytics';
 import type { Scholarship } from './types';
 import { filterScholarships } from './utils';
@@ -49,8 +50,31 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
   const [level, setLevel] = useState('');
   const [maxAmount, setMaxAmount] = useState('');
   const [saved, setSaved] = useState<Set<string>>(new Set());
+  const [savedLoaded, setSavedLoaded] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [toast, setToast] = useState<{ message: string; tone: 'success' | 'info' } | null>(null);
+  const { showToast } = useToast();
+
+  // Persist saved scholarships locally so the list survives a refresh. (There's
+  // no `scholarships` table yet, so localStorage is the only durable store.)
+  const SAVED_KEY = 'ascenda-saved-scholarships';
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(SAVED_KEY);
+      if (raw) setSaved(new Set(JSON.parse(raw) as string[]));
+    } catch {
+      // ignore malformed/unavailable storage
+    }
+    setSavedLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!savedLoaded) return;
+    try {
+      window.localStorage.setItem(SAVED_KEY, JSON.stringify([...saved]));
+    } catch {
+      // ignore
+    }
+  }, [saved, savedLoaded]);
 
   const countries = useMemo(
     () => Array.from(new Set(scholarships.map((s) => s.country).filter(Boolean))) as string[],
@@ -77,55 +101,26 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
   const resetFilters = () => { setQuery(''); setCountry(''); setLevel(''); setMaxAmount(''); };
 
   const toggleSave = (s: Scholarship) => {
+    const wasSaved = saved.has(s.id);
     setSaved((prev) => {
       const next = new Set(prev);
-      if (next.has(s.id)) {
+      if (wasSaved) {
         next.delete(s.id);
-        setToast({ message: `Removed "${s.name}" from saved scholarships`, tone: 'info' });
       } else {
         next.add(s.id);
-        trackEvent('scholarship_saved', { scholarshipId: s.id });
-        setToast({ message: `Saved "${s.name}" to your scholarship list`, tone: 'success' });
       }
       return next;
     });
+    if (wasSaved) {
+      showToast({ title: `Removed "${s.name}" from saved scholarships`, variant: 'info' });
+    } else {
+      trackEvent('scholarship_saved', { scholarshipId: s.id });
+      showToast({ title: `Saved "${s.name}" to your scholarship list`, variant: 'success' });
+    }
   };
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 2400);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
 
   return (
     <div className="relative space-y-5">
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            key={toast.message}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 12 }}
-            transition={{ duration: 0.2 }}
-            className="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2"
-            role="status"
-            aria-live="polite"
-          >
-            <div
-              className={cn(
-                'pointer-events-auto flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium shadow-lg backdrop-blur',
-                toast.tone === 'success'
-                  ? 'border-emerald-200/60 bg-emerald-500/95 text-white dark:border-emerald-500/30'
-                  : 'border-border/60 bg-background/95 text-foreground'
-              )}
-            >
-              {toast.tone === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
-              <span>{toast.message}</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Search + filter bar */}
       <div className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-4">
         <div className="flex gap-2">
@@ -174,10 +169,11 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
             >
               <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3 pt-2 border-t border-border/50">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1.5">
+                  <label htmlFor="scholarship-filter-country" className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1.5">
                     <Globe className="h-3 w-3" /> Country
                   </label>
                   <select
+                    id="scholarship-filter-country"
                     value={country}
                     onChange={(e) => setCountry(e.target.value)}
                     className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -187,10 +183,11 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1.5">
+                  <label htmlFor="scholarship-filter-level" className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1.5">
                     <GraduationCap className="h-3 w-3" /> Level
                   </label>
                   <select
+                    id="scholarship-filter-level"
                     value={level}
                     onChange={(e) => setLevel(e.target.value)}
                     className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -200,10 +197,11 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1.5">
+                  <label htmlFor="scholarship-filter-max-award" className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1.5">
                     <DollarSign className="h-3 w-3" /> Max award (USD)
                   </label>
                   <input
+                    id="scholarship-filter-max-award"
                     type="number"
                     placeholder="e.g. 50000"
                     value={maxAmount}

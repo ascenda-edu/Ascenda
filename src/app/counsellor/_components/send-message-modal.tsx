@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Send, Sparkles, X } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { useSupabase } from '@/hooks/useSupabase';
@@ -94,6 +94,19 @@ export function SendMessageModal({
 
   if (!student) return null;
 
+  // Escape/backdrop/Cancel would otherwise silently discard an edited draft.
+  // Only prompt when the user has actually changed the pre-filled text —
+  // closing an untouched draft shouldn't nag.
+  const handleOpenChange = (next: boolean) => {
+    if (!next && !submitting) {
+      const dirty = body !== initialDraft.body || subject !== initialDraft.subject;
+      if (dirty && typeof window !== 'undefined' && !window.confirm('Discard this message?')) {
+        return;
+      }
+    }
+    onOpenChange(next);
+  };
+
   const handleSubmit = async () => {
     if (submitting) return;
     setSubmitting(true);
@@ -146,12 +159,12 @@ export function SendMessageModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="w-full max-w-2xl overflow-visible">
         {/* Close affordance */}
         <button
           type="button"
-          onClick={() => onOpenChange(false)}
+          onClick={() => handleOpenChange(false)}
           aria-label="Close"
           className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
         >
@@ -164,9 +177,9 @@ export function SendMessageModal({
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
             {REASON_LABEL[reason]}
           </div>
-          <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-foreground">
+          <DialogTitle className="mt-1.5 leading-7 text-foreground">
             Message {student.firstName} {student.lastName}
-          </h2>
+          </DialogTitle>
           <p className="text-sm text-muted-foreground">
             Lands in {student.firstName}’s inbox with a notification badge.
           </p>
@@ -212,7 +225,7 @@ export function SendMessageModal({
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 border-t border-border bg-muted/30 px-7 py-4">
-          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} disabled={submitting}>
+          <Button variant="ghost" size="sm" onClick={() => handleOpenChange(false)} disabled={submitting}>
             Cancel
           </Button>
           <Button size="sm" onClick={handleSubmit} disabled={submitting || !body.trim()}>

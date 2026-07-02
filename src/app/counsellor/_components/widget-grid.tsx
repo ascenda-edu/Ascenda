@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   LayoutDashboard, AlertTriangle, TrendingUp, BarChart2,
   Clock, Activity, PieChart, Trophy, X, SlidersHorizontal,
-  GripVertical, Maximize2, Minimize2
+  GripVertical, Maximize2, Minimize2, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -94,6 +94,10 @@ export type DragHandlers = {
   onDrop: (id: WidgetId) => void;
   onDragEnd: () => void;
   dragOver: WidgetId | null;
+  /** Keyboard-accessible alternative to drag reorder. */
+  onMove: (id: WidgetId, direction: -1 | 1) => void;
+  /** Number of visible widgets — lets move buttons disable at the edges. */
+  count: number;
 };
 
 interface WidgetGridProps {
@@ -150,8 +154,28 @@ export const WidgetGrid = ({ children }: WidgetGridProps) => {
     });
   };
 
+  // Keyboard alternative to drag reorder — moves a widget one slot among the
+  // visible widgets (hidden widgets keep their stored order at the end).
+  const moveWidget = (id: WidgetId, direction: -1 | 1) => {
+    setOrder((prev) => {
+      const visible = [
+        ...prev.filter((w) => visibleWidgets.includes(w)),
+        ...visibleWidgets.filter((w) => !prev.includes(w))
+      ];
+      const fromIdx = visible.indexOf(id);
+      const toIdx = fromIdx + direction;
+      if (fromIdx === -1 || toIdx < 0 || toIdx >= visible.length) return prev;
+      [visible[fromIdx], visible[toIdx]] = [visible[toIdx], visible[fromIdx]];
+      const next = [...visible, ...prev.filter((w) => !visibleWidgets.includes(w))];
+      saveOrder(next);
+      return next;
+    });
+  };
+
   const dragHandlers: DragHandlers = {
     dragOver,
+    onMove: moveWidget,
+    count: visibleWidgets.length,
     onDragStart: (id) => { dragId.current = id; },
     onDragOver: (e, id) => {
       e.preventDefault();
@@ -346,6 +370,28 @@ export const Widget = ({
           </div>
         </div>
         <div className="flex items-center gap-1">
+          {dragHandlers && (
+            <>
+              <button
+                onClick={() => dragHandlers.onMove(id, -1)}
+                disabled={index === 0}
+                aria-label={`Move ${title} widget up`}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                title="Move widget up"
+              >
+                <ArrowUp className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => dragHandlers.onMove(id, 1)}
+                disabled={index >= dragHandlers.count - 1}
+                aria-label={`Move ${title} widget down`}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                title="Move widget down"
+              >
+                <ArrowDown className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
           {onToggleSize && (
             <button
               onClick={() => onToggleSize(id)}

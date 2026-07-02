@@ -95,11 +95,19 @@ export const useNotifications = (): UseNotificationsResult => {
     const startPoll = (intervalMs: number) => {
       if (pollHandle !== null) window.clearInterval(pollHandle);
       pollHandle = window.setInterval(() => {
+        // Don't burn queries while the tab is hidden — the visibilitychange
+        // handler below catches the inbox up as soon as the tab returns.
+        if (document.hidden) return;
         refresh();
       }, intervalMs);
     };
 
     startPoll(POLL_MS_FAST);
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) refresh();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     const channel = (supabase as any)
       .channel(`notif:${profileId}:${audience}`)
@@ -149,6 +157,7 @@ export const useNotifications = (): UseNotificationsResult => {
 
     return () => {
       if (pollHandle !== null) window.clearInterval(pollHandle);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       try {
         (supabase as any).removeChannel(channel);
       } catch {

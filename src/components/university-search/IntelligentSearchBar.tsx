@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -48,12 +48,16 @@ export function IntelligentSearchBar({
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [recentSearches, setRecentSearches] = useState<Suggestion[]>([]);
     const [trendingSuggestions, setTrendingSuggestions] = useState<SuggestionGroups>({ programs: [], universities: [] });
+    const [suggestionsError, setSuggestionsError] = useState(false);
+    const [activeIndex, setActiveIndex] = useState(-1);
     const debounceRef = useRef<number | null>(null);
-    const blurTimeoutRef = useRef<number | null>(null);
     const latestRequestRef = useRef<number>(0);
     const activeRequests = useRef<AbortController[]>([]);
     const containerRef = useRef<HTMLDivElement>(null);
+    const listboxId = useId();
     const hasTypedQuery = value.trim().length > 0;
+
+    const optionId = (index: number) => `${listboxId}-option-${index}`;
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -106,7 +110,6 @@ export function IntelligentSearchBar({
 
         return () => {
             controller.abort();
-            if (blurTimeoutRef.current) window.clearTimeout(blurTimeoutRef.current);
         };
     }, []);
 
@@ -115,10 +118,12 @@ export function IntelligentSearchBar({
             const trimmed = query.trim();
             if (trimmed.length < 2) {
                 setSuggestions({ programs: [], universities: [] });
+                setSuggestionsError(false);
                 setIsLoadingSuggestions(false);
                 return;
             }
             setIsLoadingSuggestions(true);
+            setSuggestionsError(false);
             const requestId = Date.now();
             latestRequestRef.current = requestId;
             activeRequests.current.forEach((controller) => controller.abort());
@@ -184,9 +189,11 @@ export function IntelligentSearchBar({
                     });
                 }
             } catch (err) {
+                if (err instanceof DOMException && err.name === 'AbortError') return;
                 console.error('Failed to load suggestions', err);
                 if (latestRequestRef.current === requestId) {
                     setSuggestions({ programs: [], universities: [] });
+                    setSuggestionsError(true);
                 }
             } finally {
                 if (latestRequestRef.current === requestId) {
@@ -265,6 +272,29 @@ export function IntelligentSearchBar({
         [suggestions]
     );
 
+    // Flat, in-render-order list of every selectable option so keyboard
+    // navigation can address them by a single index.
+    const flatOptions = useMemo<Suggestion[]>(() => {
+        if (hasTypedQuery) {
+            if (isLoadingSuggestions) return [];
+            return [...suggestions.programs, ...suggestions.universities];
+        }
+        return [...recentSearches, ...trendingSuggestions.programs, ...trendingSuggestions.universities];
+    }, [hasTypedQuery, isLoadingSuggestions, suggestions, recentSearches, trendingSuggestions]);
+
+    // Reset the active option whenever the option list changes or the
+    // dropdown closes — a stale index would point at the wrong item.
+    useEffect(() => {
+        setActiveIndex(-1);
+    }, [flatOptions, isDropdownOpen]);
+
+    // Keep the active option visible while arrowing through a long list.
+    useEffect(() => {
+        if (activeIndex < 0) return;
+        document.getElementById(optionId(activeIndex))?.scrollIntoView({ block: 'nearest' });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeIndex]);
+
     const persistRecentSearch = (item: Suggestion) => {
         setRecentSearches((prev) => {
             const filtered = prev.filter((entry) => entry.id !== item.id);
@@ -280,14 +310,16 @@ export function IntelligentSearchBar({
         });
     };
 
-    const handleBlur = () => {
-        blurTimeoutRef.current = window.setTimeout(() => setIsDropdownOpen(false), 200);
+    // Close only when focus actually leaves the composite widget (input +
+    // dropdown). Blur events bubble in React, so this fires for any child.
+    const handleContainerBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+        const nextFocus = event.relatedTarget as Node | null;
+        if (!containerRef.current || !containerRef.current.contains(nextFocus)) {
+            setIsDropdownOpen(false);
+        }
     };
 
     const handleFocus = () => {
-        if (blurTimeoutRef.current) {
-            window.clearTimeout(blurTimeoutRef.current);
-        }
         setIsDropdownOpen(true);
     };
 
@@ -298,11 +330,39 @@ export function IntelligentSearchBar({
         onSelectSuggestion(item);
     };
 
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (!isDropdownOpen) {
+                setIsDropdownOpen(true);
+                return;
+            }
+            if (flatOptions.length === 0) return;
+            setActiveIndex((prev) => {
+                if (prev === -1) {
+                    return event.key === 'ArrowDown' ? 0 : flatOptions.length - 1;
+                }
+                const delta = event.key === 'ArrowDown' ? 1 : -1;
+                return (prev + delta + flatOptions.length) % flatOptions.length;
+            });
+        } else if (event.key === 'Enter') {
+            if (isDropdownOpen && activeIndex >= 0 && activeIndex < flatOptions.length) {
+                event.preventDefault();
+                handleSelect(flatOptions[activeIndex]);
+            }
+        } else if (event.key === 'Escape') {
+            if (isDropdownOpen) {
+                event.preventDefault();
+                setIsDropdownOpen(false);
+            }
+        }
+    };
+
     const hasPrefill = recentSearches.length > 0 || trendingSuggestions.programs.length > 0 || trendingSuggestions.universities.length > 0;
-    const shouldShowDropdown = isDropdownOpen && (hasSuggestions || isLoadingSuggestions || !hasTypedQuery);
+    const shouldShowDropdown = isDropdownOpen && (hasSuggestions || isLoadingSuggestions || suggestionsError || !hasTypedQuery);
 
     return (
-        <div ref={containerRef} className={cn("relative w-full", className)}>
+        <div ref={containerRef} onBlur={handleContainerBlur} className={cn("relative w-full", className)}>
             <div className={cn(
                 "relative flex w-full items-center gap-3",
                 variant === 'default'
@@ -317,10 +377,15 @@ export function IntelligentSearchBar({
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     onFocus={handleFocus}
-                    onBlur={handleBlur}
+                    onKeyDown={handleKeyDown}
                     id={inputId}
                     name={inputName}
                     placeholder={placeholder}
+                    role="combobox"
+                    aria-expanded={shouldShowDropdown}
+                    aria-controls={listboxId}
+                    aria-autocomplete="list"
+                    aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
                     className={cn(
                         variant === 'default'
                             ? "h-16 flex-1 border-0 bg-transparent text-base text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
@@ -344,26 +409,40 @@ export function IntelligentSearchBar({
             </div>
 
             {shouldShowDropdown && (
-                <div className={cn(
-                    "absolute left-0 right-0 z-50 mt-2 overflow-hidden rounded-2xl border border-border bg-card shadow-xl",
-                    variant === 'default' ? "top-full" : "top-full"
-                )}>
+                <div
+                    id={listboxId}
+                    role="listbox"
+                    aria-label="Search suggestions"
+                    className={cn(
+                        "absolute left-0 right-0 z-50 mt-2 overflow-hidden rounded-2xl border border-border bg-card shadow-xl",
+                        variant === 'default' ? "top-full" : "top-full"
+                    )}
+                >
                     {hasTypedQuery ? (
                         isLoadingSuggestions ? (
                             <p className="px-3 py-2 text-xs text-muted-foreground">Finding matches…</p>
+                        ) : suggestionsError && !hasSuggestions ? (
+                            <p className="px-3 py-2 text-xs text-muted-foreground">Suggestions unavailable — try again in a moment.</p>
                         ) : (
                             <div className="max-h-72 divide-y divide-border overflow-y-auto">
                                 {suggestions.programs.length > 0 && (
-                                    <div>
+                                    <div role="group" aria-label="Programs">
                                         <p className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Programs</p>
-                                        <ul className="p-1">
-                                            {suggestions.programs.map((item) => (
-                                                <li key={`program-${item.id}`}>
+                                        <ul className="p-1" role="presentation">
+                                            {suggestions.programs.map((item, index) => (
+                                                <li key={`program-${item.id}`} role="presentation">
                                                     <button
                                                         type="button"
+                                                        role="option"
+                                                        id={optionId(index)}
+                                                        aria-selected={activeIndex === index}
                                                         onMouseDown={(e) => e.preventDefault()}
+                                                        onMouseEnter={() => setActiveIndex(index)}
                                                         onClick={() => handleSelect(item)}
-                                                        className="flex w-full flex-col rounded-xl px-3 py-2 text-left text-sm transition hover:bg-muted"
+                                                        className={cn(
+                                                            "flex w-full flex-col rounded-xl px-3 py-2 text-left text-sm transition hover:bg-muted",
+                                                            activeIndex === index && "bg-muted"
+                                                        )}
                                                     >
                                                         <span className="font-semibold text-foreground">{item.name}</span>
                                                         {item.university && (
@@ -377,22 +456,32 @@ export function IntelligentSearchBar({
                                     </div>
                                 )}
                                 {suggestions.universities.length > 0 && (
-                                    <div>
+                                    <div role="group" aria-label="Universities">
                                         <p className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Universities</p>
-                                        <ul className="p-1">
-                                            {suggestions.universities.map((item) => (
-                                                <li key={`university-${item.id}`}>
-                                                    <button
-                                                        type="button"
-                                                        onMouseDown={(e) => e.preventDefault()}
-                                                        onClick={() => handleSelect(item)}
-                                                        className="flex w-full flex-col rounded-xl px-3 py-2 text-left text-sm transition hover:bg-muted"
-                                                    >
-                                                        <span className="font-semibold text-foreground">{item.name}</span>
-                                                        {item.location && <span className="text-xs text-muted-foreground">{item.location}</span>}
-                                                    </button>
-                                                </li>
-                                            ))}
+                                        <ul className="p-1" role="presentation">
+                                            {suggestions.universities.map((item, index) => {
+                                                const flatIndex = suggestions.programs.length + index;
+                                                return (
+                                                    <li key={`university-${item.id}`} role="presentation">
+                                                        <button
+                                                            type="button"
+                                                            role="option"
+                                                            id={optionId(flatIndex)}
+                                                            aria-selected={activeIndex === flatIndex}
+                                                            onMouseDown={(e) => e.preventDefault()}
+                                                            onMouseEnter={() => setActiveIndex(flatIndex)}
+                                                            onClick={() => handleSelect(item)}
+                                                            className={cn(
+                                                                "flex w-full flex-col rounded-xl px-3 py-2 text-left text-sm transition hover:bg-muted",
+                                                                activeIndex === flatIndex && "bg-muted"
+                                                            )}
+                                                        >
+                                                            <span className="font-semibold text-foreground">{item.name}</span>
+                                                            {item.location && <span className="text-xs text-muted-foreground">{item.location}</span>}
+                                                        </button>
+                                                    </li>
+                                                );
+                                            })}
                                         </ul>
                                     </div>
                                 )}
@@ -405,16 +494,23 @@ export function IntelligentSearchBar({
                             ) : hasPrefill ? (
                                 <div className="space-y-3">
                                     {recentSearches.length > 0 && (
-                                        <div>
+                                        <div role="group" aria-label="Recent searches">
                                             <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Recent searches</p>
-                                            <ul className="mt-1 grid gap-1 md:grid-cols-2">
-                                                {recentSearches.map((item) => (
-                                                    <li key={`recent-${item.id}`}>
+                                            <ul className="mt-1 grid gap-1 md:grid-cols-2" role="presentation">
+                                                {recentSearches.map((item, index) => (
+                                                    <li key={`recent-${item.id}`} role="presentation">
                                                         <button
                                                             type="button"
+                                                            role="option"
+                                                            id={optionId(index)}
+                                                            aria-selected={activeIndex === index}
                                                             onMouseDown={(e) => e.preventDefault()}
+                                                            onMouseEnter={() => setActiveIndex(index)}
                                                             onClick={() => handleSelect(item)}
-                                                            className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition hover:bg-muted"
+                                                            className={cn(
+                                                                "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition hover:bg-muted",
+                                                                activeIndex === index && "bg-muted"
+                                                            )}
                                                         >
                                                             <div className="flex flex-col">
                                                                 <span className="font-semibold text-foreground">{item.name}</span>
@@ -431,38 +527,58 @@ export function IntelligentSearchBar({
                                         </div>
                                     )}
                                     {(trendingSuggestions.programs.length > 0 || trendingSuggestions.universities.length > 0) && (
-                                        <div>
+                                        <div role="group" aria-label="Trending">
                                             <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Trending</p>
-                                            <div className="grid gap-2 md:grid-cols-2">
-                                                {trendingSuggestions.programs.map((item) => (
-                                                    <button
-                                                        key={`trending-program-${item.id}`}
-                                                        type="button"
-                                                        onMouseDown={(e) => e.preventDefault()}
-                                                        onClick={() => handleSelect(item)}
-                                                        className="flex w-full flex-col rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-left text-sm transition hover:border-foreground/60 hover:bg-muted"
-                                                    >
-                                                        <span className="font-semibold text-foreground">{item.name}</span>
-                                                        {item.university && (
-                                                            <span className="text-xs text-muted-foreground">{item.university}</span>
-                                                        )}
-                                                        {item.location && <span className="text-[11px] text-muted-foreground">{item.location}</span>}
-                                                        <span className="mt-1 inline-flex w-fit rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">Program</span>
-                                                    </button>
-                                                ))}
-                                                {trendingSuggestions.universities.map((item) => (
-                                                    <button
-                                                        key={`trending-university-${item.id}`}
-                                                        type="button"
-                                                        onMouseDown={(e) => e.preventDefault()}
-                                                        onClick={() => handleSelect(item)}
-                                                        className="flex w-full flex-col rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-left text-sm transition hover:border-foreground/60 hover:bg-muted"
-                                                    >
-                                                        <span className="font-semibold text-foreground">{item.name}</span>
-                                                        {item.location && <span className="text-[11px] text-muted-foreground">{item.location}</span>}
-                                                        <span className="mt-1 inline-flex w-fit rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">University</span>
-                                                    </button>
-                                                ))}
+                                            <div className="grid gap-2 md:grid-cols-2" role="presentation">
+                                                {trendingSuggestions.programs.map((item, index) => {
+                                                    const flatIndex = recentSearches.length + index;
+                                                    return (
+                                                        <button
+                                                            key={`trending-program-${item.id}`}
+                                                            type="button"
+                                                            role="option"
+                                                            id={optionId(flatIndex)}
+                                                            aria-selected={activeIndex === flatIndex}
+                                                            onMouseDown={(e) => e.preventDefault()}
+                                                            onMouseEnter={() => setActiveIndex(flatIndex)}
+                                                            onClick={() => handleSelect(item)}
+                                                            className={cn(
+                                                                "flex w-full flex-col rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-left text-sm transition hover:border-foreground/60 hover:bg-muted",
+                                                                activeIndex === flatIndex && "border-foreground/60 bg-muted"
+                                                            )}
+                                                        >
+                                                            <span className="font-semibold text-foreground">{item.name}</span>
+                                                            {item.university && (
+                                                                <span className="text-xs text-muted-foreground">{item.university}</span>
+                                                            )}
+                                                            {item.location && <span className="text-[11px] text-muted-foreground">{item.location}</span>}
+                                                            <span className="mt-1 inline-flex w-fit rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">Program</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                                {trendingSuggestions.universities.map((item, index) => {
+                                                    const flatIndex = recentSearches.length + trendingSuggestions.programs.length + index;
+                                                    return (
+                                                        <button
+                                                            key={`trending-university-${item.id}`}
+                                                            type="button"
+                                                            role="option"
+                                                            id={optionId(flatIndex)}
+                                                            aria-selected={activeIndex === flatIndex}
+                                                            onMouseDown={(e) => e.preventDefault()}
+                                                            onMouseEnter={() => setActiveIndex(flatIndex)}
+                                                            onClick={() => handleSelect(item)}
+                                                            className={cn(
+                                                                "flex w-full flex-col rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-left text-sm transition hover:border-foreground/60 hover:bg-muted",
+                                                                activeIndex === flatIndex && "border-foreground/60 bg-muted"
+                                                            )}
+                                                        >
+                                                            <span className="font-semibold text-foreground">{item.name}</span>
+                                                            {item.location && <span className="text-[11px] text-muted-foreground">{item.location}</span>}
+                                                            <span className="mt-1 inline-flex w-fit rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">University</span>
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     )}

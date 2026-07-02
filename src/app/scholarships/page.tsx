@@ -10,51 +10,58 @@ export const metadata: Metadata = {
   title: 'Scholarships'
 };
 
-const fallbackScholarships: Scholarship[] = [
+// Illustrative examples shown until a live scholarships feed is connected.
+// These are intentionally generic and carry no outbound links — they exist so
+// the filtering/search tools are explorable, not as real awards to chase.
+const sampleScholarships: Scholarship[] = [
   {
-    id: 'global-innovators',
-    name: 'Global Innovators Fellowship',
+    id: 'sample-merit',
+    name: 'Example Merit Fellowship',
     country: 'United States',
     region: 'North America',
     level: 'Undergraduate',
     amount: 40000,
     currency: 'USD',
-    deadline: '2025-10-01',
+    deadline: '2026-10-01',
     category: 'Merit',
-    url: 'https://example.com/innovators'
+    url: null
   },
   {
-    id: 'asean-leaders',
-    name: 'ASEAN Leaders Award',
+    id: 'sample-regional',
+    name: 'Example Regional Leaders Award',
     country: 'Singapore',
     region: 'Asia',
     level: 'Undergraduate',
     amount: 25000,
     currency: 'USD',
-    deadline: '2025-09-15',
+    deadline: '2027-01-15',
     category: 'Regional',
-    url: 'https://example.com/asean'
+    url: null
   },
   {
-    id: 'women-in-stem',
-    name: 'Women in STEM Excellence',
+    id: 'sample-stem',
+    name: 'Example Women in STEM Grant',
     country: 'Canada',
     region: 'North America',
     level: 'Graduate',
     amount: 30000,
     currency: 'USD',
-    deadline: '2025-11-20',
+    deadline: '2026-11-20',
     category: 'STEM',
-    url: 'https://example.com/stem'
+    url: null
   }
 ];
 
 export default async function ScholarshipsPage() {
   const supabase = createServerSupabaseClient();
+  // `scholarships` is not yet a real table — this query returns nothing today and
+  // the page falls back to sample data (clearly labelled below). When a live feed
+  // is added, real rows flow straight through this mapping.
   const { data } = await supabase.from('scholarships' as never).select('*').order('deadline', { ascending: true });
+  const usingLiveData = Boolean(data && data.length > 0);
 
   const scholarships: Scholarship[] =
-    data && data.length > 0
+    usingLiveData
       ? (data as Record<string, unknown>[]).map((item, index: number) => ({
         id: (item.id as string) ?? (item.slug as string) ?? `scholarship-${index}`,
         name: (item.name as string) ?? 'Scholarship',
@@ -67,7 +74,7 @@ export default async function ScholarshipsPage() {
         deadline: (item.deadline as string) ?? (item.deadline_date as string) ?? null,
         url: (item.url as string) ?? (item.website as string) ?? null
       }))
-      : fallbackScholarships;
+      : sampleScholarships;
 
   const heroStats = [
     { label: 'Tracked scholarships', value: `${scholarships.length}`, detail: 'Active' },
@@ -90,11 +97,18 @@ export default async function ScholarshipsPage() {
         eyebrow="Scholarships"
         title="Find money for school"
         description="Filter by country, level, and award size. Save the ones worth chasing and we'll add them to your plan."
-        highlight="Updated hourly"
+        highlight={usingLiveData ? 'Live listings' : 'Sample listings'}
         accent="For you"
         stats={heroStats}
         breadcrumbs={<Breadcrumbs />}
       />
+      {!usingLiveData ? (
+        <div className="mt-6 rounded-2xl border border-amber-200/60 bg-amber-500/10 px-5 py-4 text-sm text-amber-700 dark:border-amber-500/20 dark:text-amber-300">
+          <span className="font-semibold">Sample data.</span> We haven&apos;t connected a live scholarships feed
+          yet, so these are illustrative examples to explore the search and filters — not real awards. Real listings
+          will appear here automatically once the feed is live.
+        </div>
+      ) : null}
       <ScholarshipExplorer scholarships={scholarships} />
     </DashboardShell>
   );

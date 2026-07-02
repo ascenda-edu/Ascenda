@@ -66,15 +66,10 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
       },
     },
     onUpdate: ({ editor }) => {
-      const text = editor.getText();
-      if (limit.unit === 'words') {
-        const words = text.trim().split(/\s+/).filter(Boolean).length;
-        if (words > limit.max) {
-          editor.commands.undo();
-          return;
-        }
-      }
-      setDrafts((prev) => ({ ...prev, [platform]: text }));
+      // Word limits are advisory: content is never rejected or undone (that
+      // silently destroyed pastes). The over-limit state is surfaced in the
+      // count + status bar instead.
+      setDrafts((prev) => ({ ...prev, [platform]: editor.getText() }));
     },
   });
 
@@ -83,6 +78,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
   const charCount = editorText.length;
   const current = limit.unit === 'words' ? wordCount : charCount;
   const ratio = limit.max > 0 ? current / limit.max : 0;
+  const overBy = Math.max(0, current - limit.max);
 
   const filteredPrompts = useMemo(
     () => prompts.filter((p) => p.platform === platform || platform === 'Custom'),
@@ -108,7 +104,11 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
   const insertBlock = useCallback((block: EssayBuildingBlock) => { if (!editor) return; editor.chain().focus().insertContent(`<p><em>[${block.label}]</em> ${block.detail || block.label}</p>`).run(); setSelectedBlocks((prev) => new Set(prev).add(block.id)); }, [editor]);
   const toggleCat = (cat: BlockCategory) => { setCollapsedCats((prev) => { const n = new Set(prev); n.has(cat) ? n.delete(cat) : n.add(cat); return n; }); };
   const handleCopy = () => { navigator.clipboard.writeText(editorText); setCopied(true); setTimeout(() => setCopied(false), 2000); };
-  const handleClear = () => { editor?.commands.clearContent(); setDrafts((prev) => ({ ...prev, [platform]: '' })); };
+  const handleClear = () => {
+    if (typeof window !== 'undefined' && !window.confirm(`Clear your ${platform} essay? This also removes the saved draft and can't be undone.`)) return;
+    editor?.commands.clearContent();
+    setDrafts((prev) => ({ ...prev, [platform]: '' }));
+  };
   const handleDownload = () => {
     const blob = new Blob([editorText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -179,6 +179,8 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
           {/* AI toggle */}
           <button
             onClick={() => setShowAI(!showAI)}
+            aria-expanded={showAI}
+            aria-label={showAI ? 'Hide AI panel' : 'Show AI panel'}
             className={cn('flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
               showAI ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50')}
           >
@@ -387,7 +389,12 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
                 <span className={cn('text-[11px] font-semibold tabular-nums', ratio < 0.8 ? 'text-emerald-600' : ratio < 0.95 ? 'text-amber-600' : 'text-rose-600')}>
                   {current.toLocaleString()} <span className="font-normal text-muted-foreground">/ {limit.max.toLocaleString()} {limit.unit}</span>
                 </span>
-                {ratio >= 0.95 && <span className="text-[10px] font-semibold text-rose-500 animate-pulse">At limit</span>}
+                {overBy > 0 && (
+                  <span role="status" className="text-[10px] font-semibold text-rose-500">
+                    {overBy.toLocaleString()} {limit.unit} over the {limit.max.toLocaleString()}-{limit.unit === 'words' ? 'word' : 'character'} limit
+                  </span>
+                )}
+                {overBy === 0 && ratio >= 0.95 && <span className="text-[10px] font-semibold text-rose-500 animate-pulse">At limit</span>}
                 {ratio >= 0.8 && ratio < 0.95 && <span className="text-[10px] text-amber-500">Getting close</span>}
               </div>
               <span className="text-[10px] text-muted-foreground/50">{limit.tip}</span>
@@ -439,7 +446,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
 
 function TBtn({ icon: Icon, active, onClick, title, disabled }: { icon: typeof Bold; active: boolean; onClick: () => void; title: string; disabled?: boolean }) {
   return (
-    <button onClick={onClick} disabled={disabled} title={title}
+    <button onClick={onClick} disabled={disabled} title={title} aria-label={title} aria-pressed={active}
       className={cn('flex h-7 w-7 items-center justify-center rounded-md transition-colors', active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground', disabled && 'opacity-25 cursor-not-allowed')}>
       <Icon className="h-3.5 w-3.5" />
     </button>

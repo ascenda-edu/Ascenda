@@ -1,0 +1,121 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { FileText } from 'lucide-react';
+import { DocumentUploader } from './document-uploader';
+
+export interface DocumentManagerApp {
+  id: string;
+  label: string;
+}
+
+export interface ManagedDocument {
+  id: string;
+  name: string;
+  type: string | null;
+  uploadedAt: string | null;
+  application: string;
+  url: string | null;
+}
+
+interface DocumentsManagerProps {
+  applications: DocumentManagerApp[];
+  documents: ManagedDocument[];
+}
+
+function formatDate(iso: string | null): string {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function iconFor(name: string): string {
+  const ext = name.split('.').pop()?.toLowerCase() ?? '';
+  if (ext === 'pdf') return '📄';
+  if (ext === 'doc' || ext === 'docx') return '📝';
+  return '📁';
+}
+
+export function DocumentsManager({ applications, documents }: DocumentsManagerProps) {
+  const router = useRouter();
+  const [selected, setSelected] = useState<string>(applications[0]?.id ?? '');
+
+  return (
+    <div className="space-y-6">
+      {applications.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-5 py-4 text-sm text-muted-foreground">
+          Add an application first — documents attach to a specific application so your counsellor can see them in
+          context. Start one from your{' '}
+          <a href="/university-search/shortlist" className="font-semibold text-primary hover:underline">
+            shortlist
+          </a>
+          .
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <label htmlFor="doc-application" className="text-xs font-semibold text-foreground">
+            Attach to application
+          </label>
+          <select
+            id="doc-application"
+            value={selected}
+            onChange={(event) => setSelected(event.target.value)}
+            className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:max-w-md"
+          >
+            {applications.map((app) => (
+              <option key={app.id} value={app.id}>
+                {app.label}
+              </option>
+            ))}
+          </select>
+          <DocumentUploader applicationId={selected} onUploaded={() => router.refresh()} />
+        </div>
+      )}
+
+      {documents.length === 0 ? (
+        <div className="rounded-[28px] border border-dashed border-border bg-muted/30 px-6 py-12 text-center">
+          <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
+          <p className="text-sm font-semibold text-foreground">No documents yet</p>
+          <p className="text-xs text-muted-foreground">
+            Upload a transcript, essay, or certificate above and it&apos;ll show up here.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {documents.map((doc) => (
+            <div
+              key={doc.id}
+              className="flex items-center gap-4 rounded-2xl border border-border/60 bg-background/60 px-5 py-4"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-lg" aria-hidden>
+                {iconFor(doc.name)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-foreground">{doc.name}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {doc.application}
+                  {doc.type ? ` · ${doc.type}` : ''}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-4">
+                <p className="text-right text-xs text-muted-foreground">{formatDate(doc.uploadedAt)}</p>
+                {doc.url ? (
+                  <a
+                    href={doc.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground transition hover:text-foreground"
+                  >
+                    View
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

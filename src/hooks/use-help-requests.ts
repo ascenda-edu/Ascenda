@@ -59,10 +59,17 @@ export const useHelpRequests = (): UseHelpRequestsResult => {
     const startPoll = (intervalMs: number) => {
       if (pollHandle !== null) window.clearInterval(pollHandle);
       pollHandle = window.setInterval(() => {
+        // Skip polls in hidden tabs; visibilitychange below catches up on return.
+        if (document.hidden) return;
         refresh();
       }, intervalMs);
     };
     startPoll(POLL_MS_FAST);
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) refresh();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     const channel = (supabase as any)
       .channel('help_requests_widget')
@@ -98,6 +105,7 @@ export const useHelpRequests = (): UseHelpRequestsResult => {
 
     return () => {
       if (pollHandle !== null) window.clearInterval(pollHandle);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       try {
         (supabase as any).removeChannel(channel);
       } catch {
