@@ -6,11 +6,33 @@ import { PageHero } from '@/components/layout/page-hero';
 import { SectionNav } from '@/components/layout/section-nav';
 import { PLANNER_SECTION_ITEMS } from '@/components/layout/navigation';
 import { RecLetterWorkflow } from '@/components/applications/rec-letter-workflow';
+import {
+  DocumentsManager,
+  type DocumentManagerApp,
+  type ManagedDocument
+} from '@/components/applications/documents-manager';
 import { DEMO_REC_LETTERS } from '@/lib/data/student-demo-data';
 import { AnimatedSection } from '@/components/layout/animated-section';
 
 export const metadata: Metadata = {
   title: 'Documents'
+};
+
+type ApplicationJoin = {
+  id: string;
+  program: {
+    name: string | null;
+    universities: { name: string | null } | null;
+  } | null;
+};
+
+type DocumentJoin = {
+  id: string;
+  name: string;
+  type: string | null;
+  storage_path: string;
+  uploaded_at: string | null;
+  application_id: string;
 };
 
 export default async function DocumentsPage() {
@@ -21,6 +43,66 @@ export default async function DocumentsPage() {
 
   if (!user) {
     redirect('/login');
+  }
+
+  // ── Real applications + documents ──────────────────────────────────────
+  const { data: applicationRows, error: applicationsError } = await supabase
+    .from('applications')
+    .select('id, program:programs(name:course_name, universities(name))')
+    .eq('profile_id', user.id);
+
+  // Surface failures in the error boundary — an empty documents page for a
+  // user who has uploads reads as data loss.
+  if (applicationsError) {
+    throw new Error(`documents: applications query failed — ${applicationsError.message}`);
+  }
+
+  const apps = ((applicationRows ?? []) as unknown as ApplicationJoin[]) ?? [];
+  const appLabel = (app: ApplicationJoin) => {
+    const uni = app.program?.universities?.name ?? 'University';
+    const programme = app.program?.name ?? 'Programme';
+    return `${uni} · ${programme}`;
+  };
+  const labelById = new Map(apps.map((app) => [app.id, appLabel(app)]));
+  const managerApps: DocumentManagerApp[] = apps.map((app) => ({ id: app.id, label: appLabel(app) }));
+
+  let documents: ManagedDocument[] = [];
+  const appIds = apps.map((app) => app.id);
+  if (appIds.length > 0) {
+    const { data: docRows, error: documentsError } = await supabase
+      .from('documents')
+      .select('id, name, type, storage_path, uploaded_at, application_id')
+      .in('application_id', appIds)
+      .order('uploaded_at', { ascending: false });
+    if (documentsError) {
+      throw new Error(`documents: documents query failed — ${documentsError.message}`);
+    }
+
+    const rows = ((docRows ?? []) as DocumentJoin[]) ?? [];
+    const bucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ?? 'application-documents';
+    const signedByPath = new Map<string, string>();
+    if (rows.length > 0) {
+      const { data: signed, error: signError } = await supabase.storage
+        .from(bucket)
+        .createSignedUrls(rows.map((row) => row.storage_path), 60 * 60);
+      if (signError) {
+        // Documents still render without View links; log so a broken bucket
+        // config doesn't silently strip every link.
+        console.error('documents: signing URLs failed', signError);
+      }
+      for (const item of signed ?? []) {
+        if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
+      }
+    }
+
+    documents = rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      type: row.type,
+      uploadedAt: row.uploaded_at,
+      application: labelById.get(row.application_id) ?? 'Application',
+      url: signedByPath.get(row.storage_path) ?? null
+    }));
   }
 
   const completedLetters = DEMO_REC_LETTERS.filter(
@@ -38,8 +120,8 @@ export default async function DocumentsPage() {
         accent="Files"
         stats={[
           { label: 'Letters', value: `${completedLetters}/${DEMO_REC_LETTERS.length}`, detail: 'Received' },
-          { label: 'Documents', value: '3', detail: 'Uploaded' },
-          { label: 'Pending', value: `${DEMO_REC_LETTERS.length - completedLetters}`, detail: 'Awaiting' }
+          { label: 'Documents', value: `${documents.length}`, detail: 'Uploaded' },
+          { label: 'Applications', value: `${managerApps.length}`, detail: 'Tracked' }
         ]}
       />
 
@@ -62,34 +144,9 @@ export default async function DocumentsPage() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Uploaded documents</p>
             <p className="text-lg font-semibold text-foreground mb-1">Your files</p>
             <p className="text-xs text-muted-foreground mb-6">
-              Transcripts, certificates, and other supporting documents.
+              Transcripts, certificates, and other supporting documents — stored securely against each application.
             </p>
-            <div className="space-y-3">
-              {[
-                { name: 'IB_Transcript_2025.pdf', type: 'Transcript', date: 'Mar 2025', size: '1.2 MB' },
-                { name: 'Personal_Statement_v3.docx', type: 'Essay', date: 'Mar 2025', size: '45 KB' },
-                { name: 'EE_Solar_Panel_Research.pdf', type: 'Extended Essay', date: 'Feb 2025', size: '3.8 MB' }
-              ].map((doc) => (
-                <div
-                  key={doc.name}
-                  className="flex items-center gap-4 rounded-2xl border border-border/60 bg-background/60 px-5 py-4"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">{doc.name}</p>
-                    <p className="text-xs text-muted-foreground">{doc.type}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-xs text-muted-foreground">{doc.date}</p>
-                    <p className="text-[11px] text-muted-foreground/70">{doc.size}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <DocumentsManager applications={managerApps} documents={documents} />
           </div>
         </div>
       </AnimatedSection>

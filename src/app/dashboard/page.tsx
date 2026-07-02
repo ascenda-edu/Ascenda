@@ -71,18 +71,24 @@ export default async function DashboardPage() {
     applicationProgramIds.length
       ? supabase.from('deadlines').select('*').in('program_id', applicationProgramIds).gte('deadline_date', today).order('deadline_date', { ascending: true }).limit(5)
       : Promise.resolve({ data: [] }),
-    loadMatchesForProfile(supabase, user.id),
+    // The dashboard shows 3 match cards and a health stat — no need to load
+    // the full (up to ~900-row) match cache for that.
+    loadMatchesForProfile(supabase, user.id, { resultLimit: 60 }),
     supabase
       .from('student_personal_information')
       .select('first_name,last_name,email,nationality,resident_country')
       .eq('profile_id', user.id)
-      .single(),
+      .maybeSingle(),
     supabase
       .from('student_academic_input')
       .select('programme_type,school_name,school_country,graduation_year,intended_clusters,english_required')
       .eq('profile_id', user.id)
-      .single(),
-    supabase.from('student_lifestyle_preference').select('extracurricular_interests').eq('profile_id', user.id).single(),
+      .maybeSingle(),
+    supabase
+      .from('student_lifestyle_preference')
+      .select('extracurricular_interests')
+      .eq('profile_id', user.id)
+      .maybeSingle(),
     supabase.from('student_subjects').select('id').eq('profile_id', user.id)
   ]);
 

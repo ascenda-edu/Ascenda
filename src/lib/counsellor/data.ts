@@ -14,6 +14,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/types/database';
 import { buildStepCompletion } from '@/lib/profile/completion';
 import { flagEmoji } from '@/lib/utils/flag';
+import { MS_PER_DAY, parseLocalDate, startOfToday } from '@/lib/utils/dates';
 import type {
   CounsellorStudent,
   CounsellorMatch,
@@ -37,8 +38,20 @@ import type { CounsellorDocument, EvolutionEntry } from '@/lib/data/student-demo
 
 type Client = SupabaseClient<Database>;
 
-const MS_PER_DAY = 1000 * 60 * 60 * 24;
 const GRADE_ORDER: Record<string, number> = { 'A*': 7, A: 6, B: 5, C: 4, D: 3, E: 2, U: 1 };
+
+// Throw instead of silently treating a failed query as an empty table — a
+// dropped RLS policy or network failure must surface in the counsellor
+// section's error boundary, not render as "0 students, all clear".
+const unwrap = <T,>(
+  res: { data: T | null; error: { message?: string } | null },
+  label: string
+): T | null => {
+  if (res.error) {
+    throw new Error(`counsellor data: ${label} query failed — ${res.error.message ?? 'unknown error'}`);
+  }
+  return res.data;
+};
 
 // The counsellor view is scoped to the seeded demo cohort. Founder/dev accounts
 // are also role='student' (so they keep their own student access) but should not
@@ -120,12 +133,6 @@ const formatSubject = (name: string | null, level: string | null): string => {
   return `${base} ${level}`.trim();
 };
 
-const startOfToday = (): Date => {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-};
-
 // ── program → {course, university, country} resolution (avoids the program_id
 //    multi-FK embed ambiguity by resolving in a separate, single-FK query) ─────
 
@@ -139,11 +146,11 @@ const resolvePrograms = async (supabase: Client, programIds: string[]): Promise<
   // the first 1000 silently fall back to 'University'/'Programme' in the UI.
   const CHUNK = 500;
   for (let i = 0; i < ids.length; i += CHUNK) {
-    const { data } = await supabase
+    const res = await supabase
       .from('programs')
       .select('id, course_name, universities(name, country)')
       .in('id', ids.slice(i, i + CHUNK));
-    for (const row of (data ?? []) as any[]) {
+    for (const row of (unwrap(res, 'programs') ?? []) as any[]) {
       const uni = Array.isArray(row.universities) ? row.universities[0] : row.universities;
       map.set(row.id, {
         courseName: row.course_name ?? 'Programme',
@@ -159,11 +166,11 @@ const nameMap = async (supabase: Client, profileIds: string[]): Promise<Map<stri
   const map = new Map<string, { name: string; flag: string }>();
   const ids = [...new Set(profileIds)].filter(Boolean);
   if (ids.length === 0) return map;
-  const { data } = await supabase
+  const res = await supabase
     .from('student_personal_information')
     .select('profile_id, first_name, last_name, nationality, resident_country')
     .in('profile_id', ids);
-  for (const r of (data ?? []) as Array<{
+  for (const r of (unwrap(res, 'student names') ?? []) as Array<{
     profile_id: string;
     first_name: string | null;
     last_name: string | null;
@@ -193,14 +200,25 @@ const buildStudents = async (
   // 1. base profiles (students only)
   let profileQuery = supabase.from('profiles').select('id, created_at').eq('role', 'student');
   if (opts.ids && opts.ids.length > 0) profileQuery = profileQuery.in('id', opts.ids);
-  const { data: profiles } = await profileQuery;
-  let ids = (profiles ?? []).map((p) => p.id);
+  const profiles = unwrap(await profileQuery, 'profiles') ?? [];
+  let ids = profiles.map((p) => p.id);
   if (opts.excludeId) ids = ids.filter((id) => id !== opts.excludeId);
   if (ids.length === 0) return [];
 
-  // 2. batched per-table fetches (these are bounded; safe under PostgREST's 1000-row cap)
+  // 2. Scope to the seeded demo cohort BEFORE fanning out the per-table
+  // fetches — no point loading subjects/apps/notes for profiles the email
+  // filter is about to discard. This also inherently drops empty/junk
+  // profile rows (no personal record → no email).
+  const personal = (unwrap(
+    await supabase.from('student_personal_information').select('*').in('profile_id', ids),
+    'student_personal_information'
+  ) ?? []) as any[];
+  const emailById = new Map<string, string | null>(personal.map((r) => [r.profile_id, r.email]));
+  ids = ids.filter((id) => inDemoCohort(emailById.get(id)));
+  if (ids.length === 0) return [];
+
+  // 3. batched per-table fetches (these are bounded; safe under PostgREST's 1000-row cap)
   const [
-    personalRes,
     academicRes,
     subjectsRes,
     lifestyleRes,
@@ -208,7 +226,6 @@ const buildStudents = async (
     appsRes,
     notesRes,
   ] = await Promise.all([
-    supabase.from('student_personal_information').select('*').in('profile_id', ids),
     supabase.from('student_academic_input').select('*').in('profile_id', ids),
     supabase.from('student_subjects').select('profile_id, subject_name, level, grade_value').in('profile_id', ids),
     supabase.from('student_lifestyle_preference').select('*').in('profile_id', ids),
@@ -223,19 +240,12 @@ const buildStudents = async (
       .in('student_profile_id', ids),
   ]);
 
-  const personal = personalRes.data ?? [];
-  const academic = (academicRes.data ?? []) as any[];
-  const subjects = (subjectsRes.data ?? []) as any[];
-  const lifestyle = (lifestyleRes.data ?? []) as any[];
-  const tests = (testsRes.data ?? []) as any[];
-  const apps = (appsRes.data ?? []) as any[];
-  const notes = (notesRes.data ?? []) as any[];
-
-  // Scope to the seeded demo cohort (see DEMO_COHORT_EMAIL_SUFFIX). This also
-  // inherently drops empty/junk profile rows (no personal record → no email).
-  const emailById = new Map<string, string | null>((personal as any[]).map((r) => [r.profile_id, r.email]));
-  ids = ids.filter((id) => inDemoCohort(emailById.get(id)));
-  if (ids.length === 0) return [];
+  const academic = (unwrap(academicRes, 'student_academic_input') ?? []) as any[];
+  const subjects = (unwrap(subjectsRes, 'student_subjects') ?? []) as any[];
+  const lifestyle = (unwrap(lifestyleRes, 'student_lifestyle_preference') ?? []) as any[];
+  const tests = (unwrap(testsRes, 'student_admissions_tests') ?? []) as any[];
+  const apps = (unwrap(appsRes, 'applications') ?? []) as any[];
+  const notes = (unwrap(notesRes, 'counsellor_notes') ?? []) as any[];
 
   // Matches per student, capped + ordered by score. Done per-student (not one
   // .in()) so a profile with a bloated match cache can't (a) blow past
@@ -252,7 +262,7 @@ const buildStudents = async (
         .limit(MATCH_CAP)
     )
   );
-  const matches = matchResults.flatMap((res) => (res.data ?? []) as any[]);
+  const matches = matchResults.flatMap((res) => (unwrap(res, 'student_matches') ?? []) as any[]);
 
   // 3. resolve program names/universities + applied-program deadlines
   const allProgramIds = [
@@ -264,11 +274,11 @@ const buildStudents = async (
   const appliedProgramIds = [...new Set(apps.map((a) => a.program_id))].filter(Boolean);
   let deadlinesByProgram = new Map<string, Array<{ id: string; name: string; date: string }>>();
   if (appliedProgramIds.length > 0) {
-    const { data: dls } = await supabase
+    const dlsRes = await supabase
       .from('deadlines')
       .select('id, program_id, name, deadline_date')
       .in('program_id', appliedProgramIds);
-    for (const d of (dls ?? []) as any[]) {
+    for (const d of (unwrap(dlsRes, 'deadlines') ?? []) as any[]) {
       if (!d.deadline_date) continue;
       const arr = deadlinesByProgram.get(d.program_id) ?? [];
       arr.push({ id: d.id, name: d.name, date: d.deadline_date });
@@ -308,7 +318,7 @@ const buildStudents = async (
     }
     return m;
   })();
-  const profileCreated = new Map((profiles ?? []).map((p) => [p.id, p.created_at] as const));
+  const profileCreated = new Map(profiles.map((p) => [p.id, p.created_at] as const));
 
   const today = startOfToday();
 
@@ -409,7 +419,7 @@ const buildStudents = async (
     const flags: StudentFlag[] = [];
     if (completionPct < 100) flags.push('profile_incomplete');
     const hasUrgentDeadline = studentDeadlines.some((d) => {
-      const days = Math.ceil((new Date(d.date).getTime() - today.getTime()) / MS_PER_DAY);
+      const days = Math.ceil((parseLocalDate(d.date).getTime() - today.getTime()) / MS_PER_DAY);
       return days >= 0 && days <= 14;
     });
     if (hasUrgentDeadline) flags.push('deadline_urgent');
@@ -478,7 +488,7 @@ export const deriveCohortStats = (students: CounsellorStudent[]): CohortStats =>
 
   const deadlinesThisWeek = students.flatMap((s) =>
     s.deadlines.filter((d) => {
-      const date = new Date(d.date);
+      const date = parseLocalDate(d.date);
       return date >= today && date <= inOneWeek;
     })
   ).length;
@@ -513,7 +523,7 @@ const withStudent = (students: CounsellorStudent[]): DeadlineWithStudent[] => {
       ...d,
       studentName: `${s.personal.firstName} ${s.personal.lastName}`.trim(),
       studentFlag: s.personal.flagEmoji,
-      daysUntil: Math.ceil((new Date(d.date).getTime() - today.getTime()) / MS_PER_DAY),
+      daysUntil: Math.ceil((parseLocalDate(d.date).getTime() - today.getTime()) / MS_PER_DAY),
     }))
   );
 };
@@ -523,8 +533,8 @@ export const deriveUpcomingDeadlines = (students: CounsellorStudent[], withinDay
   const cutoff = new Date(today);
   cutoff.setDate(cutoff.getDate() + withinDays);
   return withStudent(students)
-    .filter((d) => new Date(d.date) >= today && new Date(d.date) <= cutoff)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .filter((d) => parseLocalDate(d.date) >= today && parseLocalDate(d.date) <= cutoff)
+    .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
 };
 
 export const deriveAllDeadlines = (students: CounsellorStudent[]): DeadlineWithStudent[] =>
@@ -590,7 +600,7 @@ export const deriveAtRiskAlerts = (students: CounsellorStudent[]): AtRiskAlert[]
       });
     }
     s.deadlines.forEach((dl) => {
-      const daysUntil = Math.round((new Date(dl.date).getTime() - now) / MS_PER_DAY);
+      const daysUntil = Math.round((parseLocalDate(dl.date).getTime() - now) / MS_PER_DAY);
       const matchingApp = s.applications.find((a) => a.university === dl.university);
       if (daysUntil > 0 && daysUntil <= 14 && matchingApp && matchingApp.status === 'planning') {
         alerts.push({
@@ -647,25 +657,33 @@ export const deriveApplicationsWithPlatform = (students: CounsellorStudent[]): E
 // ── outcomes (own queries; outcomes page only) ──────────────────────────────
 
 export const loadOutcomes = async (supabase: Client, opts: { excludeId?: string } = {}): Promise<CounsellorOutcome[]> => {
-  const { data: studentProfiles } = await supabase.from('profiles').select('id').eq('role', 'student');
-  let ids = (studentProfiles ?? []).map((p) => p.id);
+  const studentProfiles = unwrap(
+    await supabase.from('profiles').select('id').eq('role', 'student'),
+    'profiles'
+  ) ?? [];
+  let ids = studentProfiles.map((p) => p.id);
   if (opts.excludeId) ids = ids.filter((id) => id !== opts.excludeId);
   if (ids.length === 0) return [];
 
   // Scope to the seeded demo cohort (matches the roster — see DEMO_COHORT_EMAIL_SUFFIX).
-  const { data: personalRows } = await supabase
-    .from('student_personal_information')
-    .select('profile_id, email')
-    .in('profile_id', ids);
-  const demoIds = new Set(((personalRows ?? []) as any[]).filter((r) => inDemoCohort(r.email)).map((r) => r.profile_id));
+  const personalRows = (unwrap(
+    await supabase
+      .from('student_personal_information')
+      .select('profile_id, email')
+      .in('profile_id', ids),
+    'student_personal_information'
+  ) ?? []) as any[];
+  const demoIds = new Set(personalRows.filter((r) => inDemoCohort(r.email)).map((r) => r.profile_id));
   ids = ids.filter((id) => demoIds.has(id));
   if (ids.length === 0) return [];
 
-  const { data: appsData } = await (supabase as any)
-    .from('applications')
-    .select('id, profile_id, program_id, status, platform, decision, decision_at, decision_conditions')
-    .in('profile_id', ids);
-  const apps = (appsData ?? []) as any[];
+  const apps = (unwrap(
+    await (supabase as any)
+      .from('applications')
+      .select('id, profile_id, program_id, status, platform, decision, decision_at, decision_conditions')
+      .in('profile_id', ids),
+    'applications'
+  ) ?? []) as any[];
   if (apps.length === 0) return [];
 
   // Tier per applied (profile, programme). Fetch per-student filtered to only the
@@ -687,7 +705,7 @@ export const loadOutcomes = async (supabase: Client, opts: { excludeId?: string 
     )
   );
   for (const res of matchResults) {
-    for (const m of (res.data ?? []) as any[]) {
+    for (const m of (unwrap(res, 'student_matches') ?? []) as any[]) {
       tierByKey.set(`${m.profile_id}:${m.program_id}`, tierFromMatchRow(m));
     }
   }
@@ -731,10 +749,10 @@ export const deriveOutcomeStats = (outcomes: CounsellorOutcome[]): OutcomeStats 
 // ── parents ──────────────────────────────────────────────────────────────────
 
 export const loadParentContacts = async (supabase: Client): Promise<ParentContact[]> => {
-  const { data } = await (supabase as unknown as { from: (t: string) => any })
-    .from('parent_contacts')
-    .select('*');
-  const rows = (data ?? []) as any[];
+  const rows = (unwrap(
+    await (supabase as unknown as { from: (t: string) => any }).from('parent_contacts').select('*'),
+    'parent_contacts'
+  ) ?? []) as any[];
   if (rows.length === 0) return [];
   const names = await nameMap(supabase, rows.map((r) => r.student_profile_id));
   const order = { 'needs-response': 0, active: 1, resolved: 2 } as const;
@@ -758,15 +776,19 @@ export const loadParentMessagesByContact = async (
   supabase: Client
 ): Promise<Record<string, ParentMessage[]>> => {
   const contactsClient = supabase as unknown as { from: (t: string) => any };
-  const { data: contacts } = await contactsClient.from('parent_contacts').select('id, student_profile_id');
-  const studentByContact = new Map<string, string>(
-    ((contacts ?? []) as any[]).map((c) => [c.id, c.student_profile_id])
-  );
-  const { data: msgs } = await contactsClient
-    .from('parent_messages')
-    .select('id, contact_id, sender, body, template, read_at, created_at');
+  const contacts = (unwrap(
+    await contactsClient.from('parent_contacts').select('id, student_profile_id'),
+    'parent_contacts'
+  ) ?? []) as any[];
+  const studentByContact = new Map<string, string>(contacts.map((c) => [c.id, c.student_profile_id]));
+  const msgs = (unwrap(
+    await contactsClient
+      .from('parent_messages')
+      .select('id, contact_id, sender, body, template, read_at, created_at'),
+    'parent_messages'
+  ) ?? []) as any[];
   const grouped: Record<string, ParentMessage[]> = {};
-  for (const m of (msgs ?? []) as any[]) {
+  for (const m of msgs) {
     const entry: ParentMessage = {
       id: m.id,
       parentContactId: m.contact_id,
@@ -788,16 +810,16 @@ export const loadParentMessagesByContact = async (
 // ── documents ─────────────────────────────────────────────────────────────────
 
 export const loadCounsellorDocuments = async (supabase: Client): Promise<CounsellorDocument[]> => {
-  const { data } = await (supabase as unknown as { from: (t: string) => any })
-    .from('student_documents')
-    .select('*');
-  const rows = (data ?? []) as any[];
+  const rows = (unwrap(
+    await (supabase as unknown as { from: (t: string) => any }).from('student_documents').select('*'),
+    'student_documents'
+  ) ?? []) as any[];
   if (rows.length === 0) return [];
   const names = await nameMap(supabase, rows.map((r) => r.student_profile_id));
   const today = startOfToday();
   return rows.map((r): CounsellorDocument => {
     let status = r.status as CounsellorDocument['status'];
-    if (status !== 'received' && r.due_date && new Date(r.due_date) < today) status = 'overdue';
+    if (status !== 'received' && r.due_date && parseLocalDate(r.due_date) < today) status = 'overdue';
     return {
       id: r.id,
       studentId: r.student_profile_id,
@@ -815,11 +837,13 @@ export const loadCounsellorDocuments = async (supabase: Client): Promise<Counsel
 // ── student evolution timeline (single student) ─────────────────────────────
 
 export const loadStudentEvolution = async (supabase: Client, studentId: string): Promise<EvolutionEntry[]> => {
-  const { data } = await (supabase as unknown as { from: (t: string) => any })
-    .from('counsellor_notes')
-    .select('id, body, note_type, created_at')
-    .eq('student_profile_id', studentId);
-  const rows = (data ?? []) as any[];
+  const rows = (unwrap(
+    await (supabase as unknown as { from: (t: string) => any })
+      .from('counsellor_notes')
+      .select('id, body, note_type, created_at')
+      .eq('student_profile_id', studentId),
+    'counsellor_notes'
+  ) ?? []) as any[];
   const categoryFor = (t: string): EvolutionEntry['category'] =>
     t === 'flag' ? 'goal' : t === 'update' ? 'milestone' : 'counsellor_note';
   const titleFor = (t: string): string =>

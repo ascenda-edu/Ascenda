@@ -1,16 +1,39 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { DashboardShell } from '@/components/layout/shell';
 import { PageHero } from '@/components/layout/page-hero';
 import { SectionNav } from '@/components/layout/section-nav';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ListChecks } from 'lucide-react';
 import { PLANNER_SECTION_ITEMS } from '@/components/layout/navigation';
-import { CrossApplicationTasks, type SeedTask } from '@/components/applications/cross-application-tasks';
-import { DEMO_REQUIREMENTS, DEMO_NUDGES, DEMO_TIMELINE_DEADLINES } from '@/lib/data/student-demo-data';
+import {
+  CrossApplicationTasks,
+  type SeedTask,
+  type TaskApplicationOption
+} from '@/components/applications/cross-application-tasks';
 
 export const metadata: Metadata = {
   title: 'Tasks'
+};
+
+type ChecklistJoin = {
+  id: string;
+  task_name: string;
+  status: 'todo' | 'doing' | 'done';
+  due_date: string | null;
+};
+
+type ApplicationJoin = {
+  id: string;
+  program: {
+    name: string | null;
+    universities: { name: string | null } | null;
+  } | null;
+  application_checklist: ChecklistJoin[] | null;
 };
 
 export default async function TasksPage() {
@@ -23,41 +46,43 @@ export default async function TasksPage() {
     redirect('/login');
   }
 
-  // Build a unified task feed from requirements, nudges, and deadlines.
+  const { data: applicationRows, error: applicationsError } = await supabase
+    .from('applications')
+    .select(`
+      id,
+      program:programs(name:course_name, universities(name)),
+      application_checklist(id, task_name, status, due_date)
+    `)
+    .eq('profile_id', user.id);
+
+  // A failed query must hit the error boundary — rendering the "No tasks yet"
+  // empty state to a user who has tasks is worse than an error page.
+  if (applicationsError) {
+    throw new Error(`tasks: applications query failed — ${applicationsError.message}`);
+  }
+
+  const apps = ((applicationRows ?? []) as unknown as ApplicationJoin[]) ?? [];
+  const appLabel = (app: ApplicationJoin) => app.program?.universities?.name ?? app.program?.name ?? 'Application';
+
+  const applicationOptions: TaskApplicationOption[] = apps.map((app) => ({
+    id: app.id,
+    label: appLabel(app)
+  }));
+
   const seed: SeedTask[] = [];
-
-  DEMO_REQUIREMENTS.forEach((req) => {
-    req.cells
-      .filter((cell) => cell.status !== 'not-required')
-      .forEach((cell, i) => {
-        seed.push({
-          id: `${req.id}-cell-${i}`,
-          name: `${cell.detail ?? cell.category} — ${req.university}`,
-          done: cell.status === 'complete',
-          group: req.university
-        });
+  for (const app of apps) {
+    const label = appLabel(app);
+    for (const item of app.application_checklist ?? []) {
+      seed.push({
+        id: item.id,
+        name: item.task_name,
+        done: item.status === 'done',
+        dueDate: item.due_date ?? undefined,
+        group: label,
+        applicationId: app.id
       });
-  });
-
-  DEMO_NUDGES.forEach((n) => {
-    seed.push({
-      id: `nudge-${n.id}`,
-      name: n.title,
-      done: false,
-      dueDate: n.dueDate,
-      group: n.university ?? 'General'
-    });
-  });
-
-  DEMO_TIMELINE_DEADLINES.slice(0, 6).forEach((d) => {
-    seed.push({
-      id: `deadline-${d.id}`,
-      name: d.title,
-      done: false,
-      dueDate: d.date,
-      group: d.university
-    });
-  });
+    }
+  }
 
   return (
     <DashboardShell>
@@ -66,11 +91,24 @@ export default async function TasksPage() {
         tone="student"
         eyebrow="Tasks"
         title="Everything still to do"
-        description="Action items across all your applications. Mark them off as you go."
+        description="Action items across all your applications. Mark them off as you go — changes save to your applications."
         accent="Action board"
         breadcrumbs={<Breadcrumbs />}
       />
-      <CrossApplicationTasks initialTasks={seed} />
+      {applicationOptions.length === 0 ? (
+        <EmptyState
+          icon={ListChecks}
+          title="No tasks yet — start an application"
+          description="Add a program from your shortlist and its requirements become trackable tasks here."
+          action={
+            <Button asChild size="sm">
+              <Link href="/university-search/shortlist">Add from shortlist</Link>
+            </Button>
+          }
+        />
+      ) : (
+        <CrossApplicationTasks initialTasks={seed} applicationOptions={applicationOptions} />
+      )}
     </DashboardShell>
   );
 }

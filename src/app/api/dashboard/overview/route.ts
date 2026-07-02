@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
 import { PROFILE_STEPS } from '@/lib/profile/steps';
 import { buildStepCompletion } from '@/lib/profile/completion';
 import { loadMatchesForProfile } from '@/lib/matching/service';
@@ -25,7 +25,9 @@ const formatShortDate = (value?: string | null) => {
 };
 
 export async function GET() {
-  const supabase = createServerSupabaseClient();
+  // Route handlers need the route-handler factory — the Server-Component one
+  // drops refreshed session cookies (its cookie set/remove are no-ops).
+  const supabase = createRouteHandlerSupabaseClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

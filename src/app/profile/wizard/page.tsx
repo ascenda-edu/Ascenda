@@ -29,31 +29,19 @@ export default async function ProfileWizardPage({ searchParams }: ProfileWizardP
     redirect('/login');
   }
 
-  const { data: personal } = await supabase
-    .from('student_personal_information')
-    .select('*')
-    .eq('profile_id', user.id)
-    .single();
-  const { data: academicInput } = await supabase
-    .from('student_academic_input')
-    .select('*')
-    .eq('profile_id', user.id)
-    .single();
-  const { data: lifestyle } = await supabase
-    .from('student_lifestyle_preference')
-    .select('*')
-    .eq('profile_id', user.id)
-    .single();
-  const { data: subjects } = await supabase
-    .from('student_subjects')
-    .select('id')
-    .eq('profile_id', user.id);
-  let initialPayload = null;
-  try {
-    initialPayload = await buildStudentProfilePayload(supabase, user.id);
-  } catch (error) {
-    console.error('Failed to preload intake payload', error);
-  }
+  // maybeSingle + Promise.all: new users have no rows yet, and the four
+  // queries are independent — no reason to waterfall them.
+  const [{ data: personal }, { data: academicInput }, { data: lifestyle }, { data: subjects }, initialPayload] =
+    await Promise.all([
+      supabase.from('student_personal_information').select('*').eq('profile_id', user.id).maybeSingle(),
+      supabase.from('student_academic_input').select('*').eq('profile_id', user.id).maybeSingle(),
+      supabase.from('student_lifestyle_preference').select('*').eq('profile_id', user.id).maybeSingle(),
+      supabase.from('student_subjects').select('id').eq('profile_id', user.id),
+      buildStudentProfilePayload(supabase, user.id).catch((error) => {
+        console.error('Failed to preload intake payload', error);
+        return null;
+      })
+    ]);
 
   const recordGroup: ProfileRecordGroup = {
     personal: personal ?? null,
