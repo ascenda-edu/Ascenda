@@ -29,7 +29,9 @@ export default async function MatchesPage() {
     redirect('/login');
   }
 
-  const matchResult = await loadMatchesForProfile(supabase, user.id, { resultLimit: 900 });
+  // 300 (≈100/tier) covers many "show more" clicks while keeping the RSC
+  // payload a third of the previous 900-match serialization.
+  const matchResult = await loadMatchesForProfile(supabase, user.id, { resultLimit: 300 });
 
   if (matchResult.error) {
     return (

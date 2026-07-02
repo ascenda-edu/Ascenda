@@ -477,25 +477,37 @@ export const loadMatchesForProfile = async (
       const isFreshAgainstProfile = profileFreshnessMs === null || latestCreatedAt.getTime() >= profileFreshnessMs;
       if (age >= 0 && age <= PROGRAM_CACHE_TTL_MS && isFreshAgainstProfile) {
         const windowStart = new Date(latestCreatedAt.getTime() - PROGRAM_CACHE_WINDOW_MS).toISOString();
-        // Paginate cache reads — Supabase defaults to 1000 rows max
+        // Paginate cache reads — Supabase defaults to 1000 rows max. When the
+        // caller only wants the top N, stop after N plus a buffer covering the
+        // recognition boost (≤ +5 pts) instead of loading the whole cache.
+        const cacheFetchCap = options.resultLimit
+          ? Math.min(2000, options.resultLimit + 200)
+          : Number.POSITIVE_INFINITY;
         const cachedRows: any[] = [];
         let cacheOffset = 0;
+        let cacheReadFailed = false;
         const CACHE_PAGE = 1000;
-        while (true) {
+        while (cachedRows.length < cacheFetchCap) {
+          const pageTo = Math.min(cacheOffset + CACHE_PAGE, cacheFetchCap) - 1;
           const { data: page, error: pageError } = await supabase
             .from('student_matches')
             .select('program_id, score, breakdown, created_at')
             .eq('profile_id', profileId)
             .gte('created_at', windowStart)
             .order('score', { ascending: false })
-            .range(cacheOffset, cacheOffset + CACHE_PAGE - 1);
-          if (pageError || !page || page.length === 0) break;
+            .range(cacheOffset, pageTo);
+          if (pageError) {
+            // A failed page mid-pagination means the rows we have are an
+            // arbitrary prefix — recompute rather than serve a partial cache.
+            cacheReadFailed = true;
+            break;
+          }
+          if (!page || page.length === 0) break;
           cachedRows.push(...page);
           if (page.length < CACHE_PAGE) break;
           cacheOffset += CACHE_PAGE;
         }
-        const cachedError = null;
-        if (!cachedError && cachedRows && cachedRows.length > 0) {
+        if (!cacheReadFailed && cachedRows.length > 0) {
           const cachedMatches = cachedRows
             .map((row) => {
               const breakdown = (row.breakdown ?? {}) as Record<string, number | string>;
@@ -542,8 +554,9 @@ export const loadMatchesForProfile = async (
             .filter((value): value is EnrichedMatch => value !== null);
 
           if (cachedMatches.length > 0) {
+            const cachedRowByProgramId = new Map<string, any>(cachedRows.map((r) => [r.program_id, r]));
             const cachedWithRecognition = cachedMatches.map((m) => {
-              const bd = (cachedRows.find((r) => r.program_id === m.program.id)?.breakdown ?? {}) as Record<string, unknown>;
+              const bd = (cachedRowByProgramId.get(m.program.id)?.breakdown ?? {}) as Record<string, unknown>;
               const recScore = typeof bd.university_recognition_score === 'number' ? bd.university_recognition_score : 3;
               return { match: m, recScore };
             });
@@ -576,18 +589,25 @@ export const loadMatchesForProfile = async (
   const targetFields = resolveTargetFields(studentClusters);
   const fieldLabels = targetFields ? Array.from(targetFields) : null;
 
+  // Fire all catalogue pages concurrently — the range boundaries are known up
+  // front, and awaiting them one-by-one made this a ~10-round-trip waterfall
+  // inside a user-facing request.
+  const pageRanges: Array<[number, number]> = [];
+  for (let from = 0; from < programLimit; from += PROGRAM_PAGE_SIZE) {
+    pageRanges.push([from, Math.min(from + PROGRAM_PAGE_SIZE - 1, programLimit - 1)]);
+  }
+  const pageResults = await Promise.all(
+    pageRanges.map(([rangeFrom, rangeTo]) => {
+      let programQuery = supabase.from('programs').select('id,metadata');
+      // If the student has field preferences, filter to matching programs at the DB level
+      if (fieldLabels && fieldLabels.length > 0) {
+        programQuery = programQuery.in('field', fieldLabels);
+      }
+      return applyProgramVisibilityFilters(programQuery).range(rangeFrom, rangeTo);
+    })
+  );
   const programsData: ProgramSummaryRow[] = [];
-  let offset = 0;
-  while (programsData.length < programLimit) {
-    const rangeFrom = offset;
-    const rangeTo = Math.min(offset + PROGRAM_PAGE_SIZE - 1, programLimit - 1);
-    let programQuery = supabase.from('programs').select('id,metadata');
-    // If the student has field preferences, filter to matching programs at the DB level
-    if (fieldLabels && fieldLabels.length > 0) {
-      programQuery = programQuery.in('field', fieldLabels);
-    }
-    programQuery = applyProgramVisibilityFilters(programQuery).range(rangeFrom, rangeTo);
-    const { data, error: programsError } = await programQuery;
+  for (const { data, error: programsError } of pageResults) {
     if (programsError) {
       console.error('Failed to load catalog data', { programsError });
       return {
@@ -600,7 +620,6 @@ export const loadMatchesForProfile = async (
     if (!data || data.length === 0) break;
     programsData.push(...data);
     if (data.length < PROGRAM_PAGE_SIZE) break;
-    offset += PROGRAM_PAGE_SIZE;
   }
 
   if (programsData.length === 0) {
@@ -691,12 +710,18 @@ export const loadMatchesForProfile = async (
     'course_tier'
   ].join(',');
 
+  // Batch size stays at 200 (URL-length bound for .in()), but the batches are
+  // independent — run them concurrently instead of ~25 serial round trips.
+  const courseBatchResults = await Promise.all(
+    chunk(programIds, 200).map((batch) =>
+      supabase
+        .from('course_scoring_v1' as any)
+        .select(courseColumns)
+        .in('course_id', batch)
+    )
+  );
   const courseRows: CourseScoringRow[] = [];
-  for (const batch of chunk(programIds, 200)) {
-    const { data, error } = await supabase
-      .from('course_scoring_v1' as any)
-      .select(courseColumns)
-      .in('course_id', batch);
+  for (const { data, error } of courseBatchResults) {
     if (error) {
       console.error('Failed to load catalog data', { courseScoringError: error });
       return {
@@ -805,6 +830,11 @@ export const loadMatchesForProfile = async (
     });
   }
 
+  const toKey = (value: { university: string; course: string; ucas_code?: string | null }) =>
+    `${value.university}::${value.course}::${value.ucas_code ?? ''}`;
+  const courseLookup = new Map(enrichedCourses.map((course) => [toKey(course), course]));
+  const courseByProgramId = new Map(enrichedCourses.map((course) => [course.program_id, course]));
+
   // Apply result limit per-tier to ensure balanced Reach/Match/Safe representation.
   // Without this, a top-N cut returns only Safety results (highest admission %).
   // After capping, we pin programs from high-recognition universities (score ≥ 9) that
@@ -823,7 +853,7 @@ export const loadMatchesForProfile = async (
     const pinnedReach: RankedCourseMatch[] = [];
     const pinnedUniCounts = new Map<string, number>();
     for (const m of cutOffReach) {
-      const course = enrichedCourses.find((c) => c.program_id === m.program_id);
+      const course = m.program_id ? courseByProgramId.get(m.program_id) : undefined;
       if (!course) continue;
       const recScore = recognitionByUniId.get(course.university_id) ?? 3;
       if (recScore < 9) continue;
@@ -839,11 +869,6 @@ export const loadMatchesForProfile = async (
   } else {
     limited = ranked;
   }
-
-  const toKey = (value: { university: string; course: string; ucas_code?: string | null }) =>
-    `${value.university}::${value.course}::${value.ucas_code ?? ''}`;
-  const courseLookup = new Map(enrichedCourses.map((course) => [toKey(course), course]));
-  const courseByProgramId = new Map(enrichedCourses.map((course) => [course.program_id, course]));
 
   const assignTierFromFit = (fit: RankedCourseMatch['tier_fit']): MatchTier => {
     if (fit === 'Safety') return 'Safe';
@@ -939,17 +964,23 @@ export const loadMatchesForProfile = async (
         university_recognition_score: recognitionByUniId.get(match.university.id) ?? 3
       }
     }));
+    // Rebuild the cache fail-safe: if the clear fails, don't insert (we'd
+    // duplicate rows); if any insert batch fails, wipe the partial cache —
+    // an empty cache recomputes next request, but a truncated one would be
+    // served as authoritative for the full 24h TTL.
     const { error: deleteError } = await supabase.from('student_matches').delete().eq('profile_id', profileId);
     if (deleteError) {
-      console.warn('Failed to clear cached matches', deleteError);
-    }
-    // Insert in batches to avoid payload size limits
-    for (let i = 0; i < cachePayload.length; i += 500) {
-      const batch = cachePayload.slice(i, i + 500);
-      const { error: insertError } = await supabase.from('student_matches').insert(batch);
-      if (insertError) {
-        console.warn(`Failed to persist cached matches batch ${i}`, insertError);
-        break;
+      console.warn('Failed to clear cached matches — skipping cache rebuild', deleteError);
+    } else {
+      // Insert in batches to avoid payload size limits
+      for (let i = 0; i < cachePayload.length; i += 500) {
+        const batch = cachePayload.slice(i, i + 500);
+        const { error: insertError } = await supabase.from('student_matches').insert(batch);
+        if (insertError) {
+          console.warn(`Failed to persist cached matches batch ${i} — clearing partial cache`, insertError);
+          await supabase.from('student_matches').delete().eq('profile_id', profileId);
+          break;
+        }
       }
     }
   }
