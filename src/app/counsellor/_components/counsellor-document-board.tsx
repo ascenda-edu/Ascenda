@@ -116,13 +116,15 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
           ? `Could you upload ${doc.documentName} when you have a sec?`
           : `Could you check in with ${targetLabel} about ${doc.documentName}? It's outstanding.`;
 
+      // Notify the STUDENT's profile — a nudge on the counsellor's own row
+      // would be visible only to the counsellor under notifications RLS.
       await insertNotification(supabase, {
-        profile_id: userId,
+        profile_id: doc.studentId,
         kind: 'doc_nudge',
         title:
           target === 'student'
-            ? `Sarah is asking about ${doc.documentName}`
-            : `Sarah is following up on ${doc.documentName}`,
+            ? `Your counsellor is asking about ${doc.documentName}`
+            : `Your counsellor is following up on ${doc.documentName}`,
         body: askAsStudent,
         href: null
       });

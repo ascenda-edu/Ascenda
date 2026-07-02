@@ -114,7 +114,7 @@ export const useHelpRequests = (): UseHelpRequestsResult => {
           await insertNotification(supabase, {
             profile_id: req.student_profile_id,
             kind: 'help_accepted',
-            title: 'Sarah accepted your help request',
+            title: 'Your counsellor accepted your help request',
             body: req.university ? `${req.university}${req.program ? ` · ${req.program}` : ''}` : null,
             href: req.application_id ? `/applications/${req.application_id}` : null
           });

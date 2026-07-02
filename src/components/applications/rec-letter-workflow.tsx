@@ -6,7 +6,7 @@ import { Check, FileSignature, Mail, PenLine, Send, Upload } from 'lucide-react'
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast';
 import { useSupabase } from '@/hooks/useSupabase';
-import { insertHelpRequest, insertNotification } from '@/lib/demo/help-request-client';
+import { insertHelpRequest } from '@/lib/demo/help-request-client';
 import type { RecLetterRequest, RecLetterStatus } from '@/lib/data/student-demo-data';
 
 const REMIND_STORAGE_KEY = 'ascenda-letter-reminders';
@@ -101,8 +101,8 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
     }
   }, [reminders]);
 
-  // Student-side "Remind teacher" creates a real help_request to the
-  // counsellor, asking Sarah to chase the recommender on Greg's behalf.
+  // Student-side "Remind teacher" creates a real help_request asking the
+  // counsellor to chase the recommender on the student's behalf.
   // This is the honest version of the demo claim: the chase happens
   // through the platform, not out-of-band email.
   const handleRemind = async (letter: RecLetterRequest) => {
@@ -119,7 +119,7 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
       const target = letter.universities[0] ?? 'one of my applications';
       const subject = `Help chasing ${letter.teacherName} for ${target} reference`;
       const body = [
-        `Hi Sarah,`,
+        `Hi,`,
         '',
         `${letter.teacherName} (${letter.subject} · ${letter.relationship}) is on my reference list for ${letter.universities.join(', ')} and the letter is still at the ${letter.status} stage.`,
         letter.requestedDate
@@ -128,11 +128,13 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
         '',
         'Could you give them a quick nudge? I don’t want to keep pinging them myself.',
         '',
-        'Thanks,',
-        'Greg'
+        'Thanks!'
       ].join('\n');
 
-      const inserted = await insertHelpRequest(supabase, {
+      // The help_requests insert trigger notifies the counsellor side —
+      // inserting a second notification here double-pings the demo inbox and
+      // deep-links a real student to /counsellor, which their role bounces.
+      await insertHelpRequest(supabase, {
         student_profile_id: userId,
         application_id: letter.id,
         university: target,
@@ -141,21 +143,9 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
         body
       });
 
-      try {
-        await insertNotification(supabase, {
-          profile_id: userId,
-          kind: 'help_request',
-          title: `Chase ${letter.teacherName} for ${target}`,
-          body: `${letter.teacherName} · ${letter.subject}`,
-          href: `/counsellor?help=${inserted.id}`
-        });
-      } catch (err) {
-        console.warn('rec-letter remind notify failed', err);
-      }
-
       setReminders((prev) => ({ ...prev, [letter.id]: Date.now() }));
       showToast({
-        title: `Sarah will follow up with ${letter.teacherName}`,
+        title: `Your counsellor will follow up with ${letter.teacherName}`,
         description: 'Tracked in your counsellor inbox',
         variant: 'success'
       });
@@ -275,13 +265,13 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
                 )}
               </div>
 
-              {/* Remind affordance — ask Sarah to chase the recommender. */}
+              {/* Remind affordance — ask the counsellor to chase the recommender. */}
               {(letter.status === 'requested' || letter.status === 'writing') ? (
                 <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
                   {reminders[letter.id] ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200/60 bg-sky-500/10 px-3 py-1 text-[11px] font-semibold text-sky-700 dark:text-sky-300">
                       <Send className="h-3 w-3" aria-hidden />
-                      Sarah notified · {formatReminderAge(reminders[letter.id])}
+                      Counsellor notified · {formatReminderAge(reminders[letter.id])}
                     </span>
                   ) : (
                     <button
@@ -291,7 +281,7 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
                       className="inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1 text-[11px] font-semibold text-muted-foreground transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted/60 hover:text-foreground disabled:cursor-wait disabled:opacity-60"
                     >
                       <Send className="h-3 w-3" aria-hidden />
-                      {busy === letter.id ? 'Sending…' : `Ask Sarah to chase ${letter.teacherName.split(' ')[0]}`}
+                      {busy === letter.id ? 'Sending…' : `Ask your counsellor to chase ${letter.teacherName.split(' ')[0]}`}
                     </button>
                   )}
                   <span className="ml-auto text-[10px] uppercase tracking-[0.2em] text-muted-foreground">

@@ -81,6 +81,7 @@ export interface HelpMeeting {
   duration_minutes: number;
   location: string | null;
   status: HelpMeetingStatus;
+  status_changed_by: 'student' | 'counsellor' | null;
   created_at: string;
 }
 

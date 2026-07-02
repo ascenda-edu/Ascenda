@@ -7,6 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   HelpMeeting,
   HelpMeetingInsert,
+  HelpMeetingStatus,
   HelpMessage,
   HelpMessageInsert,
   HelpNote,
@@ -191,4 +192,18 @@ export const insertHelpMeeting = async (supabase: AnyClient, row: HelpMeetingIns
   const { data, error } = await tbl(supabase, 'help_meetings').insert(row).select('*').single();
   if (error) throw error;
   return data as HelpMeeting;
+};
+
+export const updateHelpMeetingStatus = async (
+  supabase: AnyClient,
+  id: string,
+  status: HelpMeetingStatus,
+  actor: 'student' | 'counsellor'
+) => {
+  // status_changed_by drives the trg_help_meeting_status_notify fan-out —
+  // auth.uid() can't tell which side of the single-account demo acted.
+  const { error } = await tbl(supabase, 'help_meetings')
+    .update({ status, status_changed_by: actor })
+    .eq('id', id);
+  if (error) throw error;
 };

@@ -7,14 +7,15 @@ import {
   insertHelpMeeting,
   insertHelpMessage,
   insertHelpNote,
-  insertNotification,
   listHelpMeetings,
   listHelpMessages,
   listHelpNotes,
+  updateHelpMeetingStatus,
   updateHelpRequestStatus
 } from '@/lib/demo/help-request-client';
 import type {
   HelpMeeting,
+  HelpMeetingStatus,
   HelpMessage,
   HelpNote,
   HelpRequest,
@@ -35,6 +36,7 @@ export interface UseHelpThreadResult {
     durationMinutes?: number;
     location?: string;
   }) => Promise<void>;
+  setMeetingStatus: (meeting: HelpMeeting, status: HelpMeetingStatus, actor: 'student' | 'counsellor') => Promise<void>;
   setStatus: (status: HelpRequestStatus) => Promise<void>;
 }
 
@@ -153,34 +155,15 @@ export const useHelpThread = (requestId: string | null): UseHelpThreadResult => 
       if (!requestId || !currentProfileId || !request) return;
       const trimmed = body.trim();
       if (!trimmed) return;
+      // The trg_help_message_notify DB trigger notifies the other side —
+      // a student session can't insert onto a counsellor's notification row
+      // under RLS, so the fan-out has to happen server-side.
       await insertHelpMessage(supabase, {
         request_id: requestId,
         author_profile_id: currentProfileId,
         author_role: authorRole,
         body: trimmed
       });
-      // Notify the OTHER side. Counsellor reply → student inbox.
-      // Student reply → counsellor inbox. In the single-user demo, the
-      // profile_id is the same for both — the audience tag is what keeps
-      // the two inboxes separate.
-      try {
-        const targetAudience = authorRole === 'counsellor' ? 'student' : 'counsellor';
-        const targetHref =
-          targetAudience === 'counsellor' ? `/counsellor?help=${requestId}` : `/applications?help=${requestId}`;
-        await insertNotification(supabase, {
-          profile_id: request.student_profile_id,
-          audience: targetAudience,
-          kind: authorRole === 'counsellor' ? 'help_reply_from_counsellor' : 'help_reply_from_student',
-          title:
-            authorRole === 'counsellor'
-              ? 'Sarah replied to your help request'
-              : 'Greg replied to a help request',
-          body: trimmed.slice(0, 120),
-          href: targetHref
-        });
-      } catch (err) {
-        console.warn('reply notify failed', err);
-      }
       await refresh();
     },
     [requestId, currentProfileId, request, supabase, refresh]
@@ -214,6 +197,7 @@ export const useHelpThread = (requestId: string | null): UseHelpThreadResult => 
       location?: string;
     }) => {
       if (!requestId || !currentProfileId || !request) return;
+      // trg_help_meeting_insert_notify notifies the student server-side.
       await insertHelpMeeting(supabase, {
         request_id: requestId,
         counsellor_profile_id: currentProfileId,
@@ -224,27 +208,21 @@ export const useHelpThread = (requestId: string | null): UseHelpThreadResult => 
         location: location ?? null,
         status: 'proposed'
       });
-      try {
-        await insertNotification(supabase, {
-          profile_id: request.student_profile_id,
-          audience: 'student',
-          kind: 'help_meeting_proposed',
-          title: 'Sarah proposed a meeting',
-          body: `${title} · ${new Date(scheduledFor).toLocaleString('en-GB', {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit'
-          })}`,
-          href: `/applications?help=${requestId}`
-        });
-      } catch (err) {
-        console.warn('meeting notify failed', err);
-      }
       await refresh();
     },
     [requestId, currentProfileId, request, supabase, refresh]
+  );
+
+  const setMeetingStatus = useCallback(
+    async (meeting: HelpMeeting, status: HelpMeetingStatus, actor: 'student' | 'counsellor') => {
+      if (!requestId || !request) return;
+      // status_changed_by tells trg_help_meeting_status_notify which side
+      // acted (auth.uid() can't distinguish the two sides of the demo
+      // account); the trigger notifies the other side server-side.
+      await updateHelpMeetingStatus(supabase, meeting.id, status, actor);
+      await refresh();
+    },
+    [requestId, request, supabase, refresh]
   );
 
   const setStatus = useCallback(
@@ -256,5 +234,16 @@ export const useHelpThread = (requestId: string | null): UseHelpThreadResult => 
     [requestId, supabase, refresh]
   );
 
-  return { request, messages, notes, meetings, loading, reply, addNote, proposeMeeting, setStatus };
+  return {
+    request,
+    messages,
+    notes,
+    meetings,
+    loading,
+    reply,
+    addNote,
+    proposeMeeting,
+    setMeetingStatus,
+    setStatus
+  };
 };
