@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
+import { checkRateLimit } from '@/lib/api/rate-limit';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? '' });
 
@@ -120,6 +121,13 @@ export async function POST(req: NextRequest) {
     } = await supabase.auth.getUser();
     if (!user) {
       return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401 });
+    }
+
+    // Bound per-user LLM spend — nothing else stops a scripted request loop.
+    if (!checkRateLimit(`chat:${user.id}`, { limit: 20, windowMs: 60_000 })) {
+      return new Response(JSON.stringify({ error: 'Too many requests — try again in a minute' }), {
+        status: 429
+      });
     }
 
     const body = await req.json();

@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
-import { defaultWeights } from '@/lib/matching/config';
 import { loadMatchesForProfile } from '@/lib/matching/service';
 
 export async function GET(request: NextRequest) {
@@ -13,29 +12,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Extract weights from query params
   const searchParams = request.nextUrl.searchParams;
-  const parseWeight = (key: string, fallback: number) => {
-    const raw = searchParams.get(key);
-    const value = raw === null ? NaN : parseFloat(raw);
-    if (!Number.isFinite(value) || value < 0) return fallback;
-    return value;
-  };
 
-  const weights = {
-    eligibility: parseWeight('w_eligibility', defaultWeights.eligibility),
-    academicFit: parseWeight('w_academic', defaultWeights.academicFit),
-    preferenceFit: parseWeight('w_preference', defaultWeights.preferenceFit),
-    outcomes: parseWeight('w_outcomes', defaultWeights.outcomes)
-  };
-  const weightTotal = weights.eligibility + weights.academicFit + weights.preferenceFit + weights.outcomes;
-  const safeWeights = weightTotal > 0 ? weights : defaultWeights;
+  // The v4 engine has no tunable weights — reject the legacy w_* params
+  // instead of silently ignoring them (callers assumed they worked).
+  const legacyWeightParams = ['w_eligibility', 'w_academic', 'w_preference', 'w_outcomes'].filter((key) =>
+    searchParams.has(key)
+  );
+  if (legacyWeightParams.length > 0) {
+    return NextResponse.json(
+      { error: `Unsupported parameters: ${legacyWeightParams.join(', ')} — match weights are no longer tunable` },
+      { status: 400 }
+    );
+  }
 
   const forceRefresh = searchParams.get('refresh') === '1';
 
   const matchResult = await loadMatchesForProfile(supabase, user.id, {
     resultLimit: 20,
-    weights: safeWeights,
     forceRefresh
   });
 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, Clock as ClockIcon, BookOpen, MapPin, GraduationCap, Target, FileText } from 'lucide-react';
-import type { CounsellorStudent } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorStudent } from '@/lib/counsellor/types';
 import { NotesPanel } from './notes-panel';
 import { PortfolioBalance } from './portfolio-balance';
 import { EvolutionTimeline } from '@/components/profile/evolution-timeline';

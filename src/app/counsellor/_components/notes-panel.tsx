@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { MessageSquare, Flag, RefreshCw, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { CounsellorNote } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorNote } from '@/lib/counsellor/types';
 
 interface NotesPanelProps {
   notes: CounsellorNote[];

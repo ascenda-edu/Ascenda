@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, XCircle, Clock, MinusCircle, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { stagger, cardFade } from '@/lib/motion';
-import type { OutcomeResult, MatchTier, CounsellorOutcome } from '@/lib/data/counsellor-dummy-data';
+import type { OutcomeResult, MatchTier, CounsellorOutcome } from '@/lib/counsellor/types';
 import type { OutcomeStats } from '@/lib/counsellor/data';
 
 const RESULT_CONFIG: Record<OutcomeResult, { icon: typeof CheckCircle2; color: string; bg: string; label: string }> = {

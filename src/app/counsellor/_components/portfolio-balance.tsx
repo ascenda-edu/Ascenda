@@ -2,7 +2,7 @@
 
 import { AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { CounsellorStudent, MatchTier } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorStudent, MatchTier } from '@/lib/counsellor/types';
 import { MessageStudentButton } from './message-student-button';
 
 interface PortfolioBalanceProps {

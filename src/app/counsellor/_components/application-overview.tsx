@@ -6,7 +6,7 @@ import { LayoutGrid, List, ChevronRight, Filter } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { stagger, cardFade } from '@/lib/motion';
-import type { ApplicationStatus, ApplicationPlatform, EnrichedApplication } from '@/lib/data/counsellor-dummy-data';
+import type { ApplicationStatus, ApplicationPlatform, EnrichedApplication } from '@/lib/counsellor/types';
 
 const STATUS_CONFIG: Record<ApplicationStatus, { label: string; color: string; bg: string; border: string }> = {
   planning: { label: 'Planning', color: 'text-sky-600', bg: 'bg-sky-500/10', border: 'border-l-sky-500' },

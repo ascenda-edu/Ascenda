@@ -1,11 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { MatchingWeights } from './config';
 import { filterVisiblePrograms, getFlaggedProgramIds } from '../catalog/visibility';
 import type { Database } from '../types/database';
 import type { EnrichedMatch, MissingProfileSection } from './types';
 import type { MatchTier } from './match-tier';
 import type { StudentProfilePayload } from '@/lib/profile/intake-types';
 import { scoreStudentProfile } from '@/lib/scoring/student_scoring';
+import { mapIntakeRowsToPayload } from '@/lib/scoring/student_score_loader';
 import type { CourseRecord, EnrichedCourseRecord } from '@/lib/tiering/course_tiering';
 import { rankCourseMatches, resolveTargetFields, type RankedCourseMatch } from '@/lib/matching/matching_engine';
 
@@ -22,7 +22,6 @@ type Client = SupabaseClient<Database>;
 type LoadMatchesOptions = {
   programLimit?: number;
   resultLimit?: number;
-  weights?: MatchingWeights;
   forceRefresh?: boolean;
 };
 
@@ -36,112 +35,6 @@ export type MatchComputationResult = {
 const PROGRAM_PAGE_SIZE = 500;
 const PROGRAM_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const PROGRAM_CACHE_WINDOW_MS = 5 * 60 * 1000;
-const DEMO_TIER1_UNIVERSITY_KEYWORDS = [
-  'london school of economics',
-  'university of oxford',
-  'university of cambridge',
-  'imperial college london',
-  'university college london'
-];
-
-const assignDemoTierMix = (matches: EnrichedMatch[]): EnrichedMatch[] => {
-  if (matches.length < 3) return matches;
-
-  const isTier1University = (name: string, rankOverall: number | null, averageOutcomes: number) => {
-    if (typeof rankOverall === 'number' && rankOverall > 0 && rankOverall <= 30) return true;
-    const normalized = name.trim().toLowerCase();
-    if (DEMO_TIER1_UNIVERSITY_KEYWORDS.some((keyword) => normalized.includes(keyword))) return true;
-    // Fallback for sparse ranking data: treat strongest outcome bands as tier 1.
-    return averageOutcomes >= 75;
-  };
-
-  const byUniversity = new Map<
-    string,
-    {
-      university: string;
-      rankOverall: number | null;
-      matchIndexes: number[];
-      outcomesTotal: number;
-    }
-  >();
-
-  matches.forEach((match, index) => {
-    const key = match.university.id || match.university.name;
-    const existing = byUniversity.get(key);
-    const outcomes = match.breakdown.outcomes ?? 0;
-    if (existing) {
-      existing.matchIndexes.push(index);
-      existing.outcomesTotal += outcomes;
-      return;
-    }
-    byUniversity.set(key, {
-      university: match.university.name,
-      rankOverall: match.university.rankOverall ?? null,
-      matchIndexes: [index],
-      outcomesTotal: outcomes
-    });
-  });
-
-  const universities = Array.from(byUniversity.entries())
-    .map(([key, value]) => ({
-      key,
-      ...value,
-      averageOutcomes: value.matchIndexes.length ? value.outcomesTotal / value.matchIndexes.length : 0
-    }))
-    .sort((a, b) => b.averageOutcomes - a.averageOutcomes);
-
-  const reachKeys = new Set(
-    universities
-      .filter((entry) => isTier1University(entry.university, entry.rankOverall, entry.averageOutcomes))
-      .map((entry) => entry.key)
-  );
-  const nonReach = universities.filter((entry) => !reachKeys.has(entry.key));
-
-  const matchKeys = new Set<string>();
-  const safeKeys = new Set<string>();
-  nonReach.forEach((entry, index) => {
-    if (index < Math.ceil(nonReach.length / 2)) matchKeys.add(entry.key);
-    else safeKeys.add(entry.key);
-  });
-
-  if (matchKeys.size === 0 && safeKeys.size > 0) {
-    const promoted = Array.from(safeKeys)[0];
-    safeKeys.delete(promoted);
-    matchKeys.add(promoted);
-  }
-  if (safeKeys.size === 0 && matchKeys.size > 1) {
-    const demoted = Array.from(matchKeys)[matchKeys.size - 1];
-    matchKeys.delete(demoted);
-    safeKeys.add(demoted);
-  }
-
-  const assignUniversityTier = (key: string): MatchTier => {
-    if (reachKeys.has(key)) return 'Reach';
-    if (matchKeys.has(key)) return 'Match';
-    return 'Safe';
-  };
-
-  const tierCounters: Record<MatchTier, number> = {
-    Reach: 0,
-    Match: 0,
-    Safe: 0
-  };
-
-  const scoreFromTier = (tier: MatchTier, index: number) => {
-    if (tier === 'Safe') return Math.max(82, 92 - index);
-    if (tier === 'Match') return Math.max(50, 70 - index);
-    return Math.max(28, 44 - index);
-  };
-
-  return matches.map((match) => {
-    const key = match.university.id || match.university.name;
-    const tier = assignUniversityTier(key);
-    const score = scoreFromTier(tier, tierCounters[tier]);
-    tierCounters[tier] += 1;
-    return { ...match, score, tier };
-  });
-};
-
 const applyProgramVisibilityFilters = (query: any) => {
   const flagged = getFlaggedProgramIds();
   if (!flagged.length) return query.order('id', { ascending: true });
@@ -186,91 +79,6 @@ type CourseSource = EnrichedCourseRecord & {
   university_requires_test: boolean | null;
 };
 
-const buildStudentPayload = (params: {
-  academic: StudentAcademicInputRow;
-  lifestyle: StudentLifestyleRow | null;
-  subjects: StudentSubjectRow[];
-  admissionsTests: StudentAdmissionsTestRow[];
-  activities: StudentProfilePayload['activities_list'];
-}): StudentProfilePayload => {
-  const programmeType = params.academic.programme_type ?? 'IB';
-  const subjectList = params.subjects.map((subject) => {
-    const rawGrade = subject.grade_value ?? '';
-    const numericGrade = programmeType === 'IB' ? asNumber(rawGrade) : null;
-    return {
-      subject_name: subject.subject_name ?? '',
-      level: subject.level ?? (programmeType === 'IB' ? 'HL' : 'A_LEVEL'),
-      grade_value: programmeType === 'IB' ? numericGrade : rawGrade
-    };
-  });
-
-  return {
-    personal_information: {
-      first_name: '',
-      last_name: '',
-      email: '',
-      phone: null,
-      nationality: '',
-      age: null,
-      gender: null,
-      resident_country: '',
-      current_location_city: null,
-      time_zone: null
-    },
-    academic_input: {
-      programme_type: programmeType,
-      school_name: params.academic.school_name ?? '',
-      school_country: params.academic.school_country ?? '',
-      school_city: params.academic.school_city ?? null,
-      school_type: params.academic.school_type ?? null,
-      language_of_instruction: params.academic.language_of_instruction ?? null,
-      graduation_year: params.academic.graduation_year ?? new Date().getFullYear(),
-      desired_start_date: params.academic.desired_start_date ?? null,
-      intended_clusters: (params.academic.intended_clusters ?? []) as StudentProfilePayload['academic_input']['intended_clusters'],
-      secondary_clusters: (params.academic.secondary_clusters ?? []) as StudentProfilePayload['academic_input']['secondary_clusters'],
-      career_aspiration: params.academic.career_aspiration ?? null,
-      subject_list: subjectList,
-      ib_total_points: params.academic.ib_total_points ?? null,
-      ib_core_points: params.academic.ib_core_points ?? null,
-      ib_tok_grade: params.academic.ib_tok_grade ?? null,
-      ib_ee_grade: params.academic.ib_ee_grade ?? null,
-      ib_math_pathway: params.academic.ib_math_pathway ?? null,
-      ee_subject: params.academic.ee_subject ?? null,
-      ee_title: params.academic.ee_title ?? null,
-      ee_summary: params.academic.ee_summary ?? null,
-      a_level_predicted_grades: (params.academic.a_level_predicted_grades ?? null) as StudentProfilePayload['academic_input']['a_level_predicted_grades'],
-      english_required: params.academic.english_required ?? null,
-      english_test_type: params.academic.english_test_type ?? 'NONE',
-      english_status: params.academic.english_status ?? 'missing',
-      english_score_overall: params.academic.english_score_overall ?? null,
-      admissions_tests: params.admissionsTests.map((test) => ({
-        test_type: test.test_type ?? 'NONE',
-        status: test.status ?? 'missing',
-        score_numeric: test.score_numeric ?? null,
-        percentile: test.percentile ?? null
-      }))
-    },
-    lifestyle_preference: {
-      teaching_style: params.lifestyle?.teaching_style ?? null,
-      desired_location_type: params.lifestyle?.desired_location_type ?? null,
-      campus_size: params.lifestyle?.campus_size ?? null,
-      extracurricular_interests: params.lifestyle?.extracurricular_interests ?? [],
-      other_extracurriculars: params.lifestyle?.other_extracurriculars ?? null,
-      leadership_roles: params.lifestyle?.leadership_roles ?? [],
-      commitment_level: params.lifestyle?.commitment_level ?? null,
-      key_activities: params.lifestyle?.key_activities ?? [],
-      sat_score: params.lifestyle?.sat_score ?? null,
-      act_score: params.lifestyle?.act_score ?? null,
-      intl_experience: params.lifestyle?.intl_experience ?? [],
-      work_experience: params.lifestyle?.work_experience ?? null,
-      work_experience_summary: params.lifestyle?.work_experience_summary ?? null,
-      ambition_statement: params.lifestyle?.ambition_statement ?? null,
-      epq_subject: (params.lifestyle as any)?.epq_subject ?? null,
-      epq_title: (params.lifestyle as any)?.epq_title ?? null,
-    },
-    activities_list: params.activities ?? [],
-  };
-};
 
 const toTier = (value: unknown): 1 | 2 | 3 | 4 | 5 => {
   const parsed = typeof value === 'number' ? value : Number(value);
@@ -398,8 +206,6 @@ export const loadMatchesForProfile = async (
   profileId: string,
   options: LoadMatchesOptions = {}
 ): Promise<MatchComputationResult> => {
-  // Demo tier override disabled — v4 engine handles tiers natively.
-  const forceDemoTierMix = false;
   const programLimit = options.programLimit ?? 5000;
 
   const [
@@ -470,7 +276,7 @@ export const loadMatchesForProfile = async (
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (!forceDemoTierMix && !options.forceRefresh && latestMatchMeta.data?.created_at) {
+  if (!options.forceRefresh && latestMatchMeta.data?.created_at) {
     const latestCreatedAt = new Date(latestMatchMeta.data.created_at);
     if (Number.isFinite(latestCreatedAt.valueOf())) {
       const age = Date.now() - latestCreatedAt.getTime();
@@ -784,7 +590,10 @@ export const loadMatchesForProfile = async (
     }
   }
 
-  const studentPayload = buildStudentPayload({
+  // Shared row→payload mapper (also used by the score loader) — the two used
+  // to maintain independently-drifting copies of this field mapping.
+  const studentPayload = mapIntakeRowsToPayload({
+    personal: null,
     academic: academicData!,
     lifestyle: lifestyleData ?? null,
     subjects: (subjectsData ?? []) as StudentSubjectRow[],

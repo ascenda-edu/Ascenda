@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { CounsellorStudent } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorStudent } from '@/lib/counsellor/types';
 import { StudentRoster } from '../_components/student-roster';
 import type { DashboardFilter } from '../page';
 

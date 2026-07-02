@@ -1,5 +1,5 @@
-// Counsellor data-access layer — the real-Supabase replacement for the dummy
-// helpers in src/lib/data/counsellor-dummy-data.ts.
+// Counsellor data-access layer — assembles the counsellor section's view of
+// real student data. Domain types live in src/lib/counsellor/types.ts.
 //
 // `loadCohort()` assembles the `CounsellorStudent` shape the UI already consumes
 // from the real student tables (counsellor reads them via the can_act_as_counsellor()
@@ -33,7 +33,7 @@ import type {
   OutcomeResult,
   ParentContact,
   ParentMessage,
-} from '@/lib/data/counsellor-dummy-data';
+} from '@/lib/counsellor/types';
 import type { CounsellorDocument, EvolutionEntry } from '@/lib/data/student-demo-data';
 
 type Client = SupabaseClient<Database>;

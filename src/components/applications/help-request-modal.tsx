@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Sparkles, Send, X } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { useSupabase } from '@/hooks/useSupabase';
@@ -27,8 +27,6 @@ interface HelpRequestModalProps {
   app: HelpRequestModalApp | null;
 }
 
-const COUNSELLOR_FIRST_NAME = 'Sarah';
-
 const draftFor = (app: HelpRequestModalApp): { subject: string; body: string } => {
   const subject = `Help with my ${app.university} application`;
   const progressLine =
@@ -44,15 +42,14 @@ const draftFor = (app: HelpRequestModalApp): { subject: string; body: string } =
     : "There's no hard deadline yet, but I'd like to stay ahead of it.";
 
   const lines = [
-    `Hi ${COUNSELLOR_FIRST_NAME},`,
+    `Hi,`,
     '',
     `I'm working on my ${app.university} application (${app.program}). ${progressLine}${tasksLine}.`,
     deadlineLine,
     '',
     "Could we book a 15-minute call this week to talk it through? I'd like to focus on the personal statement and reference timing.",
     '',
-    'Thanks,',
-    'Greg'
+    'Thanks!'
   ];
 
   return { subject, body: lines.join('\n') };
@@ -105,7 +102,7 @@ export function HelpRequestModal({ open, onOpenChange, app }: HelpRequestModalPr
       }
 
       showToast({
-        title: 'Sent — Sarah will respond shortly',
+        title: 'Sent — your counsellor will respond shortly',
         description: `Tracked under ${app.university}`,
         variant: 'success'
       });
@@ -141,9 +138,9 @@ export function HelpRequestModal({ open, onOpenChange, app }: HelpRequestModalPr
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
             Request counsellor help
           </div>
-          <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-foreground">
+          <DialogTitle className="mt-1.5 leading-7 text-foreground">
             {app.university}
-          </h2>
+          </DialogTitle>
           <p className="text-sm text-muted-foreground">
             {app.program}
             {app.platform ? ` · ${app.platform}` : null}
@@ -187,7 +184,7 @@ export function HelpRequestModal({ open, onOpenChange, app }: HelpRequestModalPr
               className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm leading-relaxed focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             />
             <p className="text-[11px] text-muted-foreground">
-              Edit anything before sending. Sarah sees this verbatim in her inbox.
+              Edit anything before sending. Your counsellor sees this verbatim in their inbox.
             </p>
           </div>
         </div>

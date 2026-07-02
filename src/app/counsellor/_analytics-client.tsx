@@ -6,7 +6,7 @@ import {
   PieChart, BarChart2, TrendingUp, CheckCircle, Target, Users
 } from 'lucide-react';
 import { PageHero } from '@/components/layout/page-hero';
-import type { CounsellorStudent } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorStudent } from '@/lib/counsellor/types';
 import type { CohortStats } from '@/lib/counsellor/data';
 import {
   ProgrammeSplit,

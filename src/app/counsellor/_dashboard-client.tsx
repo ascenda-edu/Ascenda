@@ -5,7 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import { AlertTriangle, TrendingUp, BarChart2, Clock, Activity, PieChart, Trophy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PageHero } from '@/components/layout/page-hero';
-import type { CounsellorStudent, AtRiskAlert } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorStudent, AtRiskAlert } from '@/lib/counsellor/types';
 import type { CohortStats, DeadlineWithStudent, ActivityItem } from '@/lib/counsellor/data';
 import { AtRiskPanel } from './_components/at-risk-panel';
 import { WidgetGrid, Widget } from './_components/widget-grid';

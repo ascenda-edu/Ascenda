@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Trophy, Pin, PinOff, EyeOff, Eye, Settings2, ChevronDown } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import type { CounsellorStudent } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorStudent } from '@/lib/counsellor/types';
 
 interface TopStudentsProps {
   students: CounsellorStudent[];

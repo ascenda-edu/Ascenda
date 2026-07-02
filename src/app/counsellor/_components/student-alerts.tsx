@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AlertTriangle, UserX, Clock, TrendingDown, Pin, PinOff, EyeOff, Eye, Settings2, ChevronDown } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import type { CounsellorStudent, StudentFlag } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorStudent, StudentFlag } from '@/lib/counsellor/types';
 
 interface StudentAlertsProps {
   students: CounsellorStudent[];

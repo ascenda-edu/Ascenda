@@ -5,12 +5,13 @@ import { StudentsPageClient } from './_students-page-client';
 
 export const dynamic = 'force-dynamic';
 
+// Next 14 passes searchParams as a plain object (the Promise shape is Next 15).
 interface Props {
-  searchParams: Promise<{ stage?: string; tier?: string; programme?: string; field?: string; filter?: string }>;
+  searchParams: { stage?: string; tier?: string; programme?: string; field?: string; filter?: string };
 }
 
 export default async function CounsellorStudentsPage({ searchParams }: Props) {
-  const params = await searchParams;
+  const params = searchParams;
   const supabase = createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   const students = await loadCohort(supabase, { excludeId: user?.id });

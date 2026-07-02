@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { AlertTriangle, Clock, CheckCircle2, BookOpen, Eye, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { CounsellorStudent } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorStudent } from '@/lib/counsellor/types';
 import { MessageStudentButton } from './message-student-button';
 
 interface StudentCardProps {

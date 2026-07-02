@@ -1,19 +1,25 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
+import { canActAsCounsellor, parseJsonBody } from '@/lib/api/guards';
 
 const VALID_TYPES = new Set(['session', 'flag', 'update']);
 
 // Persist a counsellor note about a student. RLS (counsellor_notes_insert)
-// requires can_act_as_counsellor() AND author_profile_id = auth.uid().
+// requires can_act_as_counsellor() AND author_profile_id = auth.uid();
+// the in-app role check is defense in depth on top of that.
 export async function POST(request: NextRequest) {
   const supabase = createRouteHandlerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  if (!(await canActAsCounsellor(supabase, user))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
-  const { studentId, body, noteType } = await request.json();
-  if (!studentId || !body?.trim() || !VALID_TYPES.has(noteType)) {
+  const payload = await parseJsonBody<{ studentId?: string; body?: string; noteType?: string }>(request);
+  const { studentId, body, noteType } = payload ?? {};
+  if (!studentId || !body?.trim() || !noteType || !VALID_TYPES.has(noteType)) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   }
 

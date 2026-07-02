@@ -634,7 +634,10 @@ export const aLevelToIbEquivalent = (
     .slice(0, 3);             // top 3 subjects
   if (pts.length === 0) return 33;
   const sum = pts.reduce((acc, v) => acc + v, 0);
-  return Math.round(24 + ((sum - 6) / 15) * 19);
+  // Clamp to the documented 24–43 scale: with fewer than 3 predicted grades
+  // the sum can fall below 6, which would otherwise extrapolate below 24 and
+  // over-harshly exclude partially-filled profiles.
+  return Math.min(43, Math.max(24, Math.round(24 + ((sum - 6) / 15) * 19)));
 };
 
 // ── ACT → IB equivalent conversion ────────────────────────────────────────

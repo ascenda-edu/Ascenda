@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, Clock, BookOpen, FileText, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { CounsellorStudent } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorStudent } from '@/lib/counsellor/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { loadStudentById, loadStudentEvolution } from '@/lib/counsellor/data';
 import { StudentDetailTabs } from '../../_components/student-detail-tabs';
@@ -10,8 +10,9 @@ import { MessageStudentButton } from '../../_components/message-student-button';
 
 export const dynamic = 'force-dynamic';
 
+// Next 14 passes params as a plain object (the Promise shape is Next 15).
 interface Props {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }
 
 const FLAG_LABELS: Record<string, { label: string; color: string }> = {
@@ -51,7 +52,7 @@ function getNextDeadlineDays(student: CounsellorStudent) {
 }
 
 export default async function StudentDetailPage({ params }: Props) {
-  const { id } = await params;
+  const { id } = params;
   const supabase = createServerSupabaseClient();
   const student = await loadStudentById(supabase, id);
   if (!student) notFound();

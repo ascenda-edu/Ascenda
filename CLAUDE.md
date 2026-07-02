@@ -53,7 +53,7 @@ src/
     supabase/
       server.ts           # createServerSupabaseClient (Server Components)
                           # createRouteHandlerSupabaseClient (API routes)
-      client.ts           # createClientSupabaseClient (Client Components)
+      client.ts           # getBrowserSupabaseClient (Client Components, via useSupabase())
     types/
       database.ts         # Auto-generated Supabase types (may lag schema)
       demo-tables.ts      # Manual types for tables added after last generation
@@ -73,7 +73,7 @@ src/
 |---|---|---|
 | `createServerSupabaseClient()` | `lib/supabase/server.ts` | Server Components, `page.tsx`, `layout.tsx` |
 | `createRouteHandlerSupabaseClient()` | `lib/supabase/server.ts` | API route handlers (`route.ts`) |
-| `createClientSupabaseClient()` | `lib/supabase/client.ts` | Client Components (`'use client'`) |
+| `getBrowserSupabaseClient()` via the `useSupabase()` hook | `lib/supabase/client.ts` | Client Components (`'use client'`) |
 
 ### Key tables
 - `programs` + `universities` — core catalogue (119k+ programmes)
@@ -82,7 +82,7 @@ src/
 - `help_requests`, `help_messages`, `help_notes`, `help_meetings` — counsellor help system
 - `notifications` — per-profile notification feed
 - `student_personal_information`, `student_academic_input`, `student_subjects`, `student_lifestyle_preference`, `student_scores` — profile data
-- `shortlisted_programs` — **does NOT exist in DB**; shortlist uses `localStorage`
+- `shortlisted_programs` — defined in `schema.sql` but **may not exist on the remote DB**; `shortlist-store.ts` feature-detects (first failed call disables remote sync for the session) and falls back to `localStorage`
 
 ## Environment Variables
 
@@ -108,7 +108,8 @@ SUPABASE_PROJECT_ID
 - **`database.ts` lags the real schema.** Tables added in migrations after the last `supabase gen types` run are not typed. Workaround: add manual types to `src/lib/types/demo-tables.ts` and cast through `any` in one wrapper file (see `lib/demo/help-request-client.ts`).
 - **Counsellor notifications fire via DB trigger**, not application code. Don't add `insertNotification` calls on the student side — the trigger handles the counsellor copy.
 - **PostgREST `.or()` with spaces in ilike values crashes.** Use `.in('id', [...])` instead of constructing `.or()` strings with university names that contain spaces.
-- **`shortlisted_programs` table does not exist** — shortlist is localStorage-only.
+- **Date-only strings (`deadline_date`, `due_date`) must be parsed as LOCAL dates.** `new Date('YYYY-MM-DD')` is UTC midnight and shifts deadlines by the user's UTC offset — use `parseLocalDate`/`daysUntil`/`startOfToday` from `src/lib/utils/dates.ts`.
+- **Migrations are applied one-off via `npm run db:apply <file>`** — the remote migration history diverged from `supabase/migrations/`, so `supabase db push` is unsafe (see `scripts/apply-sql.ts` header). Write migrations idempotently.
 - **`recognition_score`** column on `universities` — used by search suggestions to prioritise well-known unis (threshold ≥ 5).
 - **PageHero** (`src/components/layout/page-hero.tsx`) — shared header used on every student-facing page. Tone prop: `'student'` (default warm) | `'counsellor'` (operational).
 - **`@/*` path alias** maps to `src/` — use `@/components/...`, `@/lib/...` etc.

@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Send, Check, CheckCheck, MessageSquare, Clock, Mail, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { ParentContact, ParentMessage } from '@/lib/data/counsellor-dummy-data';
+import type { ParentContact, ParentMessage } from '@/lib/counsellor/types';
 
 const STATUS_CONFIG = {
   active: { label: 'Active', color: 'text-sky-600', bg: 'bg-sky-500/10', dot: 'bg-sky-500' },

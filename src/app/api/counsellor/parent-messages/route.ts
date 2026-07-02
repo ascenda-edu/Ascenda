@@ -1,16 +1,22 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
+import { canActAsCounsellor, parseJsonBody } from '@/lib/api/guards';
 
 // Persist a counsellor → parent message and bump the contact's status.
-// RLS (parent_messages / parent_contacts policies) requires can_act_as_counsellor().
+// RLS (parent_messages / parent_contacts policies) requires
+// can_act_as_counsellor(); the in-app role check is defense in depth.
 export async function POST(request: NextRequest) {
   const supabase = createRouteHandlerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  if (!(await canActAsCounsellor(supabase, user))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
-  const { contactId, body, template } = await request.json();
+  const payload = await parseJsonBody<{ contactId?: string; body?: string; template?: string | null }>(request);
+  const { contactId, body, template } = payload ?? {};
   if (!contactId || !body?.trim()) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   }
@@ -26,10 +32,18 @@ export async function POST(request: NextRequest) {
   }
 
   // A counsellor reply moves the thread to "active" and records the contact time.
-  await (supabase as any)
+  const { error: contactError } = await (supabase as any)
     .from('parent_contacts')
     .update({ status: 'active', last_contacted: new Date().toISOString() })
     .eq('id', contactId);
+  if (contactError) {
+    // The message row exists but the thread state didn't move — tell the
+    // caller instead of returning a clean 200 with the thread stuck.
+    return NextResponse.json(
+      { error: `Message saved but contact status update failed: ${contactError.message}` },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json({
     message: {
