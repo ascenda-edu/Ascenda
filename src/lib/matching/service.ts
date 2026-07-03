@@ -220,7 +220,7 @@ export const loadMatchesForProfile = async (
     supabase.from('student_subjects').select('*').eq('profile_id', profileId),
     supabase.from('student_admissions_tests').select('*').eq('profile_id', profileId),
     // student_activities postdates the generated types — cast like the score loader does.
-    (supabase as any).from('student_activities').select('*').eq('profile_id', profileId).order('sort_order')
+    supabase.from('student_activities').select('*').eq('profile_id', profileId).order('sort_order')
   ]);
 
   const activitiesList: StudentProfilePayload['activities_list'] = (
@@ -579,7 +579,7 @@ export const loadMatchesForProfile = async (
   const allUniIds = [...new Set(enrichedCourses.map((c) => c.university_id).filter(Boolean))];
   const recognitionByUniId = new Map<string, number>();
   if (allUniIds.length > 0) {
-    const { data: recData } = await (supabase as any)
+    const { data: recData } = await supabase
       .from('universities')
       .select('id, recognition_score')
       .in('id', allUniIds);

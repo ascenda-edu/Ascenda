@@ -126,7 +126,7 @@ export const buildStudentProfilePayload = async (
     supabase.from('student_subjects').select('*').eq('profile_id', profileId),
     supabase.from('student_admissions_tests').select('*').eq('profile_id', profileId),
     supabase.from('student_lifestyle_preference').select('*').eq('profile_id', profileId).maybeSingle(),
-    (supabase as any).from('student_activities').select('*').eq('profile_id', profileId).order('sort_order')
+    supabase.from('student_activities').select('*').eq('profile_id', profileId).order('sort_order')
   ]);
 
   if (personalResponse.error || academicResponse.error || subjectsResponse.error || testsResponse.error || lifestyleResponse.error) {

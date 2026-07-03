@@ -230,11 +230,11 @@ const buildStudents = async (
     supabase.from('student_subjects').select('profile_id, subject_name, level, grade_value').in('profile_id', ids),
     supabase.from('student_lifestyle_preference').select('*').in('profile_id', ids),
     supabase.from('student_admissions_tests').select('profile_id, test_type, status, score_numeric').in('profile_id', ids),
-    (supabase as any)
+    supabase
       .from('applications')
       .select('id, profile_id, program_id, status, platform, decision, updated_at, created_at')
       .in('profile_id', ids),
-    (supabase as unknown as { from: (t: string) => any })
+    supabase
       .from('counsellor_notes')
       .select('id, student_profile_id, body, note_type, created_at')
       .in('student_profile_id', ids),
@@ -678,7 +678,7 @@ export const loadOutcomes = async (supabase: Client, opts: { excludeId?: string 
   if (ids.length === 0) return [];
 
   const apps = (unwrap(
-    await (supabase as any)
+    await supabase
       .from('applications')
       .select('id, profile_id, program_id, status, platform, decision, decision_at, decision_conditions')
       .in('profile_id', ids),
@@ -750,7 +750,7 @@ export const deriveOutcomeStats = (outcomes: CounsellorOutcome[]): OutcomeStats 
 
 export const loadParentContacts = async (supabase: Client): Promise<ParentContact[]> => {
   const rows = (unwrap(
-    await (supabase as unknown as { from: (t: string) => any }).from('parent_contacts').select('*'),
+    await supabase.from('parent_contacts').select('*'),
     'parent_contacts'
   ) ?? []) as any[];
   if (rows.length === 0) return [];
@@ -775,14 +775,13 @@ export const loadParentContacts = async (supabase: Client): Promise<ParentContac
 export const loadParentMessagesByContact = async (
   supabase: Client
 ): Promise<Record<string, ParentMessage[]>> => {
-  const contactsClient = supabase as unknown as { from: (t: string) => any };
   const contacts = (unwrap(
-    await contactsClient.from('parent_contacts').select('id, student_profile_id'),
+    await supabase.from('parent_contacts').select('id, student_profile_id'),
     'parent_contacts'
   ) ?? []) as any[];
   const studentByContact = new Map<string, string>(contacts.map((c) => [c.id, c.student_profile_id]));
   const msgs = (unwrap(
-    await contactsClient
+    await supabase
       .from('parent_messages')
       .select('id, contact_id, sender, body, template, read_at, created_at'),
     'parent_messages'
@@ -811,7 +810,7 @@ export const loadParentMessagesByContact = async (
 
 export const loadCounsellorDocuments = async (supabase: Client): Promise<CounsellorDocument[]> => {
   const rows = (unwrap(
-    await (supabase as unknown as { from: (t: string) => any }).from('student_documents').select('*'),
+    await supabase.from('student_documents').select('*'),
     'student_documents'
   ) ?? []) as any[];
   if (rows.length === 0) return [];
@@ -838,7 +837,7 @@ export const loadCounsellorDocuments = async (supabase: Client): Promise<Counsel
 
 export const loadStudentEvolution = async (supabase: Client, studentId: string): Promise<EvolutionEntry[]> => {
   const rows = (unwrap(
-    await (supabase as unknown as { from: (t: string) => any })
+    await supabase
       .from('counsellor_notes')
       .select('id, body, note_type, created_at')
       .eq('student_profile_id', studentId),
