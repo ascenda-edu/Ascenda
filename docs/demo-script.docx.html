@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="UTF-8">
+  <title>Ascenda · Demo Script</title>
+  <!--[if gte mso 9]>
+  <xml>
+    <w:WordDocument>
+      <w:View>Normal</w:View>
+      <w:Zoom>100</w:Zoom>
+    </w:WordDocument>
+  </xml>
+  <![endif]-->
+  <style>
+    body {
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.5;
+      color: #1a1a1a;
+      max-width: 700px;
+      margin: 40px auto;
+    }
+    h1 { font-size: 20pt; font-weight: bold; color: #2d1b69; margin-bottom: 4px; }
+    h2 { font-size: 14pt; font-weight: bold; color: #2d1b69; border-bottom: 2px solid #7c3aed; padding-bottom: 4px; margin-top: 24px; }
+    h3 { font-size: 12pt; font-weight: bold; color: #4c1d95; margin-top: 16px; }
+    h4 { font-size: 11pt; font-weight: bold; color: #5b21b6; margin-top: 12px; }
+    p { margin: 6px 0; }
+    blockquote {
+      margin: 10px 0 10px 0;
+      padding: 10px 16px;
+      border-left: 4px solid #7c3aed;
+      background: #f5f3ff;
+      font-style: italic;
+      color: #1e1b4b;
+    }
+    .action {
+      margin: 6px 0;
+      padding: 6px 12px;
+      background: #fffbeb;
+      border-left: 3px solid #f59e0b;
+      font-weight: bold;
+      color: #78350f;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 12px 0;
+      font-size: 10.5pt;
+    }
+    th {
+      background: #ede9fe;
+      color: #2d1b69;
+      font-weight: bold;
+      padding: 8px 10px;
+      border: 1px solid #c4b5fd;
+      text-align: left;
+    }
+    td {
+      padding: 7px 10px;
+      border: 1px solid #ddd6fe;
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background: #faf9ff; }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 10pt;
+      background: #f1f0ff;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    pre {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 9.5pt;
+      background: #f8f7ff;
+      border: 1px solid #ddd6fe;
+      padding: 10px 14px;
+      margin: 8px 0;
+      white-space: pre-wrap;
+    }
+    .sub { font-size: 9pt; color: #6b7280; }
+    .beat-header {
+      background: #2d1b69;
+      color: white;
+      padding: 10px 14px;
+      font-size: 13pt;
+      font-weight: bold;
+      margin-top: 28px;
+      margin-bottom: 4px;
+    }
+    .timing {
+      font-size: 9.5pt;
+      color: #7c3aed;
+      font-style: italic;
+    }
+    hr { border: none; border-top: 1px solid #e5e7eb; margin: 20px 0; }
+    .never-cut { background: #fef2f2; border-left: 4px solid #dc2626; padding: 4px 10px; font-weight: bold; color: #7f1d1d; }
+  </style>
+</head>
+<body>
+
+<h1>Ascenda · Demo Script</h1>
+<p class="sub"><strong>Sunday 18 May 2026 &nbsp;·&nbsp; Sarah &nbsp;·&nbsp; 30 min</strong></p>
+
+<hr>
+
+<h2>Before you start</h2>
+
+<table>
+  <tr><td><strong>URL</strong></td><td><code>https://ascenda-ashy.vercel.app</code></td></tr>
+  <tr><td><strong>Login</strong></td><td><code>greg@workiflow.com</code> / <code>AscendaDemo!2026</code></td></tr>
+  <tr><td><strong>Browser</strong></td><td>Chrome, clean profile, full screen, 100% zoom</td></tr>
+  <tr><td><strong>Tab 2</strong></td><td>Pre-logged in as backup</td></tr>
+</table>
+
+<p><strong>Saturday reset — run this in Supabase SQL editor:</strong></p>
+<pre>delete from help_messages where request_id in (select id from help_requests where student_profile_id = '54d0803b-1c6d-4203-9e02-135f5746e6fa');
+delete from help_notes where request_id in (select id from help_requests where student_profile_id = '54d0803b-1c6d-4203-9e02-135f5746e6fa');
+delete from help_meetings where request_id in (select id from help_requests where student_profile_id = '54d0803b-1c6d-4203-9e02-135f5746e6fa');
+delete from help_requests where student_profile_id = '54d0803b-1c6d-4203-9e02-135f5746e6fa';
+delete from notifications where profile_id = '54d0803b-1c6d-4203-9e02-135f5746e6fa';</pre>
+<p>Run the full demo end-to-end once, then reset again so Sunday starts clean.</p>
+
+<hr>
+
+<h2>Flow overview</h2>
+<pre>Open → Profile → Explore (course detail: campus life) → Toolbox (essay workshop LIVE)
+  → Applications → [Ascendi AI] → Need Help → Send
+  → Faculty view → Bell → Drawer (reply / notes / meeting)
+  → At-risk panel → Documents (nudge) → Student detail (notes + timeline)
+  → Analytics (brief) → Integrations teaser → Close</pre>
+<p><strong>Target: 18 min demo · 12 min Q&amp;A</strong></p>
+
+<hr>
+
+<div class="beat-header">Beat 1 · Open</div>
+<p class="timing">2 min — on /dashboard, nothing clicked yet</p>
+
+<blockquote>
+"Thanks for making time again, Sarah. When we spoke previously, you talked about chasing documents, sorting shortlists late in the day, keeping visibility on which students need your attention most. We've taken what you shared — alongside what other counsellors and students told us — and built a platform around exactly those moments.
+<br><br>
+Two sides: a student platform and a counsellor platform. I'll show the student side briefly because everything on your side flows from what students do. Most of our time will be on your side. About fifteen minutes, then we open it up. Jump in any time."
+</blockquote>
+
+<hr>
+
+<div class="beat-header">Beat 2 · Student platform</div>
+<p class="timing">6 min</p>
+
+<h3>2a · Profile</h3>
+<p class="timing">45 sec — click Profile in top nav</p>
+
+<blockquote>
+"It starts with a profile. Predicted grades, subjects, what they want to study, what matters to them. For this demo it's already filled in — a student aiming for Computer Science. Once they submit, the algorithm assigns them a compatibility score for every relevant programme.
+<br><br>
+This pill here is telling Greg his pathways are still open. If he were to drop Further Maths now, this would flip to a warning before the exam window closes. Roughly one in five students quietly block themselves from degree options through subject choices made years earlier — this catches it early."
+</blockquote>
+
+<h3>2b · Explore + course detail</h3>
+<p class="timing">2 min — click Explore</p>
+
+<blockquote>
+"And this is what they see. Programmes categorised as Reach, Match, or Safe — a framework you're already using with them. The score is decomposable; they can see exactly why a course ranked where it did."
+</blockquote>
+
+<p class="action">Click into Cambridge Computer Science (Reach section, top of page).</p>
+<p class="action">Scroll to the campus and city life section.</p>
+
+<blockquote>
+"One consolidated page replaces thirty browser tabs. The thing we're particularly proud of — and this is something other tools don't do — is this section. A lot of our students are based in India, Southeast Asia, Nigeria. They have no idea what life is actually like in the UK. They can see the percentage of international students, what the city is like, cost of living, career prospects — everything they need to make a confident decision, in one place."
+</blockquote>
+
+<h3>2c · Toolbox — essay workshop live</h3>
+<p class="timing">2.5 min — click Toolbox, then Essay Workshop</p>
+
+<blockquote>
+"Before they get to applications, they need the tools to do the work. Requirements checker, chances calculator, deadline timeline — all here. But the one I want to show you live is this."
+</blockquote>
+
+<p class="action">Click Essay Workshop. Clear the textarea. Type: <em>"Science has always been my way of making sense of the world."</em> Then click Get Feedback.</p>
+
+<blockquote>
+"We think of a personal statement as building blocks of a student's life — different pieces assembled together. What's hard is that every portal has different requirements. UCAS is 4,000 characters; other portals are different again. Students don't know what good looks like.
+<br><br>
+So we built two things: an outline suggester that helps them build the essay piece by piece from their profile, and a reviewer that benchmarks their draft against the strongest essays from Oxford, Cambridge, and Harvard. Immediate, structured feedback — not writing it for them, guiding them to write something great."
+</blockquote>
+
+<h3>2d · Applications</h3>
+<p class="timing">1 min — click Applications</p>
+
+<blockquote>
+"And this is the central hub. One place to manage everything. The page leads with the three most urgent things across all applications — they always know what to do today. Below that, the full list with status, tier, and progress. Each application has a task list so nothing falls through the cracks."
+</blockquote>
+
+<hr>
+
+<div class="beat-header">Beat 3 · The segue</div>
+<p class="timing">1 min — the pivot moment, practise this click</p>
+
+<blockquote>
+"The platform also has an AI assistant they can chat with. If they're confused about requirements or unsure what to do next, they ask here. But sometimes the AI isn't enough and they want a human. That's where this comes in."
+</blockquote>
+
+<p class="action">Click the violet Need help button next to Cambridge in the What's next list.</p>
+
+<blockquote>
+"The platform knows what they're working on, what stage they're at, pre-fills a structured request. AI-drafted — the student edits before sending. Rather than a blank email, you get context."
+</blockquote>
+
+<p class="action">Click Send to counsellor.</p>
+<p>Toast: <em>"Sent — Sarah will respond shortly."</em></p>
+
+<blockquote>"Let me flip over to your side."</blockquote>
+
+<p class="action">Click the Faculty view pill in the navbar (top-right, violet).</p>
+
+<hr>
+
+<div class="beat-header">Beat 4 · Visibility unlock</div>
+<p class="timing">2.5 min — on /counsellor, pause a beat</p>
+
+<p><strong>Don't click yet. Point out:</strong></p>
+<ul>
+  <li>Bell with red <strong>1</strong> badge</li>
+  <li>Help requests widget with Greg's request at the top</li>
+</ul>
+
+<blockquote>
+"This is your homepage. You see all your students in this cycle. The notification you just saw lives up here — anything urgent surfaces without you needing to dig for it."
+</blockquote>
+
+<p class="action">Click the bell → click Greg's request row. Drawer slides in from the right.</p>
+
+<blockquote>
+"Your inbox view of the same request. Three things you can do here without leaving the page — reply, leave a private note, or propose a meeting."
+</blockquote>
+
+<p class="action">Click Notes tab. Type:</p>
+<blockquote style="font-style: normal; background: #fff8e1; border-left-color: #f59e0b;"><em>Strong on the quant side, weak on the 'why this university' question. Send the Cambridge sample for reference.</em></blockquote>
+
+<p class="action">Click Save note.</p>
+
+<blockquote>
+"These notes are private — only counsellors see them. Whatever you discuss, decisions you make, things to come back to. It lives here and it survives counsellor turnover."
+</blockquote>
+
+<p class="action">Click Meeting tab. Click Propose.</p>
+<p>Meeting appears with "proposed" status.</p>
+
+<p class="action">Click Thread tab. Type:</p>
+<blockquote style="font-style: normal; background: #fff8e1; border-left-color: #f59e0b;"><em>Hi Greg — happy to help. Just scheduled a 15-min slot for Tuesday 3pm and dropped some notes. Let's start with your opening paragraph.</em></blockquote>
+
+<p class="action">Click Send. Then click X to close the drawer.</p>
+<p><strong>Pause on the at-risk panel below.</strong></p>
+
+<blockquote>
+"And this is the bit I want to spend a moment on. You mentioned this specifically when we spoke. The pattern is consistent: meetings stack up, the loudest students absorb the most time, and the students who genuinely need help often aren't the ones asking. They go invisible until it's too late. This surfaces them automatically — approaching deadlines, incomplete work, applications stalled.
+<br><br>
+It's not about replacing your judgement. It's about making sure your judgement gets applied to the right students at the right time."
+</blockquote>
+
+<hr>
+
+<div class="beat-header">Beat 5 · Documents</div>
+<p class="timing">2 min — click Documents in counsellor sub-nav</p>
+
+<blockquote>
+"The bit I think will resonate most based on what you shared — document chasing. Transcripts, references, personal statements. You described it as one of the most repetitive parts of the cycle. Twenty separate email threads, a spreadsheet to track what's outstanding, chasing students who haven't replied to chase teachers who haven't replied."
+</blockquote>
+
+<p class="action">Click the Overdue filter pill.</p>
+
+<blockquote>
+"Overdue documents float to the top. Per student, per application, you nudge the right person — student, teacher, registrar — through the platform, not through twenty separate emails."
+</blockquote>
+
+<p class="action">Click Nudge teacher on Mohammed Al-Rashid's A-Level Transcript.</p>
+<p>Toast appears. Status flips to "Nudge sent."</p>
+
+<blockquote>
+"Everything's logged, so you can see at a glance what's blocked instead of holding it all in your head."
+</blockquote>
+
+<hr>
+
+<div class="beat-header">Beat 6 · Student detail — the headline</div>
+<p class="timing never-cut">3 min — NEVER CUT — this is the differentiator</p>
+
+<p class="action">Click Students → click Aarav Sharma. Slow down here.</p>
+<p><strong>Show the header card without scrolling:</strong> name, school, predicted grades, 2×2 stats grid, completion bar.</p>
+
+<blockquote>
+"One thing came up across nearly every counsellor we've spoken to — 1:1 time is the most valuable thing you give a student, and the hardest to protect. Meetings stack up, prep time disappears, you walk in cold. And when a student moves between counsellors, the context of what's been discussed and why their shortlist looks the way it does is mostly gone. The institutional memory lives in your head, or scattered notes, or it's just lost.
+<br><br>
+This is what walking into a 1:1 looks like with Ascenda. Thirty seconds and you're fully briefed for a meeting you didn't have time to prepare for."
+</blockquote>
+
+<p class="action">Click Notes tab.</p>
+
+<blockquote>
+"Your notes, attached to the student. Free-text. Whatever you discuss, it lives here. Survives counsellor turnover."
+</blockquote>
+
+<p class="action">Click Timeline tab.</p>
+
+<blockquote>
+"And this — this is the part I'd ask you to look at carefully. The longitudinal view of the student. Predicted grade shifts, when they added or dropped subjects of interest, how their shortlist evolved over time.
+<br><br>
+Students told us their list goes through several rounds of redoing — open days, peer conversations, life events. Counsellors told us they usually only see the snapshot. So when you sit down with them and ask why their shortlist looks the way it does, you don't have to start from scratch. You can see the journey.
+<br><br>
+I genuinely think this is the thing other tools don't have. UCAS, school management systems, Cialfo — they're snapshot tools. This is the only place you see <em>why</em> a student's choices look the way they do, not just what's currently on the list."
+</blockquote>
+
+<hr>
+
+<div class="beat-header">Beat 7 · Analytics</div>
+<p class="timing">1.5 min — click Analytics in counsellor sub-nav</p>
+
+<blockquote>
+"Schools do yearly reports. Leadership asks how this year compares to last; parents at open evening want to know where students ended up. Right now the answer lives in memory or a spreadsheet. This changes that.
+<br><br>
+Everything in one place, completely customisable. And because it tracks applications live, year-on-year comparisons are automatic. You can also see — if a lot of your students are applying to the same field or country, that tells you where to run a targeted workshop. The data tells you where to intervene."
+</blockquote>
+
+<p class="action">Click Download Report → Cancel print dialog.</p>
+
+<hr>
+
+<div class="beat-header">Beat 8 · Integrations teaser</div>
+<p class="timing">30 sec — no clicking, voiceover only</p>
+
+<blockquote>
+"Last thing — we're building this to sit alongside the tools you already use. Gmail, calendar, document storage. When a student books a meeting here, it flows into your calendar. You don't have to leave the platform, but the platform doesn't try to replace everything either."
+</blockquote>
+
+<hr>
+
+<div class="beat-header">Beat 9 · Close</div>
+<p class="timing">1.5 min</p>
+
+<blockquote>
+"That's the demo. We're at a stage where we're really trying to understand whether what we've built actually fits how you work. The most valuable thing now is your honest reaction — what's resonating, what's not, and what's missing."
+</blockquote>
+
+<p><strong>Stop talking. Let her go first.</strong></p>
+
+<hr>
+
+<h2>Likely questions — prepared answers</h2>
+
+<table>
+  <tr>
+    <th>Question</th>
+    <th>Answer</th>
+  </tr>
+  <tr>
+    <td><strong>How does application status get updated?</strong></td>
+    <td>Students update it themselves for the MVP. We're also exploring email-sync — connecting the student's application inbox so status updates from universities come through automatically.</td>
+  </tr>
+  <tr>
+    <td><strong>Is the AI assistant real?</strong></td>
+    <td>The request draft is a structured template that fills in from the student's context today. The full LLM version is in flight — same input, richer language.</td>
+  </tr>
+  <tr>
+    <td><strong>Gmail / Calendar integration depth?</strong></td>
+    <td>Real OAuth is on the roadmap. The connection point you saw is where it plugs in — when it goes live, the meeting proposal schedules into your real calendar.</td>
+  </tr>
+  <tr>
+    <td><strong>How do you know the Reach / Match / Safe categorisation is right?</strong></td>
+    <td>We run the student's profile against entry requirements, historical admissions data, and university characteristics. It's decomposable — they can see the breakdown behind each score.</td>
+  </tr>
+  <tr>
+    <td><strong>What about UCAS integration?</strong></td>
+    <td>UCAS doesn't expose an API for direct integration, so the student manages their UCAS application in parallel and logs outcomes here. Longer term we're looking at email-sync to auto-detect updates.</td>
+  </tr>
+  <tr>
+    <td><strong>Do parents have access?</strong></td>
+    <td>Not in this demo build — it's on the roadmap. The school controls who sees what.</td>
+  </tr>
+</table>
+
+<hr>
+
+<h2>If something breaks</h2>
+
+<table>
+  <tr>
+    <th>Problem</th>
+    <th>Fix</th>
+  </tr>
+  <tr>
+    <td>Faculty view pill missing</td>
+    <td>Hard refresh once</td>
+  </tr>
+  <tr>
+    <td>Matches page slow</td>
+    <td>Let it fully load — don't open extra tabs (each recalculates the cache)</td>
+  </tr>
+  <tr>
+    <td>Bell stays at zero after Send</td>
+    <td>Wait 5 sec — realtime fires within 1s, 4s poll catches it</td>
+  </tr>
+  <tr>
+    <td>Cambridge course page 404s</td>
+    <td>Fall back to Imperial Computing or UCL Computer Science</td>
+  </tr>
+  <tr>
+    <td>Essay workshop returns nothing</td>
+    <td>Type a longer sentence and retry. If still broken: <em>"generates in real time — let me move on"</em></td>
+  </tr>
+  <tr>
+    <td>Send to counsellor does nothing</td>
+    <td>Console → if "row level security" errors, fall back to screenshots and keep talking</td>
+  </tr>
+  <tr>
+    <td>Production URL down</td>
+    <td>Switch to backup tab</td>
+  </tr>
+</table>
+
+<hr>
+
+<h2>Timing guide</h2>
+
+<table>
+  <tr>
+    <th>Beat</th>
+    <th>Time</th>
+    <th>Cut?</th>
+  </tr>
+  <tr><td>1 · Open</td><td>2 min</td><td>No</td></tr>
+  <tr><td>2 · Student platform</td><td>6 min</td><td>Can trim essay workshop to 1.5 min if tight</td></tr>
+  <tr><td>3 · Segue</td><td>1 min</td><td>No</td></tr>
+  <tr><td>4 · Visibility (drawer)</td><td>2.5 min</td><td>No</td></tr>
+  <tr><td>5 · Documents</td><td>2 min</td><td>Can cut short — Sarah will get it fast</td></tr>
+  <tr style="background: #fef2f2;"><td><strong>6 · Student detail</strong></td><td><strong>3 min</strong></td><td><strong>Never cut — this is the differentiator</strong></td></tr>
+  <tr><td>7 · Analytics</td><td>1.5 min</td><td>Cut first if running over</td></tr>
+  <tr><td>8 · Integrations</td><td>0.5 min</td><td>Can fold into Beat 9</td></tr>
+  <tr><td>9 · Close</td><td>1.5 min</td><td>No</td></tr>
+  <tr style="font-weight: bold; background: #ede9fe;"><td><strong>Total</strong></td><td><strong>~20 min</strong></td><td>Target 18, leave 12 for Q&amp;A</td></tr>
+</table>
+
+</body>
+</html>

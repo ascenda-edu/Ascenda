@@ -7,16 +7,18 @@
 
 | | |
 |---|---|
-| **Preview URL** | https://ascenda-git-feat-applications-work-cxz5mw6fk2-6983s-projects.vercel.app |
+| **URL** | https://ascenda-ashy.vercel.app |
 | **Login** | `greg@workiflow.com` / `AscendaDemo!2026` |
 | **Browser** | Chrome, clean profile (no extensions), full screen, 100% zoom |
 | **Backup** | A second tab pre-logged-in. If the first session drops, switch tabs and keep talking. |
 
 **Pre-flight (run once Saturday morning):**
 
-1. Open the preview URL → sign in → land on `/dashboard`
+1. Open the URL → sign in → land on `/dashboard`
 2. Check the **navbar has a violet "Faculty view" pill** (top-right, next to the bell). If missing, hard refresh once.
-3. **Reset demo state** so the bell starts empty. Paste this in the [Supabase SQL editor](https://supabase.com/dashboard/project/alpkbobbasxvubogkark/sql/new):
+3. Navigate to **Explore** and let the matches load fully. **Open only this one tab** — opening additional tabs can trigger cache recalculation and slow the page.
+4. Navigate to **Toolbox** → **Essay Workshop**. Clear the textarea. Type a short demo sentence like "I love science" and click **Get Feedback** to confirm it returns results. This is your live demo moment.
+5. **Reset demo state** so the bell starts empty. Paste this in the [Supabase SQL editor](https://supabase.com/dashboard/project/alpkbobbasxvubogkark/sql/new):
    ```sql
    delete from help_messages where request_id in (select id from help_requests where student_profile_id = '54d0803b-1c6d-4203-9e02-135f5746e6fa');
    delete from help_notes where request_id in (select id from help_requests where student_profile_id = '54d0803b-1c6d-4203-9e02-135f5746e6fa');
@@ -24,8 +26,8 @@
    delete from help_requests where student_profile_id = '54d0803b-1c6d-4203-9e02-135f5746e6fa';
    delete from notifications where profile_id = '54d0803b-1c6d-4203-9e02-135f5746e6fa';
    ```
-4. Run the full demo flow yourself end-to-end with a timer (target: 18 min).
-5. **Reset state again** after your dry run so Sunday starts fresh.
+6. Run the full demo flow yourself end-to-end with a timer (target: 18 min).
+7. **Reset state again** after your dry run so Sunday starts fresh.
 
 ---
 
@@ -49,7 +51,7 @@ You'll mostly stay on the desktop, sharing your full browser window. Don't switc
 
 ---
 
-### Beat 2 · Student platform · 5 min
+### Beat 2 · Student platform · 6 min
 
 #### 2a · Profile (45 sec)
 
@@ -58,35 +60,63 @@ You'll mostly stay on the desktop, sharing your full browser window. Don't switc
 **Show:** Profile sections + the **Pathway status pill** under "Pathway status" (says "Pathways open").
 
 **Say:**
-> "When a student signs up they build a profile — predicted grades, subjects, preferences, the lot. The reason we capture all this upfront, and we heard this from students directly, is that subject choices made years before application can quietly close doors. UCAS data suggests roughly one in five students unintentionally block themselves from degree options through subject choices earlier in school. This pill is the system telling Greg his pathways are still open — if he were to drop further maths now, this would flip to a warning *before* the exam window closes."
+> "The platform is built to do all the heavy lifting for students. Right now, they're Googling, tab-switching, ChatGPTing. What we've done is put everything in one place. It starts with a profile — predicted grades, subjects, what they want to study later, what matters to them. All of this is already filled out for this demo profile, and it's geared towards someone who wants to do Computer Science. Once they fill it out, our algorithm assigns them a compatibility score for every relevant programme."
 
-#### 2b · Matches + course detail (1.5 min)
+#### 2b · Matches + course detail (2 min)
 
 **Click:** Top nav → **Explore**.
 
-**Show:** Match cards with fit scores and Reach / Match / Safe badges.
+**Show:** Match cards with fit scores and Reach / Match / Safe badges. Reach programmes appear at the top.
 
 **Say:**
-> "Once their profile is set, this is what they see. The headline here is the compatibility score for each course. We run their profile against entry requirements and university characteristics — fit is decomposable, they can see why a course scored what it did. As they explore, the system auto-categorises shortlisted courses as Reach, Match, or Safe — I know it's a framework you're already using with them."
+> "And this is what they see. Programmes automatically categorised as Reach, Match, or Safe — I know it's a framework you're already using with them. The score is decomposable, they can see exactly why a course ranked where it did."
 
-**Click:** **Imperial College London · Computing** card (top of the matches grid). If you can't find it, type "Imperial Computing" into the search bar at the top of `/university-search/search`. The other reach picks — Cambridge CS and UCL CS — are equally good fallbacks.
+**Click:** **University of Cambridge · Computer Science** card (in the Reach section at the top). If you can't find it, type "Cambridge Computer Science" into the search bar. Imperial Computing and UCL Computer Science are equally good fallbacks.
 
-**Show:** The consolidated course page — modules, entry requirements, employment, salary, cost of living, teaching style.
+**Show:** The consolidated course page. **Scroll down** to the campus and city life section — show:
+- Percentage of international students
+- Climate / city info
+- Employment stats and graduate salary
 
 **Say:**
-> "When they click into a course, they see one consolidated page. The thing this replaces is thirty browser tabs across thin, inconsistent university websites that a student may have open for one course. A lot of students miss a lot of context because information is so fragmented — hard to be confident in their research without putting in extensive effort."
+> "When they click into a course, one consolidated page replaces thirty browser tabs across thin, inconsistent university websites. The thing we're particularly proud of — and this is something other tools don't do — is this section here. A lot of our students are based in India, Southeast Asia, Nigeria, and they have no idea what life is actually like in the UK. They can see the percentage of international students, what the city is like, cost of living, career prospects — everything they need to make a confident decision in one place."
 
-#### 2c · Application tracker (2 min)
+#### 2c · Toolbox — essay workshop live (2.5 min)
+
+**Click:** Top nav → **Toolbox**.
+
+**Show:** The four tools — Requirements Checker, Chances Calculator, Essay Workshop, Deadline Timeline.
+
+**Say:**
+> "Before they get to applications, they need the tools to actually do the work. Requirement checker, chances calculator, deadline timeline — all here. But the one I want to show you live is this."
+
+**Click:** **Essay Workshop**.
+
+**Show:** The tool is open. Clear the textarea if anything is pre-filled.
+
+**Say:**
+> "We think of a personal statement as building blocks of a student's life — different pieces assembled together. What's hard is that different application portals have completely different requirements. UCAS is 4,000 characters; other portals have their own limits. Students don't know what 'good' looks like. So we built two things: one, an outline suggester that helps them build the essay piece by piece based on their profile; and two, a reviewer that benchmarks their draft against the strongest essays from Oxford, Cambridge, and Harvard."
+
+**Type a short sentence into the essay textarea** — e.g. `Science has always been my way of making sense of the world.`
+
+**Click:** **Get Feedback**.
+
+**Show:** The feedback appears — structured critique, what to keep, what to improve.
+
+**Say:**
+> "Immediate, structured feedback. Not writing it for them — guiding them to write something great. And they can pick their portal here — UCAS, Common App, or custom — so the guidance is always calibrated to the right limit."
+
+#### 2d · Application tracker (1 min) — *the pivot is coming*
 
 **Click:** Top nav → **Applications**.
 
 **Show:**
-- The PageHero summary at the top
-- The **Application priorities** board (6 cards: Cambridge CS, Imperial Computing, UCL CS, Manchester CS, Warwick CS, Leeds CS)
-- "Today's focus" section below
+- The PageHero summary at the top — "X days until your next deadline"
+- **What's next** — the top 3 most urgent tasks across all applications, each tied to a specific university
+- **All applications** — clean list of all 6 applications, in-progress first, submitted at the bottom
 
 **Say:**
-> "And this is the application tracker. Per university, students see what's needed, what's done, what's outstanding — tests, transcripts, references, personal statement, deadlines. The priority board surfaces what to tackle first, weighted by fit, scholarship intensity, and deadline pressure."
+> "And this is the central hub. One place to manage all applications. The page leads with the three most urgent things across every application — they always know what to do today. Below that, the full list, with status, tier, and progress per application. For each one, they've got a task list so nothing falls through the cracks."
 
 ---
 
@@ -95,14 +125,14 @@ You'll mostly stay on the desktop, sharing your full browser window. Don't switc
 **This is the demo's hinge. Practice this click until it feels automatic.**
 
 **Say:**
-> "Now here's something I want to show you live. Imagine a student is stuck — they need help on their application. Rather than emailing you or trying to book a meeting blindly, they click this."
+> "Now — the platform also has an AI assistant they can chat with. If they're confused about requirements, unsure what to do next, they can ask right here. But sometimes the AI isn't enough and they want a human. That's where this comes in."
 
-**Click:** The violet **Need help** pill at the bottom-right of the **Cambridge · Computer Science** priority card (top-left of the priorities board).
+**Click:** The violet **Need help** button next to the **Cambridge** entry in the "What's next" list (it'll be the top item — earliest deadline).
 
-**Show:** The modal opens. Subject is pre-filled ("Help with my University of Cambridge application"). Body references the fit %, open tasks, deadline. "AI draft · edit before sending" label visible top-right of the textarea.
+**Show:** The modal opens. Subject is pre-filled ("Help with my University of Cambridge application"). Body references the open tasks and deadline. "AI draft · edit before sending" label visible top-right of the textarea.
 
 **Say:**
-> "The platform knows what they're working on, what stage they're at, and pre-fills a structured request. AI-drafted, student edits it before sending."
+> "The platform knows what they're working on, what stage they're at, and pre-fills a structured request. AI-drafted — the student edits before sending. Rather than a blank email, Sarah gets context."
 
 **Click:** **Send to counsellor**.
 
@@ -145,7 +175,7 @@ You'll mostly stay on the desktop, sharing your full browser window. Don't switc
 **Click:** **Save note**.
 
 **Say (while typing the note):**
-> "These notes are private — only counsellors see them. Whatever you discuss, decisions you make, things to come back to, it all lives here. Survives counsellor turnover. No more messy Excel files."
+> "These notes are private — only counsellors see them. Whatever you discuss, decisions you make, things to come back to — it all lives here. Survives counsellor turnover. No more scattered spreadsheets."
 
 **Click:** **Meeting** tab.
 
@@ -191,7 +221,7 @@ You'll mostly stay on the desktop, sharing your full browser window. Don't switc
 **Show:** Toast appears. The row's status pill flips to "Nudge sent · Xs ago".
 
 **Say:**
-> "Per student, per application, we track what's needed. You nudge the right person — student, teacher, registrar — to submit what's missing. The chase happens through the platform, not through twenty separate emails. And because everything's logged in one place, you can see at a glance which students are blocking on what, instead of holding it all in your head."
+> "Per student, per application, we track what's needed. You nudge the right person — student, teacher, registrar — through the platform, not through twenty separate emails. Everything's logged, so you can see at a glance what's blocked, instead of holding it all in your head."
 
 ---
 
@@ -229,33 +259,22 @@ You'll mostly stay on the desktop, sharing your full browser window. Don't switc
 
 ---
 
-### Beat 7 · Reporting up · 2 min
-
-**Click:** Counsellor sub-nav → **Outcomes**.
-
-**Show:** Outcome dashboard — acceptances, rejections, waitlists, pending.
-
-**Say:**
-> "Now this bit — and I'm flagging it because a number of counsellors we've spoken to said the same thing. The retrospective view of what their cohort actually did is missing today. When leadership asks how this year compares to last year, or parents at open evening want to know where the school's students ended up, the answer lives in memory or in a spreadsheet someone built manually."
->
-> "As students hear back, you log outcomes here — accepted, rejected, waitlisted. That builds into your analytics page."
+### Beat 7 · Reporting up · 1.5 min
 
 **Click:** Counsellor sub-nav → **Analytics**.
 
-**Show:** Analytics widget grid.
+**Show:** Analytics widget grid — applications by stage, field of study distribution, at-risk count.
 
-**Click:** The **Compare to last year** pill at the top of the **Applications by stage** widget.
-
-**Show:** Each bar now shows ▲/▼ delta vs last year, with "Last year · N" below.
+**Say:**
+> "Last bit on the counsellor side. Schools do yearly reports. Leadership asks how this year compares to last, parents at open evening want to know where students ended up. Right now the answer lives in memory or a spreadsheet someone built manually. This changes that."
+>
+> "Everything's in one place. Completely customisable — you take away the widgets you don't need, keep the ones you do. And because it's tracking applications live, year-on-year comparisons are automatic. You can also see here — if a lot of your students are applying to the same field or same country, you can run a targeted workshop. The data isn't just pretty, it tells you where to intervene."
 
 **Click:** the **Download Report** button in the page header.
 
 **Show:** Browser print preview opens.
 
 **Click:** **Cancel** in the print dialog. Don't actually print.
-
-**Say:**
-> "Year-on-year comparisons. Downloadable. So when leadership asks how this year's cohort did, or you're at open evening with parents, you have something other than memory and a spreadsheet."
 
 ---
 
@@ -282,13 +301,16 @@ You'll mostly stay on the desktop, sharing your full browser window. Don't switc
 | If… | Then… |
 |---|---|
 | **Faculty view pill** isn't in the navbar | Refresh the page once. Cache primes on first auth call. |
-| **Send to counsellor** does nothing | Open browser console (Cmd-Opt-I). If "row level security" errors, the migrations didn't take — fall back to talking through the screenshots in the deck. |
+| **Matches page loads slowly** | Let it fully load before scrolling. Do NOT open additional tabs — each tab recalculates the cache. Reach programmes appear at the top of the list. |
+| **Send to counsellor** does nothing | Open browser console (Cmd-Opt-I). If "row level security" errors, fall back to talking through the screenshots in the deck. |
 | **Bell stays at zero** after Send | Wait 5 seconds. Realtime fires within 1s but if it misses, the 4-second poll catches it. |
-| **Imperial Computing course page** loads blank or 404s | Fall back to **Cambridge Computer Science** (`/course/37b7597a-c85b-54b7-a263-f88b3e277344`) or **UCL Computer Science** (`/course/fcb852c2-f36e-5deb-973b-71110547d515`). |
-| **Drawer feels laggy** when typing in reply box | Realtime is doing too much. Close and re-open the drawer — debounces the subscription. |
-| **Preview URL totally down** | Switch to the second pre-logged-in browser tab. If that's also down, share screenshots from the deck and continue talking. |
+| **Cambridge CS course page** loads blank or 404s | Fall back to **Imperial Computing** (`/course/cd952b76-9127-5d28-903c-8e1f4c89fd4f`) or **UCL Computer Science** (`/course/fcb852c2-f36e-5deb-973b-71110547d515`). |
+| **Essay workshop** returns nothing | Type a slightly longer sentence and retry. If still broken, say "this generates in real time — let me move on and we can come back to it." |
+| **Drawer feels laggy** when typing in reply box | Close and re-open the drawer — debounces the subscription. |
+| **Production URL totally down** | Switch to the second pre-logged-in browser tab. If that's also down, share screenshots from the deck and continue talking. |
 | **Sarah asks about Gmail/Calendar integration depth** | "Real OAuth integration is on the roadmap. What you saw on screen today is the connection point — when those go live, this drawer schedules into your real calendar." Don't promise dates. |
 | **Sarah asks "is this really AI?"** for the request draft | "It's a templated draft today that fills in from the student's context. The full LLM version is in flight — same input, richer language." |
+| **Sarah asks how application status gets updated** | "Students update it themselves — we're also exploring an email-sync approach where connecting the student's application email would let us auto-detect updates from universities. But for the MVP, the student logs it." |
 
 ---
 
@@ -301,10 +323,12 @@ We made these calls during build. You'll know to deliver them in voiceover:
 | Gmail/Calendar/Outlook integration tiles | Removed entirely | Beat 8 covers this in voiceover. Tiles would have shown fake email addresses — misleading. |
 | Per-application detail page | Help button on every priority-board card on `/applications` instead | Cleaner — keeps the user on the priorities view. |
 | "Nudge teacher" really emails the teacher | Writes a real notification to the student instead | "The nudge is logged through the platform — when we wire SMTP, the same click sends the email." |
-| The student practice board | Hidden from nav | Not part of the demo narrative. |
+| The student practice board | Removed entirely (route and component deleted) | Not part of the demo narrative. |
 
 ---
 
 ## One thing to know about timing
 
 Beats 4, 5, and 6 are the meat. **If you're running over, cut Beat 7 first** (analytics) — Sarah will ask about reporting in Q&A anyway, and you can answer it then. **Don't cut Beat 6** (notes + timeline) — that's the differentiator the whole demo builds toward.
+
+Essay workshop (Beat 2c) is worth the extra 90 seconds — it's the most visceral live moment on the student side and Ruben is right that it lands hard. Don't skip it.

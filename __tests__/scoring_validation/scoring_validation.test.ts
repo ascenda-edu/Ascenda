@@ -111,12 +111,15 @@ describe('Phase 1 — Band & activity boost assertions', () => {
         extracurricular_interests: [], other_extracurriculars: null,
         leadership_roles: [], commitment_level: null, key_activities: [],
         sat_score: null, act_score: null, intl_experience: [], work_experience: null, work_experience_summary: null, ambition_statement: null,
+        epq_subject: null, epq_title: null,
       },
+      activities_list: [],
     };
     const r = scoreStudentProfile(sofia);
-    // Activities = 0, so score should match original test (183)
+    // Activities = 0, so score should match the baseline in student_scoring.test.ts
+    // (164 after the HL-strength recalibration to max 16).
     expect(r.breakdown.activities.total).toBe(0);
-    expect(r.total_score).toBe(183);
+    expect(r.total_score).toBe(164);
   });
 });
 

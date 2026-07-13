@@ -8,6 +8,8 @@ import { PageHero } from '@/components/layout/page-hero';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useSupabase } from '@/hooks/useSupabase';
+import { insertHelpRequest } from '@/lib/demo/help-request-client';
 
 type TopicTone = 'sky' | 'violet' | 'rose' | 'emerald';
 const TOPIC_TONE: Record<TopicTone, { swatch: string; activeBorder: string; text: string; chip: string }> = {
@@ -55,17 +57,57 @@ const TIMES = ['09:00', '11:00', '13:00', '15:00', '17:00'];
 const DURATIONS = ['30 min', '45 min', '60 min'];
 
 export default function AppointmentPage() {
+  const supabase = useSupabase();
   const [topic, setTopic] = useState<string>('university-choice');
   const [duration, setDuration] = useState<string>('30 min');
   const [date, setDate] = useState<string>('');
   const [time, setTime] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!date || !time) return;
-    setSubmitted(true);
+    if (!date || !time || submitting) return;
+    setError(null);
+    setSubmitting(true);
+
+    const topicLabel = TOPICS.find((t) => t.id === topic)?.label ?? 'General check-in';
+    const subject = `Appointment request: ${topicLabel}`;
+    const body = [
+      `I'd like to book a ${duration} appointment.`,
+      `Preferred time: ${date} at ${time}.`,
+      `Topic: ${topicLabel}.`,
+      '',
+      notes.trim() ? `Notes: ${notes.trim()}` : 'No additional notes.'
+    ].join('\n');
+
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      if (!userId) {
+        setError('Please sign in to request an appointment.');
+        return;
+      }
+
+      // Appointments ride on the help-request channel: this lands in the
+      // counsellor's queue and the student's inbox, and the counsellor copy is
+      // created by a DB trigger (do not insert it here). No appointments table
+      // exists yet, so this is the real persistence path.
+      await insertHelpRequest(supabase, {
+        student_profile_id: userId,
+        subject,
+        body
+      });
+
+      setSubmitted(true);
+    } catch (err) {
+      console.error('appointment request submit failed', err);
+      setError("Couldn't send your request. Check your connection and try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -74,8 +116,8 @@ export default function AppointmentPage() {
         <PageHero
           tone="student"
           eyebrow="Your counsellor"
-          title="Sent — sit tight"
-          description="Sarah will confirm shortly. We'll email you the moment the time is locked in."
+          title="Request sent"
+          description="Your request is now in Sarah's queue. She'll reply in your inbox to confirm the time."
           highlight="Pending confirmation"
           accent="On its way"
           stats={[
@@ -87,7 +129,7 @@ export default function AppointmentPage() {
           actions={
             <>
               <Button asChild size="sm" variant="outline">
-                <Link href="/dashboard">Back to dashboard</Link>
+                <Link href="/inbox">Open inbox</Link>
               </Button>
               <Button size="sm" onClick={() => setSubmitted(false)} variant="ghost">
                 Request another time
@@ -101,10 +143,13 @@ export default function AppointmentPage() {
               <Check className="h-5 w-5" />
             </div>
             <div className="space-y-2">
-              <p className="text-base font-semibold text-foreground">Got it — we&apos;ve let Sarah know</p>
+              <p className="text-base font-semibold text-foreground">Got it — Sarah has your request</p>
               <p className="text-sm text-muted-foreground">
-                We passed your preferred time over. You&apos;ll get an email at the address on your profile
-                as soon as it&apos;s confirmed.
+                We&apos;ve sent your preferred time to Sarah. Her reply will appear in your{' '}
+                <Link href="/inbox" className="font-semibold text-primary hover:underline">
+                  inbox
+                </Link>{' '}
+                — watch for the confirmation there.
               </p>
               <div className="rounded-xl bg-muted/40 p-4 text-sm text-foreground">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Notes shared with your counsellor</p>
@@ -149,6 +194,7 @@ export default function AppointmentPage() {
                 <button
                   key={option.id}
                   type="button"
+                  aria-pressed={active}
                   onClick={() => setTopic(option.id)}
                   className={cn(
                     'flex items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -208,6 +254,7 @@ export default function AppointmentPage() {
                   <button
                     key={value}
                     type="button"
+                    aria-pressed={active}
                     onClick={() => setTime(value)}
                     className={cn(
                       'inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition',
@@ -247,17 +294,25 @@ export default function AppointmentPage() {
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
-            <Mail className="mr-1 inline h-3 w-3" /> You&apos;ll receive a confirmation by email.
+            <Mail className="mr-1 inline h-3 w-3" /> Sarah will confirm in your inbox.
           </p>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {(!date || !time) && (
+              <p className="text-xs text-muted-foreground">Pick a date and time to continue.</p>
+            )}
             <Button type="button" size="sm" variant="ghost" asChild>
               <Link href="/dashboard">Cancel</Link>
             </Button>
-            <Button type="submit" size="sm" disabled={!date || !time}>
-              Send request
+            <Button type="submit" size="sm" disabled={!date || !time || submitting}>
+              {submitting ? 'Sending…' : 'Send request'}
             </Button>
           </div>
         </div>
+        {error ? (
+          <p className="text-sm text-rose-600 dark:text-rose-400" role="alert">
+            {error}
+          </p>
+        ) : null}
       </form>
     </DashboardShell>
   );

@@ -17,7 +17,7 @@ import { AnimatedBlobBanner } from '@/components/animated-blob-banner';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { IntelligentSearchBar, Suggestion } from '@/components/university-search/IntelligentSearchBar';
-import { getBrowserSupabaseClient } from '@/lib/supabase/client';
+import { SavedSearchesRow } from '@/components/university-search/saved-searches-row';
 import {
   buildSearchResultsUrl,
   buildSuggestionResultsUrl,
@@ -272,27 +272,29 @@ function UniversitySearchPageInner() {
 
     const loadFilters = async () => {
       try {
-        const supabase = getBrowserSupabaseClient();
-        const [{ data: universityData, error: universityError }, { data: programData, error: programError }] = await Promise.all([
-          supabase.from('universities').select('country'),
-          supabase.from('programs').select('field,study_level,level,mode')
-        ]);
-
-        if (universityError || programError) {
-          console.warn('Using fallback filters due to Supabase error', universityError ?? programError);
+        // Distinct values come from a cached API route backed by a
+        // SELECT DISTINCT SQL function — never scan the 119k-row programs
+        // table from the browser to derive ≤60 option strings.
+        const res = await fetch('/api/search/filter-options');
+        if (!res.ok) {
+          console.warn('Using fallback filters — filter-options route failed', res.status);
           return;
         }
+        const options = (await res.json()) as {
+          countries?: string[];
+          fields?: string[];
+          studyLevels?: string[];
+          levels?: string[];
+          modes?: string[];
+        };
 
-        const countries = uniqueSorted((universityData ?? []).map((uni) => uni.country));
-        const subjects = uniqueSorted(
-          (programData ?? []).flatMap((program) => [program.field, program.study_level, program.level])
-        );
-        const fitFocus = uniqueSorted(
-          (programData ?? [])
-            .map((program) => program.mode)
-            .filter(Boolean),
-          16
-        );
+        const countries = uniqueSorted(options.countries ?? []);
+        const subjects = uniqueSorted([
+          ...(options.fields ?? []),
+          ...(options.studyLevels ?? []),
+          ...(options.levels ?? [])
+        ]);
+        const fitFocus = uniqueSorted(options.modes ?? [], 16);
 
         setFilterGroups((prev) =>
           prev.map((group) => {
@@ -373,6 +375,8 @@ function UniversitySearchPageInner() {
           </div>
         </div>
       </section>
+
+      <SavedSearchesRow />
 
       <section className="surface-card surface-card--static">
         <div className="flex flex-col gap-2 pb-6">

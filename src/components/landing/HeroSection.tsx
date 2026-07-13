@@ -65,7 +65,7 @@ const radarContainerVariants: Variants = {
 
 export function HeroSection() {
     const [storyReady, setStoryReady] = useState(false);
-    const [launchHref, setLaunchHref] = useState('/signup');
+    const [launchHref, setLaunchHref] = useState('/login');
     const supabase = useSupabase();
     const { mode } = useThemeMode();
     const shouldReduceMotion = useReducedMotion();

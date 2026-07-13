@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
-  }
   public: {
     Tables: {
       application_checklist: {
@@ -98,8 +93,12 @@ export type Database = {
       applications: {
         Row: {
           created_at: string
+          decision: string | null
+          decision_at: string | null
+          decision_conditions: string | null
           id: string
           notes: string | null
+          platform: string | null
           portal_url: string | null
           profile_id: string
           program_id: string
@@ -108,8 +107,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          decision?: string | null
+          decision_at?: string | null
+          decision_conditions?: string | null
           id?: string
           notes?: string | null
+          platform?: string | null
           portal_url?: string | null
           profile_id: string
           program_id: string
@@ -118,8 +121,12 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          decision?: string | null
+          decision_at?: string | null
+          decision_conditions?: string | null
           id?: string
           notes?: string | null
+          platform?: string | null
           portal_url?: string | null
           profile_id?: string
           program_id?: string
@@ -393,6 +400,48 @@ export type Database = {
         }
         Relationships: []
       }
+      counsellor_notes: {
+        Row: {
+          author_profile_id: string
+          body: string
+          created_at: string
+          id: string
+          note_type: string
+          student_profile_id: string
+        }
+        Insert: {
+          author_profile_id: string
+          body: string
+          created_at?: string
+          id?: string
+          note_type?: string
+          student_profile_id: string
+        }
+        Update: {
+          author_profile_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          note_type?: string
+          student_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "counsellor_notes_author_profile_id_fkey"
+            columns: ["author_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "counsellor_notes_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deadlines: {
         Row: {
           created_at: string
@@ -503,6 +552,7 @@ export type Database = {
           request_id: string
           scheduled_for: string
           status: string
+          status_changed_by: string | null
           student_profile_id: string
           title: string
         }
@@ -515,6 +565,7 @@ export type Database = {
           request_id: string
           scheduled_for: string
           status?: string
+          status_changed_by?: string | null
           student_profile_id: string
           title: string
         }
@@ -527,6 +578,7 @@ export type Database = {
           request_id?: string
           scheduled_for?: string
           status?: string
+          status_changed_by?: string | null
           student_profile_id?: string
           title?: string
         }
@@ -728,6 +780,88 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parent_contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          last_contacted: string | null
+          parent_name: string
+          phone: string | null
+          relationship: string | null
+          status: string
+          student_profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_contacted?: string | null
+          parent_name: string
+          phone?: string | null
+          relationship?: string | null
+          status?: string
+          student_profile_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_contacted?: string | null
+          parent_name?: string
+          phone?: string | null
+          relationship?: string | null
+          status?: string
+          student_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_contacts_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parent_messages: {
+        Row: {
+          body: string
+          contact_id: string
+          created_at: string
+          id: string
+          read_at: string | null
+          sender: string
+          template: string | null
+        }
+        Insert: {
+          body: string
+          contact_id: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender: string
+          template?: string | null
+        }
+        Update: {
+          body?: string
+          contact_id?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender?: string
+          template?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_messages_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "parent_contacts"
             referencedColumns: ["id"]
           },
         ]
@@ -1050,6 +1184,69 @@ export type Database = {
           },
         ]
       }
+      simulation_results: {
+        Row: {
+          actual_country: string
+          actual_program: string
+          actual_university: string
+          algorithm_notes: string | null
+          algorithm_result: string | null
+          batch_label: string
+          chance_percent: number | null
+          created_at: string | null
+          id: string
+          profile_name: string
+          profile_snapshot: Json | null
+          programme_type: string
+          run_id: string
+          score_breakdown: Json | null
+          student_band: string | null
+          student_ib_equivalent: number | null
+          student_score: number | null
+          validation_pass: boolean | null
+        }
+        Insert: {
+          actual_country: string
+          actual_program: string
+          actual_university: string
+          algorithm_notes?: string | null
+          algorithm_result?: string | null
+          batch_label: string
+          chance_percent?: number | null
+          created_at?: string | null
+          id?: string
+          profile_name: string
+          profile_snapshot?: Json | null
+          programme_type: string
+          run_id?: string
+          score_breakdown?: Json | null
+          student_band?: string | null
+          student_ib_equivalent?: number | null
+          student_score?: number | null
+          validation_pass?: boolean | null
+        }
+        Update: {
+          actual_country?: string
+          actual_program?: string
+          actual_university?: string
+          algorithm_notes?: string | null
+          algorithm_result?: string | null
+          batch_label?: string
+          chance_percent?: number | null
+          created_at?: string | null
+          id?: string
+          profile_name?: string
+          profile_snapshot?: Json | null
+          programme_type?: string
+          run_id?: string
+          score_breakdown?: Json | null
+          student_band?: string | null
+          student_ib_equivalent?: number | null
+          student_score?: number | null
+          validation_pass?: boolean | null
+        }
+        Relationships: []
+      }
       sources: {
         Row: {
           health: Database["public"]["Enums"]["source_health"]
@@ -1200,6 +1397,47 @@ export type Database = {
           },
         ]
       }
+      student_activities: {
+        Row: {
+          category: string
+          created_at: string
+          duration: string | null
+          highlight: string | null
+          id: string
+          level: string | null
+          profile_id: string
+          sort_order: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          duration?: string | null
+          highlight?: string | null
+          id?: string
+          level?: string | null
+          profile_id: string
+          sort_order?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          duration?: string | null
+          highlight?: string | null
+          id?: string
+          level?: string | null
+          profile_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_activities_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_admissions_tests: {
         Row: {
           created_at: string
@@ -1238,6 +1476,50 @@ export type Database = {
           },
         ]
       }
+      student_documents: {
+        Row: {
+          created_at: string
+          doc_type: string
+          document_name: string
+          due_date: string | null
+          id: string
+          notes: string | null
+          status: string
+          student_profile_id: string
+          uploaded_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          doc_type: string
+          document_name: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          student_profile_id: string
+          uploaded_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          doc_type?: string
+          document_name?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          student_profile_id?: string
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_documents_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_lifestyle_preference: {
         Row: {
           act_score: number | null
@@ -1249,6 +1531,8 @@ export type Database = {
           desired_location_type:
             | Database["public"]["Enums"]["location_type"]
             | null
+          epq_subject: string | null
+          epq_title: string | null
           extracurricular_interests: string[] | null
           intl_experience: string[] | null
           key_activities: string[] | null
@@ -1271,6 +1555,8 @@ export type Database = {
           desired_location_type?:
             | Database["public"]["Enums"]["location_type"]
             | null
+          epq_subject?: string | null
+          epq_title?: string | null
           extracurricular_interests?: string[] | null
           intl_experience?: string[] | null
           key_activities?: string[] | null
@@ -1293,6 +1579,8 @@ export type Database = {
           desired_location_type?:
             | Database["public"]["Enums"]["location_type"]
             | null
+          epq_subject?: string | null
+          epq_title?: string | null
           extracurricular_interests?: string[] | null
           intl_experience?: string[] | null
           key_activities?: string[] | null
@@ -1705,7 +1993,16 @@ export type Database = {
     }
     Functions: {
       auth_role: { Args: never; Returns: string }
+      can_act_as_counsellor: { Args: never; Returns: boolean }
+      counsellor_notification_targets: { Args: never; Returns: string[] }
+      is_counsellor: { Args: never; Returns: boolean }
+      is_demo_account: { Args: never; Returns: boolean }
+      profile_display_name: {
+        Args: { p_fallback: string; p_profile_id: string }
+        Returns: string
+      }
       safe_int: { Args: { input: string; max_len?: number }; Returns: number }
+      search_filter_options: { Args: never; Returns: Json }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
@@ -1779,6 +2076,456 @@ export type Database = {
       source_health: "ok" | "stale" | "error"
       subject_level: "HL" | "SL" | "A_LEVEL"
       teaching_style: "academic" | "practical" | "mixed"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+  storage: {
+    Tables: {
+      buckets: {
+        Row: {
+          allowed_mime_types: string[] | null
+          avif_autodetection: boolean | null
+          created_at: string | null
+          file_size_limit: number | null
+          id: string
+          name: string
+          owner: string | null
+          owner_id: string | null
+          public: boolean | null
+          type: Database["storage"]["Enums"]["buckettype"]
+          updated_at: string | null
+        }
+        Insert: {
+          allowed_mime_types?: string[] | null
+          avif_autodetection?: boolean | null
+          created_at?: string | null
+          file_size_limit?: number | null
+          id: string
+          name: string
+          owner?: string | null
+          owner_id?: string | null
+          public?: boolean | null
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string | null
+        }
+        Update: {
+          allowed_mime_types?: string[] | null
+          avif_autodetection?: boolean | null
+          created_at?: string | null
+          file_size_limit?: number | null
+          id?: string
+          name?: string
+          owner?: string | null
+          owner_id?: string | null
+          public?: boolean | null
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      buckets_analytics: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          format: string
+          id: string
+          name: string
+          type: Database["storage"]["Enums"]["buckettype"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          format?: string
+          id?: string
+          name: string
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          format?: string
+          id?: string
+          name?: string
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      buckets_vectors: {
+        Row: {
+          created_at: string
+          id: string
+          type: Database["storage"]["Enums"]["buckettype"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      migrations: {
+        Row: {
+          executed_at: string | null
+          hash: string
+          id: number
+          name: string
+        }
+        Insert: {
+          executed_at?: string | null
+          hash: string
+          id: number
+          name: string
+        }
+        Update: {
+          executed_at?: string | null
+          hash?: string
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      objects: {
+        Row: {
+          bucket_id: string | null
+          created_at: string | null
+          id: string
+          last_accessed_at: string | null
+          metadata: Json | null
+          name: string | null
+          owner: string | null
+          owner_id: string | null
+          path_tokens: string[] | null
+          updated_at: string | null
+          user_metadata: Json | null
+          version: string | null
+        }
+        Insert: {
+          bucket_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_accessed_at?: string | null
+          metadata?: Json | null
+          name?: string | null
+          owner?: string | null
+          owner_id?: string | null
+          path_tokens?: string[] | null
+          updated_at?: string | null
+          user_metadata?: Json | null
+          version?: string | null
+        }
+        Update: {
+          bucket_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_accessed_at?: string | null
+          metadata?: Json | null
+          name?: string | null
+          owner?: string | null
+          owner_id?: string | null
+          path_tokens?: string[] | null
+          updated_at?: string | null
+          user_metadata?: Json | null
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "objects_bucketId_fkey"
+            columns: ["bucket_id"]
+            isOneToOne: false
+            referencedRelation: "buckets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      s3_multipart_uploads: {
+        Row: {
+          bucket_id: string
+          created_at: string
+          id: string
+          in_progress_size: number
+          key: string
+          metadata: Json | null
+          owner_id: string | null
+          upload_signature: string
+          user_metadata: Json | null
+          version: string
+        }
+        Insert: {
+          bucket_id: string
+          created_at?: string
+          id: string
+          in_progress_size?: number
+          key: string
+          metadata?: Json | null
+          owner_id?: string | null
+          upload_signature: string
+          user_metadata?: Json | null
+          version: string
+        }
+        Update: {
+          bucket_id?: string
+          created_at?: string
+          id?: string
+          in_progress_size?: number
+          key?: string
+          metadata?: Json | null
+          owner_id?: string | null
+          upload_signature?: string
+          user_metadata?: Json | null
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "s3_multipart_uploads_bucket_id_fkey"
+            columns: ["bucket_id"]
+            isOneToOne: false
+            referencedRelation: "buckets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      s3_multipart_uploads_parts: {
+        Row: {
+          bucket_id: string
+          created_at: string
+          etag: string
+          id: string
+          key: string
+          owner_id: string | null
+          part_number: number
+          size: number
+          upload_id: string
+          version: string
+        }
+        Insert: {
+          bucket_id: string
+          created_at?: string
+          etag: string
+          id?: string
+          key: string
+          owner_id?: string | null
+          part_number: number
+          size?: number
+          upload_id: string
+          version: string
+        }
+        Update: {
+          bucket_id?: string
+          created_at?: string
+          etag?: string
+          id?: string
+          key?: string
+          owner_id?: string | null
+          part_number?: number
+          size?: number
+          upload_id?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "s3_multipart_uploads_parts_bucket_id_fkey"
+            columns: ["bucket_id"]
+            isOneToOne: false
+            referencedRelation: "buckets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "s3_multipart_uploads_parts_upload_id_fkey"
+            columns: ["upload_id"]
+            isOneToOne: false
+            referencedRelation: "s3_multipart_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vector_indexes: {
+        Row: {
+          bucket_id: string
+          created_at: string
+          data_type: string
+          dimension: number
+          distance_metric: string
+          id: string
+          metadata_configuration: Json | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          bucket_id: string
+          created_at?: string
+          data_type: string
+          dimension: number
+          distance_metric: string
+          id?: string
+          metadata_configuration?: Json | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          bucket_id?: string
+          created_at?: string
+          data_type?: string
+          dimension?: number
+          distance_metric?: string
+          id?: string
+          metadata_configuration?: Json | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vector_indexes_bucket_id_fkey"
+            columns: ["bucket_id"]
+            isOneToOne: false
+            referencedRelation: "buckets_vectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      allow_any_operation: {
+        Args: { expected_operations: string[] }
+        Returns: boolean
+      }
+      allow_only_operation: {
+        Args: { expected_operation: string }
+        Returns: boolean
+      }
+      can_insert_object: {
+        Args: { bucketid: string; metadata: Json; name: string; owner: string }
+        Returns: undefined
+      }
+      extension: { Args: { name: string }; Returns: string }
+      filename: { Args: { name: string }; Returns: string }
+      foldername: { Args: { name: string }; Returns: string[] }
+      get_common_prefix: {
+        Args: { p_delimiter: string; p_key: string; p_prefix: string }
+        Returns: string
+      }
+      get_size_by_bucket: {
+        Args: never
+        Returns: {
+          bucket_id: string
+          size: number
+        }[]
+      }
+      list_multipart_uploads_with_delimiter: {
+        Args: {
+          bucket_id: string
+          delimiter_param: string
+          max_keys?: number
+          next_key_token?: string
+          next_upload_token?: string
+          prefix_param: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          key: string
+        }[]
+      }
+      list_objects_with_delimiter: {
+        Args: {
+          _bucket_id: string
+          delimiter_param: string
+          max_keys?: number
+          next_token?: string
+          prefix_param: string
+          sort_order?: string
+          start_after?: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          last_accessed_at: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
+      operation: { Args: never; Returns: string }
+      search: {
+        Args: {
+          bucketname: string
+          levels?: number
+          limits?: number
+          offsets?: number
+          prefix: string
+          search?: string
+          sortcolumn?: string
+          sortorder?: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          last_accessed_at: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
+      search_by_timestamp: {
+        Args: {
+          p_bucket_id: string
+          p_level: number
+          p_limit: number
+          p_prefix: string
+          p_sort_column: string
+          p_sort_column_after: string
+          p_sort_order: string
+          p_start_after: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          key: string
+          last_accessed_at: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
+      search_v2: {
+        Args: {
+          bucket_name: string
+          levels?: number
+          limits?: number
+          prefix: string
+          sort_column?: string
+          sort_column_after?: string
+          sort_order?: string
+          start_after?: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          key: string
+          last_accessed_at: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
+    }
+    Enums: {
+      buckettype: "STANDARD" | "ANALYTICS" | "VECTOR"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1984,4 +2731,10 @@ export const Constants = {
       teaching_style: ["academic", "practical", "mixed"],
     },
   },
+  storage: {
+    Enums: {
+      buckettype: ["STANDARD", "ANALYTICS", "VECTOR"],
+    },
+  },
 } as const
+

@@ -371,11 +371,11 @@ const DEMO_MATCHES: Array<{
     outcomes: number;
   };
 }> = [
-  // ── Reach (top fit scores — display ordering) ────────────────────────────
+  // ── Reach (<30% admission chance) ────────────────────────────────────────
   {
     programId: '37b7597a-c85b-54b7-a263-f88b3e277344',
     tier: 'Reach',
-    score: 92,
+    score: 18,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',
@@ -401,7 +401,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: 'cd952b76-9127-5d28-903c-8e1f4c89fd4f',
     tier: 'Reach',
-    score: 94,
+    score: 22,
     breakdown: {
       program_name: 'Computing',
       program_field: 'Computer Science',
@@ -427,7 +427,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: 'fcb852c2-f36e-5deb-973b-71110547d515',
     tier: 'Reach',
-    score: 90,
+    score: 25,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',
@@ -454,7 +454,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: 'dbc9c060-5d51-5871-80d6-d59d4821a4f4',
     tier: 'Match',
-    score: 86,
+    score: 45,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',
@@ -480,7 +480,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: 'c4678f36-8c52-5439-8fcb-6cd1181aa984',
     tier: 'Match',
-    score: 84,
+    score: 42,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',
@@ -506,7 +506,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: '0994d437-27c3-5231-8bd5-a1d011a61f3d',
     tier: 'Match',
-    score: 81,
+    score: 38,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',

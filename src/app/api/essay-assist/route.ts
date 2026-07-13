@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
+import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
+import { checkRateLimit } from '@/lib/api/rate-limit';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? '' });
 
@@ -114,6 +116,21 @@ const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite']
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = createRouteHandlerSupabaseClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401 });
+    }
+
+    // Bound per-user LLM spend — nothing else stops a scripted request loop.
+    if (!checkRateLimit(`essay-assist:${user.id}`, { limit: 10, windowMs: 60_000 })) {
+      return new Response(JSON.stringify({ error: 'Too many requests — try again in a minute' }), {
+        status: 429
+      });
+    }
+
     const body = await req.json();
     const { action, essay, platform, block, blocks, studentContext } = body as {
       action: Action;
@@ -134,6 +151,10 @@ export async function POST(req: NextRequest) {
 
     if (action === 'feedback' && (!essay || essay.trim().length < 20)) {
       return new Response(JSON.stringify({ error: 'Write at least a few sentences before requesting feedback.' }), { status: 400 });
+    }
+
+    if ((essay && essay.length > 30_000) || (studentContext && studentContext.length > 5_000)) {
+      return new Response(JSON.stringify({ error: 'Input too long.' }), { status: 400 });
     }
 
     if (action === 'expand' && !block) {
@@ -209,8 +230,10 @@ export async function POST(req: NextRequest) {
       error: 'AI models are rate-limited right now. Please wait 60 seconds and try again.',
     }), { status: 503 });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[essay-assist]', message);
-    return new Response(JSON.stringify({ error: message }), { status: 500 });
+    console.error('[essay-assist]', err);
+    return new Response(
+      JSON.stringify({ error: 'Something went wrong. Please try again.' }),
+      { status: 500 }
+    );
   }
 }

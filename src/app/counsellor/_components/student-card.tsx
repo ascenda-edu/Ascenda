@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { AlertTriangle, Clock, CheckCircle2, BookOpen, Eye, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { CounsellorStudent } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorStudent } from '@/lib/counsellor/types';
+import { MessageStudentButton } from './message-student-button';
 
 interface StudentCardProps {
   student: CounsellorStudent;
@@ -153,12 +154,17 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
           >
             <Eye className="h-3.5 w-3.5" />
           </Link>
-          <a
-            href={`mailto:${student.personal.email}`}
+          <MessageStudentButton
+            student={{
+              id: student.id,
+              firstName: student.personal.firstName,
+              lastName: student.personal.lastName
+            }}
+            variant={null}
             className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground backdrop-blur-sm transition hover:border-primary/40 hover:text-primary"
           >
             <Mail className="h-3.5 w-3.5" />
-          </a>
+          </MessageStudentButton>
         </div>
       </div>
 
@@ -171,8 +177,8 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
             : 'border-sky-200/60 bg-sky-500/10 text-sky-700 dark:text-sky-300'
         )}>
           {student.academic.programmeType === 'IB'
-            ? `IB · ${student.academic.ibPoints} pts`
-            : `A-Level · ${student.academic.aLevelGrades}`}
+            ? student.academic.ibPoints ? `IB · ${student.academic.ibPoints} pts` : 'IB'
+            : student.academic.aLevelGrades ? `A-Level · ${student.academic.aLevelGrades}` : 'A-Level'}
         </span>
         <span className="rounded-full border border-border/60 bg-muted/40 px-3 py-0.5 text-xs text-muted-foreground">
           {student.academic.clusters[0]?.replace(/_/g, ' ')}

@@ -14,7 +14,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useSupabase } from '@/hooks/useSupabase';
 import { Button } from '../ui/button';
 import { CommandPaletteIconTrigger, CommandPaletteTrigger } from './command-palette';
-import { SideSwitcher } from './side-switcher';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 
 export const Navbar = () => {
@@ -34,6 +33,12 @@ export const Navbar = () => {
   }, []);
 
   const handleSignOut = async () => {
+    // Confirm before signing out — the button sits a click away from the
+    // bell and theme toggle, so accidental clicks during a demo would
+    // dump us to the login screen with no easy recovery.
+    if (typeof window !== 'undefined' && !window.confirm('Sign out of Ascenda?')) {
+      return;
+    }
     await supabase.auth.signOut();
     router.refresh();
     router.push('/login');
@@ -41,7 +46,7 @@ export const Navbar = () => {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50">
-      <div className="container mx-auto px-2 pb-2 pt-2 sm:px-4 sm:pb-3 sm:pt-3 md:px-6">
+      <div className="px-3 pb-2 pt-2 sm:px-6 sm:pb-3 sm:pt-3 lg:px-10">
         <div
           className={cn(
             'flex w-full items-center justify-between rounded-2xl border border-border bg-card/95 px-3 py-1.5 sm:px-4 sm:py-2 text-foreground backdrop-blur-lg transition-all dark:border-white/10 dark:bg-card/90',
@@ -65,7 +70,6 @@ export const Navbar = () => {
             ))}
           </nav>
           <div className="flex items-center gap-2">
-            <SideSwitcher className="hidden sm:inline-flex" />
             <CommandPaletteTrigger />
             <CommandPaletteIconTrigger />
             <NotificationBell />
@@ -76,6 +80,7 @@ export const Navbar = () => {
               onClick={handleSignOut}
               className="rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
               title="Sign out"
+              aria-label="Sign out"
             >
               <LogOut className="h-4 w-4" />
             </Button>

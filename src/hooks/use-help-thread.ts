@@ -7,14 +7,15 @@ import {
   insertHelpMeeting,
   insertHelpMessage,
   insertHelpNote,
-  insertNotification,
   listHelpMeetings,
   listHelpMessages,
   listHelpNotes,
+  updateHelpMeetingStatus,
   updateHelpRequestStatus
 } from '@/lib/demo/help-request-client';
 import type {
   HelpMeeting,
+  HelpMeetingStatus,
   HelpMessage,
   HelpNote,
   HelpRequest,
@@ -35,10 +36,13 @@ export interface UseHelpThreadResult {
     durationMinutes?: number;
     location?: string;
   }) => Promise<void>;
+  setMeetingStatus: (meeting: HelpMeeting, status: HelpMeetingStatus, actor: 'student' | 'counsellor') => Promise<void>;
   setStatus: (status: HelpRequestStatus) => Promise<void>;
 }
 
-const POLL_MS = 4000;
+// See use-notifications.ts for the rationale on the two-speed poll.
+const POLL_MS_FAST = 1500;
+const POLL_MS_SLOW = 10000;
 
 export const useHelpThread = (requestId: string | null): UseHelpThreadResult => {
   const supabase = useSupabase();
@@ -95,9 +99,28 @@ export const useHelpThread = (requestId: string | null): UseHelpThreadResult => 
     };
   }, [requestId, refresh]);
 
-  // Realtime + poll fallback while drawer is open.
+  // Realtime + adaptive poll fallback while drawer is open. Same
+  // two-speed scheme as the other live hooks.
   useEffect(() => {
     if (!requestId) return;
+
+    let pollHandle: number | null = null;
+    const startPoll = (intervalMs: number) => {
+      if (pollHandle !== null) window.clearInterval(pollHandle);
+      pollHandle = window.setInterval(() => {
+        // Each poll is 4 queries — skip them in hidden tabs and let the
+        // visibilitychange handler below catch up on return.
+        if (document.hidden) return;
+        refresh();
+      }, intervalMs);
+    };
+    startPoll(POLL_MS_FAST);
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) refresh();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     const channel = (supabase as any)
       .channel(`help_thread:${requestId}`)
       .on(
@@ -120,10 +143,16 @@ export const useHelpThread = (requestId: string | null): UseHelpThreadResult => 
         { event: '*', schema: 'public', table: 'help_requests', filter: `id=eq.${requestId}` },
         () => refresh()
       )
-      .subscribe();
-    const handle = window.setInterval(() => refresh(), POLL_MS);
+      .subscribe((status: string) => {
+        if (status === 'SUBSCRIBED') startPoll(POLL_MS_SLOW);
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          startPoll(POLL_MS_FAST);
+        }
+      });
+
     return () => {
-      window.clearInterval(handle);
+      if (pollHandle !== null) window.clearInterval(pollHandle);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       try {
         (supabase as any).removeChannel(channel);
       } catch {
@@ -137,28 +166,15 @@ export const useHelpThread = (requestId: string | null): UseHelpThreadResult => 
       if (!requestId || !currentProfileId || !request) return;
       const trimmed = body.trim();
       if (!trimmed) return;
+      // The trg_help_message_notify DB trigger notifies the other side —
+      // a student session can't insert onto a counsellor's notification row
+      // under RLS, so the fan-out has to happen server-side.
       await insertHelpMessage(supabase, {
         request_id: requestId,
         author_profile_id: currentProfileId,
         author_role: authorRole,
         body: trimmed
       });
-      // Notify the other side. In demo, student and counsellor are the same
-      // auth user; the notification still surfaces in the bell post-flip.
-      try {
-        await insertNotification(supabase, {
-          profile_id: request.student_profile_id,
-          kind: authorRole === 'counsellor' ? 'help_reply_from_counsellor' : 'help_reply_from_student',
-          title:
-            authorRole === 'counsellor'
-              ? 'Sarah replied to your help request'
-              : 'Greg replied to a help request',
-          body: trimmed.slice(0, 120),
-          href: `/counsellor?help=${requestId}`
-        });
-      } catch (err) {
-        console.warn('reply notify failed', err);
-      }
       await refresh();
     },
     [requestId, currentProfileId, request, supabase, refresh]
@@ -192,6 +208,7 @@ export const useHelpThread = (requestId: string | null): UseHelpThreadResult => 
       location?: string;
     }) => {
       if (!requestId || !currentProfileId || !request) return;
+      // trg_help_meeting_insert_notify notifies the student server-side.
       await insertHelpMeeting(supabase, {
         request_id: requestId,
         counsellor_profile_id: currentProfileId,
@@ -202,26 +219,21 @@ export const useHelpThread = (requestId: string | null): UseHelpThreadResult => 
         location: location ?? null,
         status: 'proposed'
       });
-      try {
-        await insertNotification(supabase, {
-          profile_id: request.student_profile_id,
-          kind: 'help_meeting_proposed',
-          title: 'Sarah proposed a meeting',
-          body: `${title} · ${new Date(scheduledFor).toLocaleString('en-GB', {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit'
-          })}`,
-          href: `/counsellor?help=${requestId}`
-        });
-      } catch (err) {
-        console.warn('meeting notify failed', err);
-      }
       await refresh();
     },
     [requestId, currentProfileId, request, supabase, refresh]
+  );
+
+  const setMeetingStatus = useCallback(
+    async (meeting: HelpMeeting, status: HelpMeetingStatus, actor: 'student' | 'counsellor') => {
+      if (!requestId || !request) return;
+      // status_changed_by tells trg_help_meeting_status_notify which side
+      // acted (auth.uid() can't distinguish the two sides of the demo
+      // account); the trigger notifies the other side server-side.
+      await updateHelpMeetingStatus(supabase, meeting.id, status, actor);
+      await refresh();
+    },
+    [requestId, request, supabase, refresh]
   );
 
   const setStatus = useCallback(
@@ -233,5 +245,16 @@ export const useHelpThread = (requestId: string | null): UseHelpThreadResult => 
     [requestId, supabase, refresh]
   );
 
-  return { request, messages, notes, meetings, loading, reply, addNote, proposeMeeting, setStatus };
+  return {
+    request,
+    messages,
+    notes,
+    meetings,
+    loading,
+    reply,
+    addNote,
+    proposeMeeting,
+    setMeetingStatus,
+    setStatus
+  };
 };

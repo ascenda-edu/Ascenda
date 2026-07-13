@@ -43,10 +43,12 @@ export async function GET(request: Request) {
   }
 
   const [profileResult, personalResult, academicResult, lifestyleResult, subjectsResult, testsResult] = await Promise.all([
-    supabase.from('profiles').select('full_name').eq('id', user.id).single(),
-    supabase.from('student_personal_information').select('*').eq('profile_id', user.id).single(),
-    supabase.from('student_academic_input').select('*').eq('profile_id', user.id).single(),
-    supabase.from('student_lifestyle_preference').select('*').eq('profile_id', user.id).single(),
+    // maybeSingle: a new user's missing rows are not errors — .single() would
+    // add a spurious "unavailable" warning to every export for them.
+    supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
+    supabase.from('student_personal_information').select('*').eq('profile_id', user.id).maybeSingle(),
+    supabase.from('student_academic_input').select('*').eq('profile_id', user.id).maybeSingle(),
+    supabase.from('student_lifestyle_preference').select('*').eq('profile_id', user.id).maybeSingle(),
     supabase.from('student_subjects').select('*').eq('profile_id', user.id).order('created_at', { ascending: true }),
     supabase.from('student_admissions_tests').select('*').eq('profile_id', user.id).order('created_at', { ascending: true })
   ]);

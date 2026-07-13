@@ -6,8 +6,7 @@ import { LayoutGrid, List, ChevronRight, Filter } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { stagger, cardFade } from '@/lib/motion';
-import { getAllApplicationsWithPlatform } from '@/lib/data/counsellor-dummy-data';
-import type { ApplicationStatus, ApplicationPlatform, EnrichedApplication } from '@/lib/data/counsellor-dummy-data';
+import type { ApplicationStatus, ApplicationPlatform, EnrichedApplication } from '@/lib/counsellor/types';
 
 const STATUS_CONFIG: Record<ApplicationStatus, { label: string; color: string; bg: string; border: string }> = {
   planning: { label: 'Planning', color: 'text-sky-600', bg: 'bg-sky-500/10', border: 'border-l-sky-500' },
@@ -28,8 +27,8 @@ const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 
 
 const STATUSES: ApplicationStatus[] = ['planning', 'in_progress', 'submitted', 'decision'];
 
-export function ApplicationOverview() {
-  const allApps = useMemo(() => getAllApplicationsWithPlatform(), []);
+export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
+  const allApps = apps;
   const [view, setView] = useState<'kanban' | 'list'>('kanban');
   const [filterPlatform, setFilterPlatform] = useState<ApplicationPlatform | null>(null);
   const [searchStudent, setSearchStudent] = useState('');
@@ -50,12 +49,30 @@ export function ApplicationOverview() {
     return [...map.entries()].sort((a, b) => b[1] - a[1]);
   }, [allApps]);
 
-  // Group by status for kanban
+  // Group by status for kanban; within each status, group by student
   const columns = useMemo(() => {
     const map: Record<ApplicationStatus, EnrichedApplication[]> = { planning: [], in_progress: [], submitted: [], decision: [] };
     filtered.forEach((a) => map[a.status].push(a));
     return map;
   }, [filtered]);
+
+  // Per-column: unique students with all their apps in that stage
+  const kanbanByStudent = useMemo(() => {
+    const result: Record<ApplicationStatus, { studentId: string; studentName: string; flagEmoji: string; apps: EnrichedApplication[] }[]> = {
+      planning: [], in_progress: [], submitted: [], decision: []
+    };
+    (Object.keys(columns) as ApplicationStatus[]).forEach((status) => {
+      const seen = new Map<string, typeof result[ApplicationStatus][number]>();
+      columns[status].forEach((app) => {
+        if (!seen.has(app.studentId)) {
+          seen.set(app.studentId, { studentId: app.studentId, studentName: app.studentName, flagEmoji: app.flagEmoji, apps: [] });
+        }
+        seen.get(app.studentId)!.apps.push(app);
+      });
+      result[status] = [...seen.values()];
+    });
+    return result;
+  }, [columns]);
 
   return (
     <div className="space-y-6">
@@ -69,7 +86,7 @@ export function ApplicationOverview() {
         ))}
         <div className="surface-subcard px-4 py-2 text-center">
           <p className="text-lg font-bold text-foreground">{allApps.length}</p>
-          <p className="text-xs text-muted-foreground">Total</p>
+          <p className="text-xs text-muted-foreground">Total applications</p>
         </div>
       </div>
 
@@ -101,44 +118,51 @@ export function ApplicationOverview() {
         ))}
       </div>
 
-      {/* Kanban view */}
+      {/* Kanban view — one card per student, apps listed inside */}
       {view === 'kanban' && (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {STATUSES.map((status) => {
             const cfg = STATUS_CONFIG[status];
-            const apps = columns[status];
+            const studentGroups = kanbanByStudent[status];
             return (
               <div key={status} className="space-y-3">
                 <div className="flex items-center gap-2">
                   <h3 className={cn('text-sm font-semibold', cfg.color)}>{cfg.label}</h3>
-                  <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold', cfg.bg, cfg.color)}>{apps.length}</span>
+                  <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold', cfg.bg, cfg.color)}>
+                    {studentGroups.length} student{studentGroups.length !== 1 ? 's' : ''}
+                  </span>
                 </div>
                 <motion.div className="space-y-2" variants={stagger} initial="hidden" animate="show">
-                  {apps.map((app) => (
-                    <motion.div key={`${app.studentId}-${app.university}`} variants={cardFade}>
+                  {studentGroups.map(({ studentId, studentName, flagEmoji, apps }) => (
+                    <motion.div key={studentId} variants={cardFade}>
                       <Link
-                        href={`/counsellor/students/${app.studentId}`}
+                        href={`/counsellor/students/${studentId}`}
                         className={cn('block surface-subcard p-3 border-l-4 transition-colors hover:bg-muted/30 group', cfg.border)}
                       >
                         <div className="flex items-start justify-between">
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-sm">{app.flagEmoji}</span>
-                              <span className="text-sm font-semibold text-foreground truncate">{app.studentName}</span>
+                              <span className="text-sm">{flagEmoji}</span>
+                              <span className="text-sm font-semibold text-foreground truncate">{studentName}</span>
                             </div>
-                            <p className="text-xs text-foreground mt-1 truncate">{app.university}</p>
-                            <p className="text-[10px] text-muted-foreground truncate">{app.program}</p>
+                            <div className="mt-1.5 space-y-0.5">
+                              {apps.map((app) => (
+                                <div key={app.university} className="flex items-center gap-1.5 text-[11px]">
+                                  <span className="truncate text-muted-foreground">{app.university}</span>
+                                  <span className={cn('shrink-0 rounded-full px-1.5 py-0 text-[9px] font-semibold', PLATFORM_COLORS[app.platform] ?? 'bg-muted/50 text-muted-foreground')}>{app.platform}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground shrink-0 mt-1" />
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground shrink-0 mt-1 ml-2" />
                         </div>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', PLATFORM_COLORS[app.platform] ?? 'bg-muted/50 text-muted-foreground')}>{app.platform}</span>
-                          <span className="text-[10px] text-muted-foreground">{dateFormatter.format(new Date(app.deadline))}</span>
-                        </div>
+                        {apps.length > 1 && (
+                          <p className="mt-1.5 text-[10px] text-muted-foreground">{apps.length} applications</p>
+                        )}
                       </Link>
                     </motion.div>
                   ))}
-                  {apps.length === 0 && (
+                  {studentGroups.length === 0 && (
                     <p className="text-xs text-muted-foreground text-center py-4">No applications</p>
                   )}
                 </motion.div>

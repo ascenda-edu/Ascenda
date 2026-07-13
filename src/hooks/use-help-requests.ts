@@ -9,7 +9,9 @@ import {
 } from '@/lib/demo/help-request-client';
 import type { HelpRequest, HelpRequestStatus } from '@/lib/types/demo-tables';
 
-const POLL_MS = 4000;
+// See use-notifications.ts for the rationale on the two-speed poll.
+const POLL_MS_FAST = 1500;
+const POLL_MS_SLOW = 10000;
 
 export interface UseHelpRequestsResult {
   items: HelpRequest[];
@@ -50,8 +52,25 @@ export const useHelpRequests = (): UseHelpRequestsResult => {
     };
   }, [supabase]);
 
-  // Realtime + poll fallback.
+  // Realtime + adaptive poll fallback (fast when realtime not confirmed,
+  // slow when it is — keeps the demo flip moment snappy under any conditions).
   useEffect(() => {
+    let pollHandle: number | null = null;
+    const startPoll = (intervalMs: number) => {
+      if (pollHandle !== null) window.clearInterval(pollHandle);
+      pollHandle = window.setInterval(() => {
+        // Skip polls in hidden tabs; visibilitychange below catches up on return.
+        if (document.hidden) return;
+        refresh();
+      }, intervalMs);
+    };
+    startPoll(POLL_MS_FAST);
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) refresh();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     const channel = (supabase as any)
       .channel('help_requests_widget')
       .on(
@@ -77,14 +96,16 @@ export const useHelpRequests = (): UseHelpRequestsResult => {
           });
         }
       )
-      .subscribe();
-
-    const pollHandle = window.setInterval(() => {
-      refresh();
-    }, POLL_MS);
+      .subscribe((status: string) => {
+        if (status === 'SUBSCRIBED') startPoll(POLL_MS_SLOW);
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          startPoll(POLL_MS_FAST);
+        }
+      });
 
     return () => {
-      window.clearInterval(pollHandle);
+      if (pollHandle !== null) window.clearInterval(pollHandle);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       try {
         (supabase as any).removeChannel(channel);
       } catch {
@@ -101,7 +122,7 @@ export const useHelpRequests = (): UseHelpRequestsResult => {
           await insertNotification(supabase, {
             profile_id: req.student_profile_id,
             kind: 'help_accepted',
-            title: 'Sarah accepted your help request',
+            title: 'Your counsellor accepted your help request',
             body: req.university ? `${req.university}${req.program ? ` · ${req.program}` : ''}` : null,
             href: req.application_id ? `/applications/${req.application_id}` : null
           });

@@ -2,14 +2,16 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, Clock as ClockIcon, BookOpen, MapPin, GraduationCap, Target, FileText, Sparkles, Loader2 } from 'lucide-react';
-import type { CounsellorStudent, CounsellorMatch } from '@/lib/data/counsellor-dummy-data';
+import { CheckCircle2, XCircle, Clock as ClockIcon, BookOpen, MapPin, GraduationCap, Target, FileText } from 'lucide-react';
+import type { CounsellorStudent } from '@/lib/counsellor/types';
 import { NotesPanel } from './notes-panel';
+import { PortfolioBalance } from './portfolio-balance';
 import { EvolutionTimeline } from '@/components/profile/evolution-timeline';
-import { DEMO_EVOLUTION } from '@/lib/data/student-demo-data';
+import type { EvolutionEntry } from '@/lib/data/student-demo-data';
 
 interface StudentDetailTabsProps {
   student: CounsellorStudent;
+  evolution: EvolutionEntry[];
 }
 
 type Tab = 'overview' | 'academic' | 'matches' | 'applications' | 'notes' | 'timeline';
@@ -36,57 +38,18 @@ const APP_STATUS = {
   decision: { label: 'Decision', color: 'text-emerald-600 bg-emerald-500/10 border-emerald-200/60 dark:border-emerald-500/20' }
 };
 
-// Plausible generated matches per academic cluster
-const GENERATED_MATCHES: Record<string, CounsellorMatch[]> = {
-  engineering: [
-    { university: 'University of Sheffield', country: 'UK', program: 'MEng Aerospace Engineering', score: 74, tier: 'Match' },
-    { university: 'University of Leeds', country: 'UK', program: 'MEng Mechanical Engineering', score: 78, tier: 'Match' },
-    { university: 'University of Bath', country: 'UK', program: 'BEng Aerospace Engineering', score: 82, tier: 'Safe' },
-    { university: 'University of Surrey', country: 'UK', program: 'BEng Aeronautical Engineering', score: 86, tier: 'Safe' }
-  ],
-  computer_science: [
-    { university: 'University of Birmingham', country: 'UK', program: 'BSc Computer Science', score: 76, tier: 'Match' },
-    { university: 'University of Nottingham', country: 'UK', program: 'BSc Computer Science', score: 81, tier: 'Safe' }
-  ],
-  law: [
-    { university: 'University of Birmingham', country: 'UK', program: 'LLB Law', score: 72, tier: 'Match' },
-    { university: 'University of Bristol', country: 'UK', program: 'LLB Law', score: 78, tier: 'Safe' },
-    { university: 'University of Leeds', country: 'UK', program: 'LLB Law', score: 83, tier: 'Safe' }
-  ],
-  default: [
-    { university: 'University of Edinburgh', country: 'UK', program: 'Undergraduate Programme', score: 75, tier: 'Match' },
-    { university: 'University of Bristol', country: 'UK', program: 'Undergraduate Programme', score: 82, tier: 'Safe' },
-    { university: 'University of Exeter', country: 'UK', program: 'Undergraduate Programme', score: 87, tier: 'Safe' }
-  ]
-};
-
-function getGeneratedMatches(student: CounsellorStudent): CounsellorMatch[] {
-  const cluster = student.academic.clusters[0] ?? '';
-  return GENERATED_MATCHES[cluster] ?? GENERATED_MATCHES.default;
-}
-
 function formatDate(iso: string) {
+  if (!iso) return 'No deadline';
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-export const StudentDetailTabs = ({ student }: StudentDetailTabsProps) => {
+export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps) => {
   const [active, setActive] = useState<Tab>('overview');
-  const [matches, setMatches] = useState<CounsellorMatch[]>(student.matches);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [hasGenerated, setHasGenerated] = useState(false);
+  const matches = student.matches;
 
   const reachCount = matches.filter((m) => m.tier === 'Reach').length;
   const matchCount = matches.filter((m) => m.tier === 'Match').length;
   const safeCount = matches.filter((m) => m.tier === 'Safe').length;
-
-  const runMatchGeneration = () => {
-    setIsGenerating(true);
-    setTimeout(() => {
-      setMatches(getGeneratedMatches(student));
-      setIsGenerating(false);
-      setHasGenerated(true);
-    }, 1600);
-  };
 
   return (
     <div className="space-y-6">
@@ -239,12 +202,12 @@ export const StudentDetailTabs = ({ student }: StudentDetailTabsProps) => {
               {student.academic.programmeType === 'IB' ? (
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">IB Points</dt>
-                  <dd className="font-bold text-primary">{student.academic.ibPoints} / 45</dd>
+                  <dd className="font-bold text-primary">{student.academic.ibPoints ?? '—'} / 45</dd>
                 </div>
               ) : (
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">A-Level Grades</dt>
-                  <dd className="font-bold text-primary">{student.academic.aLevelGrades}</dd>
+                  <dd className="font-bold text-primary">{student.academic.aLevelGrades ?? '—'}</dd>
                 </div>
               )}
               <div className="flex justify-between">
@@ -324,50 +287,16 @@ export const StudentDetailTabs = ({ student }: StudentDetailTabsProps) => {
       {/* Matches tab */}
       {active === 'matches' && (
         <div className="space-y-4">
-          {/* Generate / Re-run button */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
               {matches.length > 0
                 ? `${matches.length} match${matches.length !== 1 ? 'es' : ''} found`
                 : 'No matches yet'}
             </p>
-            <button
-              onClick={runMatchGeneration}
-              disabled={isGenerating}
-              className={cn(
-                'flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition',
-                hasGenerated || matches.length > 0
-                  ? 'border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20'
-                  : 'bg-primary text-primary-foreground shadow-sm hover:-translate-y-0.5',
-                'disabled:cursor-not-allowed disabled:opacity-60'
-              )}
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Generating…
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  {matches.length > 0 ? 'Re-run Matching' : 'Generate Matches'}
-                </>
-              )}
-            </button>
           </div>
 
-          {/* Generating shimmer */}
-          {isGenerating && (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-16 animate-pulse rounded-2xl bg-muted/50" />
-              ))}
-            </div>
-          )}
-
           {/* Match list */}
-          {!isGenerating && (
-            <>
+          <>
               {(['Reach', 'Match', 'Safe'] as const).map((tier) => {
                 const tierMatches = matches.filter((m) => m.tier === tier);
                 if (tierMatches.length === 0) return null;
@@ -409,41 +338,43 @@ export const StudentDetailTabs = ({ student }: StudentDetailTabsProps) => {
                 <div className="rounded-[28px] border border-dashed border-border bg-muted/40 p-12 text-center">
                   <BookOpen className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
                   <p className="font-semibold text-foreground">No matches generated</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Complete the student profile then click Generate Matches above.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Complete the student profile to generate matches.</p>
                 </div>
               )}
-            </>
-          )}
+          </>
         </div>
       )}
 
       {/* Applications tab */}
       {active === 'applications' && (
-        <div className="space-y-3">
+        <div className="space-y-4">
+          <PortfolioBalance student={student} />
           {student.applications.length > 0 ? (
-            student.applications.map((app, i) => {
-              const statusCfg = APP_STATUS[app.status];
-              return (
-                <div
-                  key={i}
-                  className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-background/60 px-5 py-4 sm:flex-row sm:items-center sm:gap-4"
-                >
-                  <div className="flex-1 space-y-0.5">
-                    <p className="font-semibold text-foreground">{app.university}</p>
-                    <p className="text-sm text-muted-foreground">{app.program}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <ClockIcon className="h-3.5 w-3.5" />
-                      {formatDate(app.deadline)}
+            <div className="space-y-3">
+              {student.applications.map((app, i) => {
+                const statusCfg = APP_STATUS[app.status];
+                return (
+                  <div
+                    key={i}
+                    className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-background/60 px-5 py-4 sm:flex-row sm:items-center sm:gap-4"
+                  >
+                    <div className="flex-1 space-y-0.5">
+                      <p className="font-semibold text-foreground">{app.university}</p>
+                      <p className="text-sm text-muted-foreground">{app.program}</p>
                     </div>
-                    <span className={cn('rounded-full border px-3 py-1 text-xs font-semibold', statusCfg.color)}>
-                      {statusCfg.label}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <ClockIcon className="h-3.5 w-3.5" />
+                        {formatDate(app.deadline)}
+                      </div>
+                      <span className={cn('rounded-full border px-3 py-1 text-xs font-semibold', statusCfg.color)}>
+                        {statusCfg.label}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              );
-            })
+                );
+              })}
+            </div>
           ) : (
             <div className="rounded-[28px] border border-dashed border-border bg-muted/40 p-12 text-center">
               <FileText className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
@@ -465,7 +396,7 @@ export const StudentDetailTabs = ({ student }: StudentDetailTabsProps) => {
             <p className="text-sm text-muted-foreground">How this student&apos;s goals and interests have evolved over time.</p>
           </div>
           <EvolutionTimeline
-            entries={DEMO_EVOLUTION}
+            entries={evolution}
             studentName={`${student.personal.firstName} ${student.personal.lastName}`}
           />
         </div>

@@ -68,7 +68,9 @@ const formatPlain = (value?: string | null) => (value && value.trim().length > 0
 export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxItems = 5 }: ComparisonModalProps) {
     const [highlightDiffs, setHighlightDiffs] = useState(true);
 
-    const metricRows: MetricRow[] = [
+    // Memoized: this array feeds a useMemo below — rebuilding it per render
+    // invalidated that memo every time (react-hooks/exhaustive-deps warning).
+    const metricRows: MetricRow[] = useMemo(() => [
         {
             id: 'fitScore',
             label: 'Fit score',
@@ -174,7 +176,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
             valueForCompare: (uni) => uni.ucasCode,
             render: (uni) => <span className="text-sm font-mono text-foreground">{formatPlain(uni.ucasCode)}</span>
         }
-    ];
+    ], []);
 
     const isEmpty = universities.length === 0;
     const isMultiple = universities.length > 1;

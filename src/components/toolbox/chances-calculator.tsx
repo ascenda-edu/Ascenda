@@ -8,6 +8,13 @@ import { cn } from '@/lib/utils';
 import { stagger, cardFade } from '@/lib/motion';
 import type { DemoStudentGrades, UniversityChance } from '@/lib/data/student-demo-data';
 
+// Only link to a course page for IDs that actually resolve to a real `programs`
+// row. Demo cohort IDs ('ch-1'…) and the legacy '<title>-shortlist' IDs 404 on
+// /course/[id], so we omit the link rather than render a dead end.
+function isLinkableCourseId(id: string): boolean {
+  return !/^ch-\d+$/.test(id) && !id.endsWith('-shortlist');
+}
+
 function classify(predicted: number, min: number): 'reach' | 'match' | 'safety' {
   const diff = predicted - min;
   if (diff >= 5) return 'safety';
@@ -201,17 +208,17 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
           return (
             <motion.div key={uni.id} variants={cardFade} layout>
               <div
-                role="button"
-                tabIndex={0}
-                onClick={() => setExpandedId(isExpanded ? null : uni.id)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    setExpandedId(isExpanded ? null : uni.id);
-                  }
-                }}
-                className={cn('w-full text-left rounded-2xl border p-4 transition-all hover:shadow-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', cfg.bg)}
+                className={cn('relative w-full text-left rounded-2xl border p-4 transition-all hover:shadow-md', cfg.bg)}
               >
+                {/* Stretched toggle: a real button covering the card, kept as a
+                    SIBLING of the course Link (interactive elements must not nest). */}
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(isExpanded ? null : uni.id)}
+                  aria-expanded={isExpanded}
+                  aria-label={`${uni.university} — ${isExpanded ? 'collapse' : 'expand'} details`}
+                  className="absolute inset-0 cursor-pointer rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
                 <div className="flex items-center gap-4">
                   {/* Chance ring */}
                   <div className="relative h-14 w-14 shrink-0">
@@ -246,15 +253,17 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
                     <span className={cn('rounded-full px-3 py-1 text-xs font-semibold', cfg.bg, cfg.color)}>
                       {cfg.label}
                     </span>
-                    <Link
-                      href={`/course/${uni.id}`}
-                      onClick={(event) => event.stopPropagation()}
-                      className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-[11px] font-semibold text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
-                      aria-label={`View ${uni.university} course details`}
-                    >
-                      View course
-                      <ExternalLink className="h-3 w-3" aria-hidden />
-                    </Link>
+                    {isLinkableCourseId(uni.id) ? (
+                      <Link
+                        href={`/course/${uni.id}`}
+                        onClick={(event) => event.stopPropagation()}
+                        className="relative z-10 inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-[11px] font-semibold text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
+                        aria-label={`View ${uni.university} course details`}
+                      >
+                        View course
+                        <ExternalLink className="h-3 w-3" aria-hidden />
+                      </Link>
+                    ) : null}
                     <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', isExpanded && 'rotate-180')} />
                   </div>
                 </div>

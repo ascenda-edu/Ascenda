@@ -5,9 +5,9 @@ import { usePathname } from 'next/navigation';
 
 export function PageWrapper({ children }: PropsWithChildren) {
   const pathname = usePathname();
-  const isHome = pathname === '/';
+  const isFullBleed = pathname === '/' || pathname === '/login';
 
-  if (isHome) {
+  if (isFullBleed) {
     return children;
   }
 

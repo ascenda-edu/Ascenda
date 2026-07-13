@@ -1,15 +1,21 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useSupabase } from '@/hooks/useSupabase';
 import {
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead
 } from '@/lib/demo/help-request-client';
-import type { Notification } from '@/lib/types/demo-tables';
+import type { Notification, NotificationAudience } from '@/lib/types/demo-tables';
 
-const POLL_MS = 4000;
+// Aggressive poll while realtime hasn't confirmed subscription (cold start,
+// flaky network). Once realtime says SUBSCRIBED the interval relaxes — we
+// only need a safety net at that point. Numbers tuned for the live demo:
+// 1.5s feels near-instant when realtime is missing, 10s is cheap insurance.
+const POLL_MS_FAST = 1500;
+const POLL_MS_SLOW = 10000;
 
 export interface UseNotificationsResult {
   items: Notification[];
@@ -20,8 +26,16 @@ export interface UseNotificationsResult {
   refresh: () => Promise<void>;
 }
 
+// Derive which inbox audience to show from the current route. /counsellor/*
+// = counsellor inbox; everything else = student inbox. Lets a single user
+// (the demo's greg@workiflow.com) hold two clean inboxes without auth changes.
+const audienceForPath = (pathname: string | null): NotificationAudience =>
+  pathname?.startsWith('/counsellor') ? 'counsellor' : 'student';
+
 export const useNotifications = (): UseNotificationsResult => {
   const supabase = useSupabase();
+  const pathname = usePathname();
+  const audience = audienceForPath(pathname);
   const [items, setItems] = useState<Notification[]>([]);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,12 +44,12 @@ export const useNotifications = (): UseNotificationsResult => {
   const refresh = useCallback(async () => {
     if (!profileId) return;
     try {
-      const next = await listNotifications(supabase, profileId, 25);
+      const next = await listNotifications(supabase, profileId, audience, 25);
       setItems(next);
     } catch (err) {
       console.warn('useNotifications: refresh failed', err);
     }
-  }, [supabase, profileId]);
+  }, [supabase, profileId, audience]);
 
   // Resolve current profile id once.
   useEffect(() => {
@@ -49,7 +63,8 @@ export const useNotifications = (): UseNotificationsResult => {
     };
   }, [supabase]);
 
-  // Initial load.
+  // Initial load. Re-runs whenever audience changes (i.e. the user
+  // flipped to the other side).
   useEffect(() => {
     if (!profileId) {
       setLoading(false);
@@ -57,7 +72,7 @@ export const useNotifications = (): UseNotificationsResult => {
     }
     let cancelled = false;
     setLoading(true);
-    listNotifications(supabase, profileId, 25)
+    listNotifications(supabase, profileId, audience, 25)
       .then((rows) => {
         if (!cancelled) setItems(rows);
       })
@@ -68,15 +83,34 @@ export const useNotifications = (): UseNotificationsResult => {
     return () => {
       cancelled = true;
     };
-  }, [supabase, profileId]);
+  }, [supabase, profileId, audience]);
 
-  // Realtime: subscribe to inserts for this profile. Fallback to polling
-  // if the subscription doesn't go live within 3s.
+  // Realtime: subscribe to inserts for this profile. Poll interval starts
+  // fast (1.5s) and relaxes to 10s once realtime confirms SUBSCRIBED, so
+  // the demo flip-moment is never gated on realtime succeeding.
   useEffect(() => {
     if (!profileId) return;
 
+    let pollHandle: number | null = null;
+    const startPoll = (intervalMs: number) => {
+      if (pollHandle !== null) window.clearInterval(pollHandle);
+      pollHandle = window.setInterval(() => {
+        // Don't burn queries while the tab is hidden — the visibilitychange
+        // handler below catches the inbox up as soon as the tab returns.
+        if (document.hidden) return;
+        refresh();
+      }, intervalMs);
+    };
+
+    startPoll(POLL_MS_FAST);
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) refresh();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     const channel = (supabase as any)
-      .channel(`notif:${profileId}`)
+      .channel(`notif:${profileId}:${audience}`)
       .on(
         'postgres_changes',
         {
@@ -86,6 +120,10 @@ export const useNotifications = (): UseNotificationsResult => {
           filter: `profile_id=eq.${profileId}`
         },
         (payload: { new: Notification }) => {
+          // Realtime filter can only match one column; double-check audience
+          // here so we don't surface counsellor inbox items on the student
+          // side and vice versa.
+          if (payload.new.audience !== audience) return;
           setItems((prev) => {
             if (prev.some((row) => row.id === payload.new.id)) return prev;
             return [payload.new, ...prev].slice(0, 25);
@@ -101,6 +139,7 @@ export const useNotifications = (): UseNotificationsResult => {
           filter: `profile_id=eq.${profileId}`
         },
         (payload: { new: Notification }) => {
+          if (payload.new.audience !== audience) return;
           setItems((prev) =>
             prev.map((row) => (row.id === payload.new.id ? payload.new : row))
           );
@@ -109,24 +148,23 @@ export const useNotifications = (): UseNotificationsResult => {
       .subscribe((status: string) => {
         if (status === 'SUBSCRIBED') {
           realtimeOkRef.current = true;
+          startPoll(POLL_MS_SLOW);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          realtimeOkRef.current = false;
+          startPoll(POLL_MS_FAST);
         }
       });
 
-    // Polling fallback — runs unconditionally but cheaply. If realtime is up,
-    // the poll is just a safety net for events the subscription missed.
-    const pollHandle = window.setInterval(() => {
-      refresh();
-    }, POLL_MS);
-
     return () => {
-      window.clearInterval(pollHandle);
+      if (pollHandle !== null) window.clearInterval(pollHandle);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       try {
         (supabase as any).removeChannel(channel);
       } catch {
         // ignore
       }
     };
-  }, [supabase, profileId, refresh]);
+  }, [supabase, profileId, audience, refresh]);
 
   const markRead = useCallback(
     async (id: string) => {
@@ -145,13 +183,13 @@ export const useNotifications = (): UseNotificationsResult => {
   const markAllRead = useCallback(async () => {
     if (!profileId) return;
     try {
-      await markAllNotificationsRead(supabase, profileId);
+      await markAllNotificationsRead(supabase, profileId, audience);
       const now = new Date().toISOString();
       setItems((prev) => prev.map((row) => (row.read_at ? row : { ...row, read_at: now })));
     } catch (err) {
       console.warn('useNotifications: markAllRead failed', err);
     }
-  }, [supabase, profileId]);
+  }, [supabase, profileId, audience]);
 
   const unreadCount = items.filter((row) => !row.read_at).length;
 

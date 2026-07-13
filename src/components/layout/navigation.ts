@@ -5,6 +5,7 @@ import {
   CalendarClock,
   ClipboardCheck,
   FileText,
+  Inbox,
   LayoutDashboard,
   Search,
   Settings,
@@ -12,7 +13,8 @@ import {
   UserCircle,
   Users,
   Target,
-  MessageSquare
+  MessageSquare,
+  Layers
 } from 'lucide-react';
 
 export type NavItem = {
@@ -21,7 +23,7 @@ export type NavItem = {
   icon: LucideIcon;
   exact?: boolean;
   matchers?: Array<(pathname: string) => boolean>;
-  segment: 'home' | 'explore' | 'planner' | 'scholarships' | 'profile' | 'toolbox' | 'admin' | 'counsellor';
+  segment: 'home' | 'explore' | 'planner' | 'inbox' | 'scholarships' | 'profile' | 'toolbox' | 'admin' | 'counsellor';
 };
 
 export type SectionNavItem = {
@@ -57,6 +59,12 @@ export const NAV_ITEMS: NavItem[] = [
     icon: ClipboardCheck,
     segment: 'planner',
     matchers: [(pathname) => pathname.startsWith('/applications')]
+  },
+  {
+    label: 'Inbox',
+    href: '/inbox',
+    icon: Inbox,
+    segment: 'inbox'
   },
   {
     label: 'Scholarships',
@@ -97,6 +105,13 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Users,
     segment: 'counsellor',
     matchers: [(pathname) => pathname.startsWith('/counsellor/students')]
+  },
+  {
+    label: 'Universities',
+    href: '/counsellor/universities',
+    icon: Layers,
+    segment: 'counsellor',
+    matchers: [(pathname) => pathname.startsWith('/counsellor/universities')]
   },
   {
     label: 'Analytics',
@@ -159,6 +174,7 @@ export const TOOLBOX_SECTION_ITEMS: SectionNavItem[] = [
 export const COUNSELLOR_SECTION_ITEMS: SectionNavItem[] = [
   { label: 'Overview', href: '/counsellor', exact: true },
   { label: 'Students', href: '/counsellor/students' },
+  { label: 'Universities', href: '/counsellor/universities' },
   { label: 'Analytics', href: '/counsellor/analytics' },
   { label: 'Deadlines', href: '/counsellor/deadlines' },
   { label: 'Documents', href: '/counsellor/documents' },

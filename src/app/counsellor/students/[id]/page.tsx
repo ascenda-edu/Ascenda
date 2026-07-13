@@ -1,12 +1,20 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { AlertTriangle, CheckCircle2, Clock, BookOpen, FileText, Mail, ChevronRight } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, BookOpen, FileText, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { DUMMY_STUDENTS } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorStudent } from '@/lib/counsellor/types';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { loadStudentById, loadStudentEvolution } from '@/lib/counsellor/data';
+import { loadStudentQuestDecks } from '@/lib/counsellor/decks';
 import { StudentDetailTabs } from '../../_components/student-detail-tabs';
+import { MessageStudentButton } from '../../_components/message-student-button';
+import { CharacterSheet } from '../../_components/character-sheet';
 
+export const dynamic = 'force-dynamic';
+
+// Next 14 passes params as a plain object (the Promise shape is Next 15).
 interface Props {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }
 
 const FLAG_LABELS: Record<string, { label: string; color: string }> = {
@@ -35,7 +43,7 @@ function getAvgMatchScore(matches: { score: number }[]) {
   return Math.round(matches.reduce((acc, m) => acc + m.score, 0) / matches.length);
 }
 
-function getNextDeadlineDays(student: typeof DUMMY_STUDENTS[0]) {
+function getNextDeadlineDays(student: CounsellorStudent) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const upcoming = student.deadlines
@@ -46,11 +54,18 @@ function getNextDeadlineDays(student: typeof DUMMY_STUDENTS[0]) {
 }
 
 export default async function StudentDetailPage({ params }: Props) {
-  const { id } = await params;
-  const student = DUMMY_STUDENTS.find((s) => s.id === id);
+  const { id } = params;
+  const supabase = createServerSupabaseClient();
+  const student = await loadStudentById(supabase, id);
   if (!student) notFound();
+  const [evolution, questDecks] = await Promise.all([
+    loadStudentEvolution(supabase, id),
+    // Deck tables may not exist until the migration is applied — degrade to an
+    // empty quest log rather than tripping the section error boundary.
+    loadStudentQuestDecks(supabase, id).catch(() => []),
+  ]);
 
-  const initials = `${student.personal.firstName[0]}${student.personal.lastName[0]}`.toUpperCase();
+  const initials = `${student.personal.firstName[0] ?? ''}${student.personal.lastName[0] ?? ''}`.toUpperCase() || '–';
   const avColor = avatarColor(student.id);
   const avgScore = getAvgMatchScore(student.matches);
   const nextDeadlineDays = getNextDeadlineDays(student);
@@ -108,8 +123,8 @@ export default async function StudentDetailPage({ params }: Props) {
                   : 'border-sky-200/60 bg-sky-500/10 text-sky-700 dark:text-sky-300'
               )}>
                 {student.academic.programmeType === 'IB'
-                  ? `IB · ${student.academic.ibPoints} pts`
-                  : `A-Level · ${student.academic.aLevelGrades}`}
+                  ? student.academic.ibPoints ? `IB · ${student.academic.ibPoints} pts` : 'IB'
+                  : student.academic.aLevelGrades ? `A-Level · ${student.academic.aLevelGrades}` : 'A-Level'}
               </span>
               {student.academic.clusters.map((c) => (
                 <span key={c} className="rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs capitalize text-muted-foreground">
@@ -121,15 +136,16 @@ export default async function StudentDetailPage({ params }: Props) {
 
           {/* Actions + Quick stats */}
           <div className="flex flex-col gap-3">
-            {/* Message button */}
-            <a
-              href={`mailto:${student.personal.email}`}
-              aria-label={`Email ${student.personal.firstName} ${student.personal.lastName}`}
-              className="flex items-center justify-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition hover:-translate-y-0.5 hover:bg-primary/20"
-            >
-              <Mail className="h-4 w-4" />
-              Message
-            </a>
+            {/* Message button — opens in-app send modal, fires student notification */}
+            <MessageStudentButton
+              student={{
+                id: student.id,
+                firstName: student.personal.firstName,
+                lastName: student.personal.lastName
+              }}
+              variant="header"
+            />
+
 
             {/* Quick stats */}
             <div className="grid grid-cols-2 gap-2">
@@ -192,12 +208,11 @@ export default async function StudentDetailPage({ params }: Props) {
         )}
       </div>
 
+      {/* RPG character sheet: level/XP, stat blocks, assigned-deck quest log */}
+      <CharacterSheet student={student} questDecks={questDecks} />
+
       {/* Tabbed detail view */}
-      <StudentDetailTabs student={student} />
+      <StudentDetailTabs student={student} evolution={evolution} />
     </div>
   );
-}
-
-export function generateStaticParams() {
-  return DUMMY_STUDENTS.map((s) => ({ id: s.id }));
 }

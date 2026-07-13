@@ -4,7 +4,7 @@ import { Sidebar } from './sidebar';
 import { MobileNav } from './mobile-nav';
 import { SidebarProvider } from './sidebar-context';
 import { CommandPalette } from './command-palette';
-import { ChatbotWidget } from '@/components/chat/chatbot-widget';
+import { ChatbotWidgetLazy } from '@/components/chat/chatbot-widget-lazy';
 
 export const DashboardShell = ({ children }: { children: ReactNode }) => {
   return (
@@ -29,7 +29,7 @@ export const DashboardShell = ({ children }: { children: ReactNode }) => {
         </div>
         <MobileNav />
         <CommandPalette />
-        <ChatbotWidget />
+        <ChatbotWidgetLazy />
       </div>
     </SidebarProvider>
   );

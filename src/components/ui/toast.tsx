@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -11,6 +11,11 @@ export type Toast = {
   title: string;
   description?: string;
   variant?: ToastVariant;
+  /**
+   * Auto-dismiss delay in ms. Defaults to 5000 (8000 for errors).
+   * Pass 0 to keep the toast until it is dismissed manually.
+   */
+  duration?: number;
 };
 
 type ToastContextValue = {
@@ -57,30 +62,52 @@ const toneClass = (variant?: ToastVariant) =>
       ? 'border-rose-200 bg-rose-50 text-rose-900'
       : 'border-border bg-card text-foreground';
 
+const resolveDuration = (toast: Toast) => {
+  if (typeof toast.duration === 'number') return toast.duration;
+  return toast.variant === 'error' ? 8000 : 5000;
+};
+
+const ToastCard = ({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string) => void }) => {
+  const { id } = toast;
+  const duration = resolveDuration(toast);
+
+  // Auto-dismiss after `duration` ms; 0 keeps the toast until manually
+  // dismissed. Manual dismissal unmounts the card, so the cleanup below
+  // clears the pending timer.
+  useEffect(() => {
+    if (duration <= 0) return;
+    const timer = window.setTimeout(() => onDismiss(id), duration);
+    return () => window.clearTimeout(timer);
+  }, [id, duration, onDismiss]);
+
+  return (
+    <div
+      className={cn(
+        'pointer-events-auto flex min-w-[240px] max-w-sm items-start gap-3 rounded-2xl border p-4 shadow-xl',
+        toneClass(toast.variant)
+      )}
+      role={toast.variant === 'error' ? 'alert' : 'status'}
+    >
+      <div className="flex-1">
+        <p className="text-sm font-semibold">{toast.title}</p>
+        {toast.description ? <p className="text-xs text-muted-foreground">{toast.description}</p> : null}
+      </div>
+      <button
+        className="text-muted-foreground transition hover:text-foreground"
+        aria-label="Dismiss notification"
+        onClick={() => onDismiss(toast.id)}
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
+};
+
 const ToastViewport = ({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: string) => void }) => {
   return (
     <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col gap-3 sm:bottom-6 sm:right-6">
       {toasts.map((toast) => (
-        <div
-          key={toast.id}
-          className={cn(
-            'pointer-events-auto flex min-w-[240px] max-w-sm items-start gap-3 rounded-2xl border p-4 shadow-xl',
-            toneClass(toast.variant)
-          )}
-          role="status"
-        >
-          <div className="flex-1">
-            <p className="text-sm font-semibold">{toast.title}</p>
-            {toast.description ? <p className="text-xs text-muted-foreground">{toast.description}</p> : null}
-          </div>
-          <button
-            className="text-muted-foreground transition hover:text-foreground"
-            aria-label="Dismiss notification"
-            onClick={() => onDismiss(toast.id)}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+        <ToastCard key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}
     </div>
   );

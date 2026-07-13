@@ -6,7 +6,7 @@ import { AlertTriangle, FileX, Clock, UserX, ChevronRight, Timer } from 'lucide-
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { stagger, cardFade } from '@/lib/motion';
-import type { AtRiskAlert, RiskType, RiskUrgency } from '@/lib/data/counsellor-dummy-data';
+import type { AtRiskAlert, RiskType, RiskUrgency } from '@/lib/counsellor/types';
 
 const RISK_CONFIG: Record<RiskType, { icon: typeof AlertTriangle; label: string; color: string; bg: string }> = {
   essay_not_started: { icon: FileX, label: 'Essay not started', color: 'text-rose-600', bg: 'bg-rose-500/10' },

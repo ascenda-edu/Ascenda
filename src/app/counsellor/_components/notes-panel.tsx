@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { MessageSquare, Flag, RefreshCw, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { CounsellorNote } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorNote } from '@/lib/counsellor/types';
 
 interface NotesPanelProps {
   notes: CounsellorNote[];
@@ -38,56 +38,40 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-function storageKey(id: string) {
-  return `ascenda-notes-${id}`;
-}
-
 export const NotesPanel = ({ notes: seedNotes, studentId }: NotesPanelProps) => {
   const [notes, setNotes] = useState<CounsellorNote[]>(seedNotes);
-  const [hydrated, setHydrated] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [noteType, setNoteType] = useState<'session' | 'flag' | 'update'>('session');
+  const [saving, setSaving] = useState(false);
 
-  // On mount, merge any locally-persisted notes on top of the seed data
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(storageKey(studentId));
-      if (stored) {
-        const parsed: CounsellorNote[] = JSON.parse(stored);
-        // Merge: stored notes first (most recent), then seed notes not already present
-        const storedIds = new Set(parsed.map((n) => n.id));
-        const merged = [...parsed, ...seedNotes.filter((n) => !storedIds.has(n.id))];
-        setNotes(merged);
-      }
-    } catch {
-      // ignore corrupt storage
-    }
-    setHydrated(true);
-  }, [studentId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const addNote = async () => {
+    const body = newNote.trim();
+    if (!body || saving) return;
+    setSaving(true);
 
-  const addNote = () => {
-    if (!newNote.trim()) return;
-    const today = new Date().toISOString().slice(0, 10);
-    const note: CounsellorNote = {
-      id: `local-${Date.now()}`,
-      date: today,
-      content: newNote.trim(),
-      type: noteType
-    };
-    const updated = [note, ...notes];
-    setNotes(updated);
+    // Optimistic insert; reconciled with the server row on success.
+    const optimistic: CounsellorNote = { id: `local-${Date.now()}`, date: new Date().toISOString(), content: body, type: noteType };
+    setNotes((prev) => [optimistic, ...prev]);
     setNewNote('');
 
-    // Persist only the locally-added notes (those with id starting with 'local-')
     try {
-      const localOnly = updated.filter((n) => n.id.startsWith('local-'));
-      localStorage.setItem(storageKey(studentId), JSON.stringify(localOnly));
+      const res = await fetch('/api/counsellor/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, body, noteType }),
+      });
+      if (res.ok) {
+        const { note } = await res.json();
+        setNotes((prev) => prev.map((n) => (n.id === optimistic.id ? note : n)));
+      } else {
+        setNotes((prev) => prev.filter((n) => n.id !== optimistic.id)); // roll back
+      }
     } catch {
-      // ignore storage errors
+      setNotes((prev) => prev.filter((n) => n.id !== optimistic.id));
+    } finally {
+      setSaving(false);
     }
   };
-
-  if (!hydrated) return null;
 
   return (
     <div className="space-y-6">
@@ -133,11 +117,11 @@ export const NotesPanel = ({ notes: seedNotes, studentId }: NotesPanelProps) => 
         <div className="flex justify-end">
           <button
             onClick={addNote}
-            disabled={!newNote.trim()}
+            disabled={!newNote.trim() || saving}
             className="flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <PlusCircle className="h-4 w-4" />
-            Save note
+            {saving ? 'Saving…' : 'Save note'}
           </button>
         </div>
       </div>

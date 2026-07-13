@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Sparkles, Send } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sparkles, Send, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { useSupabase } from '@/hooks/useSupabase';
@@ -27,8 +27,6 @@ interface HelpRequestModalProps {
   app: HelpRequestModalApp | null;
 }
 
-const COUNSELLOR_FIRST_NAME = 'Sarah';
-
 const draftFor = (app: HelpRequestModalApp): { subject: string; body: string } => {
   const subject = `Help with my ${app.university} application`;
   const progressLine =
@@ -44,15 +42,14 @@ const draftFor = (app: HelpRequestModalApp): { subject: string; body: string } =
     : "There's no hard deadline yet, but I'd like to stay ahead of it.";
 
   const lines = [
-    `Hi ${COUNSELLOR_FIRST_NAME},`,
+    `Hi,`,
     '',
     `I'm working on my ${app.university} application (${app.program}). ${progressLine}${tasksLine}.`,
     deadlineLine,
     '',
     "Could we book a 15-minute call this week to talk it through? I'd like to focus on the personal statement and reference timing.",
     '',
-    'Thanks,',
-    'Greg'
+    'Thanks!'
   ];
 
   return { subject, body: lines.join('\n') };
@@ -105,7 +102,7 @@ export function HelpRequestModal({ open, onOpenChange, app }: HelpRequestModalPr
       }
 
       showToast({
-        title: 'Sent — Sarah will respond shortly',
+        title: 'Sent — your counsellor will respond shortly',
         description: `Tracked under ${app.university}`,
         variant: 'success'
       });
@@ -124,62 +121,76 @@ export function HelpRequestModal({ open, onOpenChange, app }: HelpRequestModalPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" aria-hidden />
+      <DialogContent className="w-full max-w-2xl overflow-visible">
+        {/* Close affordance */}
+        <button
+          type="button"
+          onClick={() => onOpenChange(false)}
+          aria-label="Close"
+          className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        {/* Header */}
+        <div className="border-b border-border px-7 py-5">
+          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-primary">
+            <Sparkles className="h-3.5 w-3.5" aria-hidden />
             Request counsellor help
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 px-1">
-          <div className="rounded-2xl border border-border/60 bg-muted/30 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-              Context
-            </p>
-            <p className="mt-1 text-sm font-medium text-foreground">{app.university}</p>
-            <p className="text-xs text-muted-foreground">
-              {app.program}
-              {app.platform ? ` · ${app.platform}` : null}
-              {typeof app.progress === 'number' ? ` · ${app.progress}% fit` : null}
-              {typeof app.tasksRemaining === 'number' && app.tasksRemaining > 0
-                ? ` · ${app.tasksRemaining} open task${app.tasksRemaining === 1 ? '' : 's'}`
-                : null}
-            </p>
           </div>
+          <DialogTitle className="mt-1.5 leading-7 text-foreground">
+            {app.university}
+          </DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            {app.program}
+            {app.platform ? ` · ${app.platform}` : null}
+            {typeof app.progress === 'number' ? ` · ${app.progress}% fit` : null}
+            {typeof app.tasksRemaining === 'number' && app.tasksRemaining > 0
+              ? ` · ${app.tasksRemaining} open task${app.tasksRemaining === 1 ? '' : 's'}`
+              : null}
+          </p>
+        </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+        {/* Body */}
+        <div className="space-y-5 px-7 py-6">
+          <div className="space-y-2">
+            <label htmlFor="hr-subject" className="text-xs font-semibold text-foreground">
               Subject
             </label>
             <input
+              id="hr-subject"
               type="text"
               value={subject}
               onChange={(event) => setSubject(event.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             />
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <label className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+              <label htmlFor="hr-body" className="text-xs font-semibold text-foreground">
                 Message
               </label>
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.2em] text-primary">
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
                 <Sparkles className="h-3 w-3" aria-hidden />
-                AI draft · edit before sending
+                AI draft
               </span>
             </div>
             <textarea
+              id="hr-body"
               value={body}
               onChange={(event) => setBody(event.target.value)}
-              rows={8}
-              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              rows={10}
+              className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm leading-relaxed focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             />
+            <p className="text-[11px] text-muted-foreground">
+              Edit anything before sending. Your counsellor sees this verbatim in their inbox.
+            </p>
           </div>
         </div>
 
-        <div className="mt-2 flex items-center justify-end gap-2 px-1">
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 border-t border-border bg-muted/30 px-7 py-4">
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancel
           </Button>

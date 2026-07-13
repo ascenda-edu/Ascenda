@@ -7,6 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   HelpMeeting,
   HelpMeetingInsert,
+  HelpMeetingStatus,
   HelpMessage,
   HelpMessageInsert,
   HelpNote,
@@ -15,6 +16,7 @@ import type {
   HelpRequestInsert,
   HelpRequestStatus,
   Notification,
+  NotificationAudience,
   NotificationInsert
 } from '@/lib/types/demo-tables';
 
@@ -42,6 +44,45 @@ export const listOpenHelpRequests = async (supabase: AnyClient): Promise<HelpReq
   return (data ?? []) as HelpRequest[];
 };
 
+// Inbox uses this — pulls every conversation the student is part of, including
+// resolved ones. The student-side inbox doesn't filter by status; it shows the
+// full history with read/unread state surfaced separately.
+export const listInboxRequests = async (
+  supabase: AnyClient,
+  profileId: string
+): Promise<HelpRequest[]> => {
+  const { data, error } = await tbl(supabase, 'help_requests')
+    .select('*')
+    .eq('student_profile_id', profileId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as HelpRequest[];
+};
+
+// Returns request_id -> unread notification count for the student inbox.
+// We derive this from notifications.href ('/inbox?help=<id>') rather than a
+// separate column so the schema stays the same; only the inbox UI cares.
+export const listUnreadByRequest = async (
+  supabase: AnyClient,
+  profileId: string
+): Promise<Map<string, number>> => {
+  const { data, error } = await tbl(supabase, 'notifications')
+    .select('href')
+    .eq('profile_id', profileId)
+    .eq('audience', 'student')
+    .is('read_at', null);
+  if (error) throw error;
+  const map = new Map<string, number>();
+  for (const row of (data ?? []) as { href: string | null }[]) {
+    if (!row.href) continue;
+    const m = row.href.match(/[?&]help=([0-9a-f-]+)/i);
+    if (!m) continue;
+    const id = m[1];
+    map.set(id, (map.get(id) ?? 0) + 1);
+  }
+  return map;
+};
+
 export const updateHelpRequestStatus = async (
   supabase: AnyClient,
   id: string,
@@ -57,11 +98,13 @@ export const updateHelpRequestStatus = async (
 export const listNotifications = async (
   supabase: AnyClient,
   profileId: string,
+  audience: NotificationAudience,
   limit = 20
 ): Promise<Notification[]> => {
   const { data, error } = await tbl(supabase, 'notifications')
     .select('*')
     .eq('profile_id', profileId)
+    .eq('audience', audience)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
@@ -75,10 +118,15 @@ export const markNotificationRead = async (supabase: AnyClient, id: string) => {
   if (error) throw error;
 };
 
-export const markAllNotificationsRead = async (supabase: AnyClient, profileId: string) => {
+export const markAllNotificationsRead = async (
+  supabase: AnyClient,
+  profileId: string,
+  audience: NotificationAudience
+) => {
   const { error } = await tbl(supabase, 'notifications')
     .update({ read_at: new Date().toISOString() })
     .eq('profile_id', profileId)
+    .eq('audience', audience)
     .is('read_at', null);
   if (error) throw error;
 };
@@ -144,4 +192,18 @@ export const insertHelpMeeting = async (supabase: AnyClient, row: HelpMeetingIns
   const { data, error } = await tbl(supabase, 'help_meetings').insert(row).select('*').single();
   if (error) throw error;
   return data as HelpMeeting;
+};
+
+export const updateHelpMeetingStatus = async (
+  supabase: AnyClient,
+  id: string,
+  status: HelpMeetingStatus,
+  actor: 'student' | 'counsellor'
+) => {
+  // status_changed_by drives the trg_help_meeting_status_notify fan-out —
+  // auth.uid() can't tell which side of the single-account demo acted.
+  const { error } = await tbl(supabase, 'help_meetings')
+    .update({ status, status_changed_by: actor })
+    .eq('id', id);
+  if (error) throw error;
 };

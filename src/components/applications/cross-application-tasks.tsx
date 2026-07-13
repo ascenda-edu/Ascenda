@@ -1,10 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ListChecks, Plus, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
+import { MS_PER_DAY, parseLocalDate, startOfToday } from '@/lib/utils/dates';
 
 export interface SeedTask {
   id: string;
@@ -12,16 +14,26 @@ export interface SeedTask {
   done: boolean;
   dueDate?: string;
   group: string;
+  /** Owning application — required so new tasks persist to application_checklist. */
+  applicationId: string;
+}
+
+export interface TaskApplicationOption {
+  id: string;
+  label: string;
 }
 
 type Filter = 'open' | 'done' | 'all';
 
+const isTempId = (id: string) => id.startsWith('temp-');
+
 function dueLabel(iso?: string) {
   if (!iso) return null;
-  const due = new Date(iso);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diff = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  // parseLocalDate: date-only strings must compare against LOCAL midnight, or
+  // "due today" reads as overdue/tomorrow depending on the user's UTC offset.
+  const due = parseLocalDate(iso);
+  const today = startOfToday();
+  const diff = Math.round((due.getTime() - today.getTime()) / MS_PER_DAY);
   if (diff < 0) return { label: `${Math.abs(diff)}d overdue`, urgent: true };
   if (diff === 0) return { label: 'Today', urgent: true };
   if (diff === 1) return { label: 'Tomorrow', urgent: false };
@@ -31,13 +43,20 @@ function dueLabel(iso?: string) {
 
 interface CrossApplicationTasksProps {
   initialTasks: SeedTask[];
+  applicationOptions: TaskApplicationOption[];
 }
 
-export function CrossApplicationTasks({ initialTasks }: CrossApplicationTasksProps) {
+export function CrossApplicationTasks({ initialTasks, applicationOptions }: CrossApplicationTasksProps) {
+  const { showToast } = useToast();
   const [tasks, setTasks] = useState<SeedTask[]>(initialTasks);
   const [filter, setFilter] = useState<Filter>('open');
   const [newName, setNewName] = useState('');
-  const [newGroup, setNewGroup] = useState('General');
+  const [newAppId, setNewAppId] = useState(applicationOptions[0]?.id ?? '');
+  const [adding, setAdding] = useState(false);
+  // Interactions with a temp task while its POST is in flight, replayed once
+  // the real id arrives — otherwise a toggle is silently lost on reload and a
+  // delete resurrects as a ghost row created by the still-running POST.
+  const pendingTempOps = useRef(new Map<string, { done?: boolean; removed?: boolean }>());
 
   const filtered = useMemo(() => {
     if (filter === 'open') return tasks.filter((t) => !t.done);
@@ -55,31 +74,108 @@ export function CrossApplicationTasks({ initialTasks }: CrossApplicationTasksPro
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [filtered]);
 
-  const groups = useMemo(() => {
-    const set = new Set(tasks.map((t) => t.group));
-    return [...set].sort();
-  }, [tasks]);
-
   const totals = {
     open: tasks.filter((t) => !t.done).length,
     done: tasks.filter((t) => t.done).length,
     all: tasks.length
   };
 
-  const toggle = (id: string) =>
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
+  // Toggle done — persists the new status to application_checklist.
+  const toggle = async (id: string) => {
+    const target = tasks.find((t) => t.id === id);
+    if (!target) return;
+    const nextDone = !target.done;
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: nextDone } : t)));
+    if (isTempId(id)) {
+      // Not yet persisted — record the desired state; add() replays it.
+      const pending = pendingTempOps.current.get(id) ?? {};
+      pendingTempOps.current.set(id, { ...pending, done: nextDone });
+      return;
+    }
 
-  const remove = (id: string) =>
+    try {
+      const res = await fetch('/api/checklist', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: nextDone ? 'done' : 'todo' })
+      });
+      if (!res.ok) throw new Error('request failed');
+    } catch {
+      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: !nextDone } : t)));
+      showToast({ title: "Couldn't update that task", variant: 'error' });
+    }
+  };
+
+  const remove = async (id: string) => {
+    const target = tasks.find((t) => t.id === id);
+    if (!target) return;
+    if (typeof window !== 'undefined' && !window.confirm(`Remove "${target.name}"?`)) return;
     setTasks((prev) => prev.filter((t) => t.id !== id));
+    if (isTempId(id)) {
+      // The POST may still be in flight — mark for deletion; add() cleans up.
+      const pending = pendingTempOps.current.get(id) ?? {};
+      pendingTempOps.current.set(id, { ...pending, removed: true });
+      return;
+    }
 
-  const add = () => {
+    try {
+      const res = await fetch('/api/checklist', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      if (!res.ok) throw new Error('request failed');
+    } catch {
+      setTasks((prev) => [...prev, target]);
+      showToast({ title: "Couldn't remove that task", variant: 'error' });
+    }
+  };
+
+  const add = async () => {
     const name = newName.trim();
-    if (!name) return;
-    setTasks((prev) => [
-      ...prev,
-      { id: `custom-${Date.now()}`, name, done: false, group: newGroup }
-    ]);
+    if (!name || !newAppId || adding) return;
+    const tempId = `temp-${Date.now()}`;
+    const groupLabel = applicationOptions.find((a) => a.id === newAppId)?.label ?? 'Application';
+    const optimistic: SeedTask = { id: tempId, name, done: false, group: groupLabel, applicationId: newAppId };
+    setTasks((prev) => [...prev, optimistic]);
     setNewName('');
+    setAdding(true);
+
+    try {
+      const res = await fetch('/api/checklist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ application_id: newAppId, task_name: name })
+      });
+      if (!res.ok) throw new Error('request failed');
+      const { item } = (await res.json()) as { item: { id: string } };
+
+      // Replay anything the user did to the temp task while the POST ran.
+      const pending = pendingTempOps.current.get(tempId);
+      pendingTempOps.current.delete(tempId);
+      if (pending?.removed) {
+        await fetch('/api/checklist', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: item.id })
+        }).catch(() => {});
+        return;
+      }
+      setTasks((prev) => prev.map((t) => (t.id === tempId ? { ...t, id: item.id } : t)));
+      if (pending?.done) {
+        await fetch('/api/checklist', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: item.id, status: 'done' })
+        }).catch(() => {});
+      }
+    } catch {
+      pendingTempOps.current.delete(tempId);
+      setTasks((prev) => prev.filter((t) => t.id !== tempId));
+      showToast({ title: "Couldn't add that task", variant: 'error' });
+    } finally {
+      setAdding(false);
+    }
   };
 
   return (
@@ -116,18 +212,19 @@ export function CrossApplicationTasks({ initialTasks }: CrossApplicationTasksPro
             className="flex-1 min-w-[200px] rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/70 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <select
-            value={newGroup}
-            onChange={(e) => setNewGroup(e.target.value)}
+            value={newAppId}
+            onChange={(e) => setNewAppId(e.target.value)}
+            aria-label="Attach task to application"
             className="rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
           >
-            {['General', ...groups.filter((g) => g !== 'General')].map((g) => (
-              <option key={g} value={g}>
-                {g}
+            {applicationOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
               </option>
             ))}
           </select>
-          <Button size="sm" onClick={add} disabled={!newName.trim()}>
-            <Plus className="mr-1 h-3.5 w-3.5" /> Add
+          <Button size="sm" onClick={add} disabled={!newName.trim() || !newAppId || adding}>
+            <Plus className="mr-1 h-3.5 w-3.5" /> {adding ? 'Adding…' : 'Add'}
           </Button>
         </div>
       </section>
@@ -210,7 +307,7 @@ export function CrossApplicationTasks({ initialTasks }: CrossApplicationTasksPro
                             type="button"
                             onClick={() => remove(task.id)}
                             aria-label="Remove task"
-                            className="rounded-full p-1 text-muted-foreground/60 opacity-0 transition hover:bg-muted/80 hover:text-foreground group-hover:opacity-100"
+                            className="rounded-full p-1 text-muted-foreground/60 opacity-0 transition hover:bg-muted/80 hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
                           >
                             <XCircle className="h-3.5 w-3.5" />
                           </button>

@@ -214,7 +214,9 @@ const formatDelta = (current: number, prior: number): { label: string; tone: str
 
 export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
   const [compareYoY, setCompareYoY] = useState(false);
-  const total = Object.values(funnel).reduce((a, b) => a + b, 0) || 1;
+  // Students can appear in multiple stages; use max stage value as denominator
+  // so bars are relative to the busiest stage, not an inflated sum.
+  const total = Math.max(...Object.values(funnel), 1);
   const priorFunnel = buildPriorYearFunnel(funnel);
 
   return (
@@ -267,7 +269,7 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
                 >
                   {count}
                   <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100">
-                    {count} application{count !== 1 ? 's' : ''} · {pct}%
+                    {count} student{count !== 1 ? 's' : ''} · {pct}%
                     {compareYoY ? ` · ${delta.label} vs last year` : ''} · Click to explore
                   </span>
                 </div>

@@ -1,20 +1,41 @@
+import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
+
+const safeTokenEqual = (a: string, b: string): boolean => {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+};
 
 const unauthorized = () =>
   NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 
 // Lightweight health check to verify catalog data is present and key fields are usable.
 export async function GET(request: Request) {
-  // Simple bearer guard. Set ADMIN_API_KEY to require access; if unset, allow for local use.
-  const adminKey = process.env.ADMIN_API_KEY;
-  if (adminKey) {
-    const header = request.headers.get('authorization');
-    const token = header?.replace(/^Bearer\s+/i, '');
-    if (!token || token !== adminKey) return unauthorized();
-  }
-
   const supabase = createRouteHandlerSupabaseClient();
+
+  // Access requires EITHER a server-to-server bearer token (ADMIN_API_KEY, for
+  // CLI/cron use) OR an authenticated admin user. Without one of these the
+  // endpoint must not leak catalogue data — previously the bearer check was
+  // opt-in, leaving the route fully public whenever ADMIN_API_KEY was unset.
+  const adminKey = process.env.ADMIN_API_KEY;
+  const header = request.headers.get('authorization');
+  const token = header?.replace(/^Bearer\s+/i, '');
+  const hasValidBearer = Boolean(adminKey && token && safeTokenEqual(token, adminKey));
+
+  if (!hasValidBearer) {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    if (!user) return unauthorized();
+
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    if (profile?.role !== 'admin') {
+      return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 });
+    }
+  }
 
   const [{ count: universityCount, error: uniErr }, { count: programCount, error: progErr }] =
     await Promise.all([

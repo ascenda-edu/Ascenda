@@ -1212,8 +1212,16 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                     {/* Requirements Preview */}
                     <div
-                      className="group relative cursor-pointer overflow-hidden rounded-3xl border border-border/60 bg-card p-6 transition-all hover:border-primary/50 hover:shadow-lg"
+                      role="button"
+                      tabIndex={0}
+                      className="group relative cursor-pointer overflow-hidden rounded-3xl border border-border/60 bg-card p-6 transition-all hover:border-primary/50 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       onClick={() => setActiveTab('requirements')}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          setActiveTab('requirements');
+                        }
+                      }}
                     >
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-bold flex items-center gap-2">
@@ -1237,8 +1245,16 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                     {/* Curriculum Preview */}
                     <div
-                      className="group relative cursor-pointer overflow-hidden rounded-3xl border border-border/60 bg-card p-6 transition-all hover:border-primary/50 hover:shadow-lg"
+                      role="button"
+                      tabIndex={0}
+                      className="group relative cursor-pointer overflow-hidden rounded-3xl border border-border/60 bg-card p-6 transition-all hover:border-primary/50 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       onClick={() => setActiveTab('curriculum')}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          setActiveTab('curriculum');
+                        }
+                      }}
                     >
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-bold flex items-center gap-2">

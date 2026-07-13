@@ -7,6 +7,7 @@ import type { MatchTier } from '@/lib/matching/match-tier';
 import { UniversityCard } from '@/components/university-card';
 import { UniversityCardSkeleton } from '@/components/university-card-skeleton';
 import { FilterBar } from '@/components/university-search/FilterBar';
+import { SaveSearchButton } from '@/components/university-search/save-search-button';
 import { cn } from '@/lib/utils';
 import { getBrowserSupabaseClient } from '@/lib/supabase/client';
 import { ProgramSearchResult, tierFromScore } from '@/components/university-search/types';
@@ -98,6 +99,15 @@ export default function UniversitySearchResultsPage() {
 
   // State
   const [searchQuery, setSearchQuery] = useState(initialQuery);
+  // Debounced copy drives the Supabase query — firing a full catalogue query
+  // (with a count over 119k rows) per keystroke hammers the DB and lets stale
+  // responses overwrite newer ones. The raw query still filters loaded
+  // results instantly client-side.
+  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
+  useEffect(() => {
+    const handle = window.setTimeout(() => setDebouncedQuery(searchQuery), 250);
+    return () => window.clearTimeout(handle);
+  }, [searchQuery]);
   const [selectedTiers, setSelectedTiers] = useState<MatchTier[]>(['Reach', 'Match', 'Safe']);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedUniversities, setSelectedUniversities] = useState<string[]>([]);
@@ -106,6 +116,9 @@ export default function UniversitySearchResultsPage() {
   const [areFiltersLoading, setAreFiltersLoading] = useState(true);
   // Store all unique universities directly from the DB to ensure the filter list is complete
   const [allUniversities, setAllUniversities] = useState<{ id: string; name: string }[]>([]);
+  // Ref mirror so the fetch effect can read the list without depending on it —
+  // the filters arriving used to re-fire the whole first-page fetch.
+  const allUniversitiesRef = useRef<{ id: string; name: string }[]>([]);
   const [results, setResults] = useState<ProgramSearchResult[]>([]);
   const [resultCount, setResultCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -126,7 +139,9 @@ export default function UniversitySearchResultsPage() {
 
     const fetchFilters = async () => {
       try {
-        const response = await fetch('/api/search/filters', { next: { revalidate: 300 } });
+        // (Caching happens via the route's Cache-Control header — fetch
+        // options like next.revalidate are server-only and no-ops here.)
+        const response = await fetch('/api/search/filters');
         if (!response.ok) {
           throw new Error(`Failed to load filters (${response.status})`);
         }
@@ -135,6 +150,7 @@ export default function UniversitySearchResultsPage() {
         if (!isActive) return;
 
         const universities = (body.universities ?? []).filter((u) => u.name);
+        allUniversitiesRef.current = universities;
         setAllUniversities(universities);
 
         const mapped: FilterOption[] = (body.programs ?? [])
@@ -188,7 +204,7 @@ export default function UniversitySearchResultsPage() {
     setResults([]);
     setPage(0);
     setHasMore(true);
-  }, [programId, universityId, selectedUniversities, selectedPrograms, searchQuery, chipFilters]);
+  }, [programId, universityId, selectedUniversities, selectedPrograms, debouncedQuery, chipFilters]);
 
   // If all filters and search are cleared, remove any lingering URL params so we fetch full results.
   useEffect(() => {
@@ -218,6 +234,8 @@ export default function UniversitySearchResultsPage() {
 
   // Load catalog results from Supabase
   useEffect(() => {
+    // Abort on cleanup so a superseded request can't overwrite newer results.
+    const controller = new AbortController();
     const fetchResults = async () => {
       const isFirstPage = page === 0;
       if (isFirstPage) {
@@ -229,6 +247,7 @@ export default function UniversitySearchResultsPage() {
       try {
         const supabase = getBrowserSupabaseClient();
         const flaggedIds = getFlaggedProgramIds();
+        const allUniversitiesList = allUniversitiesRef.current;
 
         // Base query
         // We always use the 'universities' inner join to get location/tuition details
@@ -264,7 +283,9 @@ export default function UniversitySearchResultsPage() {
               metadata
             )
           `,
-              { count: 'exact' }
+              // Counting 119k rows is expensive — do it once per filter
+              // change (page 0), not on every infinite-scroll page.
+              { count: isFirstPage ? 'exact' : undefined }
             ),
           flaggedIds
         );
@@ -279,7 +300,7 @@ export default function UniversitySearchResultsPage() {
 
         if (activeUniFilters.length > 0) {
           const selectedUniIds = activeUniFilters
-            .map((name) => allUniversities.find((u) => u.name === name)?.id)
+            .map((name) => allUniversitiesList.find((u) => u.name === name)?.id)
             .filter((id): id is string => Boolean(id));
 
           if (selectedUniIds.length > 0) {
@@ -349,7 +370,7 @@ export default function UniversitySearchResultsPage() {
         const sanitizeSearchValue = (value: string) =>
           value.replace(/[(),%_]/g, ' ').replace(/\s+/g, ' ').trim();
 
-        const safeSearchQuery = sanitizeSearchValue(searchQuery);
+        const safeSearchQuery = sanitizeSearchValue(debouncedQuery);
 
         if (safeSearchQuery && !programId && !universityId) {
           const normalizedQ = safeSearchQuery.toLowerCase();
@@ -357,15 +378,15 @@ export default function UniversitySearchResultsPage() {
 
           // Helper: find university IDs where every given word appears in the name.
           const lookupUniIds = async (mustMatchWords: string[]): Promise<string[]> => {
-            if (allUniversities.length > 0) {
-              return allUniversities
+            if (allUniversitiesList.length > 0) {
+              return allUniversitiesList
                 .filter((u) => mustMatchWords.every((w) => (u.name?.toLowerCase() ?? '').includes(w)))
                 .map((u) => u.id)
                 .slice(0, 100);
             }
             let q = supabase.from('universities').select('id').limit(100);
             mustMatchWords.forEach((w) => { q = q.ilike('name', `%${w}%`); });
-            const { data } = await q;
+            const { data } = await q.abortSignal(controller.signal);
             return (data ?? []).map((u) => u.id);
           };
 
@@ -380,8 +401,9 @@ export default function UniversitySearchResultsPage() {
               // (most specific). Skip very common words.
               const skip = new Set(['university', 'college', 'institute', 'school', 'of', 'the', 'and']);
               const candidates = words.filter((w) => !skip.has(w));
-              for (const word of candidates) {
-                const ids = await lookupUniIds([word]);
+              // The per-word lookups are independent — run them concurrently.
+              const perWordIds = await Promise.all(candidates.map((word) => lookupUniIds([word])));
+              for (const ids of perWordIds) {
                 if (ids.length > 0 && (matchedUniIds.length === 0 || ids.length < matchedUniIds.length)) {
                   matchedUniIds = ids;
                 }
@@ -397,8 +419,9 @@ export default function UniversitySearchResultsPage() {
             const skip = new Set(['university', 'college', 'institute', 'school', 'of', 'the', 'and']);
             const courseWords = words.filter((w) => !skip.has(w) && !matchedUniIds.length);
             // Narrow by course name words that aren't purely university-identifying words
-            const uniNameWords = (allUniversities.length > 0
-              ? allUniversities.filter((u) => matchedUniIds.includes(u.id)).flatMap((u) =>
+            const matchedIdSet = new Set(matchedUniIds);
+            const uniNameWords = (allUniversitiesList.length > 0
+              ? allUniversitiesList.filter((u) => matchedIdSet.has(u.id)).flatMap((u) =>
                   (u.name?.toLowerCase() ?? '').split(/\s+/)
                 )
               : []
@@ -422,7 +445,7 @@ export default function UniversitySearchResultsPage() {
         // Pagination
         const from = page * PAGE_SIZE;
         const to = from + PAGE_SIZE - 1;
-        query = query.range(from, to);
+        query = query.range(from, to).abortSignal(controller.signal);
 
         const [{ data: sessionData }, { data, error: supabaseError, count }] = await Promise.all([
           supabase.auth.getSession(),
@@ -433,12 +456,17 @@ export default function UniversitySearchResultsPage() {
 
         const userId = sessionData?.session?.user?.id;
         let matchScores: Record<string, number> = {};
+        const pageProgramIds = ((data ?? []) as ProgramRow[]).map((p) => p.id);
 
-        if (userId) {
+        if (userId && pageProgramIds.length > 0) {
+          // Only the scores for THIS page — the full match cache can be
+          // hundreds of rows and was previously reloaded on every scroll.
           const { data: matches, error: matchError } = await supabase
             .from('student_matches')
             .select('program_id, score')
-            .eq('profile_id', userId);
+            .eq('profile_id', userId)
+            .in('program_id', pageProgramIds)
+            .abortSignal(controller.signal);
           if (matchError) {
             console.error('Failed to load match scores', matchError);
           } else {
@@ -467,7 +495,7 @@ export default function UniversitySearchResultsPage() {
             typeof uni?.name === 'string' && uni.name?.trim()
               ? uni.name.trim()
               : uniId
-                ? allUniversities.find((u) => u.id === uniId)?.name ?? null
+                ? allUniversitiesList.find((u) => u.id === uniId)?.name ?? null
                 : null;
           const uniMetadata =
             uni && typeof uni.metadata === 'object' && uni.metadata !== null ? (uni.metadata as Record<string, unknown>) : {};
@@ -503,6 +531,8 @@ export default function UniversitySearchResultsPage() {
             studyLevel: level
           };
         });
+
+        if (controller.signal.aborted) return;
 
         setResults((prev) => {
           if (isFirstPage) return mapped;
@@ -544,6 +574,7 @@ export default function UniversitySearchResultsPage() {
         }
 
       } catch (fetchError) {
+        if (controller.signal.aborted) return; // superseded request — ignore
         console.error('[SearchResults] fetch error:', fetchError);
         // Supabase errors are plain objects, not Error instances — never render them raw.
         const message =
@@ -558,16 +589,19 @@ export default function UniversitySearchResultsPage() {
             : 'Something went wrong loading results. Please try again.'
         );
       } finally {
-        if (isFirstPage) {
-          setIsLoading(false);
-        } else {
-          setIsLoadingMore(false);
+        if (!controller.signal.aborted) {
+          if (isFirstPage) {
+            setIsLoading(false);
+          } else {
+            setIsLoadingMore(false);
+          }
         }
       }
     };
 
     fetchResults();
-  }, [page, programId, universityId, selectedUniversities, selectedPrograms, searchQuery, allUniversities, chipFilters]);
+    return () => controller.abort();
+  }, [page, programId, universityId, selectedUniversities, selectedPrograms, debouncedQuery, chipFilters]);
 
   const availableUniversities = useMemo(() => {
     // Use the full universities list from Supabase (not the capped filterOptions)
@@ -726,14 +760,17 @@ export default function UniversitySearchResultsPage() {
               Explore programs tailored to your profile and preferences.
             </p>
           </div>
-          <Button asChild size="sm" variant="outline">
-            <Link
-              href={buildSearchHubUrl(searchQuery, readFiltersFromParams(searchParams))}
-              className="gap-2"
-            >
-              ← Refine in search hub
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <SaveSearchButton query={searchQuery} />
+            <Button asChild size="sm" variant="outline">
+              <Link
+                href={buildSearchHubUrl(searchQuery, readFiltersFromParams(searchParams))}
+                className="gap-2"
+              >
+                ← Refine in search hub
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <FilterBar

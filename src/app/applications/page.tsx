@@ -3,26 +3,6 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { DashboardShell } from '@/components/layout/shell';
-import { DeadlineTimeline } from '@/components/dashboard/deadline-timeline';
-import { DocumentUploader } from '@/components/applications/document-uploader';
-import { type PriorityItem } from '@/components/applications/application-priority-board';
-import { PriorityBoardWithHelp } from '@/components/applications/priority-board-with-help';
-import { RequirementTracker, type RequirementItem } from '@/components/applications/requirement-tracker';
-import dynamic from 'next/dynamic';
-const PlannerCalendar = dynamic(
-  () => import('@/components/applications/planner-calendar').then((m) => m.PlannerCalendar),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-96 items-center justify-center rounded-2xl border border-border bg-muted/20 text-sm text-muted-foreground">
-        Loading calendar…
-      </div>
-    ),
-  }
-);
-type PlannerEvent = import('@/components/applications/planner-calendar').PlannerEvent;
-import { ReferenceTracker, type ReferenceItem } from '@/components/applications/reference-tracker';
-import { SignalCenter, type SignalItem } from '@/components/applications/signal-center';
 import { PageHero } from '@/components/layout/page-hero';
 import { Button } from '@/components/ui/button';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
@@ -30,6 +10,8 @@ import { SectionNav } from '@/components/layout/section-nav';
 import { PLANNER_SECTION_ITEMS } from '@/components/layout/navigation';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ClipboardCheck } from 'lucide-react';
+import { NextActionsList, type NextActionItem } from '@/components/applications/next-actions-list';
+import { ApplicationList, type ApplicationRow } from '@/components/applications/application-list';
 
 export const metadata: Metadata = {
   title: 'Applications'
@@ -75,22 +57,6 @@ export default async function ApplicationsPage() {
     `)
     .eq('profile_id', user.id);
 
-  type ApplicationRecord = {
-    id: string;
-    status: string;
-    notes?: string | null;
-    priority_score?: number | null;
-    program_id: string;
-    program?: {
-      id: string;
-      name?: string | null;
-      level?: string | null;
-      universities?: { name?: string | null; country?: string | null } | null;
-      deadlines?: DeadlineRecord[] | null;
-    } | null;
-    application_checklist?: ChecklistRecord[] | null;
-  };
-
   type ChecklistRecord = {
     id: string;
     task_name: string;
@@ -107,30 +73,22 @@ export default async function ApplicationsPage() {
     program_id: string;
   };
 
+  type ApplicationRecord = {
+    id: string;
+    status: string;
+    notes?: string | null;
+    program_id: string;
+    program?: {
+      id: string;
+      name?: string | null;
+      level?: string | null;
+      universities?: { name?: string | null; country?: string | null } | null;
+      deadlines?: DeadlineRecord[] | null;
+    } | null;
+    application_checklist?: ChecklistRecord[] | null;
+  };
+
   const appRecords = ((applications ?? []) as ApplicationRecord[]) ?? [];
-  const checklistRecords = appRecords.flatMap((app) => app.application_checklist ?? []);
-  const deadlineRecords = appRecords.flatMap((app) => app.program?.deadlines ?? []);
-  deadlineRecords.sort((a, b) => {
-    const first = a.deadline_date ? new Date(a.deadline_date).getTime() : Number.POSITIVE_INFINITY;
-    const second = b.deadline_date ? new Date(b.deadline_date).getTime() : Number.POSITIVE_INFINITY;
-    return first - second;
-  });
-
-  const parsePriorityScore = (score?: number | string | null) => {
-    if (typeof score === 'number') return score;
-    if (typeof score === 'string') {
-      const parsed = Number.parseFloat(score);
-      return Number.isNaN(parsed) ? null : parsed;
-    }
-    return null;
-  };
-
-  const derivePriority = (score: number | null): PriorityItem['priority'] => {
-    if (score === null) return 'watch';
-    if (score >= 80) return 'high';
-    if (score >= 60) return 'medium';
-    return 'watch';
-  };
 
   if (appRecords.length === 0) {
     return (
@@ -170,226 +128,165 @@ export default async function ApplicationsPage() {
     );
   }
 
-  const priorityItems: PriorityItem[] =
-    appRecords.length > 0
-      ? appRecords.map((app) => {
-        const score = parsePriorityScore(app.priority_score);
-        const firstDeadline = deadlineRecords.find((deadline) => deadline.program_id === app.program_id);
-        return {
-          id: app.id,
-          program: app.program?.name ?? 'Program',
-          university: app.program?.universities?.name ?? 'University partner',
-          priority: derivePriority(score),
-          fitScore: score,
-          status: app.status ?? 'In progress',
-          nextDeadline: firstDeadline?.deadline_date ?? undefined,
-          tasksRemaining: checklistRecords.filter((task) => task.status !== 'done' && task.application_id === app.id).length,
-          scholarshipFocus: app.notes ?? undefined
-        };
-      })
-      : [];
+  // ─── Tier lookup from student_matches ──────────────────────────────────
+  // student_matches encodes tier (Reach / Match / Safe) inside breakdown JSON.
+  // Map program_id → tier so application rows can wear the right badge.
+  const programIds = appRecords.map((app) => app.program_id);
+  const { data: matchRows } = await supabase
+    .from('student_matches')
+    .select('program_id, breakdown')
+    .eq('profile_id', user.id)
+    .in('program_id', programIds);
 
-  const requirementItems: RequirementItem[] =
-    checklistRecords.length > 0
-      ? checklistRecords.map((task) => {
-        const status: RequirementItem['status'] =
-          task.status === 'done' ? 'submitted' : task.task_name.toLowerCase().includes('reference') ? 'requested' : 'pending';
-        return {
-          id: task.id,
-          requirement: task.task_name,
-          application: appRecords.find((app) => app.id === task.application_id)?.program?.name ?? 'General',
-          dueDate: task.due_date ?? undefined,
-          owner: status === 'requested' ? 'Recommender' : 'You',
-          status
-        };
-      })
-      : [];
-
-  const plannerEvents: PlannerEvent[] =
-    deadlineRecords.length > 0
-      ? deadlineRecords
-        .map((deadline) => ({
-          id: deadline.id,
-          title: deadline.name,
-          date: deadline.deadline_date ?? '',
-          category: 'deadline' as const,
-          detail: deadline.intake ?? 'Application'
-        }))
-        .filter((event) => event.date && !Number.isNaN(new Date(event.date).getTime()))
-      : [];
-
-  const today = new Date();
-  const isSameDay = (value?: string | null) => {
-    if (!value) return false;
-    const candidate = new Date(value);
-    return !Number.isNaN(candidate.getTime()) && candidate.toDateString() === today.toDateString();
-  };
-
-  const dailySummary = {
-    tasks: checklistRecords.filter((task) => isSameDay(task.due_date)).length,
-    deadlines: deadlineRecords.filter((deadline) => isSameDay(deadline.deadline_date)).length,
-    interviews: plannerEvents.filter((event) => event.category === 'interview' && isSameDay(event.date)).length
-  };
-
-  const disciplineFocus = appRecords[0]?.program?.name ?? 'university';
-  const resourceHighlights = [
-    {
-      id: 'essay-template',
-      tag: 'Templates',
-      title: `${disciplineFocus} essay planner`,
-      description: `Map your story arcs for relevant prompts with this guided outline.`,
-      href: 'https://www.commonapp.org/'
-    },
-    {
-      id: 'interview-prep',
-      tag: 'Interview',
-      title: 'Interview prep checklist',
-      description: 'Practice STAR stories and quick intros before your alumni interviews.',
-      href: 'https://www.linkedin.com/learning/interviewing'
-    },
-    {
-      id: 'scholarship-spotlight',
-      tag: 'Scholarships',
-      title: 'Regional scholarship spotlight',
-      description: 'Weekly roundups tailored to the regions on your program list.',
-      href: 'https://www.scholarshiphunter.com/'
-    },
-    {
-      id: 'reference-guide',
-      tag: 'References',
-      title: 'Recommender checklist',
-      description: 'Share a one-pager with your ref so they know what deadlines matter most.',
-      href: 'https://www.ucanews.com/'
+  const tierByProgramId = new Map<string, 'Reach' | 'Match' | 'Safe'>();
+  for (const row of (matchRows ?? []) as Array<{ program_id: string; breakdown: Record<string, unknown> | null }>) {
+    const tier = row.breakdown?.tier;
+    if (tier === 'Reach' || tier === 'Match' || tier === 'Safe') {
+      tierByProgramId.set(row.program_id, tier);
     }
-  ];
+  }
 
-  const referenceItems: ReferenceItem[] =
-    checklistRecords.filter((task) => task.task_name.toLowerCase().includes('reference')).length > 0
-      ? checklistRecords
-        .filter((task) => task.task_name.toLowerCase().includes('reference'))
-        .map((task, index) => ({
-          id: task.id,
-          name: `Recommender ${index + 1}`,
-          relationship: 'Teacher',
-          school: appRecords.find((app) => app.id === task.application_id)?.program?.universities?.name ?? 'Multiple schools',
-          dueDate: task.due_date ?? undefined,
-          status: task.status === 'done' ? 'received' : 'sent',
-          lastNudged: undefined
-        }))
-      : [];
+  // ─── Helpers ──────────────────────────────────────────────────────────
+  const now = Date.now();
+  const ONE_DAY = 1000 * 60 * 60 * 24;
+  const daysFromNow = (iso?: string | null): number | null => {
+    if (!iso) return null;
+    const ts = Date.parse(iso);
+    if (Number.isNaN(ts)) return null;
+    return Math.ceil((ts - now) / ONE_DAY);
+  };
 
-  const signalItems: SignalItem[] =
-    deadlineRecords.length > 0
-      ? deadlineRecords.slice(0, 3).map((deadline) => ({
-        id: deadline.id,
-        title: `${deadline.name} updated`,
-        detail: `Deadline is now ${deadline.deadline_date ?? 'TBD'} for ${deadline.intake ?? 'current intake'}.`,
-        timeAgo: 'Just now',
-        type: 'deadline'
-      }))
-      : [];
+  // ─── Build next-actions ────────────────────────────────────────────────
+  // One open task per application, ranked across the board by earliest
+  // due date (or by application's earliest deadline if no task has a due).
+  const nextActionItems: NextActionItem[] = [];
+  for (const app of appRecords) {
+    const openTasks = (app.application_checklist ?? []).filter((t) => t.status !== 'done');
+    if (openTasks.length === 0) continue;
 
-  const timelineItems = deadlineRecords.map((deadline) => ({
-    id: deadline.id,
-    name: deadline.name,
-    date: deadline.deadline_date ?? 'TBD',
-    context: deadline.intake ?? 'Submission'
-  }));
+    // Pick the earliest-due open task, falling back to the first.
+    const ranked = [...openTasks].sort((a, b) => {
+      const da = a.due_date ? Date.parse(a.due_date) : Number.POSITIVE_INFINITY;
+      const db = b.due_date ? Date.parse(b.due_date) : Number.POSITIVE_INFINITY;
+      return da - db;
+    });
+    const top = ranked[0];
 
-  const heroStats = [
-    { label: 'Applications', value: `${appRecords.length}`, detail: 'Tracked' },
-    { label: 'Deadlines', value: `${deadlineRecords.length}`, detail: 'Synced' },
-    { label: 'Updates', value: `${signalItems.length}`, detail: 'Latest activity' }
-  ];
+    const programDeadlines = app.program?.deadlines ?? [];
+    const earliestProgramDeadline = programDeadlines
+      .map((d) => d.deadline_date)
+      .filter((d): d is string => Boolean(d))
+      .sort()[0];
+
+    const days = daysFromNow(top.due_date ?? earliestProgramDeadline ?? null);
+
+    nextActionItems.push({
+      taskId: top.id,
+      applicationId: app.id,
+      university: app.program?.universities?.name ?? 'University',
+      program: app.program?.name ?? 'Programme',
+      taskName: top.task_name,
+      dueDate: top.due_date ?? null,
+      daysUntilDue: days,
+      tasksRemaining: openTasks.length
+    });
+  }
+
+  // ─── Build the all-applications list ───────────────────────────────────
+  const applicationRows: ApplicationRow[] = appRecords.map((app) => {
+    const tasks = app.application_checklist ?? [];
+    const openTasks = tasks.filter((t) => t.status !== 'done');
+    const programDeadlines = app.program?.deadlines ?? [];
+    const earliestDeadlineIso = programDeadlines
+      .map((d) => d.deadline_date)
+      .filter((d): d is string => Boolean(d))
+      .sort()[0];
+
+    return {
+      id: app.id,
+      university: app.program?.universities?.name ?? 'University',
+      program: app.program?.name ?? 'Programme',
+      status: app.status,
+      tier: tierByProgramId.get(app.program_id) ?? null,
+      daysUntilDeadline: daysFromNow(earliestDeadlineIso ?? null),
+      tasksOpen: openTasks.length,
+      tasksTotal: tasks.length
+    };
+  });
+
+  // ─── Hero numbers ──────────────────────────────────────────────────────
+  const submittedCount = appRecords.filter((a) => a.status === 'submitted' || a.status === 'decision' || a.status === 'enrolled').length;
+  const inProgressCount = appRecords.filter((a) => a.status === 'in_progress' || a.status === 'planning').length;
+
+  // Find the most urgent next-action for the hero highlight.
+  const mostUrgent = [...nextActionItems].sort((a, b) => {
+    const da = a.daysUntilDue ?? Number.POSITIVE_INFINITY;
+    const db = b.daysUntilDue ?? Number.POSITIVE_INFINITY;
+    return da - db;
+  })[0];
+  const highlight = mostUrgent && mostUrgent.daysUntilDue !== null
+    ? mostUrgent.daysUntilDue <= 0
+      ? `${mostUrgent.university} ${mostUrgent.taskName} is overdue`
+      : `${mostUrgent.daysUntilDue} day${mostUrgent.daysUntilDue === 1 ? '' : 's'} until ${mostUrgent.university} ${mostUrgent.taskName}`
+    : 'Nothing urgent right now';
 
   return (
     <DashboardShell>
       <SectionNav items={PLANNER_SECTION_ITEMS} />
+
       <PageHero
         tone="student"
         eyebrow="Your applications"
-        title="Where everything's at"
-        description="Tasks, deadlines, docs, references — your whole application picture in one spot."
-        highlight={`Today · ${dailySummary.tasks} tasks, ${dailySummary.deadlines} deadlines`}
         accent="Today"
-        stats={heroStats}
+        title="Where everything's at"
+        description="The most urgent thing first, then everything you're tracking."
+        highlight={highlight}
+        stats={[
+          { label: 'Tracked', value: `${appRecords.length}`, detail: 'Applications' },
+          { label: 'In progress', value: `${inProgressCount}`, detail: 'Working on now' },
+          { label: 'Submitted', value: `${submittedCount}`, detail: 'Awaiting decision' }
+        ]}
         breadcrumbs={<Breadcrumbs />}
         actions={
           <>
             <Button asChild size="sm">
               <Link href="/university-search/shortlist">Add from shortlist</Link>
             </Button>
-            <Button asChild size="sm" variant="soft">
-              <Link className="text-foreground" href="/matches">
-                Add from matches
-              </Link>
-            </Button>
             <Button asChild size="sm" variant="outline">
-              <Link href="/applications/tasks">Open tasks</Link>
+              <Link href="/applications/tasks">All tasks</Link>
             </Button>
           </>
         }
       />
 
       <div className="space-y-6 sm:space-y-8">
-        {/* Priority — what to focus on this week */}
-        <PriorityBoardWithHelp items={priorityItems} />
-
-        {/* Now — what's open right now (tasks, deadlines, updates) */}
-        <section className="space-y-4">
-          <div className="flex flex-wrap items-end justify-between gap-3">
+        {/* ── What's next ───────────────────────────────────────── */}
+        <section className="space-y-3">
+          <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Now</p>
-              <h2 className="text-2xl font-semibold text-foreground">Today&apos;s focus</h2>
-              <p className="text-sm text-muted-foreground">
-                {dailySummary.tasks} {dailySummary.tasks === 1 ? 'task' : 'tasks'} ·{' '}
-                {dailySummary.deadlines} {dailySummary.deadlines === 1 ? 'deadline' : 'deadlines'} ·{' '}
-                {dailySummary.interviews} {dailySummary.interviews === 1 ? 'interview' : 'interviews'}
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+                What&apos;s next
               </p>
+              <h2 className="text-xl font-semibold text-foreground">Your top three this week</h2>
             </div>
             <Button asChild size="sm" variant="ghost">
-              <Link href="/applications/tasks">Open task board →</Link>
+              <Link href="/applications/tasks">All tasks →</Link>
             </Button>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 sm:gap-6">
-            <RequirementTracker items={requirementItems} />
-            <div className="space-y-4">
-              <div className="surface-stage space-y-4 rounded-[28px]">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Timeline</p>
-                  <p className="text-lg font-semibold text-foreground">Upcoming deadlines</p>
-                </div>
-                <DeadlineTimeline items={timelineItems} />
-              </div>
-              <SignalCenter signals={signalItems} />
-            </div>
-          </div>
+          <NextActionsList items={nextActionItems} />
         </section>
 
-        {/* Resources — quieter row: calendar, files, references */}
-        <section className="space-y-4">
+        {/* ── All applications ──────────────────────────────────── */}
+        <section className="space-y-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Resources</p>
-            <h2 className="text-2xl font-semibold text-foreground">Calendar, files, and references</h2>
-            <p className="text-sm text-muted-foreground">Drop in anything you want to keep handy across applications.</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+              All applications
+            </p>
+            <h2 className="text-xl font-semibold text-foreground">
+              {appRecords.length} tracked · in-progress first, submitted at the bottom
+            </h2>
           </div>
-          <PlannerCalendar events={plannerEvents} />
-          <div className="grid gap-4 md:grid-cols-2 sm:gap-6">
-            <div className="surface-stage space-y-4 rounded-[28px]">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Files</p>
-                <p className="text-lg font-semibold text-foreground">Upload documents</p>
-              </div>
-              <DocumentUploader applicationId={appRecords[0]?.id ?? null} />
-            </div>
-            <div className="surface-stage space-y-4 rounded-[28px]">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">References</p>
-                <p className="text-lg font-semibold text-foreground">Recommenders</p>
-              </div>
-              <ReferenceTracker references={referenceItems} />
-            </div>
-          </div>
+          <ApplicationList rows={applicationRows} />
         </section>
       </div>
     </DashboardShell>

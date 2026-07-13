@@ -1,15 +1,23 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, NotebookPen, CalendarPlus, Check, Sparkles, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
+import { useSupabase } from '@/hooks/useSupabase';
 import { useHelpThread } from '@/hooks/use-help-thread';
 import type { HelpMeetingStatus } from '@/lib/types/demo-tables';
 
 type Side = 'student' | 'counsellor';
+
+// Mirrors the focusable-element query in ui/dialog.tsx so the drawer traps
+// focus with the same semantics as the shared Dialog primitive.
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+const TAB_KEYS = ['thread', 'notes', 'meeting'] as const;
 
 interface HelpThreadDrawerProps {
   open: boolean;
@@ -62,9 +70,13 @@ const defaultMeetingSlot = (): string => {
 };
 
 export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadDrawerProps) {
-  const { request, messages, notes, meetings, loading, reply, addNote, proposeMeeting, setStatus } =
+  const { request, messages, notes, meetings, loading, reply, addNote, proposeMeeting, setMeetingStatus, setStatus } =
     useHelpThread(requestId);
+  const supabase = useSupabase();
   const { showToast } = useToast();
+
+  const asideRef = useRef<HTMLElement | null>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
 
   const [replyText, setReplyText] = useState('');
   const [noteText, setNoteText] = useState('');
@@ -86,8 +98,77 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
     }
   }, [open, requestId]);
 
+  // Escape closes the drawer (matches ui/dialog.tsx behaviour).
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open, onClose]);
+
+  // Move focus into the drawer on open, restore it to the trigger on close.
+  useEffect(() => {
+    if (open) {
+      previouslyFocused.current = document.activeElement as HTMLElement | null;
+      const node = asideRef.current;
+      const target = node?.querySelector<HTMLElement>(FOCUSABLE) ?? node;
+      target?.focus();
+    } else {
+      previouslyFocused.current?.focus?.();
+    }
+  }, [open]);
+
+  // Trap Tab focus within the drawer while it's open.
+  const onTrapKeyDown = (event: ReactKeyboardEvent) => {
+    if (event.key !== 'Tab') return;
+    const node = asideRef.current;
+    if (!node) return;
+    const focusables = Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+      (el) => el.offsetParent !== null
+    );
+    if (focusables.length === 0) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   const isCounsellor = side === 'counsellor';
-  const studentName = useMemo(() => (request ? 'Greg Franck' : ''), [request]);
+
+  // Resolve the student's real name from their profile row; fall back to
+  // neutral copy rather than showing a wrong hardcoded name.
+  const [studentName, setStudentName] = useState('');
+  useEffect(() => {
+    const profileId = request?.student_profile_id;
+    if (!profileId) {
+      setStudentName('');
+      return;
+    }
+    let cancelled = false;
+    setStudentName('Student');
+    supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', profileId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setStudentName(data?.full_name?.trim() || 'Student');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, request?.student_profile_id]);
 
   const handleReply = async () => {
     if (busy || !replyText.trim()) return;
@@ -96,7 +177,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
       await reply(replyText, side);
       setReplyText('');
       showToast({
-        title: isCounsellor ? `Reply sent to ${studentName}` : 'Reply sent to Sarah',
+        title: isCounsellor ? `Reply sent to ${studentName}` : 'Reply sent to your counsellor',
         variant: 'success'
       });
     } catch {
@@ -136,6 +217,30 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
       });
     } catch {
       showToast({ title: "Couldn't propose meeting", variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleMeetingStatus = async (
+    meeting: ReturnType<typeof useHelpThread>['meetings'][number],
+    status: HelpMeetingStatus
+  ) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await setMeetingStatus(meeting, status, side);
+      const label =
+        status === 'confirmed'
+          ? 'Meeting confirmed'
+          : status === 'cancelled'
+            ? 'Meeting cancelled'
+            : status === 'completed'
+              ? 'Meeting marked complete'
+              : 'Meeting updated';
+      showToast({ title: label, variant: 'success' });
+    } catch {
+      showToast({ title: "Couldn't update the meeting", variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -185,11 +290,17 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
             onClick={onClose}
           />
           <motion.aside
+            ref={asideRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={request?.subject ?? 'Help request'}
+            tabIndex={-1}
+            onKeyDown={onTrapKeyDown}
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 280, damping: 32 }}
-            className="relative z-10 flex h-full w-full max-w-xl flex-col bg-background shadow-2xl"
+            className="relative z-10 flex h-full w-full max-w-xl flex-col bg-background shadow-2xl outline-none"
           >
             <header className="flex items-start justify-between gap-3 border-b border-border/60 px-5 py-4">
               <div className="min-w-0 flex-1">
@@ -216,24 +327,46 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
             </header>
 
             {/* Tab strip */}
-            <div className="flex gap-1 border-b border-border/60 px-3 py-2 text-xs font-semibold">
-              {(['thread', 'notes', 'meeting'] as const).map((key) => {
+            <div
+              role="tablist"
+              aria-label="Request views"
+              className="flex gap-1 border-b border-border/60 px-3 py-2 text-xs"
+            >
+              {TAB_KEYS.map((key, index) => {
                 const isActive = tab === key;
+                // Don't surface the notes count to the student — notes are
+                // counsellor-private and the count alone would leak existence.
+                const notesLabel = isCounsellor && notes.length
+                  ? `Notes · ${notes.length}`
+                  : 'Notes';
                 const label =
                   key === 'thread'
                     ? `Thread${messages.length ? ` · ${messages.length}` : ''}`
                     : key === 'notes'
-                      ? `Notes${notes.length ? ` · ${notes.length}` : ''}`
+                      ? notesLabel
                       : `Meeting${meetings.length ? ` · ${meetings.length}` : ''}`;
                 return (
                   <button
                     key={key}
+                    id={`help-drawer-tab-${key}`}
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-controls="help-drawer-tabpanel"
+                    tabIndex={isActive ? 0 : -1}
                     onClick={() => setTab(key)}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+                      event.preventDefault();
+                      const delta = event.key === 'ArrowRight' ? 1 : -1;
+                      const next = TAB_KEYS[(index + delta + TAB_KEYS.length) % TAB_KEYS.length];
+                      setTab(next);
+                      document.getElementById(`help-drawer-tab-${next}`)?.focus();
+                    }}
                     className={cn(
                       'rounded-full px-3 py-1.5 transition',
                       isActive
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                        ? 'bg-primary font-semibold text-primary-foreground shadow-sm'
+                        : 'font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                     )}
                   >
                     {label}
@@ -243,7 +376,12 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div
+              id="help-drawer-tabpanel"
+              role="tabpanel"
+              aria-labelledby={`help-drawer-tab-${tab}`}
+              className="flex-1 overflow-y-auto px-5 py-4"
+            >
               {loading && !request ? (
                 <p className="text-sm text-muted-foreground">Loading…</p>
               ) : !request ? (
@@ -276,6 +414,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
                   meetingLocation={meetingLocation}
                   setMeetingLocation={setMeetingLocation}
                   onPropose={handleProposeMeeting}
+                  onSetStatus={handleMeetingStatus}
                   busy={busy}
                 />
               )}
@@ -285,11 +424,15 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
             {tab === 'thread' && request ? (
               <div className="border-t border-border/60 bg-card/40 px-5 py-3">
                 <div className="flex items-start gap-2">
+                  <label htmlFor="help-drawer-reply" className="sr-only">
+                    Reply message
+                  </label>
                   <textarea
+                    id="help-drawer-reply"
                     value={replyText}
                     onChange={(event) => setReplyText(event.target.value)}
                     placeholder={
-                      isCounsellor ? `Reply to ${studentName}…` : 'Reply to Sarah…'
+                      isCounsellor ? `Reply to ${studentName}…` : 'Reply to your counsellor…'
                     }
                     rows={2}
                     className="min-h-[44px] flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -392,7 +535,7 @@ function ThreadView({
         >
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-semibold text-foreground">
-              {m.author_role === 'counsellor' ? 'Sarah Meacha' : studentName}
+              {m.author_role === 'counsellor' ? 'Counsellor' : studentName}
             </p>
             <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
               {formatRelative(m.created_at)}
@@ -433,7 +576,11 @@ function NotesView({
           <p className="mt-0.5 text-xs text-muted-foreground">
             Only counsellors see this. Useful for decisions, follow-ups, things to come back to.
           </p>
+          <label htmlFor="help-drawer-note" className="sr-only">
+            Private note
+          </label>
           <textarea
+            id="help-drawer-note"
             value={noteText}
             onChange={(event) => setNoteText(event.target.value)}
             placeholder="e.g. PS is strong on the quant side, weak on the 'why this university' question. Send the Cambridge sample for reference."
@@ -448,33 +595,35 @@ function NotesView({
         </div>
       ) : (
         <p className="rounded-2xl border border-dashed border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
-          Notes are private to the counsellor — visible to Sarah, not to you.
+          Notes are private to the counsellor — visible to them, not to you.
         </p>
       )}
-      <div className="space-y-2">
-        {notes.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border/60 bg-muted/20 p-3 text-sm text-muted-foreground">
-            No notes yet.
-          </p>
-        ) : (
-          notes.map((n) => (
-            <article
-              key={n.id}
-              className="rounded-2xl border border-border/60 bg-card/40 p-3 text-sm text-foreground/90"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  Counsellor note
-                </span>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  {formatRelative(n.created_at)}
-                </span>
-              </div>
-              <p className="mt-1 whitespace-pre-line">{n.body}</p>
-            </article>
-          ))
-        )}
-      </div>
+      {isCounsellor ? (
+        <div className="space-y-2">
+          {notes.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-border/60 bg-muted/20 p-3 text-sm text-muted-foreground">
+              No notes yet.
+            </p>
+          ) : (
+            notes.map((n) => (
+              <article
+                key={n.id}
+                className="rounded-2xl border border-border/60 bg-card/40 p-3 text-sm text-foreground/90"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                    Counsellor note
+                  </span>
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                    {formatRelative(n.created_at)}
+                  </span>
+                </div>
+                <p className="mt-1 whitespace-pre-line">{n.body}</p>
+              </article>
+            ))
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -489,6 +638,7 @@ function MeetingView({
   meetingLocation,
   setMeetingLocation,
   onPropose,
+  onSetStatus,
   busy
 }: {
   meetings: ReturnType<typeof useHelpThread>['meetings'];
@@ -500,6 +650,10 @@ function MeetingView({
   meetingLocation: string;
   setMeetingLocation: (s: string) => void;
   onPropose: () => void;
+  onSetStatus: (
+    meeting: ReturnType<typeof useHelpThread>['meetings'][number],
+    status: HelpMeetingStatus
+  ) => void;
   busy: boolean;
 }) {
   return (
@@ -511,26 +665,44 @@ function MeetingView({
             <p className="text-sm font-semibold text-foreground">Propose a meeting</p>
           </div>
           <div className="mt-2 space-y-2">
-            <input
-              type="text"
-              value={meetingTitle}
-              onChange={(event) => setMeetingTitle(event.target.value)}
-              placeholder="Meeting title"
-              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            />
-            <input
-              type="datetime-local"
-              value={meetingTime}
-              onChange={(event) => setMeetingTime(event.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            />
-            <input
-              type="text"
-              value={meetingLocation}
-              onChange={(event) => setMeetingLocation(event.target.value)}
-              placeholder="Location or video link"
-              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            />
+            <div>
+              <label htmlFor="help-drawer-meeting-title" className="sr-only">
+                Meeting title
+              </label>
+              <input
+                id="help-drawer-meeting-title"
+                type="text"
+                value={meetingTitle}
+                onChange={(event) => setMeetingTitle(event.target.value)}
+                placeholder="Meeting title"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              />
+            </div>
+            <div>
+              <label htmlFor="help-drawer-meeting-time" className="sr-only">
+                Meeting date and time
+              </label>
+              <input
+                id="help-drawer-meeting-time"
+                type="datetime-local"
+                value={meetingTime}
+                onChange={(event) => setMeetingTime(event.target.value)}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              />
+            </div>
+            <div>
+              <label htmlFor="help-drawer-meeting-location" className="sr-only">
+                Location or video link
+              </label>
+              <input
+                id="help-drawer-meeting-location"
+                type="text"
+                value={meetingLocation}
+                onChange={(event) => setMeetingLocation(event.target.value)}
+                placeholder="Location or video link"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              />
+            </div>
             <div className="flex items-center justify-end">
               <Button size="sm" onClick={onPropose} disabled={busy || !meetingTitle.trim() || !meetingTime}>
                 Propose
@@ -540,7 +712,7 @@ function MeetingView({
         </div>
       ) : (
         <p className="rounded-2xl border border-dashed border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
-          Meetings proposed by Sarah appear here. You can confirm or suggest a different time.
+          Meetings proposed by your counsellor appear here. Confirm the time that works, or decline to ask for another.
         </p>
       )}
 
@@ -550,24 +722,56 @@ function MeetingView({
             No meetings yet.
           </p>
         ) : (
-          meetings.map((m) => (
-            <article
-              key={m.id}
-              className={cn('flex items-start gap-3 rounded-2xl border p-3', meetingToneClass(m.status))}
-            >
-              <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">{m.title}</p>
-                <p className="text-xs">
-                  {formatMeetingTime(m.scheduled_for)} · {m.duration_minutes} min
-                  {m.location ? ` · ${m.location}` : null}
-                </p>
-                <p className="mt-0.5 text-[10px] uppercase tracking-[0.2em]">
-                  {m.status}
-                </p>
-              </div>
-            </article>
-          ))
+          meetings.map((m) => {
+            // Per-status, per-side actions. Student confirms a proposed time;
+            // either side can cancel; the counsellor closes one out as complete.
+            const actions: { label: string; status: HelpMeetingStatus; primary?: boolean }[] = [];
+            if (m.status === 'proposed') {
+              if (isCounsellor) {
+                actions.push({ label: 'Cancel', status: 'cancelled' });
+              } else {
+                actions.push({ label: 'Confirm', status: 'confirmed', primary: true });
+                actions.push({ label: 'Decline', status: 'cancelled' });
+              }
+            } else if (m.status === 'confirmed') {
+              if (isCounsellor) {
+                actions.push({ label: 'Mark complete', status: 'completed', primary: true });
+              }
+              actions.push({ label: 'Cancel', status: 'cancelled' });
+            }
+
+            return (
+              <article
+                key={m.id}
+                className={cn('flex items-start gap-3 rounded-2xl border p-3', meetingToneClass(m.status))}
+              >
+                <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">{m.title}</p>
+                  <p className="text-xs">
+                    {formatMeetingTime(m.scheduled_for)} · {m.duration_minutes} min
+                    {m.location ? ` · ${m.location}` : null}
+                  </p>
+                  <p className="mt-0.5 text-[10px] uppercase tracking-[0.2em]">{m.status}</p>
+                  {actions.length ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {actions.map((action) => (
+                        <Button
+                          key={action.status}
+                          size="sm"
+                          variant={action.primary ? 'default' : 'outline'}
+                          disabled={busy}
+                          onClick={() => onSetStatus(m, action.status)}
+                        >
+                          {action.label}
+                        </Button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </article>
+            );
+          })
         )}
       </div>
     </div>

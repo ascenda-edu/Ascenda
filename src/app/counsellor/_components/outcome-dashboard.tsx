@@ -5,8 +5,8 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, XCircle, Clock, MinusCircle, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { stagger, cardFade } from '@/lib/motion';
-import { DUMMY_OUTCOMES, getOutcomeStats } from '@/lib/data/counsellor-dummy-data';
-import type { OutcomeResult, MatchTier, CounsellorOutcome } from '@/lib/data/counsellor-dummy-data';
+import type { OutcomeResult, MatchTier, CounsellorOutcome } from '@/lib/counsellor/types';
+import type { OutcomeStats } from '@/lib/counsellor/data';
 
 const RESULT_CONFIG: Record<OutcomeResult, { icon: typeof CheckCircle2; color: string; bg: string; label: string }> = {
   accepted: { icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-500/10', label: 'Accepted' },
@@ -24,31 +24,27 @@ const TIER_COLORS: Record<MatchTier, string> = {
 
 const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
-export function OutcomeDashboard() {
-  const stats = getOutcomeStats();
+export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutcome[]; stats: OutcomeStats }) {
   const [filterResult, setFilterResult] = useState<OutcomeResult | null>(null);
   const [filterStudent, setFilterStudent] = useState('');
 
-  const students = useMemo(() => [...new Set(DUMMY_OUTCOMES.map((o) => o.studentName))], []);
-  const universities = useMemo(() => [...new Set(DUMMY_OUTCOMES.map((o) => o.university))], []);
-
   const filtered = useMemo(() => {
-    let result = [...DUMMY_OUTCOMES];
+    let result = [...outcomes];
     if (filterResult) result = result.filter((o) => o.result === filterResult);
     if (filterStudent) result = result.filter((o) => o.studentName.toLowerCase().includes(filterStudent.toLowerCase()));
     return result;
-  }, [filterResult, filterStudent]);
+  }, [outcomes, filterResult, filterStudent]);
 
   // Acceptance by tier
   const tierStats = useMemo(() => {
     const tiers: MatchTier[] = ['Reach', 'Match', 'Safe'];
     return tiers.map((tier) => {
-      const ofTier = DUMMY_OUTCOMES.filter((o) => o.tier === tier);
+      const ofTier = outcomes.filter((o) => o.tier === tier);
       const decided = ofTier.filter((o) => o.result !== 'pending');
       const accepted = decided.filter((o) => o.result === 'accepted').length;
       return { tier, total: ofTier.length, decided: decided.length, accepted, rate: decided.length > 0 ? Math.round((accepted / decided.length) * 100) : 0 };
     });
-  }, []);
+  }, [outcomes]);
 
   return (
     <div className="space-y-6">

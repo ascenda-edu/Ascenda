@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { Search, SlidersHorizontal, ChevronDown, X, Filter, FilterX } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import type { CounsellorStudent } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorStudent } from '@/lib/counsellor/types';
 import { StudentCard } from './student-card';
 import type { DashboardFilter } from '../page';
 
@@ -39,12 +39,13 @@ function getAvgScore(s: CounsellorStudent) {
   return s.matches.reduce((acc, m) => acc + m.score, 0) / s.matches.length;
 }
 
-export const StudentRoster = ({ students, externalFilter, onClearExternalFilter, initialProgramme, initialFlagFilter }: StudentRosterProps) => {
+export const StudentRoster = ({ students, externalFilter, onClearExternalFilter, initialProgramme, initialField, initialFlagFilter }: StudentRosterProps) => {
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [programme, setProgramme] = useState<ProgrammeFilter>(initialProgramme ?? 'all');
   const [flagFilter, setFlagFilter] = useState<FlagFilter>(initialFlagFilter ?? 'all');
-  const [filtersOpen, setFiltersOpen] = useState(!!(initialProgramme || initialFlagFilter));
+  const [fieldFilter, setFieldFilter] = useState<string | undefined>(initialField);
+  const [filtersOpen, setFiltersOpen] = useState(!!(initialProgramme || initialField || initialFlagFilter));
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -85,6 +86,8 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
       list = list.filter((s) => s.academic.programmeType === programme);
     }
 
+    if (fieldFilter) list = list.filter((s) => s.academic.clusters.includes(fieldFilter));
+
     if (flagFilter === 'flagged') list = list.filter((s) => s.flags.length > 0);
     if (flagFilter === 'clear') list = list.filter((s) => s.flags.length === 0);
 
@@ -104,7 +107,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
     });
 
     return list;
-  }, [students, query, sortKey, programme, flagFilter, externalFilter]);
+  }, [students, query, sortKey, programme, fieldFilter, flagFilter, externalFilter]);
 
   const SORT_OPTS: { key: SortKey; label: string }[] = [
     { key: 'name', label: 'Name' },
@@ -145,6 +148,26 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
             <p className="text-[11px] text-muted-foreground italic">
               Click the chart again to reset
             </p>
+          </motion.div>
+        )}
+        {fieldFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex items-center gap-2 overflow-hidden"
+          >
+            <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold capitalize text-primary">
+              <Filter className="h-3 w-3" />
+              Field: {fieldFilter.replace(/_/g, ' ')}
+              <button
+                onClick={() => setFieldFilter(undefined)}
+                className="ml-1 rounded-full p-0.5 hover:bg-primary/10"
+                title="Clear field filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -249,7 +272,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
       {filtered.length > 0 ? (
         <motion.div
           layout
-          className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+          className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
         >
           <AnimatePresence mode="popLayout">
             {filtered.map((student) => (

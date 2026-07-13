@@ -39,6 +39,14 @@ export default function RoleSelectPage() {
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
+  // Pre-warm both destination routes while the user reads the role cards.
+  // This sidesteps the cold serverless first-request penalty for the
+  // demo's opening moments — by the time you click, the chunk is cached.
+  useEffect(() => {
+    router.prefetch('/dashboard');
+    router.prefetch('/counsellor');
+  }, [router]);
+
   useEffect(() => {
     let isMounted = true;
 

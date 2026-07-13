@@ -4,10 +4,12 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/role-select';
+  const next = searchParams.get('next') ?? '/dashboard';
 
   if (code) {
-    const response = NextResponse.redirect(new URL(next, req.url));
+    const redirectUrl = new URL(next, req.url);
+    redirectUrl.searchParams.set('auth_fresh', '1');
+    const response = NextResponse.redirect(redirectUrl);
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,6 +38,5 @@ export async function GET(req: NextRequest) {
     console.error('Auth callback code exchange failed:', error.message);
   }
 
-  // If no code or exchange failed, redirect to login
   return NextResponse.redirect(new URL('/login', req.url));
 }

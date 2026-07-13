@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
+import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
+import { checkRateLimit } from '@/lib/api/rate-limit';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? '' });
 
@@ -113,6 +115,21 @@ interface ChatMessage {
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = createRouteHandlerSupabaseClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401 });
+    }
+
+    // Bound per-user LLM spend — nothing else stops a scripted request loop.
+    if (!checkRateLimit(`chat:${user.id}`, { limit: 20, windowMs: 60_000 })) {
+      return new Response(JSON.stringify({ error: 'Too many requests — try again in a minute' }), {
+        status: 429
+      });
+    }
+
     const body = await req.json();
     const { messages, currentPage, mode } = body as {
       messages: ChatMessage[];
@@ -122,6 +139,12 @@ export async function POST(req: NextRequest) {
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: 'No messages provided' }), { status: 400 });
+    }
+    if (
+      messages.length > 50 ||
+      messages.some((m) => typeof m.content !== 'string' || m.content.length > 8_000)
+    ) {
+      return new Response(JSON.stringify({ error: 'Conversation too long' }), { status: 400 });
     }
 
     if (!process.env.GEMINI_API_KEY) {
@@ -196,8 +219,10 @@ export async function POST(req: NextRequest) {
       error: 'AI is rate-limited right now. Please wait a moment and try again.',
     }), { status: 503 });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[chat]', message);
-    return new Response(JSON.stringify({ error: message }), { status: 500 });
+    console.error('[chat]', err);
+    return new Response(
+      JSON.stringify({ error: 'Something went wrong. Please try again.' }),
+      { status: 500 }
+    );
   }
 }

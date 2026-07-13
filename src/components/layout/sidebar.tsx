@@ -8,6 +8,7 @@ import { filterNavByRole, isNavActive, NAV_ITEMS } from './navigation';
 import { useUserRole } from '@/hooks/use-user-role';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useSidebar } from './sidebar-context';
+import { SideSwitcher } from './side-switcher';
 
 export const Sidebar = () => {
   const pathname = usePathname();
@@ -74,6 +75,8 @@ export const Sidebar = () => {
             </Link>
           );
         })}
+
+        <SideSwitcher className={cn('mt-1 w-full', collapsed ? 'justify-center px-0 rounded-lg' : '')} collapsed={collapsed} />
 
         <button
           onClick={handleSignOut}

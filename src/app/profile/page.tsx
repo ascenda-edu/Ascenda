@@ -30,35 +30,29 @@ export default async function ProfilePage() {
     redirect('/login');
   }
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user?.id ?? '').single();
-  const { data: personal } = await supabase
-    .from('student_personal_information')
-    .select('*')
-    .eq('profile_id', user?.id ?? '')
-    .single();
-  const { data: academicInput } = await supabase
-    .from('student_academic_input')
-    .select('*')
-    .eq('profile_id', user?.id ?? '')
-    .single();
-  const { data: lifestyle } = await supabase
-    .from('student_lifestyle_preference')
-    .select('*')
-    .eq('profile_id', user?.id ?? '')
-    .single();
-  const { data: subjects } = await supabase
-    .from('student_subjects')
-    .select('subject_name,level,grade_value')
-    .eq('profile_id', user?.id ?? '');
-  const { data: admissionsTests } = await supabase
-    .from('student_admissions_tests')
-    .select('test_type,status,score_numeric,percentile')
-    .eq('profile_id', user?.id ?? '');
-  const { data: scores } = await supabase
-    .from('student_scores')
-    .select('*')
-    .eq('profile_id', user?.id ?? '')
-    .single();
+  // maybeSingle(): new users legitimately have no row yet — .single() turns
+  // that into a discarded PGRST116 error that also masks real failures.
+  // Promise.all: these are independent; serial awaits were a 7-hop waterfall.
+  const [
+    { data: profile },
+    { data: personal },
+    { data: academicInput },
+    { data: lifestyle },
+    { data: subjects },
+    { data: admissionsTests },
+    { data: scores }
+  ] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+    supabase.from('student_personal_information').select('*').eq('profile_id', user.id).maybeSingle(),
+    supabase.from('student_academic_input').select('*').eq('profile_id', user.id).maybeSingle(),
+    supabase.from('student_lifestyle_preference').select('*').eq('profile_id', user.id).maybeSingle(),
+    supabase.from('student_subjects').select('subject_name,level,grade_value').eq('profile_id', user.id),
+    supabase
+      .from('student_admissions_tests')
+      .select('test_type,status,score_numeric,percentile')
+      .eq('profile_id', user.id),
+    supabase.from('student_scores').select('*').eq('profile_id', user.id).maybeSingle()
+  ]);
 
   const pathwayInsight = summarisePathwayStatus(
     (scores?.eligibility_flags as string[] | null) ?? null,

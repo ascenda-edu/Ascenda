@@ -27,11 +27,15 @@ export const MatchDistribution = ({ tiers, activeTier, onSelectTier, onNavigateT
           const isAnythingSelected = activeTier !== null && activeTier !== undefined;
 
           return pct > 0 ? (
-            <div
+            <button
               key={key}
+              type="button"
+              disabled={!onSelectTier}
+              aria-pressed={isSelected}
+              aria-label={`${TIERS.find(t => t.key === key)?.label}: ${tiers[key]} students${onSelectTier ? ' — filter by this tier' : ''}`}
               className={cn(
                 color,
-                "transition-all duration-700",
+                "transition-all duration-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                 onSelectTier && "cursor-pointer",
                 isAnythingSelected && !isSelected && "opacity-20 grayscale-[0.8]"
               )}
@@ -54,22 +58,34 @@ export const MatchDistribution = ({ tiers, activeTier, onSelectTier, onNavigateT
             <div
               key={key}
               className={cn(
-                "rounded-2xl border transition-all",
-                onSelectTier && "cursor-pointer hover:scale-[1.02]",
+                "relative rounded-2xl border transition-all",
+                onSelectTier && "hover:scale-[1.02]",
                 isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border/50",
                 light,
                 isAnythingSelected && !isSelected && "opacity-40 grayscale-[0.5]"
               )}
-              onClick={() => onSelectTier?.(key)}
             >
+              {/* Stretched filter button — keyboard-accessible sibling of the
+                  View link, so no interactive element nests inside another. */}
+              {onSelectTier && (
+                <button
+                  type="button"
+                  onClick={() => onSelectTier(key)}
+                  aria-pressed={isSelected}
+                  aria-label={`Filter students by ${label} tier`}
+                  className="absolute inset-0 cursor-pointer rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              )}
               <div className="px-4 py-3 text-center">
                 <p className={`text-xl font-bold tabular-nums ${text}`}>{tiers[key]}</p>
                 <p className="text-xs font-semibold text-muted-foreground">{label}</p>
                 <p className="text-[11px] text-muted-foreground">{pct}%</p>
                 {onNavigateTier && tiers[key] > 0 && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); onNavigateTier(key); }}
-                    className="mt-1 text-[10px] text-primary hover:underline underline-offset-2 font-medium"
+                    type="button"
+                    onClick={() => onNavigateTier(key)}
+                    aria-label={`View ${label} tier students`}
+                    className="relative z-10 mt-1 text-[10px] text-primary hover:underline underline-offset-2 font-medium"
                   >
                     View →
                   </button>
@@ -80,7 +96,7 @@ export const MatchDistribution = ({ tiers, activeTier, onSelectTier, onNavigateT
         })}
       </div>
 
-      <p className="text-center text-xs text-muted-foreground">{total} total matches across cohort</p>
+      <p className="text-center text-xs text-muted-foreground">{total} students with matches</p>
     </div>
   );
 };

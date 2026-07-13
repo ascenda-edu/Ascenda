@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Trophy, Pin, PinOff, EyeOff, Eye, Settings2, ChevronDown } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import type { CounsellorStudent } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorStudent } from '@/lib/counsellor/types';
 
 interface TopStudentsProps {
   students: CounsellorStudent[];
@@ -190,8 +190,8 @@ export const TopStudents = ({ students }: TopStudentsProps) => {
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {student.academic.programmeType === 'IB'
-                        ? `IB ${student.academic.ibPoints} pts`
-                        : `A-Level ${student.academic.aLevelGrades}`}
+                        ? student.academic.ibPoints ? `IB ${student.academic.ibPoints} pts` : 'IB'
+                        : student.academic.aLevelGrades ? `A-Level ${student.academic.aLevelGrades}` : 'A-Level'}
                     </p>
                   </div>
                   <div className="text-right">

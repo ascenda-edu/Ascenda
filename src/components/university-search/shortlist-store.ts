@@ -22,6 +22,16 @@ const DEMO_IDS = new Set(['yale-epe', 'melbourne-design', 'hkust-gbus']);
 const TABLE_NAME = 'shortlisted_programs';
 const SHORTLIST_SYNC_EVENT = 'ascenda:shortlist-sync';
 
+// The shortlisted_programs table only exists on environments where the full
+// schema.sql has been applied. Feature-detect once per session: after the
+// first failed remote call, stop issuing doomed requests and stay
+// localStorage-only instead of warning on every hydrate/add/remove.
+let remoteShortlistAvailable = true;
+const markRemoteUnavailable = (error: { message?: string } | null) => {
+  remoteShortlistAvailable = false;
+  console.warn('Shortlist remote sync disabled for this session', error?.message ?? error);
+};
+
 type ShortlistRow = {
   program_id: string;
   program_name: string | null;
@@ -89,6 +99,7 @@ export const useShortlist = () => {
 
   const upsertRemoteItem = useCallback(
     async (client: Client, userId: string, item: ShortlistItem) => {
+      if (!remoteShortlistAvailable) return;
       const payload = {
         profile_id: userId,
         program_id: item.id,
@@ -103,7 +114,7 @@ export const useShortlist = () => {
       };
       const { error } = await (client as any).from(TABLE_NAME).upsert(payload, { onConflict: 'profile_id,program_id' });
       if (error) {
-        console.warn('Failed to upsert shortlist item', error);
+        markRemoteUnavailable(error);
       }
     },
     []
@@ -111,9 +122,10 @@ export const useShortlist = () => {
 
   const deleteRemoteItem = useCallback(
     async (client: Client, userId: string, programId: string) => {
+      if (!remoteShortlistAvailable) return;
       const { error } = await (client as any).from(TABLE_NAME).delete().eq('profile_id', userId).eq('program_id', programId);
       if (error) {
-        console.warn('Failed to remove shortlist item', error);
+        markRemoteUnavailable(error);
       }
     },
     []
@@ -144,13 +156,19 @@ export const useShortlist = () => {
         window.localStorage.removeItem(OLD_STORAGE_KEY);
       }
 
+      if (!remoteShortlistAvailable) {
+        setItems(localItems);
+        setReady(true);
+        return;
+      }
+
       const { data, error } = await (supabase as any)
         .from(TABLE_NAME)
         .select('program_id,program_name,university_name,location,fit_score,stage,next_action,due_date')
         .eq('profile_id', userId);
 
       if (error) {
-        console.warn('Falling back to local shortlist due to Supabase error', error);
+        markRemoteUnavailable(error);
         setItems(localItems);
         setReady(true);
         return;
@@ -210,52 +228,52 @@ export const useShortlist = () => {
     }
   }, [getStorageKey, items, persistLocal, profileId, ready]);
 
+  // Side effects (persist, event dispatch, remote sync) run OUTSIDE the
+  // setItems updater — React StrictMode double-invokes updaters, which used
+  // to double-fire the upsert and sync event.
   const addItem = useCallback((item: ShortlistItem) => {
-    setItems((prev) => {
-      const storageKey = getStorageKey(profileId);
-      const fallbackKeys = profileId ? [] : [OLD_STORAGE_KEY];
-      const latest = typeof window !== 'undefined' ? loadLocal(storageKey, fallbackKeys) : prev;
-      if (latest.some((existing) => existing.id === item.id)) {
-        return latest;
+    const storageKey = getStorageKey(profileId);
+    const fallbackKeys = profileId ? [] : [OLD_STORAGE_KEY];
+    const latest = typeof window !== 'undefined' ? loadLocal(storageKey, fallbackKeys) : items;
+    if (latest.some((existing) => existing.id === item.id)) {
+      setItems(latest);
+      return;
+    }
+    const nextItems = [
+      ...latest,
+      {
+        stage: 'Researching',
+        due: null,
+        nextAction: null,
+        ...item
       }
-      const nextItems = [
-        ...latest,
-        {
-          stage: 'Researching',
-          due: null,
-          nextAction: null,
-          ...item
-        }
-      ];
-      persistLocal(storageKey, nextItems);
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event(SHORTLIST_SYNC_EVENT));
-      }
-      const client = supabaseRef.current;
-      if (client && profileId) {
-        void upsertRemoteItem(client, profileId, item);
-      }
-      return nextItems;
-    });
-  }, [getStorageKey, loadLocal, persistLocal, profileId, upsertRemoteItem]);
+    ];
+    persistLocal(storageKey, nextItems);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(SHORTLIST_SYNC_EVENT));
+    }
+    const client = supabaseRef.current;
+    if (client && profileId) {
+      void upsertRemoteItem(client, profileId, item);
+    }
+    setItems(nextItems);
+  }, [getStorageKey, items, loadLocal, persistLocal, profileId, upsertRemoteItem]);
 
   const removeItem = useCallback((id: string) => {
-    setItems((prev) => {
-      const storageKey = getStorageKey(profileId);
-      const fallbackKeys = profileId ? [] : [OLD_STORAGE_KEY];
-      const latest = typeof window !== 'undefined' ? loadLocal(storageKey, fallbackKeys) : prev;
-      const next = latest.filter((item) => item.id !== id);
-      persistLocal(storageKey, next);
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event(SHORTLIST_SYNC_EVENT));
-      }
-      return next;
-    });
+    const storageKey = getStorageKey(profileId);
+    const fallbackKeys = profileId ? [] : [OLD_STORAGE_KEY];
+    const latest = typeof window !== 'undefined' ? loadLocal(storageKey, fallbackKeys) : items;
+    const next = latest.filter((item) => item.id !== id);
+    persistLocal(storageKey, next);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(SHORTLIST_SYNC_EVENT));
+    }
     const client = supabaseRef.current;
     if (client && profileId) {
       void deleteRemoteItem(client, profileId, id);
     }
-  }, [deleteRemoteItem, getStorageKey, loadLocal, persistLocal, profileId]);
+    setItems(next);
+  }, [deleteRemoteItem, getStorageKey, items, loadLocal, persistLocal, profileId]);
 
   return { items, addItem, removeItem, ready };
 };

@@ -29,7 +29,14 @@ export default async function MatchesPage() {
     redirect('/login');
   }
 
-  const matchResult = await loadMatchesForProfile(supabase, user.id, { resultLimit: 900 });
+  // 300 (≈100/tier) covers many "show more" clicks while keeping the RSC
+  // payload a third of the previous 900-match serialization. It equals the
+  // service's FULL_CACHE_LIMIT — every caller's compute caches at least this
+  // many rows — so this force-dynamic, top-level-awaited load is a cache hit
+  // whenever ANY caller (e.g. the dashboard) computed within the TTL; the
+  // tens-of-seconds recompute happens at most once per TTL, for whoever
+  // arrives first.
+  const matchResult = await loadMatchesForProfile(supabase, user.id, { resultLimit: 300 });
 
   if (matchResult.error) {
     return (

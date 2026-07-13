@@ -5,6 +5,22 @@ import { CalendarClock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { stagger as listStagger, itemSlide as itemFade } from '@/lib/motion';
 import { classifyDeadlineUrgency, DEADLINE_VISUAL } from '@/lib/theme/categories';
+import { parseLocalDate } from '@/lib/utils/dates';
+
+// item.date arrives as a raw date-only string ('2026-07-17') so urgency can be
+// classified from it; render it as a human date ('Jul 17') and fall back to the
+// raw value for non-dates like 'TBD'.
+const formatDisplayDate = (value: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const parsed = parseLocalDate(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  const sameYear = parsed.getFullYear() === new Date().getFullYear();
+  return parsed.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(sameYear ? {} : { year: 'numeric' })
+  });
+};
 
 interface TimelineItem {
   id: string;
@@ -66,7 +82,7 @@ export const DeadlineTimeline = ({ items }: DeadlineTimelineProps) => {
               <p className="mt-0.5 text-xs text-muted-foreground">{item.context}</p>
             </div>
             <div className="shrink-0 text-right">
-              <p className={cn('text-xs font-semibold uppercase tracking-wider', visual.text)}>{item.date}</p>
+              <p className={cn('text-xs font-semibold uppercase tracking-wider', visual.text)}>{formatDisplayDate(item.date)}</p>
               {badgeLabel ? (
                 <span className={cn(visual.chip, 'mt-1')}>{badgeLabel}</span>
               ) : null}

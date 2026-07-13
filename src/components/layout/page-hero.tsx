@@ -15,16 +15,15 @@ interface PageHeroProps {
   eyebrow?: string;
   title: string;
   description: string;
+  /** Short bold value rendered next to the eyebrow (e.g. "13 total"). */
   highlight?: string;
+  /** @deprecated Pill removed — value is no longer rendered. Kept for API compat. */
   accent?: string;
   stats?: HeroStat[];
   actions?: ReactNode;
   breadcrumbs?: ReactNode;
   className?: string;
-  /**
-   * 'student' = warmer, lighter, sentence-case (default for student-facing pages).
-   * 'counsellor' = denser, all-caps tracking, live-pulse pill (operational vibe).
-   */
+  /** Tone still controls subtle copy weight in downstream slots. */
   tone?: 'student' | 'counsellor';
 }
 
@@ -92,7 +91,6 @@ export const PageHero = ({
   title,
   description,
   highlight,
-  accent,
   stats,
   actions,
   breadcrumbs,
@@ -100,9 +98,11 @@ export const PageHero = ({
   tone = 'counsellor'
 }: PageHeroProps) => {
   const isStudent = tone === 'student';
-  const resolvedAccent = accent ?? (isStudent ? 'Today' : 'Live focus');
   const reduced = useReducedMotion();
   const initial = reduced ? false : 'hidden';
+  // Only render the small eyebrow row when the caller actually provided
+  // content — no default "Live focus" / "Today" pill noise on every page.
+  const showEyebrowRow = Boolean(eyebrow || highlight);
   return (
     <motion.section
       className={cn(
@@ -122,28 +122,20 @@ export const PageHero = ({
 
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <motion.div className="space-y-1" variants={containerVariants}>
-            <motion.div className="flex flex-wrap items-center gap-2" variants={fadeUp}>
-              {isStudent ? (
-                <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/5 px-2 py-0.5 text-[10px] font-medium text-primary/80">
-                  <span>{resolvedAccent}</span>
-                  {highlight ? (
-                    <>
-                      <span className="text-muted-foreground/60">·</span>
-                      <span className="font-semibold text-foreground">{highlight}</span>
-                    </>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.4em] text-primary/70">
-                  <span className="h-1 w-1 rounded-full bg-primary animate-pulse" />
-                  <span>{resolvedAccent}</span>
-                  {highlight ? <span className="text-foreground font-bold">{highlight}</span> : null}
-                </div>
-              )}
-              {eyebrow ? (
-                <span className="text-[10px] text-muted-foreground font-medium">{eyebrow}</span>
-              ) : null}
-            </motion.div>
+            {showEyebrowRow ? (
+              <motion.div
+                className="flex flex-wrap items-baseline gap-1.5 text-[10px] text-muted-foreground"
+                variants={fadeUp}
+              >
+                {eyebrow ? <span className="font-medium">{eyebrow}</span> : null}
+                {eyebrow && highlight ? <span className="text-muted-foreground/40">·</span> : null}
+                {highlight ? (
+                  <span className={cn('font-semibold', isStudent ? 'text-foreground' : 'text-foreground')}>
+                    {highlight}
+                  </span>
+                ) : null}
+              </motion.div>
+            ) : null}
             <motion.div variants={fadeUp}>
               <h1
                 className={cn(

@@ -14,7 +14,8 @@ const PROTECTED_PREFIXES = [
   '/shortlist',
   '/scholarships',
   '/counsellor',
-  '/role-select'
+  '/role-select',
+  '/inbox'
 ];
 
 export async function middleware(req: NextRequest) {
@@ -43,8 +44,20 @@ export async function middleware(req: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = req.nextUrl;
+
+  // Registration is disabled for the design-partner build. Any visit to the
+  // legacy /signup route is redirected to the login page.
+  if (pathname.startsWith('/signup')) {
+    const redirectUrl = req.nextUrl.clone();
+    redirectUrl.pathname = '/login';
+    redirectUrl.search = '';
+    const redirectResponse = NextResponse.redirect(redirectUrl);
+    res.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie));
+    return redirectResponse;
+  }
+
   const isProtected = PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-  const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/signup');
+  const isAuthRoute = pathname.startsWith('/login');
 
   // Helper to carry over cookies to redirects
   const applyCookies = (source: NextResponse, target: NextResponse) => {
@@ -143,14 +156,20 @@ export async function middleware(req: NextRequest) {
   }
 
   if (user && isProtected && !pathname.startsWith('/profile') && !pathname.startsWith('/counsellor') && !pathname.startsWith('/role-select')) {
-    const needsOnboarding = await getOnboardingStatus(res);
-    if (needsOnboarding) {
-      const redirectUrl = req.nextUrl.clone();
-      redirectUrl.pathname = '/profile/wizard';
-      redirectUrl.searchParams.set('onboarding', 'true');
-      const redirectResponse = NextResponse.redirect(redirectUrl);
-      applyCookies(res, redirectResponse);
-      return redirectResponse;
+    // Skip the onboarding check on the very first request after OAuth callback —
+    // the session cookie has just been written and downstream DB reads can race.
+    // Let the page render; the next request will hit the onboarding check normally.
+    const isFreshAuth = req.nextUrl.searchParams.get('auth_fresh') === '1';
+    if (!isFreshAuth) {
+      const needsOnboarding = await getOnboardingStatus(res);
+      if (needsOnboarding) {
+        const redirectUrl = req.nextUrl.clone();
+        redirectUrl.pathname = '/profile/wizard';
+        redirectUrl.searchParams.set('onboarding', 'true');
+        const redirectResponse = NextResponse.redirect(redirectUrl);
+        applyCookies(res, redirectResponse);
+        return redirectResponse;
+      }
     }
   }
 
@@ -158,5 +177,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/(dashboard|profile|matches|applications|admin|university-search|course|shortlist|scholarships|counsellor|role-select)(.*)', '/login', '/signup']
+  matcher: ['/(dashboard|profile|matches|applications|admin|university-search|course|shortlist|scholarships|counsellor|role-select|inbox)(.*)', '/login', '/signup']
 };

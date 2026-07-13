@@ -1,17 +1,17 @@
 import { PageHero } from '@/components/layout/page-hero';
-import {
-  DEMO_COUNSELLOR_DOCS,
-  DEMO_REC_LETTERS,
-  type CounsellorDocument,
-  type CounsellorDocStatus
-} from '@/lib/data/student-demo-data';
 import { CounsellorDocumentBoard } from '../_components/counsellor-document-board';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { loadCounsellorDocuments } from '@/lib/counsellor/data';
 
-const received = DEMO_COUNSELLOR_DOCS.filter((d) => d.status === 'received').length;
-const pending = DEMO_COUNSELLOR_DOCS.filter((d) => d.status === 'pending').length;
-const overdue = DEMO_COUNSELLOR_DOCS.filter((d) => d.status === 'overdue').length;
+export const dynamic = 'force-dynamic';
 
-export default function CounsellorDocumentsPage() {
+export default async function CounsellorDocumentsPage() {
+  const supabase = createServerSupabaseClient();
+  const docs = await loadCounsellorDocuments(supabase);
+  const received = docs.filter((d) => d.status === 'received').length;
+  const pending = docs.filter((d) => d.status === 'pending').length;
+  const overdue = docs.filter((d) => d.status === 'overdue').length;
+
   return (
     <div className="space-y-6">
       <PageHero
@@ -21,14 +21,14 @@ export default function CounsellorDocumentsPage() {
         title="Document management"
         description="Transcripts, recommendation letters, essays, and certificates across the cohort."
         stats={[
-          { label: 'Total', value: String(DEMO_COUNSELLOR_DOCS.length), detail: 'Documents tracked' },
+          { label: 'Total', value: String(docs.length), detail: 'Documents tracked' },
           { label: 'Received', value: String(received), detail: 'Complete' },
           { label: 'Pending', value: String(pending), detail: 'Awaiting' },
           { label: 'Overdue', value: String(overdue), detail: 'Need attention' }
         ]}
       />
 
-      <CounsellorDocumentBoard documents={DEMO_COUNSELLOR_DOCS} />
+      <CounsellorDocumentBoard documents={docs} />
     </div>
   );
 }

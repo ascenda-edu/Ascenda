@@ -20,6 +20,7 @@ const extractHelpRequestId = (href?: string | null): string | null => {
 const KIND_TONE: Record<string, string> = {
   help_request: 'bg-violet-500/10 text-violet-700 dark:text-violet-300',
   help_accepted: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+  deck_assignment: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
   default: 'bg-sky-500/10 text-sky-700 dark:text-sky-300'
 };
 
@@ -40,6 +41,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
   const { openRequest } = useHelpDrawer();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
 
   // Close on outside click
   useEffect(() => {
@@ -51,6 +53,18 @@ export const NotificationBell = ({ className }: { className?: string }) => {
     };
     document.addEventListener('mousedown', handle);
     return () => document.removeEventListener('mousedown', handle);
+  }, [open]);
+
+  // Escape closes the panel and returns focus to the bell button.
+  useEffect(() => {
+    if (!open) return;
+    const handle = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setOpen(false);
+      buttonRef.current?.focus();
+    };
+    document.addEventListener('keydown', handle);
+    return () => document.removeEventListener('keydown', handle);
   }, [open]);
 
   const handleItemClick = (notif: Notification) => {
@@ -68,9 +82,13 @@ export const NotificationBell = ({ className }: { className?: string }) => {
   return (
     <div ref={wrapperRef} className={cn('relative', className)}>
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-label={`Notifications${unreadCount ? ` (${unreadCount} unread)` : ''}`}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={open ? 'notification-bell-panel' : undefined}
         title="Notifications"
         className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
@@ -85,6 +103,9 @@ export const NotificationBell = ({ className }: { className?: string }) => {
       <AnimatePresence>
         {open ? (
           <motion.div
+            id="notification-bell-panel"
+            role="dialog"
+            aria-label="Notifications"
             initial={{ opacity: 0, y: -6, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}

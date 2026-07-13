@@ -3,6 +3,7 @@ import type { CohortStats } from './types';
 
 interface ApplicationFunnelProps {
   funnel: CohortStats['appFunnel'];
+  totalStudents?: number;
   activeStage?: 'planning' | 'inProgress' | 'submitted' | 'decision' | null;
   onSelectStage?: (stage: 'planning' | 'inProgress' | 'submitted' | 'decision') => void;
   onNavigateStage?: (stage: 'planning' | 'inProgress' | 'submitted' | 'decision') => void;
@@ -15,15 +16,15 @@ const STAGES = [
   { key: 'decision' as const, label: 'Decision', color: 'bg-emerald-500/15', text: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-200/60 dark:border-emerald-500/30', active: 'ring-2 ring-emerald-500 ring-offset-2' }
 ];
 
-export const ApplicationFunnel = ({ funnel, activeStage, onSelectStage, onNavigateStage }: ApplicationFunnelProps) => {
-  const total = Object.values(funnel).reduce((a, b) => a + b, 0) || 1;
+export const ApplicationFunnel = ({ funnel, totalStudents, activeStage, onSelectStage, onNavigateStage }: ApplicationFunnelProps) => {
+  const denominator = totalStudents ?? (Object.values(funnel).reduce((a, b) => a + b, 0) || 1);
   const maxVal = Math.max(...Object.values(funnel), 1);
 
   return (
     <div className="space-y-3">
       {STAGES.map(({ key, label, color, text, border, active }) => {
         const count = funnel[key];
-        const pct = Math.round((count / total) * 100);
+        const pct = Math.round((count / denominator) * 100);
         const barWidth = Math.round((count / maxVal) * 100);
         const isSelected = activeStage === key;
 
@@ -31,20 +32,32 @@ export const ApplicationFunnel = ({ funnel, activeStage, onSelectStage, onNaviga
           <div
             key={key}
             className={cn(
-              "space-y-1 transition-all",
-              onSelectStage && "cursor-pointer hover:opacity-80",
+              "relative space-y-1 transition-all",
+              onSelectStage && "hover:opacity-80",
               isSelected ? "scale-[1.02]" : "opacity-60 grayscale-[0.5]"
             )}
-            onClick={() => onSelectStage?.(key)}
           >
+            {/* Stretched filter button — keyboard-accessible sibling of the
+                View link, so no interactive element nests inside another. */}
+            {onSelectStage && (
+              <button
+                type="button"
+                onClick={() => onSelectStage(key)}
+                aria-pressed={isSelected}
+                aria-label={`Filter students by ${label} stage`}
+                className="absolute inset-0 cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            )}
             <div className="flex items-center justify-between text-xs">
               <span className={cn("font-medium", isSelected ? "text-foreground font-bold" : "text-muted-foreground")}>{label}</span>
               <div className="flex items-center gap-2">
                 <span className={`font-bold ${text}`}>{count} <span className="font-normal text-muted-foreground">({pct}%)</span></span>
                 {onNavigateStage && count > 0 && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); onNavigateStage(key); }}
-                    className="text-[10px] text-primary hover:underline underline-offset-2 font-medium"
+                    type="button"
+                    onClick={() => onNavigateStage(key)}
+                    aria-label={`View ${label} stage students`}
+                    className="relative z-10 text-[10px] text-primary hover:underline underline-offset-2 font-medium"
                   >
                     View →
                   </button>

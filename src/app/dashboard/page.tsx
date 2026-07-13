@@ -1,39 +1,64 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
+import { CalendarClock, ListChecks } from 'lucide-react';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { DashboardShell } from '@/components/layout/shell';
 import { DeadlineTimeline } from '@/components/dashboard/deadline-timeline';
-import { UniversityCard } from '@/components/university-card';
-import { loadMatchesForProfile } from '@/lib/matching/service';
-import type { EnrichedMatch } from '@/lib/matching/types';
-import { DashboardOverview, type OverviewPayload, type HighlightCard } from '@/components/dashboard/overview';
+import { MatchesPeek, MatchesPeekSkeleton } from './_components/matches-peek';
+import { CounsellorQuests } from './_components/counsellor-quests';
 import { PageHero } from '@/components/layout/page-hero';
 import { Button } from '@/components/ui/button';
 import { TaskListPanel } from '@/components/dashboard/task-list-panel';
+import { AnimatedSection } from '@/components/layout/animated-section';
+import { HubCard } from '@/components/dashboard/hub/hub-card';
+import { NextUpCard, type HubFocusItem } from '@/components/dashboard/hub/next-up-card';
+import { ProfileProgressCard } from '@/components/dashboard/hub/profile-progress-card';
+import { PipelineCard, type PipelineStage } from '@/components/dashboard/hub/pipeline-card';
+import { CounsellorCard } from '@/components/dashboard/hub/counsellor-card';
+import { QuickLinks } from '@/components/dashboard/hub/quick-links';
+import { buildStepCompletion, ProfileRecordGroup } from '@/lib/profile/completion';
+import { PROFILE_STEPS } from '@/lib/profile/steps';
+import { listInboxRequests, listUnreadByRequest } from '@/lib/demo/help-request-client';
+import { DEMO_COUNSELLOR } from '@/lib/demo/counsellor';
+import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import type { Database } from '@/lib/types/database';
 
 export const dynamic = 'force-dynamic';
-import { buildStepCompletion, isProfileComplete, ProfileRecordGroup } from '@/lib/profile/completion';
-import { PROFILE_STEPS } from '@/lib/profile/steps';
-import { AnimatedSection } from '@/components/layout/animated-section';
-import { cn } from '@/lib/utils';
-import { classifyCompletion, COMPLETION_VISUAL } from '@/lib/theme/categories';
 
 type ChecklistRow = Database['public']['Tables']['application_checklist']['Row'];
+type ChecklistItem = Pick<ChecklistRow, 'id' | 'task_name' | 'status' | 'due_date'>;
 type DeadlineRow = Database['public']['Tables']['deadlines']['Row'];
-type ApplicationRow = Database['public']['Tables']['applications']['Row'];
+type ApplicationStatus = Database['public']['Enums']['application_status'];
 
 export const metadata: Metadata = {
   title: 'Dashboard'
 };
 
 const shortDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
-const formatShortDate = (value?: string | null) => {
+
+// deadline_date / due_date are date-only strings — parse as LOCAL dates so a
+// deadline doesn't shift by the user's UTC offset (see lib/utils/dates).
+const formatDateOnly = (value?: string | null) => {
   if (!value) return 'TBD';
-  const timestamp = Date.parse(value);
-  return Number.isNaN(timestamp) ? 'TBD' : shortDateFormatter.format(new Date(timestamp));
+  const parsed = parseLocalDate(value);
+  return Number.isNaN(parsed.getTime()) ? 'TBD' : shortDateFormatter.format(parsed);
 };
+
+const safeDaysUntil = (value?: string | null): number | null => {
+  if (!value) return null;
+  const days = daysUntil(value);
+  return Number.isNaN(days) ? null : days;
+};
+
+const PIPELINE_STAGES: Array<{ key: ApplicationStatus; label: string }> = [
+  { key: 'planning', label: 'Planning' },
+  { key: 'in_progress', label: 'In progress' },
+  { key: 'submitted', label: 'Submitted' },
+  { key: 'decision', label: 'Awaiting decision' },
+  { key: 'enrolled', label: 'Enrolled' }
+];
 
 export default async function DashboardPage() {
   const supabase = createServerSupabaseClient();
@@ -46,11 +71,11 @@ export default async function DashboardPage() {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const todayString = new Date().toDateString();
+  const nowIso = new Date().toISOString();
 
   const { data: applications } = await supabase
     .from('applications')
-    .select('id, program_id')
+    .select('id, status, program_id')
     .eq('profile_id', user.id);
 
   const applicationIds = (applications ?? []).map((app) => app.id);
@@ -59,382 +84,402 @@ export default async function DashboardPage() {
   const [
     checklistResponse,
     deadlinesResponse,
-    matchResult,
     personalResponse,
     academicResponse,
     lifestyleResponse,
-    subjectsResponse
+    subjectsResponse,
+    helpResult,
+    meetingResponse
   ] = await Promise.all([
+    // No .limit(6) here: openTasks/overdueTasks/dueThisWeekCount below are shown
+    // as TOTALS (hero stats + focus items), so we need every row — only the
+    // columns we use, with a generous safety cap. Top-N slicing for display
+    // happens at render time.
     applicationIds.length
-      ? supabase.from('application_checklist').select('*').in('application_id', applicationIds).order('due_date', { ascending: true }).limit(5)
+      ? supabase
+          .from('application_checklist')
+          .select('id, task_name, status, due_date')
+          .in('application_id', applicationIds)
+          .order('due_date', { ascending: true })
+          .limit(500)
       : Promise.resolve({ data: [] }),
     applicationProgramIds.length
       ? supabase.from('deadlines').select('*').in('program_id', applicationProgramIds).gte('deadline_date', today).order('deadline_date', { ascending: true }).limit(5)
       : Promise.resolve({ data: [] }),
-    loadMatchesForProfile(supabase, user.id),
     supabase
       .from('student_personal_information')
       .select('first_name,last_name,email,nationality,resident_country')
       .eq('profile_id', user.id)
-      .single(),
+      .maybeSingle(),
     supabase
       .from('student_academic_input')
       .select('programme_type,school_name,school_country,graduation_year,intended_clusters,english_required')
       .eq('profile_id', user.id)
-      .single(),
-    supabase.from('student_lifestyle_preference').select('extracurricular_interests').eq('profile_id', user.id).single(),
-    supabase.from('student_subjects').select('id').eq('profile_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('student_lifestyle_preference')
+      .select('extracurricular_interests')
+      .eq('profile_id', user.id)
+      .maybeSingle(),
+    supabase.from('student_subjects').select('id').eq('profile_id', user.id),
+    // NOTE: matches are deliberately NOT loaded here — an uncached match
+    // compute can take tens of seconds, so the matches cell streams in behind
+    // Suspense (see MatchesPeek) instead of blocking the whole hub.
+    // Help threads + unread counts feed the counsellor cell; the hub must
+    // still render if the help tables are unreachable. help_requests carries
+    // no counsellor column, so we chain one narrow query for the author of the
+    // most recent counsellor reply — that is who "unread replies" are from.
+    Promise.all([listInboxRequests(supabase, user.id), listUnreadByRequest(supabase, user.id)])
+      .then(async ([requests, unread]) => {
+        let lastReplyAuthorId: string | null = null;
+        if (requests.length > 0) {
+          const { data: lastReply } = await supabase
+            .from('help_messages')
+            .select('author_profile_id')
+            .in('request_id', requests.map((request) => request.id))
+            .eq('author_role', 'counsellor')
+            .order('created_at', { ascending: false })
+            .limit(1);
+          lastReplyAuthorId = lastReply?.[0]?.author_profile_id ?? null;
+        }
+        return [requests, unread, lastReplyAuthorId] as const;
+      })
+      .catch(() => [[], new Map<string, number>(), null] as const),
+    supabase
+      .from('help_meetings')
+      .select('title, scheduled_for, location, status, counsellor_profile_id')
+      .eq('student_profile_id', user.id)
+      .in('status', ['proposed', 'confirmed'])
+      .gte('scheduled_for', nowIso)
+      .order('scheduled_for', { ascending: true })
+      .limit(1)
   ]);
 
-  const checklist = (checklistResponse.data ?? []) as ChecklistRow[];
+  const checklist = (checklistResponse.data ?? []) as ChecklistItem[];
   const deadlines = (deadlinesResponse.data ?? []) as DeadlineRow[];
-  const matchError = Boolean(matchResult.error);
-  const matches: EnrichedMatch[] = matchError ? [] : matchResult.matches;
 
-  // Profile Completion Logic
-  const personal = personalResponse.data;
-  const academicInput = academicResponse.data;
-  const lifestyle = lifestyleResponse.data;
-
+  // ── Profile completion ──────────────────────────────────────────────────
   const records: ProfileRecordGroup = {
-    personal: personal ?? null,
-    academicInput: academicInput ?? null,
+    personal: personalResponse.data ?? null,
+    academicInput: academicResponse.data ?? null,
     subjectCount: subjectsResponse.data?.length ?? 0,
-    lifestyle: lifestyle ?? null
+    lifestyle: lifestyleResponse.data ?? null
   };
-
-  const profileIncomplete = !isProfileComplete(records);
-
   const stepCompletion = buildStepCompletion(records);
-  const completedSteps = PROFILE_STEPS.filter((step) => stepCompletion[step.key]).length;
+  const profileSteps = PROFILE_STEPS.map((step) => ({
+    key: step.key,
+    title: step.title,
+    done: stepCompletion[step.key]
+  }));
+  const completedSteps = profileSteps.filter((step) => step.done).length;
   const completionPercent = Math.round((completedSteps / PROFILE_STEPS.length) * 100);
-  const nextStep = PROFILE_STEPS.find((step) => !stepCompletion[step.key]);
+  const nextStep = PROFILE_STEPS.find((step) => !stepCompletion[step.key]) ?? null;
 
-  // Derived Overview Data
-  const openTasks = checklist.filter((task) => task.status !== 'done').length;
-  const now = Date.now();
-  const dueSoonCount = checklist.filter((task) => {
-    if (!task.due_date) return false;
-    const dueTime = Date.parse(task.due_date);
-    return !Number.isNaN(dueTime) && dueTime >= now && dueTime <= now + 1000 * 60 * 60 * 24 * 7;
+  // ── Pipeline ────────────────────────────────────────────────────────────
+  const pipelineStages: PipelineStage[] = PIPELINE_STAGES.map((stage) => ({
+    ...stage,
+    count: (applications ?? []).filter((app) => app.status === stage.key).length
+  }));
+  const submittedCount = (applications ?? []).filter(
+    (app) => app.status === 'submitted' || app.status === 'decision' || app.status === 'enrolled'
+  ).length;
+
+  // ── Tasks & deadlines ───────────────────────────────────────────────────
+  const openTasks = checklist.filter((task) => task.status !== 'done');
+  const overdueTasks = openTasks.filter((task) => {
+    const days = safeDaysUntil(task.due_date);
+    return days !== null && days < 0;
+  });
+  const dueTodayTasks = openTasks.filter((task) => safeDaysUntil(task.due_date) === 0);
+  const dueThisWeekCount = openTasks.filter((task) => {
+    const days = safeDaysUntil(task.due_date);
+    return days !== null && days >= 0 && days <= 7;
   }).length;
-
   const nextDeadline = deadlines[0] ?? null;
-  const averageMatchScore = matches.length
-    ? Math.round(matches.reduce((total, item) => total + item.score, 0) / matches.length)
+  const nextDeadlineDays = nextDeadline ? safeDaysUntil(nextDeadline.deadline_date) : null;
+
+  // ── Counsellor / inbox ──────────────────────────────────────────────────
+  const [helpRequests, unreadByRequest, lastReplyAuthorId] = helpResult;
+  const unreadTotal = Array.from(unreadByRequest.values()).reduce((sum, count) => sum + count, 0);
+  const openThreads = helpRequests.filter((request) => request.status !== 'resolved');
+  const latestSubject = openThreads[0]?.subject ?? helpRequests[0]?.subject ?? null;
+  const meetingRow = meetingResponse.data?.[0] ?? null;
+
+  // Resolve real counsellor names. The counsellor side runs on live Supabase
+  // data, so a second counsellor's replies or meetings must not be attributed
+  // to the demo persona — one narrow profiles lookup for the (at most two)
+  // ids in play; DEMO_COUNSELLOR is only the fallback when nothing resolves.
+  const counsellorIds = Array.from(
+    new Set(
+      [lastReplyAuthorId, meetingRow?.counsellor_profile_id].filter((id): id is string => Boolean(id))
+    )
+  );
+  const counsellorNameById = new Map<string, string>();
+  if (counsellorIds.length > 0) {
+    const { data: counsellorProfiles } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', counsellorIds);
+    for (const profile of counsellorProfiles ?? []) {
+      const name = profile.full_name?.trim();
+      if (name) counsellorNameById.set(profile.id, name);
+    }
+  }
+  const firstNameOf = (fullName: string) => fullName.split(/\s+/)[0];
+  const inboxCounsellorName = lastReplyAuthorId ? counsellorNameById.get(lastReplyAuthorId) ?? null : null;
+  const meetingCounsellorName = meetingRow?.counsellor_profile_id
+    ? counsellorNameById.get(meetingRow.counsellor_profile_id) ?? null
     : null;
+  const inboxFirstName = inboxCounsellorName ? firstNameOf(inboxCounsellorName) : DEMO_COUNSELLOR.firstName;
+  const meetingFirstName = meetingCounsellorName ? firstNameOf(meetingCounsellorName) : DEMO_COUNSELLOR.firstName;
+  // The card fronts one counsellor: prefer whoever the next meeting is with,
+  // then the latest replier, then the demo persona.
+  const cardCounsellorFullName = meetingCounsellorName ?? inboxCounsellorName ?? DEMO_COUNSELLOR.fullName;
+  const cardCounsellor = { fullName: cardCounsellorFullName, firstName: firstNameOf(cardCounsellorFullName) };
 
-  const isSameToday = (value?: string | null) => {
-    if (!value) return false;
-    const timestamp = Date.parse(value);
-    return !Number.isNaN(timestamp) && new Date(timestamp).toDateString() === todayString;
-  };
+  const nextMeeting = meetingRow
+    ? {
+        title: meetingRow.title,
+        scheduledFor: meetingRow.scheduled_for,
+        location: meetingRow.location,
+        status: (meetingRow.status === 'confirmed' ? 'confirmed' : 'proposed') as 'confirmed' | 'proposed'
+      }
+    : null;
+  const meetingSoon = nextMeeting
+    ? new Date(nextMeeting.scheduledFor).getTime() - Date.now() <= 1000 * 60 * 60 * 48
+    : false;
 
-  const todayFocus = {
-    tasks: checklist.filter((task) => isSameToday(task.due_date)).length,
-    deadlines: deadlines.filter((deadline) => isSameToday(deadline.deadline_date)).length,
-    interviews: checklist.filter((task) => isSameToday(task.due_date) && /interview/i.test(task.task_name ?? '')).length
-  };
-
-  const dueTodayTasks = checklist.filter((task) => task.status !== 'done' && isSameToday(task.due_date));
-  const dueTodayDeadlines = deadlines.filter((deadline) => isSameToday(deadline.deadline_date));
-  const trackedProgramsCount = applicationProgramIds.length;
-
-  const focusItems = [];
-  const urgentTask = dueTodayTasks[0];
-  if (urgentTask) {
+  // ── Next moves — one hero action + a short queue, every row deep-linked ─
+  const focusItems: HubFocusItem[] = [];
+  if (overdueTasks.length > 0) {
     focusItems.push({
-      id: urgentTask.id,
+      id: `overdue-${overdueTasks[0].id}`,
+      label: 'Overdue',
+      title: overdueTasks.length === 1 ? overdueTasks[0].task_name ?? 'Checklist task' : `${overdueTasks.length} tasks are overdue`,
+      detail: overdueTasks.length === 1 ? `Was due ${formatDateOnly(overdueTasks[0].due_date)} — clear it first.` : 'Clear these first to get back on track.',
+      href: '/applications/tasks',
+      tone: 'rose'
+    });
+  }
+  if (unreadTotal > 0) {
+    focusItems.push({
+      id: 'focus-inbox',
+      label: 'Inbox',
+      title: `${unreadTotal} unread ${unreadTotal === 1 ? 'reply' : 'replies'} from ${inboxFirstName}`,
+      detail: latestSubject ? `Latest thread: ${latestSubject}` : 'Your counsellor has responded.',
+      href: '/inbox',
+      tone: 'violet'
+    });
+  }
+  if (dueTodayTasks.length > 0) {
+    focusItems.push({
+      id: `today-${dueTodayTasks[0].id}`,
       label: 'Due today',
-      title: urgentTask.task_name ?? 'Checklist task',
-      detail: 'Close this out to stay on track.'
+      title: dueTodayTasks[0].task_name ?? 'Checklist task',
+      detail: dueTodayTasks.length > 1 ? `Plus ${dueTodayTasks.length - 1} more due today.` : 'Close this out to stay on track.',
+      href: '/applications/tasks',
+      tone: 'amber'
     });
   }
-  const urgentDeadline = dueTodayDeadlines[0] ?? deadlines[0];
-  if (urgentDeadline) {
+  if (nextMeeting && meetingSoon) {
     focusItems.push({
-      id: urgentDeadline.id,
-      label: 'Milestone',
-      title: urgentDeadline.name ?? 'Application milestone',
-      detail: urgentDeadline.deadline_date ? `Due ${formatShortDate(urgentDeadline.deadline_date)}` : 'Date TBC'
+      id: 'focus-meeting',
+      label: nextMeeting.status === 'confirmed' ? 'Meeting' : 'Proposed meeting',
+      title: nextMeeting.title ?? `Catch-up with ${meetingFirstName}`,
+      detail:
+        nextMeeting.status === 'confirmed'
+          ? 'Coming up soon — jot down what you want to cover.'
+          : `${meetingFirstName} proposed a time — confirm it in your inbox.`,
+      href: '/inbox',
+      tone: 'violet'
     });
   }
-  const nextTask = checklist.find((task) => task.status !== 'done');
-  if (nextTask) {
+  if (nextDeadline) {
     focusItems.push({
-      id: nextTask.id,
+      id: `deadline-${nextDeadline.id}`,
+      label: 'Deadline',
+      title: nextDeadline.name ?? 'Application milestone',
+      detail:
+        nextDeadlineDays !== null
+          ? nextDeadlineDays === 0
+            ? 'Due today.'
+            : `Due ${formatDateOnly(nextDeadline.deadline_date)} — ${nextDeadlineDays} day${nextDeadlineDays === 1 ? '' : 's'} away.`
+          : 'Date to be confirmed.',
+      href: '/applications',
+      tone: nextDeadlineDays !== null && nextDeadlineDays <= 7 ? 'rose' : 'amber'
+    });
+  }
+  const nextOpenTask = openTasks.find((task) => !overdueTasks.includes(task) && !dueTodayTasks.includes(task));
+  if (nextOpenTask) {
+    focusItems.push({
+      id: `task-${nextOpenTask.id}`,
       label: 'Checklist',
-      title: nextTask.task_name ?? 'Checklist task',
-      detail: nextTask.due_date ? `Due ${formatShortDate(nextTask.due_date)}` : 'No due date'
-    });
-  }
-  const blockerMatch = matches.find((match) => match.blockingReasons.length > 0);
-  if (blockerMatch) {
-    focusItems.push({
-      id: `blocker-${blockerMatch.program.id}`,
-      label: 'Eligibility flag',
-      title: blockerMatch.program.name,
-      detail: blockerMatch.blockingReasons[0]
+      title: nextOpenTask.task_name ?? 'Checklist task',
+      detail: nextOpenTask.due_date ? `Due ${formatDateOnly(nextOpenTask.due_date)}` : 'No due date — good one to get ahead on.',
+      href: '/applications/tasks',
+      tone: 'sky'
     });
   }
   if (nextStep) {
     focusItems.push({
       id: 'focus-profile',
       label: 'Profile',
-      title: nextStep.title,
-      detail: 'Add these details to unlock richer recommendations.'
+      title: `Complete ${nextStep.title.toLowerCase()}`,
+      detail: 'Richer details unlock sharper matches and requirements.',
+      href: '/profile/wizard',
+      tone: 'primary'
     });
   }
   if (focusItems.length === 0) {
     focusItems.push({
       id: 'focus-clear',
       label: 'All caught up',
-      title: "Nice — you're all caught up",
-      detail: 'Add a program or update your profile when you want a new step.'
+      title: 'Nothing urgent — explore something new',
+      detail: 'Browse programmes or revisit your shortlist while things are calm.',
+      href: '/university-search/search',
+      tone: 'emerald'
     });
   }
+  const visibleFocus = focusItems.slice(0, 5);
+  const primaryFocus = visibleFocus[0];
 
-  const primaryFocus = focusItems[0];
-
-  const priorityHref =
-    primaryFocus?.label === 'Profile'
-      ? '/profile'
-      : primaryFocus?.label === 'Milestone'
-        ? '/applications'
-        : primaryFocus?.label === 'Eligibility flag'
-          ? '/matches'
-          : '/applications';
-
-  const highlightCards: HighlightCard[] = [
-    {
-      id: 'priority',
-      label: 'Next priority',
-      value: primaryFocus ? primaryFocus.title : 'All clear',
-      detail: primaryFocus ? primaryFocus.detail : 'Log progress or add programs to surface new actions.',
-      href: priorityHref,
-      tone: primaryFocus && primaryFocus.label === 'Due today' ? 'warning' : !primaryFocus ? 'positive' : undefined
-    },
-    {
-      id: 'profile',
-      label: 'Profile readiness',
-      value: `${completedSteps}/${PROFILE_STEPS.length} sections`,
-      detail: nextStep
-        ? `${completionPercent}% complete \u00B7 Next: ${nextStep.title}`
-        : 'All sections complete \u2014 update anytime',
-      href: '/profile',
-      tone: completionPercent === 100 ? 'positive' : undefined
-    }
-  ];
-
-  const overviewPayload: OverviewPayload = {
-    highlightCards,
-    focusItems,
-    nextStepTitle: nextStep?.title ?? null
-  };
-
-  const heroHighlight = primaryFocus ? primaryFocus.label : 'All caught up';
-  const heroStats = [
-    { label: 'Due today', value: todayFocus.tasks > 0 ? `${todayFocus.tasks}` : '0', detail: dueSoonCount > 0 ? `${dueSoonCount} due this week` : 'Nothing urgent' },
-    { label: 'Deadlines', value: deadlines.length > 0 ? `${deadlines.length}` : '0', detail: nextDeadline ? `Next: ${formatShortDate(nextDeadline.deadline_date)}` : 'Add a program to track milestones' },
-    { label: 'Match health', value: matchError ? '—' : averageMatchScore !== null ? `${averageMatchScore}%` : '-', detail: matchError ? 'Service unavailable' : matches.length ? `${matches[0].program.name}` : 'Finish profile to unlock' }
-  ];
-
+  // ── Hero ────────────────────────────────────────────────────────────────
   const hour = new Date().getHours();
   const timeGreeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  const firstName = personal?.first_name?.trim();
+  const firstName = personalResponse.data?.first_name?.trim();
   const greeting = firstName ? `${timeGreeting}, ${firstName}` : timeGreeting;
-  const heroDescription = primaryFocus
-    ? `Here's what's next for you — ${primaryFocus.title.toLowerCase()}. Take it one step at a time.`
-    : "You're all caught up. Add a program or polish your profile when you're ready for the next step.";
+  const heroDescription =
+    primaryFocus.id === 'focus-clear'
+      ? "You're all caught up — everything you're tracking lives on this page."
+      : `Everything in one place — start with ${primaryFocus.title.toLowerCase()}.`;
+
+  const heroStats = [
+    {
+      label: 'Applications',
+      value: `${applicationIds.length}`,
+      detail: submittedCount > 0 ? `${submittedCount} submitted` : 'In your pipeline'
+    },
+    {
+      label: 'Due this week',
+      value: `${dueThisWeekCount}`,
+      detail: openTasks.length > 0 ? `${openTasks.length} open tasks` : 'No open tasks'
+    },
+    {
+      label: 'Next deadline',
+      value: nextDeadline ? formatDateOnly(nextDeadline.deadline_date) : '—',
+      detail: nextDeadline ? nextDeadline.name ?? 'Milestone' : 'Nothing scheduled'
+    },
+    {
+      label: 'Profile',
+      value: `${completionPercent}%`,
+      detail: nextStep ? `Next: ${nextStep.title}` : 'All sections complete'
+    }
+  ];
 
   return (
     <DashboardShell>
       <PageHero
         tone="student"
-        eyebrow="Your dashboard"
+        eyebrow="Home"
         title={greeting}
         description={heroDescription}
-        highlight={heroHighlight}
-        accent="Today"
+        highlight={primaryFocus.label}
         stats={heroStats}
         actions={
           <>
             <Button asChild size="sm">
-              <Link href="/university-search/search">Open university search</Link>
+              <Link href="/university-search/search">Explore universities</Link>
             </Button>
             <Button asChild size="sm" variant="secondary">
               <Link href="/matches">Review matches</Link>
-            </Button>
-            <Button asChild size="sm" variant="outline">
-              <Link href="/profile">Update profile</Link>
             </Button>
           </>
         }
       />
 
       <div className="space-y-6">
-        {/* 1. Today's focus + key stats (already prioritised inside DashboardOverview) */}
-        <DashboardOverview data={overviewPayload} />
+        {/* Row 1 — the priority spine + profile progress */}
+        <div className="grid gap-6 lg:grid-cols-12">
+          <AnimatedSection className="lg:col-span-8">
+            <NextUpCard items={visibleFocus} />
+          </AnimatedSection>
+          <AnimatedSection className="lg:col-span-4" delay={0.05}>
+            <ProfileProgressCard percent={completionPercent} steps={profileSteps} nextStepTitle={nextStep?.title ?? null} />
+          </AnimatedSection>
+        </div>
 
-        {/* 2. Tasks — inline mark-done, no nav required */}
-        <AnimatedSection delay={0.05}>
-          <div className="surface-card surface-card--static">
-            <div className="relative z-10 space-y-4">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Tasks</p>
-                  <p className="text-lg font-semibold text-foreground">Mark today&apos;s tasks as you finish</p>
-                </div>
-                <Button asChild size="sm" variant="ghost">
-                  <Link href="/applications/tasks">Open all tasks →</Link>
-                </Button>
-              </div>
+        {/* Row 2 — pipeline, deadlines, counsellor */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <AnimatedSection delay={0.05}>
+            <PipelineCard stages={pipelineStages} />
+          </AnimatedSection>
+          <AnimatedSection delay={0.08}>
+            <HubCard
+              eyebrow="Timeline"
+              title="Upcoming deadlines"
+              icon={CalendarClock}
+              iconClassName="bg-amber-500/10 text-amber-700 ring-amber-500/15 dark:text-amber-300"
+              action={deadlines.length > 0 ? { label: 'Plan', href: '/applications' } : undefined}
+            >
+              <DeadlineTimeline
+                items={deadlines.slice(0, 3).map((deadline) => ({
+                  id: deadline.id,
+                  name: deadline.name,
+                  date: deadline.deadline_date ?? 'TBD',
+                  context: deadline.intake ?? 'Application period'
+                }))}
+              />
+            </HubCard>
+          </AnimatedSection>
+          <AnimatedSection className="md:col-span-2 lg:col-span-1" delay={0.11}>
+            <CounsellorCard
+              counsellor={cardCounsellor}
+              openThreads={openThreads.length}
+              unreadTotal={unreadTotal}
+              latestSubject={latestSubject}
+              nextMeeting={nextMeeting}
+            />
+          </AnimatedSection>
+        </div>
+
+        {/* Row 3 — tasks (inline mark-done) + top matches */}
+        <div className="grid gap-6 lg:grid-cols-12">
+          <AnimatedSection className="lg:col-span-5" delay={0.05}>
+            <HubCard
+              eyebrow="Tasks"
+              title="Knock out today's list"
+              icon={ListChecks}
+              iconClassName="bg-emerald-500/10 text-emerald-700 ring-emerald-500/15 dark:text-emerald-300"
+              action={{ label: 'All tasks', href: '/applications/tasks' }}
+            >
               <TaskListPanel
                 title=""
-                tasks={checklist.map((item) => ({
+                tasks={checklist.slice(0, 6).map((item) => ({
                   id: item.id,
                   name: item.task_name,
                   status: item.status,
                   dueDate: item.due_date ?? undefined
                 }))}
               />
-            </div>
-          </div>
-        </AnimatedSection>
-
-        {/* 3. Upcoming deadlines */}
-        {deadlines.length > 0 ? (
-          <AnimatedSection delay={0.08}>
-            <div className="surface-card surface-card--static">
-              <div className="relative z-10 space-y-4">
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Timeline</p>
-                    <p className="text-lg font-semibold text-foreground">Upcoming deadlines</p>
-                  </div>
-                  <Button asChild size="sm" variant="ghost">
-                    <Link href="/applications">Plan applications →</Link>
-                  </Button>
-                </div>
-                <DeadlineTimeline
-                  items={deadlines.map((deadline) => ({
-                    id: deadline.id,
-                    name: deadline.name,
-                    date: deadline.deadline_date ?? 'TBD',
-                    context: deadline.intake ?? 'Application period'
-                  }))}
-                />
-              </div>
-            </div>
+            </HubCard>
           </AnimatedSection>
-        ) : null}
+          <AnimatedSection className="lg:col-span-7" delay={0.08}>
+            <Suspense fallback={<MatchesPeekSkeleton />}>
+              <MatchesPeek profileId={user.id} />
+            </Suspense>
+          </AnimatedSection>
+        </div>
 
-        {/* 4. Top matches peek — 3 cards max, link to full list */}
-        <AnimatedSection delay={0.1}>
-          <div className="surface-card surface-card--static">
-            <div className="relative z-10 space-y-4">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Matches</p>
-                  <p className="text-lg font-semibold text-foreground">Top recommendations for you</p>
-                </div>
-                {matches.length > 0 ? (
-                  <Button asChild size="sm" variant="ghost">
-                    <Link href="/matches">See all {matches.length} matches →</Link>
-                  </Button>
-                ) : null}
-              </div>
-              {matchError ? (
-                <div className="space-y-3 text-sm text-muted-foreground">
-                  <p className="text-base font-semibold text-foreground">Can&apos;t pull your matches right now</p>
-                  <p>Something&apos;s off on our side. Refresh in a moment and you should be back in business.</p>
-                </div>
-              ) : matches.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {matches.slice(0, 3).map((match) => (
-                    <UniversityCard
-                      key={match.program.id}
-                      id={match.program.id}
-                      name={match.university.name}
-                      program={match.program.name}
-                      location={match.university.country}
-                      fitScore={match.score}
-                      tier={match.tier}
-                      reasons={match.blockingReasons}
-                      highlights={[
-                        match.program.field ?? match.program.level ?? 'Program',
-                        match.program.tuition != null
-                          ? `${match.program.currency ?? 'GBP'} ${Math.round(match.program.tuition).toLocaleString()}/yr`
-                          : null,
-                        match.program.language && match.program.language !== 'English' ? match.program.language : null
-                      ].filter((value): value is string => Boolean(value))}
-                      variant="compact"
-                      trackingLabelVariant="planner"
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-3 text-sm text-muted-foreground">
-                  <p className="text-base font-semibold text-foreground">Tell us a bit more, then we&apos;ll find your matches</p>
-                  <p>Finish your profile and add a country or two — we&apos;ll do the matching.</p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button asChild size="sm">
-                      <Link href="/profile/wizard">Finish profile</Link>
-                    </Button>
-                    <Button asChild size="sm" variant="outline">
-                      <Link href="/matches">See all matches</Link>
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* Row 3.5 — counsellor-assigned university decks (hidden when none;
+            no AnimatedSection so a null panel leaves no empty gap in the stack) */}
+        <Suspense fallback={null}>
+          <CounsellorQuests profileId={user.id} />
+        </Suspense>
+
+        {/* Row 4 — launch strip to the rest of the app */}
+        <AnimatedSection delay={0.05}>
+          <QuickLinks />
         </AnimatedSection>
-
-        {/* 5. Setup nudge — small footer pill, only when truly incomplete */}
-        {profileIncomplete && (() => {
-          const band = classifyCompletion(completionPercent);
-          const visual = COMPLETION_VISUAL[band];
-          const Icon = visual.icon;
-          return (
-            <AnimatedSection delay={0.12}>
-              <div
-                className={cn(
-                  'flex flex-col gap-3 rounded-2xl border border-l-4 bg-card/60 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between',
-                  visual.border,
-                  visual.accent
-                )}
-              >
-                <div className="flex items-start gap-3">
-                  <div className={visual.swatch}>
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      Profile {completionPercent}% complete
-                      {nextStep ? <span className="text-muted-foreground"> · Next: {nextStep.title}</span> : null}
-                    </p>
-                    <div className="mt-2 flex max-w-md items-center gap-1.5">
-                      {PROFILE_STEPS.map((step) => (
-                        <div
-                          key={step.key}
-                          className={cn(
-                            'h-1.5 flex-1 rounded-full transition-colors',
-                            stepCompletion[step.key] ? visual.bar : 'bg-border'
-                          )}
-                          title={`${step.title}: ${stepCompletion[step.key] ? 'Complete' : 'Incomplete'}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <Button asChild size="sm" className="shrink-0">
-                  <Link href="/profile/wizard">Continue setup</Link>
-                </Button>
-              </div>
-            </AnimatedSection>
-          );
-        })()}
       </div>
     </DashboardShell>
   );

@@ -31,6 +31,8 @@ const baseLifestyle: StudentProfilePayload['lifestyle_preference'] = {
   work_experience: null,
   work_experience_summary: null,
   ambition_statement: null,
+  epq_subject: null,
+  epq_title: null,
 };
 
 // ─── Profile 1 — Wei (IB · Medicine) ─────────────────────────────────────────
@@ -83,6 +85,7 @@ export const wei: StudentProfilePayload = {
     intl_experience: [],
     work_experience: false,
   },
+  activities_list: [],
 };
 
 // ─── Profile 2 — Amara (A-levels · Law) ──────────────────────────────────────
@@ -130,6 +133,7 @@ export const amara: StudentProfilePayload = {
     work_experience: true,
     work_experience_summary: 'Legal aid clinic volunteer, 6 months',
   },
+  activities_list: [],
 };
 
 // ─── Profile 3 — Marcus (A-levels · Computer Science) ────────────────────────
@@ -176,6 +180,7 @@ export const marcus: StudentProfilePayload = {
     work_experience: true,
     work_experience_summary: 'Freelance mobile app developer — 2 apps published on App Store',
   },
+  activities_list: [],
 };
 
 // ─── Profile 4 — Priya (IB · Business) ───────────────────────────────────────
@@ -224,6 +229,7 @@ export const priya: StudentProfilePayload = {
     intl_experience: ['Study abroad'],
     work_experience: false,
   },
+  activities_list: [],
 };
 
 // ─── Export as ordered batch ──────────────────────────────────────────────────

@@ -182,7 +182,8 @@ const sofia: StudentProfilePayload = {
         admissions_tests: [{ test_type: 'UCAT', status: 'taken', score_numeric: 2900, percentile: 85 }],
         a_level_predicted_grades: null
     },
-    lifestyle_preference: { teaching_style: 'academic', desired_location_type: 'london', campus_size: 'medium', extracurricular_interests: [], other_extracurriculars: null, leadership_roles: [], commitment_level: null, key_activities: [], sat_score: null, act_score: null, intl_experience: [], work_experience: null, work_experience_summary: null, ambition_statement: null }
+    lifestyle_preference: { teaching_style: 'academic', desired_location_type: 'london', campus_size: 'medium', extracurricular_interests: [], other_extracurriculars: null, leadership_roles: [], commitment_level: null, key_activities: [], sat_score: null, act_score: null, intl_experience: [], work_experience: null, work_experience_summary: null, ambition_statement: null, epq_subject: null, epq_title: null },
+    activities_list: []
 };
 
 const daniel: StudentProfilePayload = {
@@ -201,7 +202,8 @@ const daniel: StudentProfilePayload = {
         admissions_tests: [{ test_type: 'LNAT', status: 'taken', score_numeric: 25, percentile: null }],
         ib_total_points: null, ib_core_points: null, ib_tok_grade: null, ib_ee_grade: null, ib_math_pathway: null, ee_subject: null, ee_title: null, ee_summary: null
     },
-    lifestyle_preference: { teaching_style: 'academic', desired_location_type: 'london', campus_size: 'medium', extracurricular_interests: [], other_extracurriculars: null, leadership_roles: [], commitment_level: null, key_activities: [], sat_score: null, act_score: null, intl_experience: [], work_experience: null, work_experience_summary: null, ambition_statement: null }
+    lifestyle_preference: { teaching_style: 'academic', desired_location_type: 'london', campus_size: 'medium', extracurricular_interests: [], other_extracurriculars: null, leadership_roles: [], commitment_level: null, key_activities: [], sat_score: null, act_score: null, intl_experience: [], work_experience: null, work_experience_summary: null, ambition_statement: null, epq_subject: null, epq_title: null },
+    activities_list: []
 };
 
 const lucas: StudentProfilePayload = {
@@ -220,7 +222,8 @@ const lucas: StudentProfilePayload = {
         admissions_tests: [],
         ib_total_points: null, ib_core_points: null, ib_tok_grade: null, ib_ee_grade: null, ib_math_pathway: null, ee_subject: null, ee_title: null, ee_summary: null
     },
-    lifestyle_preference: { teaching_style: 'academic', desired_location_type: 'london', campus_size: 'medium', extracurricular_interests: [], other_extracurriculars: null, leadership_roles: [], commitment_level: null, key_activities: [], sat_score: null, act_score: null, intl_experience: [], work_experience: null, work_experience_summary: null, ambition_statement: null }
+    lifestyle_preference: { teaching_style: 'academic', desired_location_type: 'london', campus_size: 'medium', extracurricular_interests: [], other_extracurriculars: null, leadership_roles: [], commitment_level: null, key_activities: [], sat_score: null, act_score: null, intl_experience: [], work_experience: null, work_experience_summary: null, ambition_statement: null, epq_subject: null, epq_title: null },
+    activities_list: []
 };
 
 function runDemo() {
@@ -247,3 +250,7 @@ function runDemo() {
 }
 
 runDemo();
+
+test('matching demo runs without throwing', () => {
+  expect(() => runDemo()).not.toThrow();
+});

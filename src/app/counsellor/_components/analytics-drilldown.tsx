@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X, GraduationCap, MapPin, ArrowUpRight, Search, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import type { CounsellorStudent } from '@/lib/data/counsellor-dummy-data';
+import type { CounsellorStudent } from '@/lib/counsellor/types';
 
 /* ─── Types ──────────────────────────────────────────────────────────────────── */
 

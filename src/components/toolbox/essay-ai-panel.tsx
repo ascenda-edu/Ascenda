@@ -3,13 +3,14 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sparkles, MessageSquare, Wand2, ListTree,
-  Loader2, X, Copy, Check, ChevronDown, RefreshCw, CheckCircle2,
+  Sparkles, MessageSquare, ListTree,
+  Loader2, Copy, Check, ChevronDown, RefreshCw, CheckCircle2, Wand2,
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import type { EssayBuildingBlock } from '@/lib/data/student-demo-data';
 
-type Action = 'feedback' | 'expand' | 'outline';
+type Action = 'feedback' | 'outline';
 
 interface EssayAIPanelProps {
   essay: string;
@@ -19,58 +20,8 @@ interface EssayAIPanelProps {
   onInsertText?: (text: string) => void;
 }
 
-function parseMarkdown(text: string): string {
-  const lines = text.split('\n');
-  const output: string[] = [];
-  let inUl = false;
-  let inOl = false;
-
-  const closeList = () => {
-    if (inUl) { output.push('</ul>'); inUl = false; }
-    if (inOl) { output.push('</ol>'); inOl = false; }
-  };
-
-  const inline = (s: string) =>
-    s
-      .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/`(.+?)`/g, '<code>$1</code>');
-
-  for (const raw of lines) {
-    const line = raw.trimEnd();
-
-    if (/^### (.+)/.test(line)) {
-      closeList();
-      output.push(`<h3 class="font-semibold mt-4 mb-1">${inline(line.slice(4))}</h3>`);
-    } else if (/^## (.+)/.test(line)) {
-      closeList();
-      output.push(`<h2 class="font-semibold mt-4 mb-1">${inline(line.slice(3))}</h2>`);
-    } else if (/^# (.+)/.test(line)) {
-      closeList();
-      output.push(`<h1 class="font-semibold mt-4 mb-1">${inline(line.slice(2))}</h1>`);
-    } else if (/^\d+\. (.+)/.test(line)) {
-      if (!inOl) { closeList(); output.push('<ol class="list-decimal pl-5">'); inOl = true; }
-      output.push(`<li>${inline(line.replace(/^\d+\. /, ''))}</li>`);
-    } else if (/^[-*] (.+)/.test(line)) {
-      if (!inUl) { closeList(); output.push('<ul class="list-disc pl-5">'); inUl = true; }
-      output.push(`<li>${inline(line.slice(2))}</li>`);
-    } else if (line === '') {
-      closeList();
-      output.push('<br/>');
-    } else {
-      closeList();
-      output.push(`<p>${inline(line)}</p>`);
-    }
-  }
-
-  closeList();
-  return output.join('');
-}
-
 const ACTIONS: { key: Action; label: string; icon: typeof Sparkles; description: string; color: string }[] = [
   { key: 'feedback', label: 'Get Feedback', icon: MessageSquare, description: 'AI reviews your draft with specific rewrites', color: 'text-violet-500 bg-violet-500/10' },
-  { key: 'expand', label: 'Expand Block', icon: Wand2, description: 'Turn a building block into a paragraph', color: 'text-amber-500 bg-amber-500/10' },
   { key: 'outline', label: 'Suggest Outline', icon: ListTree, description: 'Generate essay structure from your blocks', color: 'text-emerald-500 bg-emerald-500/10' },
 ];
 
@@ -81,7 +32,6 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
   const [result, setResult] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [activeAction, setActiveAction] = useState<Action | null>(null);
-  const [showBlockPicker, setShowBlockPicker] = useState(false);
   const [copied, setCopied] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
 
@@ -103,7 +53,6 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
     setResult('');
     setError(null);
     setActiveAction(action);
-    setShowBlockPicker(false);
 
     try {
       // Build rich student context from all available data
@@ -129,16 +78,6 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
           setLoading(false);
           return;
         }
-      }
-
-      if (action === 'expand') {
-        const target = block;
-        if (!target) {
-          setError('Select a building block to expand.');
-          setLoading(false);
-          return;
-        }
-        body.block = { label: target.label, detail: target.detail };
       }
 
       if (action === 'outline') {
@@ -266,12 +205,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
                   <button
                     key={key}
                     onClick={() => {
-                      if (key === 'expand') {
-                        setShowBlockPicker(true);
-                        setActiveAction('expand');
-                      } else {
-                        runAction(key);
-                      }
+                      runAction(key);
                     }}
                     disabled={disabled}
                     className={cn(
@@ -295,49 +229,12 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
                 );
               })}
 
-              {/* Block picker for expand */}
-              <AnimatePresence>
-                {showBlockPicker && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="rounded-xl border border-amber-200/50 bg-amber-500/5 p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[11px] font-semibold text-amber-600">Pick a block to expand</p>
-                        <button onClick={() => setShowBlockPicker(false)} className="text-muted-foreground hover:text-foreground">
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      <div className="max-h-40 overflow-y-auto space-y-1 scrollbar-thin">
-                        {allBlocks.map((block) => (
-                          <button
-                            key={block.id}
-                            onClick={() => runAction('expand', block)}
-                            className="w-full text-left rounded-lg px-2.5 py-2 text-xs hover:bg-amber-500/10 transition-colors"
-                          >
-                            <span className="font-medium text-foreground">{block.label}</span>
-                            {block.detail && (
-                              <span className="block text-[10px] text-muted-foreground mt-0.5 truncate">{block.detail}</span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
               {/* Loading indicator */}
               {loading && (
                 <div className="flex items-center gap-2 text-xs text-primary">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   <span className="font-medium">
-                    {activeAction === 'feedback' ? 'Reading your essay...' :
-                     activeAction === 'expand' ? 'Drafting paragraph...' :
-                     'Building outline...'}
+                    {activeAction === 'feedback' ? 'Reading your essay...' : 'Building outline...'}
                   </span>
                 </div>
               )}
@@ -374,9 +271,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
                         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                       )}
                       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                        {activeAction === 'feedback' ? 'Feedback' :
-                         activeAction === 'expand' ? 'Draft Paragraph' :
-                         'Outline'}
+                        {activeAction === 'feedback' ? 'Feedback' : 'Outline'}
                       </p>
                     </div>
                     <div className="flex gap-1">
@@ -397,7 +292,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
                         {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
                         {copied ? 'Copied' : 'Copy'}
                       </button>
-                      {(activeAction === 'expand' || activeAction === 'outline') && onInsertText && (
+                      {activeAction === 'outline' && onInsertText && (
                         <button
                           onClick={handleInsert}
                           className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/20 transition-colors"
@@ -412,10 +307,11 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
                     ref={resultRef}
                     className="max-h-[60vh] overflow-y-auto rounded-xl border border-border/50 bg-card p-4 scrollbar-thin"
                   >
-                    <div
-                      className="prose prose-sm dark:prose-invert max-w-none text-[13px] leading-relaxed [&>h1]:text-base [&>h2]:text-[13px] [&>h3]:text-[13px] [&>p]:mb-3 [&>ul]:mb-3 [&>ol]:mb-3 [&>ul>li]:mb-1 [&>ol>li]:mb-1"
-                      dangerouslySetInnerHTML={{ __html: parseMarkdown(result) }}
-                    />
+                    {/* react-markdown escapes raw HTML — model output built from
+                        student-controlled essay text must never hit innerHTML. */}
+                    <div className="prose prose-sm dark:prose-invert max-w-none text-[13px] leading-relaxed [&_h1]:text-base [&_h1]:font-semibold [&_h2]:text-[13px] [&_h2]:font-semibold [&_h3]:text-[13px] [&_h3]:font-semibold [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1">
+                      <ReactMarkdown>{result}</ReactMarkdown>
+                    </div>
                   </div>
                 </motion.div>
               )}
