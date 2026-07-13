@@ -1,0 +1,129 @@
+import Link from 'next/link';
+import { CalendarPlus, MailOpen, MessageSquare } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { HubCard } from './hub-card';
+import { MeetingTime } from './meeting-time';
+
+export interface CounsellorCardProps {
+  /** Resolved from real profile data where possible; falls back to DEMO_COUNSELLOR upstream. */
+  counsellor: { firstName: string; fullName: string };
+  openThreads: number;
+  unreadTotal: number;
+  latestSubject: string | null;
+  nextMeeting: {
+    title: string | null;
+    scheduledFor: string;
+    location: string | null;
+    status: 'proposed' | 'confirmed';
+  } | null;
+}
+
+/**
+ * Counsellor & inbox cell: the counsellor's presence, unread replies, the next
+ * booked meeting, and the two ways to reach them.
+ */
+export function CounsellorCard({ counsellor, openThreads, unreadTotal, latestSubject, nextMeeting }: CounsellorCardProps) {
+  const initials = counsellor.fullName
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+  return (
+    <HubCard
+      eyebrow="Counsellor"
+      title={`${counsellor.firstName}'s corner`}
+      icon={MessageSquare}
+      iconClassName="bg-violet-500/10 text-violet-600 ring-violet-500/15 dark:text-violet-300"
+      action={{ label: 'Open inbox', href: '/inbox' }}
+    >
+      <div className="flex h-full flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <div className="relative shrink-0">
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-primary text-xs font-bold text-white shadow-sm"
+              aria-hidden
+            >
+              {initials}
+            </div>
+            <span
+              className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-emerald-500"
+              aria-label="Available today"
+            />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">{counsellor.fullName}</p>
+            <p className="text-[11px] text-muted-foreground">Your counsellor · usually replies same-day</p>
+          </div>
+        </div>
+
+        <Link
+          href="/inbox"
+          className={cn(
+            'group flex items-center gap-3 rounded-xl border p-3 transition-all hover:-translate-y-px hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            unreadTotal > 0 ? 'border-violet-300/60 bg-violet-500/[0.06]' : 'border-border/70 bg-background/60'
+          )}
+        >
+          <MailOpen
+            className={cn('h-4 w-4 shrink-0', unreadTotal > 0 ? 'text-violet-600 dark:text-violet-300' : 'text-muted-foreground/60')}
+            aria-hidden
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-foreground">
+              {unreadTotal > 0
+                ? `${unreadTotal} unread ${unreadTotal === 1 ? 'reply' : 'replies'}`
+                : openThreads > 0
+                  ? `${openThreads} open ${openThreads === 1 ? 'thread' : 'threads'}`
+                  : 'No open threads'}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {latestSubject ?? 'Ask about essays, shortlists or anything in between.'}
+            </p>
+          </div>
+          {unreadTotal > 0 ? (
+            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-violet-500 px-1.5 text-[10px] font-bold text-white">
+              {unreadTotal}
+            </span>
+          ) : null}
+        </Link>
+
+        {nextMeeting ? (
+          <div className="rounded-xl border border-border/70 bg-background/60 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">Next meeting</p>
+              <span
+                className={cn(
+                  'rounded-full px-2 py-px text-[10px] font-semibold',
+                  nextMeeting.status === 'confirmed'
+                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                )}
+              >
+                {nextMeeting.status === 'confirmed' ? 'Confirmed' : 'Proposed'}
+              </span>
+            </div>
+            {/* Time renders client-side (browser timezone) — this card is a
+                server component and would otherwise bake in the server's TZ. */}
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              <MeetingTime iso={nextMeeting.scheduledFor} />
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {[nextMeeting.title, nextMeeting.location].filter(Boolean).join(' · ') || `Catch-up with ${counsellor.firstName}`}
+            </p>
+          </div>
+        ) : null}
+
+        <div className="mt-auto pt-1">
+          <Button asChild size="sm" variant={unreadTotal > 0 ? 'outline' : 'default'} className="w-full">
+            <Link href="/appointment">
+              <CalendarPlus className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              {nextMeeting ? 'Book another chat' : `Book a chat with ${counsellor.firstName}`}
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </HubCard>
+  );
+}

@@ -136,9 +136,9 @@ const formatSubject = (name: string | null, level: string | null): string => {
 // ── program → {course, university, country} resolution (avoids the program_id
 //    multi-FK embed ambiguity by resolving in a separate, single-FK query) ─────
 
-type ProgramInfo = { courseName: string; university: string; country: string };
+export type ProgramInfo = { courseName: string; university: string; country: string };
 
-const resolvePrograms = async (supabase: Client, programIds: string[]): Promise<Map<string, ProgramInfo>> => {
+export const resolvePrograms = async (supabase: Client, programIds: string[]): Promise<Map<string, ProgramInfo>> => {
   const map = new Map<string, ProgramInfo>();
   const ids = [...new Set(programIds)].filter(Boolean);
   if (ids.length === 0) return map;
@@ -162,7 +162,7 @@ const resolvePrograms = async (supabase: Client, programIds: string[]): Promise<
   return map;
 };
 
-const nameMap = async (supabase: Client, profileIds: string[]): Promise<Map<string, { name: string; flag: string }>> => {
+export const nameMap = async (supabase: Client, profileIds: string[]): Promise<Map<string, { name: string; flag: string }>> => {
   const map = new Map<string, { name: string; flag: string }>();
   const ids = [...new Set(profileIds)].filter(Boolean);
   if (ids.length === 0) return map;
@@ -191,6 +191,28 @@ const maxIso = (...values: Array<string | null | undefined>): string | null => {
   const times = values.filter(Boolean).map((v) => new Date(v as string).getTime());
   if (times.length === 0) return null;
   return new Date(Math.max(...times)).toISOString();
+};
+
+// Completion math shared by buildStudents and loadRoster. Maps the 5 real
+// profile steps → the 4 UI keys (activities folds into lifestyle).
+const computeProfileCompletion = (
+  personal: any,
+  academic: any,
+  subjectCount: number,
+  lifestyle: object | null
+): { completionPct: number; stepsComplete: CounsellorStudent['profile']['stepsComplete'] } => {
+  const completion = buildStepCompletion({
+    personal,
+    academicInput: academic,
+    subjectCount,
+    lifestyle,
+  });
+  const stepsComplete: CounsellorStudent['profile']['stepsComplete'] = [];
+  if (completion.personal_information) stepsComplete.push('personal');
+  if (completion.academic_input) stepsComplete.push('academic');
+  if (completion.academic_details) stepsComplete.push('subjects');
+  if (completion.lifestyle_preferences) stepsComplete.push('lifestyle');
+  return { stepsComplete, completionPct: Math.round((stepsComplete.length / 4) * 100) };
 };
 
 const buildStudents = async (
@@ -333,19 +355,12 @@ const buildStudents = async (
     const as = appsById.get(id) ?? [];
     const ns = notesByStudent.get(id) ?? [];
 
-    const completion = buildStepCompletion({
-      personal: p,
-      academicInput: a,
-      subjectCount: subs.length,
-      lifestyle: Object.keys(l).length ? l : null,
-    });
-    // Map the 5 real steps → the 4 UI keys (activities folds into lifestyle).
-    const stepsComplete: CounsellorStudent['profile']['stepsComplete'] = [];
-    if (completion.personal_information) stepsComplete.push('personal');
-    if (completion.academic_input) stepsComplete.push('academic');
-    if (completion.academic_details) stepsComplete.push('subjects');
-    if (completion.lifestyle_preferences) stepsComplete.push('lifestyle');
-    const completionPct = Math.round((stepsComplete.length / 4) * 100);
+    const { completionPct, stepsComplete } = computeProfileCompletion(
+      p,
+      a,
+      subs.length,
+      Object.keys(l).length ? l : null
+    );
 
     const studentMatches: CounsellorMatch[] = ms.map((m) => {
       const info = programInfo.get(m.program_id);
@@ -476,6 +491,83 @@ export const loadCohort = (supabase: Client, opts: { excludeId?: string } = {}):
 export const loadStudentById = async (supabase: Client, id: string): Promise<CounsellorStudent | null> => {
   const [student] = await buildStudents(supabase, { ids: [id] });
   return student ?? null;
+};
+
+// ── slim roster loader (name + completion chips only) ───────────────────────
+//
+// Pages that only render student chips (e.g. /counsellor/universities) don't
+// need the full loadCohort pipeline — matches fan-out, programme resolution
+// and deadlines all get discarded. This replicates just the cohort scoping and
+// completion inputs: 5 fixed queries, no per-student fan-out.
+
+export type RosterStudent = {
+  id: string;
+  name: string;
+  flag: string;
+  completionPct: number;
+};
+
+export const loadRoster = async (
+  supabase: Client,
+  opts: { excludeId?: string } = {}
+): Promise<RosterStudent[]> => {
+  // 1. base profiles (students only)
+  const profiles = unwrap(
+    await supabase.from('profiles').select('id').eq('role', 'student'),
+    'profiles'
+  ) ?? [];
+  let ids = profiles.map((p) => p.id);
+  if (opts.excludeId) ids = ids.filter((id) => id !== opts.excludeId);
+  if (ids.length === 0) return [];
+
+  // 2. seeded-cohort scoping — identical to buildStudents. The selected columns
+  // cover the name chip, the flag, and every field buildStepCompletion reads.
+  const personal = (unwrap(
+    await supabase
+      .from('student_personal_information')
+      .select('profile_id, first_name, last_name, email, nationality, resident_country')
+      .in('profile_id', ids),
+    'student_personal_information'
+  ) ?? []) as any[];
+  const personalById = new Map<string, any>(personal.map((r) => [r.profile_id, r]));
+  ids = ids.filter((id) => inDemoCohort(personalById.get(id)?.email));
+  if (ids.length === 0) return [];
+
+  // 3. completion inputs only (no matches/programs/deadlines/notes)
+  const [academicRes, subjectsRes, lifestyleRes] = await Promise.all([
+    supabase
+      .from('student_academic_input')
+      .select('profile_id, programme_type, school_name, school_country, graduation_year, intended_clusters, english_required')
+      .in('profile_id', ids),
+    supabase.from('student_subjects').select('profile_id').in('profile_id', ids),
+    supabase.from('student_lifestyle_preference').select('profile_id').in('profile_id', ids),
+  ]);
+  const academicById = new Map<string, any>(
+    ((unwrap(academicRes, 'student_academic_input') ?? []) as any[]).map((r) => [r.profile_id, r])
+  );
+  const subjectCounts = new Map<string, number>();
+  for (const r of (unwrap(subjectsRes, 'student_subjects') ?? []) as any[]) {
+    subjectCounts.set(r.profile_id, (subjectCounts.get(r.profile_id) ?? 0) + 1);
+  }
+  const lifestyleById = new Map<string, any>(
+    ((unwrap(lifestyleRes, 'student_lifestyle_preference') ?? []) as any[]).map((r) => [r.profile_id, r])
+  );
+
+  return ids.map((id): RosterStudent => {
+    const p = personalById.get(id) ?? ({} as any);
+    const { completionPct } = computeProfileCompletion(
+      p,
+      academicById.get(id) ?? null,
+      subjectCounts.get(id) ?? 0,
+      lifestyleById.get(id) ?? null
+    );
+    return {
+      id,
+      name: `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || 'Student',
+      flag: flagEmoji(p.nationality, p.resident_country),
+      completionPct,
+    };
+  });
 };
 
 // ── pure derivations over a loaded cohort (mirror the dummy helpers) ─────────

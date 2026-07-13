@@ -28,6 +28,7 @@ import {
   Users,
   type LucideIcon
 } from 'lucide-react';
+import { parseLocalDate } from '@/lib/utils/dates';
 
 /**
  * Single source of truth for category styling on the student surface.
@@ -264,7 +265,9 @@ export const classifyDeadlineUrgency = (
   now: Date = new Date()
 ): DeadlineUrgency => {
   if (!isoDate) return 'unknown';
-  const target = new Date(isoDate);
+  // Date-only strings must parse as LOCAL dates — new Date('YYYY-MM-DD') is UTC
+  // midnight, which shifts the deadline by the user's UTC offset (see lib/utils/dates).
+  const target = /^\d{4}-\d{2}-\d{2}$/.test(isoDate) ? parseLocalDate(isoDate) : new Date(isoDate);
   if (Number.isNaN(target.getTime())) return 'unknown';
   const days = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   if (days < 0) return 'overdue';

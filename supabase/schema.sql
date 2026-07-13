@@ -10,7 +10,10 @@ create type application_task_category as enum ('test', 'essay', 'reference', 'vi
 create type application_status as enum ('planning', 'in_progress', 'submitted', 'decision', 'enrolled');
 create type checklist_status as enum ('todo', 'doing', 'done');
 create type source_health as enum ('ok', 'stale', 'error');
-create type programme_type as enum ('IB', 'A_LEVEL');
+-- 'ACT' appended by 20260611120000_act_ap_enum_values.sql (folded into the
+-- create list here — ALTER TYPE ... ADD VALUE cannot run in the same
+-- transaction as its first use).
+create type programme_type as enum ('IB', 'A_LEVEL', 'ACT');
 create type intended_cluster as enum (
   'computer_science',
   'maths',
@@ -32,7 +35,8 @@ create type school_type as enum ('international_school', 'local_private', 'state
 create type language_of_instruction as enum ('english', 'bilingual', 'non_english');
 create type ib_grade as enum ('A', 'B', 'C', 'D', 'E');
 create type ib_math_pathway as enum ('AA_HL', 'AA_SL', 'AI_HL', 'AI_SL');
-create type subject_level as enum ('HL', 'SL', 'A_LEVEL');
+-- 'AP' appended by 20260611120000_act_ap_enum_values.sql (folded in, as above).
+create type subject_level as enum ('HL', 'SL', 'A_LEVEL', 'AP');
 create type teaching_style as enum ('academic', 'practical', 'mixed');
 create type location_type as enum ('london', 'major_city', 'smaller_city', 'suburban', 'no_preference');
 create type campus_size_preference as enum ('small', 'medium', 'large', 'no_preference');
@@ -47,9 +51,13 @@ create or replace function safe_int(input text, max_len int default 9) returns i
 $$ language sql immutable;
 
 -- Profiles
+-- role check uses the named constraint + British 'counsellor' spelling from
+-- 20260628120000_counsellor_real_data.sql (which reconciled the original
+-- American 'counselor' spelling).
 create table if not exists profiles (
   id uuid primary key default gen_random_uuid(),
-  role text not null default 'student' check (role in ('student', 'counselor', 'admin')),
+  role text not null default 'student'
+    constraint profiles_role_check check (role in ('student', 'counsellor', 'admin')),
   full_name text,
   country text,
   locale text,
@@ -308,6 +316,10 @@ create table if not exists deadlines (
   created_at timestamptz not null default timezone('utc', now())
 );
 
+-- course_scoring_v1: FINAL version from
+-- 20250415_update_course_scoring_v1_metadata_scores.sql — prefers pre-computed
+-- scores from programs.metadata / universities.metadata (all_countries_programs
+-- import), falling back to the ranking-derived calculations for legacy data.
 create or replace view course_scoring_v1 as
 with base as (
   select
@@ -373,7 +385,7 @@ with base as (
     coalesce(
       p.min_a_level_score,
       p.min_alevel,
-      (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\\*AA|A\\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
+      (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\*AA|A\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
     ) as min_a_level_score,
     coalesce(
       p.a_level_min_numeric,
@@ -381,48 +393,43 @@ with base as (
         when upper(regexp_replace(coalesce(
           p.min_a_level_score,
           p.min_alevel,
-          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\\*AA|A\\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
-        ), '\\s+', '', 'g')) like '%A*AA%' then 100
+          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\*AA|A\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
+        ), '\s+', '', 'g')) like '%A*AA%' then 100
         when upper(regexp_replace(coalesce(
           p.min_a_level_score,
           p.min_alevel,
-          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\\*AA|A\\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
-        ), '\\s+', '', 'g')) = 'A*AB' then 95
+          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\*AA|A\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
+        ), '\s+', '', 'g')) = 'A*AB' then 95
         when upper(regexp_replace(coalesce(
           p.min_a_level_score,
           p.min_alevel,
-          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\\*AA|A\\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
-        ), '\\s+', '', 'g')) = 'AAA' then 90
+          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\*AA|A\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
+        ), '\s+', '', 'g')) = 'AAA' then 90
         when upper(regexp_replace(coalesce(
           p.min_a_level_score,
           p.min_alevel,
-          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\\*AA|A\\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
-        ), '\\s+', '', 'g')) = 'AAB' then 80
+          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\*AA|A\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
+        ), '\s+', '', 'g')) = 'AAB' then 80
         when upper(regexp_replace(coalesce(
           p.min_a_level_score,
           p.min_alevel,
-          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\\*AA|A\\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
-        ), '\\s+', '', 'g')) = 'ABB' then 70
+          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\*AA|A\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
+        ), '\s+', '', 'g')) = 'ABB' then 70
         when upper(regexp_replace(coalesce(
           p.min_a_level_score,
           p.min_alevel,
-          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\\*AA|A\\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
-        ), '\\s+', '', 'g')) = 'BBB' then 60
+          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\*AA|A\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
+        ), '\s+', '', 'g')) = 'BBB' then 60
         when upper(regexp_replace(coalesce(
           p.min_a_level_score,
           p.min_alevel,
-          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\\*AA|A\\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
-        ), '\\s+', '', 'g')) = 'BBC' then 50
+          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\*AA|A\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
+        ), '\s+', '', 'g')) = 'BBC' then 50
         when upper(regexp_replace(coalesce(
           p.min_a_level_score,
           p.min_alevel,
-          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\\*AA|A\\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
-        ), '\\s+', '', 'g')) = 'BCC' then 40
-        when upper(regexp_replace(coalesce(
-          p.min_a_level_score,
-          p.min_alevel,
-          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\\*AA|A\\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
-        ), '\\s+', '', 'g')) = 'CCC' then 30
+          (regexp_match(upper(coalesce(p.entry_requirements_overview, '')), '(A\*AA|A\*AB|AAA|AAB|ABB|BBB|BBC|BCC|CCC)'))[1]
+        ), '\s+', '', 'g')) = 'BCC' then 40
         else null
       end
     ) as a_level_min_numeric,
@@ -457,7 +464,12 @@ with base as (
     u.country as university_country,
     u.rank_overall as university_rank_overall,
     u.rank_source as university_rank_source,
-    u.requires_test as university_requires_test
+    u.requires_test as university_requires_test,
+    -- Pre-computed scores from metadata (all_countries_programs import)
+    nullif(regexp_replace(coalesce(p.metadata->>'total_course_score', ''), '[^0-9.]', '', 'g'), '')::numeric as meta_total_course_score,
+    nullif(regexp_replace(coalesce(p.metadata->>'selectivity_score', ''), '[^0-9.]', '', 'g'), '')::numeric as meta_selectivity_score,
+    nullif(regexp_replace(coalesce(p.metadata->>'course_tier', ''), '[^0-9]', '', 'g'), '')::int as meta_course_tier,
+    nullif(regexp_replace(coalesce(u.metadata->>'university_score', ''), '[^0-9.]', '', 'g'), '')::numeric as meta_university_score
   from programs p
   join universities u on u.id = p.university_id
   left join cities c on c.id = u.city_id
@@ -506,18 +518,22 @@ ranked as (
 scores as (
   select
     *,
-    case
-      when qs_band is null and times_band is null and guardian_band is null then 30
-      else round(
-        (coalesce(qs_band, 0) + coalesce(times_band, 0) + coalesce(guardian_band, 0))::numeric /
-        nullif(
-          (case when qs_band is not null then 1 else 0 end) +
-          (case when times_band is not null then 1 else 0 end) +
-          (case when guardian_band is not null then 1 else 0 end),
-          0
+    -- University score: prefer metadata, then derive from rankings, else 30
+    coalesce(
+      meta_university_score,
+      case
+        when qs_band is null and times_band is null and guardian_band is null then 30
+        else round(
+          (coalesce(qs_band, 0) + coalesce(times_band, 0) + coalesce(guardian_band, 0))::numeric /
+          nullif(
+            (case when qs_band is not null then 1 else 0 end) +
+            (case when times_band is not null then 1 else 0 end) +
+            (case when guardian_band is not null then 1 else 0 end),
+            0
+          )
         )
-      )
-    end as university_score,
+      end
+    ) as university_score,
     case
       when min_ib_score is null then 40
       when min_ib_score >= 40 then 100
@@ -531,14 +547,14 @@ scores as (
     end as ib_score,
     case
       when min_a_level_score is null then 40
-      when upper(regexp_replace(min_a_level_score, '\\s+', '', 'g')) like '%A*AA%' then 100
-      when upper(regexp_replace(min_a_level_score, '\\s+', '', 'g')) = 'A*AB' then 95
-      when upper(regexp_replace(min_a_level_score, '\\s+', '', 'g')) = 'AAA' then 90
-      when upper(regexp_replace(min_a_level_score, '\\s+', '', 'g')) = 'AAB' then 80
-      when upper(regexp_replace(min_a_level_score, '\\s+', '', 'g')) = 'ABB' then 70
-      when upper(regexp_replace(min_a_level_score, '\\s+', '', 'g')) = 'BBB' then 60
-      when upper(regexp_replace(min_a_level_score, '\\s+', '', 'g')) = 'BBC' then 50
-      when upper(regexp_replace(min_a_level_score, '\\s+', '', 'g')) = 'BCC' then 40
+      when upper(regexp_replace(min_a_level_score, '\s+', '', 'g')) like '%A*AA%' then 100
+      when upper(regexp_replace(min_a_level_score, '\s+', '', 'g')) = 'A*AB' then 95
+      when upper(regexp_replace(min_a_level_score, '\s+', '', 'g')) = 'AAA' then 90
+      when upper(regexp_replace(min_a_level_score, '\s+', '', 'g')) = 'AAB' then 80
+      when upper(regexp_replace(min_a_level_score, '\s+', '', 'g')) = 'ABB' then 70
+      when upper(regexp_replace(min_a_level_score, '\s+', '', 'g')) = 'BBB' then 60
+      when upper(regexp_replace(min_a_level_score, '\s+', '', 'g')) = 'BBC' then 50
+      when upper(regexp_replace(min_a_level_score, '\s+', '', 'g')) = 'BCC' then 40
       else 30
     end as alevel_score
   from ranked
@@ -597,55 +613,79 @@ select
   university_rank_source,
   university_requires_test,
   university_score,
-  case
-    when min_ib_score is not null and min_a_level_score is not null then round((ib_score + alevel_score) / 2.0)
-    when min_ib_score is not null then ib_score
-    when min_a_level_score is not null then alevel_score
-    else 40
-  end as course_selectivity_score,
-  round(university_score * 0.6 + (
+  -- Course selectivity: prefer metadata, then derive from IB/A-level
+  coalesce(
+    meta_selectivity_score,
     case
-      when min_ib_score is not null and min_a_level_score is not null then (ib_score + alevel_score) / 2.0
+      when min_ib_score is not null and min_a_level_score is not null then round((ib_score + alevel_score) / 2.0)
       when min_ib_score is not null then ib_score
       when min_a_level_score is not null then alevel_score
       else 40
     end
-  ) * 0.4) as total_course_score,
-  case
-    when round(university_score * 0.6 + (
+  ) as course_selectivity_score,
+  -- Total course score: prefer metadata, then derive
+  coalesce(
+    meta_total_course_score,
+    round(university_score * 0.6 + (
       case
         when min_ib_score is not null and min_a_level_score is not null then (ib_score + alevel_score) / 2.0
         when min_ib_score is not null then ib_score
         when min_a_level_score is not null then alevel_score
         else 40
       end
-    ) * 0.4) >= 85 then 1
-    when round(university_score * 0.6 + (
-      case
-        when min_ib_score is not null and min_a_level_score is not null then (ib_score + alevel_score) / 2.0
-        when min_ib_score is not null then ib_score
-        when min_a_level_score is not null then alevel_score
-        else 40
-      end
-    ) * 0.4) >= 75 then 2
-    when round(university_score * 0.6 + (
-      case
-        when min_ib_score is not null and min_a_level_score is not null then (ib_score + alevel_score) / 2.0
-        when min_ib_score is not null then ib_score
-        when min_a_level_score is not null then alevel_score
-        else 40
-      end
-    ) * 0.4) >= 65 then 3
-    when round(university_score * 0.6 + (
-      case
-        when min_ib_score is not null and min_a_level_score is not null then (ib_score + alevel_score) / 2.0
-        when min_ib_score is not null then ib_score
-        when min_a_level_score is not null then alevel_score
-        else 40
-      end
-    ) * 0.4) >= 50 then 4
-    else 5
-  end as course_tier
+    ) * 0.4)
+  ) as total_course_score,
+  -- Course tier: prefer metadata, then derive
+  coalesce(
+    meta_course_tier,
+    case
+      when coalesce(
+        meta_total_course_score,
+        round(university_score * 0.6 + (
+          case
+            when min_ib_score is not null and min_a_level_score is not null then (ib_score + alevel_score) / 2.0
+            when min_ib_score is not null then ib_score
+            when min_a_level_score is not null then alevel_score
+            else 40
+          end
+        ) * 0.4)
+      ) >= 85 then 1
+      when coalesce(
+        meta_total_course_score,
+        round(university_score * 0.6 + (
+          case
+            when min_ib_score is not null and min_a_level_score is not null then (ib_score + alevel_score) / 2.0
+            when min_ib_score is not null then ib_score
+            when min_a_level_score is not null then alevel_score
+            else 40
+          end
+        ) * 0.4)
+      ) >= 75 then 2
+      when coalesce(
+        meta_total_course_score,
+        round(university_score * 0.6 + (
+          case
+            when min_ib_score is not null and min_a_level_score is not null then (ib_score + alevel_score) / 2.0
+            when min_ib_score is not null then ib_score
+            when min_a_level_score is not null then alevel_score
+            else 40
+          end
+        ) * 0.4)
+      ) >= 65 then 3
+      when coalesce(
+        meta_total_course_score,
+        round(university_score * 0.6 + (
+          case
+            when min_ib_score is not null and min_a_level_score is not null then (ib_score + alevel_score) / 2.0
+            when min_ib_score is not null then ib_score
+            when min_a_level_score is not null then alevel_score
+            else 40
+          end
+        ) * 0.4)
+      ) >= 50 then 4
+      else 5
+    end
+  ) as course_tier
 from scores;
 
 grant select on course_scoring_v1 to anon, authenticated;
@@ -671,6 +711,10 @@ create table if not exists student_matches (
 );
 
 -- Applications
+-- platform/decision columns from 20260628120000_counsellor_real_data.sql:
+-- `decision` is the admissions result (null = pending); `platform` is the
+-- submission portal. `country` is intentionally NOT stored — the adapter
+-- derives it from programs → universities.country.
 create table if not exists applications (
   id uuid primary key default gen_random_uuid(),
   profile_id uuid not null references profiles(id) on delete cascade,
@@ -678,8 +722,14 @@ create table if not exists applications (
   status application_status not null default 'planning',
   portal_url text,
   notes text,
+  platform text,
+  decision text,
+  decision_at timestamptz,
+  decision_conditions text,
   created_at timestamptz not null default timezone('utc', now()),
-  updated_at timestamptz not null default timezone('utc', now())
+  updated_at timestamptz not null default timezone('utc', now()),
+  constraint applications_decision_check
+    check (decision is null or decision in ('accepted', 'rejected', 'waitlisted', 'withdrawn'))
 );
 
 -- Checklist items
@@ -731,7 +781,14 @@ create index if not exists idx_programs_university_id on programs(university_id)
 create index if not exists idx_programs_course_name on programs(course_name);
 create index if not exists idx_programs_level on programs(level);
 create index if not exists idx_programs_degree_type on programs(name);
-create index if not exists idx_programs_field on programs(field);
+-- idx_programs_field_of_study is the final-state name from
+-- 20250308120000_normalize_course_catalog.sql (previously idx_programs_field).
+create index if not exists idx_programs_field_of_study on programs(field);
+-- Composite (field, id) index from 20260713120000_programs_field_id_idx.sql:
+-- lets the matching catalogue pager stream pre-sorted index ranges instead of
+-- bitmap-scanning + re-sorting every page (was exceeding the 8s statement
+-- timeout).
+create index if not exists idx_programs_field_id on programs (field, id);
 create index if not exists idx_programs_min_ib_score on programs(min_ib_score);
 create index if not exists idx_programs_min_a_level_numeric on programs(a_level_min_numeric);
 create index if not exists idx_programs_nss_override on programs(nss_score_pct_override);
@@ -746,6 +803,8 @@ create index if not exists idx_student_matches_profile_score on student_matches(
 create index if not exists idx_applications_profile on applications(profile_id);
 create index if not exists idx_documents_application on documents(application_id);
 create index if not exists idx_shortlisted_profile on shortlisted_programs(profile_id);
+create index if not exists student_subjects_profile_id_idx on student_subjects(profile_id);
+create index if not exists student_admissions_tests_profile_id_idx on student_admissions_tests(profile_id);
 
 -- Row Level Security
 alter table profiles enable row level security;
@@ -767,13 +826,36 @@ alter table documents enable row level security;
 alter table sources enable row level security;
 alter table shortlisted_programs enable row level security;
 
--- Helper function for role
-create or replace function auth_role() returns text as $$
+-- Helper function for role.
+--
+-- INVARIANT (from 20260713130000_fix_auth_role_recursion.sql): any helper
+-- function referenced by profiles RLS policies must be SECURITY DEFINER.
+-- An invoker-rights `select ... from profiles` inside a policy re-enters
+-- profiles RLS, which re-evaluates the function, which re-enters profiles
+-- RLS… → Postgres error 54001 "stack depth limit exceeded". SECURITY DEFINER
+-- makes the inner profiles read run as the function owner, bypassing profiles
+-- RLS and breaking the cycle (same treatment is_counsellor() got in
+-- 20260611130000_tighten_help_rls.sql).
+create or replace function public.auth_role()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
   select coalesce(
     (select role from profiles where id = auth.uid()),
     'student'
   );
-$$ language sql stable;
+$$;
+
+grant execute on function public.auth_role() to authenticated;
+
+-- NOTE on the admin policies below: per
+-- 20260713140000_initplan_admin_policies.sql, every `auth_role() = 'admin'`
+-- qual is written `(select auth_role()) = 'admin'` so it is evaluated ONCE per
+-- statement (InitPlan) instead of per row — a bare call meant ~30k+ profiles
+-- lookups on catalogue-sized scans.
 
 -- Profiles policies
 drop policy if exists profiles_self_access on profiles;
@@ -781,7 +863,7 @@ drop policy if exists profiles_admin_view on profiles;
 create policy profiles_self_access on profiles
   using (auth.uid() = id) with check (auth.uid() = id);
 create policy profiles_admin_view on profiles
-  for select using (auth_role() = 'admin');
+  for select using ((select auth_role()) = 'admin');
 
 -- Student personal policies
 drop policy if exists personal_self on student_personal_information;
@@ -789,7 +871,7 @@ drop policy if exists personal_admin on student_personal_information;
 create policy personal_self on student_personal_information
   using (auth.uid() = profile_id) with check (auth.uid() = profile_id);
 create policy personal_admin on student_personal_information
-  using (auth_role() = 'admin');
+  using ((select auth_role()) = 'admin');
 
 -- Student academic input policies
 drop policy if exists academic_input_self on student_academic_input;
@@ -797,7 +879,7 @@ drop policy if exists academic_input_admin on student_academic_input;
 create policy academic_input_self on student_academic_input
   using (auth.uid() = profile_id) with check (auth.uid() = profile_id);
 create policy academic_input_admin on student_academic_input
-  using (auth_role() = 'admin');
+  using ((select auth_role()) = 'admin');
 
 -- Student subjects policies
 drop policy if exists subjects_self on student_subjects;
@@ -805,7 +887,7 @@ drop policy if exists subjects_admin on student_subjects;
 create policy subjects_self on student_subjects
   using (auth.uid() = profile_id) with check (auth.uid() = profile_id);
 create policy subjects_admin on student_subjects
-  using (auth_role() = 'admin');
+  using ((select auth_role()) = 'admin');
 
 -- Admissions tests policies
 drop policy if exists admissions_self on student_admissions_tests;
@@ -813,7 +895,7 @@ drop policy if exists admissions_admin on student_admissions_tests;
 create policy admissions_self on student_admissions_tests
   using (auth.uid() = profile_id) with check (auth.uid() = profile_id);
 create policy admissions_admin on student_admissions_tests
-  using (auth_role() = 'admin');
+  using ((select auth_role()) = 'admin');
 
 -- Lifestyle preferences policies
 drop policy if exists lifestyle_self on student_lifestyle_preference;
@@ -821,7 +903,7 @@ drop policy if exists lifestyle_admin on student_lifestyle_preference;
 create policy lifestyle_self on student_lifestyle_preference
   using (auth.uid() = profile_id) with check (auth.uid() = profile_id);
 create policy lifestyle_admin on student_lifestyle_preference
-  using (auth_role() = 'admin');
+  using ((select auth_role()) = 'admin');
 
 -- Student scores policies
 drop policy if exists scores_self on student_scores;
@@ -829,38 +911,38 @@ drop policy if exists scores_admin on student_scores;
 create policy scores_self on student_scores
   using (auth.uid() = profile_id) with check (auth.uid() = profile_id);
 create policy scores_admin on student_scores
-  using (auth_role() = 'admin');
+  using ((select auth_role()) = 'admin');
 
 -- Catalog policies
 drop policy if exists universities_read_all on universities;
 drop policy if exists universities_admin on universities;
 create policy universities_read_all on universities for select using (auth.uid() is not null);
-create policy universities_admin on universities using (auth_role() = 'admin');
+create policy universities_admin on universities using ((select auth_role()) = 'admin');
 
 drop policy if exists programs_read_all on programs;
 drop policy if exists programs_admin on programs;
 create policy programs_read_all on programs for select using (auth.uid() is not null);
-create policy programs_admin on programs using (auth_role() = 'admin');
+create policy programs_admin on programs using ((select auth_role()) = 'admin');
 
 drop policy if exists requirements_read_all on program_requirements;
 drop policy if exists requirements_admin on program_requirements;
 create policy requirements_read_all on program_requirements for select using (auth.uid() is not null);
-create policy requirements_admin on program_requirements using (auth_role() = 'admin');
+create policy requirements_admin on program_requirements using ((select auth_role()) = 'admin');
 
 drop policy if exists deadlines_read_all on deadlines;
 drop policy if exists deadlines_admin on deadlines;
 create policy deadlines_read_all on deadlines for select using (auth.uid() is not null);
-create policy deadlines_admin on deadlines using (auth_role() = 'admin');
+create policy deadlines_admin on deadlines using ((select auth_role()) = 'admin');
 
 drop policy if exists application_tasks_read_all on application_tasks;
 drop policy if exists application_tasks_admin on application_tasks;
 create policy application_tasks_read_all on application_tasks for select using (auth.uid() is not null);
-create policy application_tasks_admin on application_tasks using (auth_role() = 'admin');
+create policy application_tasks_admin on application_tasks using ((select auth_role()) = 'admin');
 
 drop policy if exists sources_read_all on sources;
 drop policy if exists sources_admin on sources;
 create policy sources_read_all on sources for select using (auth.uid() is not null);
-create policy sources_admin on sources using (auth_role() = 'admin');
+create policy sources_admin on sources using ((select auth_role()) = 'admin');
 
 -- Matches policies
 drop policy if exists matches_self on student_matches;
@@ -873,7 +955,7 @@ create policy matches_self_write on student_matches
   for insert with check (auth.uid() = profile_id);
 create policy matches_self_update on student_matches
   for update using (auth.uid() = profile_id) with check (auth.uid() = profile_id);
-create policy matches_admin on student_matches using (auth_role() = 'admin');
+create policy matches_admin on student_matches using ((select auth_role()) = 'admin');
 
 -- Shortlist policies
 drop policy if exists shortlist_self on shortlisted_programs;
@@ -889,14 +971,14 @@ create policy shortlist_self_insert on shortlisted_programs
   for insert with check (auth.uid() = profile_id);
 create policy shortlist_self_delete on shortlisted_programs
   for delete using (auth.uid() = profile_id);
-create policy shortlist_admin on shortlisted_programs using (auth_role() = 'admin');
+create policy shortlist_admin on shortlisted_programs using ((select auth_role()) = 'admin');
 
 -- Applications policies
 drop policy if exists applications_self on applications;
 drop policy if exists applications_admin on applications;
 create policy applications_self on applications
   using (auth.uid() = profile_id) with check (auth.uid() = profile_id);
-create policy applications_admin on applications using (auth_role() = 'admin');
+create policy applications_admin on applications using ((select auth_role()) = 'admin');
 
 drop policy if exists checklist_self on application_checklist;
 drop policy if exists checklist_admin on application_checklist;
@@ -916,7 +998,7 @@ create policy checklist_self on application_checklist
         and a.profile_id = auth.uid()
     )
   );
-create policy checklist_admin on application_checklist using (auth_role() = 'admin');
+create policy checklist_admin on application_checklist using ((select auth_role()) = 'admin');
 
 drop policy if exists documents_self on documents;
 drop policy if exists documents_admin on documents;
@@ -936,7 +1018,7 @@ create policy documents_self on documents
         and a.profile_id = auth.uid()
     )
   );
-create policy documents_admin on documents using (auth_role() = 'admin');
+create policy documents_admin on documents using ((select auth_role()) = 'admin');
 
 -- Storage bucket and policies for application documents
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -1057,3 +1139,996 @@ create policy application_documents_admin on storage.objects
     bucket_id = 'application-documents'
     and public.auth_role() = 'admin'
   );
+
+-- =============================================================================
+-- Counsellor & help system
+-- Final state of migrations 20260512120000 … 20260713150000.
+-- =============================================================================
+
+-- ── Counsellor helper functions ───────────────────────────────────────────────
+-- From 20260611130000_tighten_help_rls.sql / 20260628120000_counsellor_real_data.sql.
+--
+-- INVARIANT: is_counsellor() must be SECURITY DEFINER — an invoker-rights
+-- select from profiles inside a policy is the classic Supabase RLS recursion
+-- trap (same treatment auth_role() got above).
+create or replace function public.is_counsellor()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from profiles
+    where id = auth.uid() and role in ('counsellor', 'admin')
+  );
+$$;
+
+create or replace function public.is_demo_account()
+returns boolean
+language sql
+stable
+as $$
+  select coalesce(lower(coalesce(auth.jwt() ->> 'email', '')) = 'greg@workiflow.com', false);
+$$;
+
+-- OPEN ACCESS (final form, from 20260712130000_open_counsellor_access.sql):
+-- the counsellor surface is open to EVERY signed-in user. Every RLS policy on
+-- the help/counsellor tables routes through this one function, so redefining
+-- it opens/closes the whole counsellor surface at once.
+--
+-- To re-restrict later, restore the body to:
+--   select public.is_counsellor() or public.is_demo_account();
+-- (both functions are left in place, unchanged).
+create or replace function public.can_act_as_counsellor()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select auth.uid() is not null;
+$$;
+
+grant execute on function public.is_counsellor() to authenticated;
+grant execute on function public.is_demo_account() to authenticated;
+grant execute on function public.can_act_as_counsellor() to authenticated;
+
+-- ── profiles.role escalation guard ────────────────────────────────────────────
+-- From 20260702120000_p0_role_guard_notification_routing.sql: profiles_self_access
+-- covers UPDATE with no column restriction, so without this trigger any student
+-- could set their own role='admin' from the browser console. Server-side
+-- contexts (service_role key, seed scripts, SQL editor) carry no auth.uid()
+-- and stay trusted.
+create or replace function public.guard_profile_role_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.role is distinct from old.role then
+    if auth.uid() is not null
+       and not exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+    then
+      raise exception 'changing profiles.role requires an administrator';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_guard_profile_role on profiles;
+create trigger trg_guard_profile_role
+  before update on profiles
+  for each row
+  execute function public.guard_profile_role_change();
+
+-- ── Counsellor read access on the per-owner student tables ───────────────────
+-- From 20260628120000_counsellor_real_data.sql. Additive (permissive →
+-- OR-combined with the owner-only policies). deadlines / programs /
+-- universities / application_tasks are already authenticated-readable, so they
+-- are intentionally omitted.
+
+drop policy if exists profiles_counsellor_read on profiles;
+create policy profiles_counsellor_read on profiles
+  for select to authenticated using (public.can_act_as_counsellor());
+
+drop policy if exists personal_counsellor_read on student_personal_information;
+create policy personal_counsellor_read on student_personal_information
+  for select to authenticated using (public.can_act_as_counsellor());
+
+drop policy if exists academic_input_counsellor_read on student_academic_input;
+create policy academic_input_counsellor_read on student_academic_input
+  for select to authenticated using (public.can_act_as_counsellor());
+
+drop policy if exists subjects_counsellor_read on student_subjects;
+create policy subjects_counsellor_read on student_subjects
+  for select to authenticated using (public.can_act_as_counsellor());
+
+drop policy if exists admissions_counsellor_read on student_admissions_tests;
+create policy admissions_counsellor_read on student_admissions_tests
+  for select to authenticated using (public.can_act_as_counsellor());
+
+drop policy if exists lifestyle_counsellor_read on student_lifestyle_preference;
+create policy lifestyle_counsellor_read on student_lifestyle_preference
+  for select to authenticated using (public.can_act_as_counsellor());
+
+drop policy if exists scores_counsellor_read on student_scores;
+create policy scores_counsellor_read on student_scores
+  for select to authenticated using (public.can_act_as_counsellor());
+
+drop policy if exists matches_counsellor_read on student_matches;
+create policy matches_counsellor_read on student_matches
+  for select to authenticated using (public.can_act_as_counsellor());
+
+drop policy if exists applications_counsellor_read on applications;
+create policy applications_counsellor_read on applications
+  for select to authenticated using (public.can_act_as_counsellor());
+
+drop policy if exists checklist_counsellor_read on application_checklist;
+create policy checklist_counsellor_read on application_checklist
+  for select to authenticated using (public.can_act_as_counsellor());
+
+drop policy if exists documents_counsellor_read on documents;
+create policy documents_counsellor_read on documents
+  for select to authenticated using (public.can_act_as_counsellor());
+
+-- ── Help requests + notifications tables ─────────────────────────────────────
+-- From 20260512120000 / 20260513120000, with columns added by later migrations
+-- folded in: help_requests.initiated_by (20260517120000),
+-- notifications.audience (20260514130000),
+-- help_meetings.status_changed_by (20260702120000).
+
+create table if not exists help_requests (
+  id uuid primary key default gen_random_uuid(),
+  student_profile_id uuid not null references profiles(id) on delete cascade,
+  application_id text,
+  university text,
+  program text,
+  subject text not null,
+  body text not null,
+  status text not null default 'open' check (status in ('open', 'accepted', 'resolved')),
+  -- 'student' (default) or 'counsellor' — drives notification copy + which
+  -- side opens the thread drawer first.
+  initiated_by text not null default 'student'
+    check (initiated_by in ('student', 'counsellor')),
+  created_at timestamptz not null default now(),
+  accepted_at timestamptz,
+  resolved_at timestamptz
+);
+
+create index if not exists help_requests_status_created_idx
+  on help_requests (status, created_at desc);
+create index if not exists help_requests_student_idx
+  on help_requests (student_profile_id, created_at desc);
+
+create table if not exists notifications (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references profiles(id) on delete cascade,
+  kind text not null,
+  title text not null,
+  body text,
+  href text,
+  -- Audience tag (student | counsellor) so one auth user (the demo) can hold
+  -- two distinct inboxes — the bell/drawer hooks filter by side.
+  audience text not null default 'student'
+    check (audience in ('student', 'counsellor')),
+  read_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists notifications_inbox_idx
+  on notifications (profile_id, read_at, created_at desc);
+create index if not exists notifications_audience_inbox_idx
+  on notifications (profile_id, audience, read_at, created_at desc);
+
+create table if not exists help_messages (
+  id uuid primary key default gen_random_uuid(),
+  request_id uuid not null references help_requests(id) on delete cascade,
+  author_profile_id uuid not null references profiles(id) on delete cascade,
+  author_role text not null check (author_role in ('student', 'counsellor')),
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists help_messages_request_idx
+  on help_messages (request_id, created_at);
+
+create table if not exists help_notes (
+  id uuid primary key default gen_random_uuid(),
+  request_id uuid not null references help_requests(id) on delete cascade,
+  author_profile_id uuid not null references profiles(id) on delete cascade,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists help_notes_request_idx
+  on help_notes (request_id, created_at desc);
+
+create table if not exists help_meetings (
+  id uuid primary key default gen_random_uuid(),
+  request_id uuid not null references help_requests(id) on delete cascade,
+  counsellor_profile_id uuid not null references profiles(id) on delete cascade,
+  student_profile_id uuid not null references profiles(id) on delete cascade,
+  title text not null,
+  scheduled_for timestamptz not null,
+  duration_minutes int not null default 30,
+  location text,
+  status text not null default 'proposed' check (status in ('proposed', 'confirmed', 'cancelled', 'completed')),
+  -- Which side changed the status; auth.uid() cannot distinguish the two sides
+  -- of the single-account demo.
+  status_changed_by text
+    check (status_changed_by in ('student', 'counsellor')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists help_meetings_request_idx
+  on help_meetings (request_id, scheduled_for);
+create index if not exists help_meetings_student_upcoming_idx
+  on help_meetings (student_profile_id, scheduled_for);
+
+alter table help_requests enable row level security;
+alter table notifications enable row level security;
+alter table help_messages enable row level security;
+alter table help_notes enable row level security;
+alter table help_meetings enable row level security;
+
+-- Realtime: surface inserts/updates on the help/notification tables
+-- (idempotent form of the `alter publication supabase_realtime add table …`
+-- statements in 20260512120000 / 20260513120000).
+do $$
+declare t text;
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    foreach t in array array['help_requests', 'notifications', 'help_messages', 'help_notes', 'help_meetings']
+    loop
+      if not exists (
+        select 1 from pg_publication_tables
+        where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+      ) then
+        execute format('alter publication supabase_realtime add table public.%I', t);
+      end if;
+    end loop;
+  end if;
+end $$;
+
+-- ── Help / notification RLS (final participant-scoped form) ───────────────────
+-- From 20260611130000_tighten_help_rls.sql, which replaced the demo-permissive
+-- `using (true)` policies of 20260512120000 / 20260513120000.
+--
+-- Access model:
+--   • Students see and write only their own help requests, the messages and
+--     meetings on those requests, and their own notifications.
+--   • Counsellor-capable users (see can_act_as_counsellor() above) see all
+--     requests, can reply, write private notes, propose meetings, and notify
+--     students.
+
+drop policy if exists help_requests_demo_all on help_requests;
+
+drop policy if exists help_requests_select on help_requests;
+create policy help_requests_select on help_requests
+  for select to authenticated
+  using (student_profile_id = auth.uid() or public.can_act_as_counsellor());
+
+drop policy if exists help_requests_insert on help_requests;
+create policy help_requests_insert on help_requests
+  for insert to authenticated
+  -- Students file requests as themselves; counsellors may open
+  -- counsellor-initiated threads on behalf of a student.
+  with check (student_profile_id = auth.uid() or public.can_act_as_counsellor());
+
+drop policy if exists help_requests_update on help_requests;
+create policy help_requests_update on help_requests
+  for update to authenticated
+  using (student_profile_id = auth.uid() or public.can_act_as_counsellor())
+  with check (student_profile_id = auth.uid() or public.can_act_as_counsellor());
+
+drop policy if exists help_messages_demo_all on help_messages;
+
+drop policy if exists help_messages_select on help_messages;
+create policy help_messages_select on help_messages
+  for select to authenticated
+  using (
+    public.can_act_as_counsellor()
+    or exists (
+      select 1 from help_requests hr
+      where hr.id = help_messages.request_id and hr.student_profile_id = auth.uid()
+    )
+  );
+
+drop policy if exists help_messages_insert on help_messages;
+create policy help_messages_insert on help_messages
+  for insert to authenticated
+  with check (
+    author_profile_id = auth.uid()
+    -- Only counsellor-capable users may speak as 'counsellor'.
+    and (author_role = 'student' or public.can_act_as_counsellor())
+    and (
+      public.can_act_as_counsellor()
+      or exists (
+        select 1 from help_requests hr
+        where hr.id = help_messages.request_id and hr.student_profile_id = auth.uid()
+      )
+    )
+  );
+
+-- help_notes are counsellor-private.
+drop policy if exists help_notes_demo_all on help_notes;
+
+drop policy if exists help_notes_select on help_notes;
+create policy help_notes_select on help_notes
+  for select to authenticated
+  using (public.can_act_as_counsellor());
+
+drop policy if exists help_notes_insert on help_notes;
+create policy help_notes_insert on help_notes
+  for insert to authenticated
+  with check (public.can_act_as_counsellor() and author_profile_id = auth.uid());
+
+drop policy if exists help_meetings_demo_all on help_meetings;
+
+drop policy if exists help_meetings_select on help_meetings;
+create policy help_meetings_select on help_meetings
+  for select to authenticated
+  using (student_profile_id = auth.uid() or public.can_act_as_counsellor());
+
+drop policy if exists help_meetings_insert on help_meetings;
+create policy help_meetings_insert on help_meetings
+  for insert to authenticated
+  with check (public.can_act_as_counsellor() and counsellor_profile_id = auth.uid());
+
+drop policy if exists help_meetings_update on help_meetings;
+create policy help_meetings_update on help_meetings
+  for update to authenticated
+  using (student_profile_id = auth.uid() or public.can_act_as_counsellor())
+  with check (student_profile_id = auth.uid() or public.can_act_as_counsellor());
+
+drop policy if exists notifications_demo_all on notifications;
+
+drop policy if exists notifications_select on notifications;
+create policy notifications_select on notifications
+  for select to authenticated
+  using (profile_id = auth.uid());
+
+drop policy if exists notifications_insert on notifications;
+create policy notifications_insert on notifications
+  for insert to authenticated
+  -- Students may only notify themselves; counsellors may notify their
+  -- students (e.g. reply pings, meeting proposals, document nudges).
+  -- DB triggers that fan out notifications run SECURITY DEFINER and are
+  -- unaffected by this policy.
+  with check (profile_id = auth.uid() or public.can_act_as_counsellor());
+
+drop policy if exists notifications_update on notifications;
+create policy notifications_update on notifications
+  for update to authenticated
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+
+drop policy if exists notifications_delete on notifications;
+create policy notifications_delete on notifications
+  for delete to authenticated
+  using (profile_id = auth.uid());
+
+-- ── Counsellor workspace tables ───────────────────────────────────────────────
+-- From 20260628120000_counsellor_real_data.sql: per-student counsellor notes,
+-- parent communications, and a document tracker (distinct from the
+-- storage-backed `documents` table).
+
+create table if not exists counsellor_notes (
+  id uuid primary key default gen_random_uuid(),
+  student_profile_id uuid not null references profiles(id) on delete cascade,
+  author_profile_id uuid not null references profiles(id) on delete cascade,
+  body text not null,
+  note_type text not null default 'session' check (note_type in ('session', 'flag', 'update')),
+  created_at timestamptz not null default timezone('utc', now())
+);
+create index if not exists counsellor_notes_student_idx
+  on counsellor_notes (student_profile_id, created_at desc);
+
+alter table counsellor_notes enable row level security;
+
+drop policy if exists counsellor_notes_select on counsellor_notes;
+create policy counsellor_notes_select on counsellor_notes
+  for select to authenticated using (public.can_act_as_counsellor());
+
+drop policy if exists counsellor_notes_insert on counsellor_notes;
+create policy counsellor_notes_insert on counsellor_notes
+  for insert to authenticated
+  with check (public.can_act_as_counsellor() and author_profile_id = auth.uid());
+
+drop policy if exists counsellor_notes_update on counsellor_notes;
+create policy counsellor_notes_update on counsellor_notes
+  for update to authenticated
+  using (public.can_act_as_counsellor())
+  with check (public.can_act_as_counsellor());
+
+create table if not exists parent_contacts (
+  id uuid primary key default gen_random_uuid(),
+  student_profile_id uuid not null references profiles(id) on delete cascade,
+  parent_name text not null,
+  relationship text,
+  email text,
+  phone text,
+  status text not null default 'active' check (status in ('active', 'needs-response', 'resolved')),
+  last_contacted timestamptz,
+  created_at timestamptz not null default timezone('utc', now())
+);
+create index if not exists parent_contacts_student_idx
+  on parent_contacts (student_profile_id);
+
+alter table parent_contacts enable row level security;
+
+drop policy if exists parent_contacts_all on parent_contacts;
+create policy parent_contacts_all on parent_contacts
+  for all to authenticated
+  using (public.can_act_as_counsellor())
+  with check (public.can_act_as_counsellor());
+
+create table if not exists parent_messages (
+  id uuid primary key default gen_random_uuid(),
+  contact_id uuid not null references parent_contacts(id) on delete cascade,
+  sender text not null check (sender in ('counsellor', 'parent')),
+  body text not null,
+  template text,
+  read_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now())
+);
+create index if not exists parent_messages_contact_idx
+  on parent_messages (contact_id, created_at);
+
+alter table parent_messages enable row level security;
+
+drop policy if exists parent_messages_all on parent_messages;
+create policy parent_messages_all on parent_messages
+  for all to authenticated
+  using (public.can_act_as_counsellor())
+  with check (public.can_act_as_counsellor());
+
+create table if not exists student_documents (
+  id uuid primary key default gen_random_uuid(),
+  student_profile_id uuid not null references profiles(id) on delete cascade,
+  document_name text not null,
+  doc_type text not null check (doc_type in ('transcript', 'recommendation', 'essay', 'certificate', 'other')),
+  status text not null default 'pending' check (status in ('received', 'pending', 'overdue')),
+  uploaded_at timestamptz,
+  due_date date,
+  notes text,
+  created_at timestamptz not null default timezone('utc', now())
+);
+create index if not exists student_documents_student_idx
+  on student_documents (student_profile_id);
+
+alter table student_documents enable row level security;
+
+drop policy if exists student_documents_counsellor_all on student_documents;
+create policy student_documents_counsellor_all on student_documents
+  for all to authenticated
+  using (public.can_act_as_counsellor())
+  with check (public.can_act_as_counsellor());
+
+drop policy if exists student_documents_student_read on student_documents;
+create policy student_documents_student_read on student_documents
+  for select to authenticated
+  using (student_profile_id = auth.uid() or public.can_act_as_counsellor());
+
+-- ── Notification routing (SECURITY DEFINER triggers) ─────────────────────────
+-- Final forms: helpers + help_requests/help_messages triggers from
+-- 20260702120000_p0_role_guard_notification_routing.sql; the two meeting
+-- triggers from 20260712120000_meeting_notification_local_time.sql (render the
+-- meeting time in the student's stored IANA timezone instead of UTC).
+-- Counsellor notifications fire HERE, via DB trigger, not application code.
+
+-- Every profile that should receive counsellor-audience notifications:
+-- real counsellor/admin accounts, plus the single-account demo profile
+-- (greg@workiflow.com), which holds the counsellor inbox for demo sessions.
+create or replace function public.counsellor_notification_targets()
+returns setof uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select id from profiles where role in ('counsellor', 'admin')
+  union
+  select u.id from auth.users u where lower(u.email) = 'greg@workiflow.com';
+$$;
+
+create or replace function public.profile_display_name(p_profile_id uuid, p_fallback text)
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(nullif(trim(full_name), ''), p_fallback) from profiles where id = p_profile_id;
+$$;
+
+-- help_requests insert → notify the right side, with real names.
+create or replace function notify_on_help_request_insert()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  student_name text;
+begin
+  if new.initiated_by = 'counsellor' then
+    -- Counsellor reached out first: notify the student.
+    insert into notifications (profile_id, kind, title, body, href, audience)
+    values (
+      new.student_profile_id,
+      'counsellor_message',
+      'Message from your counsellor',
+      coalesce(new.subject, new.body),
+      '/inbox?help=' || new.id::text,
+      'student'
+    );
+  else
+    -- Student raised a help request: fan out to the counsellor side.
+    student_name := coalesce(public.profile_display_name(new.student_profile_id, null), 'A student');
+    insert into notifications (profile_id, kind, title, body, href, audience)
+    select
+      target,
+      'help_request',
+      'New help request from ' || student_name,
+      coalesce(new.university || coalesce(' · ' || new.program, ''), new.subject),
+      '/counsellor?help=' || new.id::text,
+      'counsellor'
+    from public.counsellor_notification_targets() as target;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_help_request_notify on help_requests;
+create trigger trg_help_request_notify
+  after insert on help_requests
+  for each row
+  execute function notify_on_help_request_insert();
+
+-- help_messages insert → notify the other side. A student session cannot
+-- insert onto a counsellor's profile row under notifications_insert RLS, so
+-- this has to happen server-side.
+create or replace function public.notify_on_help_message_insert()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  author_name text;
+begin
+  if new.author_role = 'counsellor' then
+    author_name := coalesce(public.profile_display_name(new.author_profile_id, null), 'Your counsellor');
+    insert into notifications (profile_id, kind, title, body, href, audience)
+    select
+      hr.student_profile_id,
+      'help_reply_from_counsellor',
+      author_name || ' replied to your help request',
+      left(new.body, 120),
+      '/applications?help=' || new.request_id::text,
+      'student'
+    from help_requests hr
+    where hr.id = new.request_id;
+  else
+    author_name := coalesce(public.profile_display_name(new.author_profile_id, null), 'A student');
+    insert into notifications (profile_id, kind, title, body, href, audience)
+    select
+      target,
+      'help_reply_from_student',
+      author_name || ' replied to a help request',
+      left(new.body, 120),
+      '/counsellor?help=' || new.request_id::text,
+      'counsellor'
+    from public.counsellor_notification_targets() as target;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_help_message_notify on help_messages;
+create trigger trg_help_message_notify
+  after insert on help_messages
+  for each row
+  execute function public.notify_on_help_message_insert();
+
+-- Format a timestamptz as local wall-clock in the given IANA timezone. Bad or
+-- empty timezone strings must never break a meeting insert/update, so an
+-- invalid zone falls back to UTC instead of raising.
+create or replace function public.format_meeting_time(p_ts timestamptz, p_tz text)
+returns text
+language plpgsql
+stable
+set search_path = public
+as $$
+begin
+  return to_char(p_ts at time zone coalesce(nullif(trim(p_tz), ''), 'UTC'), 'Dy DD Mon, HH24:MI');
+exception when others then
+  return to_char(p_ts at time zone 'UTC', 'Dy DD Mon, HH24:MI');
+end;
+$$;
+
+-- Meeting proposed → notify the student in their own timezone.
+create or replace function public.notify_on_help_meeting_insert()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  counsellor_name text;
+  student_tz text;
+begin
+  counsellor_name := coalesce(public.profile_display_name(new.counsellor_profile_id, null), 'Your counsellor');
+  select time_zone into student_tz
+  from student_personal_information
+  where profile_id = new.student_profile_id;
+
+  insert into notifications (profile_id, kind, title, body, href, audience)
+  values (
+    new.student_profile_id,
+    'help_meeting_proposed',
+    counsellor_name || ' proposed a meeting',
+    new.title || ' · ' || public.format_meeting_time(new.scheduled_for, student_tz),
+    '/applications?help=' || new.request_id::text,
+    'student'
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_help_meeting_insert_notify on help_meetings;
+create trigger trg_help_meeting_insert_notify
+  after insert on help_meetings
+  for each row
+  execute function public.notify_on_help_meeting_insert();
+
+-- Meeting status change → notify the other side, times in the student's tz.
+-- The meeting time is anchored to the student's local timezone for both
+-- audiences (it is that student's meeting); this is consistent and never shows
+-- raw UTC.
+create or replace function public.notify_on_help_meeting_status()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  actor text;
+  actor_name text;
+  verb text;
+  student_tz text;
+  when_label text;
+begin
+  if new.status is not distinct from old.status then
+    return new;
+  end if;
+
+  actor := coalesce(
+    new.status_changed_by,
+    case when auth.uid() = new.student_profile_id then 'student' else 'counsellor' end
+  );
+  verb := case new.status
+    when 'confirmed' then 'confirmed'
+    when 'cancelled' then 'cancelled'
+    when 'completed' then 'marked complete'
+    else 'updated'
+  end;
+
+  select time_zone into student_tz
+  from student_personal_information
+  where profile_id = new.student_profile_id;
+  when_label := new.title || ' · ' || public.format_meeting_time(new.scheduled_for, student_tz);
+
+  if actor = 'student' then
+    actor_name := coalesce(public.profile_display_name(new.student_profile_id, null), 'A student');
+    insert into notifications (profile_id, kind, title, body, href, audience)
+    select
+      target,
+      'help_meeting_' || new.status,
+      actor_name || ' ' || verb || ' a meeting',
+      when_label,
+      '/counsellor?help=' || new.request_id::text,
+      'counsellor'
+    from public.counsellor_notification_targets() as target;
+  else
+    actor_name := coalesce(public.profile_display_name(new.counsellor_profile_id, null), 'Your counsellor');
+    insert into notifications (profile_id, kind, title, body, href, audience)
+    values (
+      new.student_profile_id,
+      'help_meeting_' || new.status,
+      actor_name || ' ' || verb || ' a meeting',
+      when_label,
+      '/applications?help=' || new.request_id::text,
+      'student'
+    );
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_help_meeting_status_notify on help_meetings;
+create trigger trg_help_meeting_status_notify
+  after update on help_meetings
+  for each row
+  execute function public.notify_on_help_meeting_status();
+
+-- ── Search filter options ─────────────────────────────────────────────────────
+-- From 20260702130000_search_filter_options_fn.sql: distinct filter options for
+-- the university-search hub, computed in the DB instead of shipping a full
+-- 119k-row scan to the browser. /api/search/filter-options caches it for an hour.
+create or replace function public.search_filter_options()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'countries', (
+      select coalesce(jsonb_agg(v order by v), '[]'::jsonb)
+      from (select distinct country as v from universities
+            where country is not null and country <> '' limit 60) t
+    ),
+    'fields', (
+      select coalesce(jsonb_agg(v order by v), '[]'::jsonb)
+      from (select distinct field as v from programs
+            where field is not null and field <> '' limit 60) t
+    ),
+    'studyLevels', (
+      select coalesce(jsonb_agg(v order by v), '[]'::jsonb)
+      from (select distinct study_level as v from programs
+            where study_level is not null and study_level <> '' limit 30) t
+    ),
+    'levels', (
+      select coalesce(jsonb_agg(v order by v), '[]'::jsonb)
+      from (select distinct level as v from programs
+            where level is not null and level <> '' limit 30) t
+    ),
+    'modes', (
+      select coalesce(jsonb_agg(v order by v), '[]'::jsonb)
+      from (select distinct mode as v from programs
+            where mode is not null and mode <> '' limit 16) t
+    )
+  );
+$$;
+
+grant execute on function public.search_filter_options() to anon, authenticated;
+
+-- =============================================================================
+-- Counsellor university decks + student saved searches
+-- From 20260713150000_counsellor_decks_saved_searches.sql.
+--
+-- Counsellors search the programme catalogue, collect programmes into themed
+-- "decks" (video-game framing: decks of cards with a rarity per programme),
+-- and assign a deck to one or more students. Assigning fires a student-audience
+-- notification via a SECURITY DEFINER trigger (same pattern as the help-system
+-- triggers). Students also get a saved_searches table to persist
+-- university-search filter state across devices.
+-- =============================================================================
+
+create table if not exists counsellor_decks (
+  id uuid primary key default gen_random_uuid(),
+  counsellor_id uuid not null references profiles(id) on delete cascade,
+  name text not null,
+  description text,
+  -- Visual theme for the deck card: emoji badge + accent token, kept loose on
+  -- purpose so the UI can evolve without migrations.
+  theme jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists counsellor_decks_owner_idx
+  on counsellor_decks (counsellor_id, created_at desc);
+
+create table if not exists counsellor_deck_programs (
+  id uuid primary key default gen_random_uuid(),
+  deck_id uuid not null references counsellor_decks(id) on delete cascade,
+  program_id uuid not null references programs(id) on delete cascade,
+  -- Rarity is the game-facing label; fit is the admissions-facing meaning.
+  rarity text not null default 'rare'
+    check (rarity in ('legendary', 'epic', 'rare', 'common')),
+  fit text not null default 'match'
+    check (fit in ('reach', 'match', 'safety')),
+  note text,
+  position integer not null default 0,
+  created_at timestamptz not null default now(),
+  unique (deck_id, program_id)
+);
+
+create index if not exists counsellor_deck_programs_deck_idx
+  on counsellor_deck_programs (deck_id, position);
+
+create table if not exists deck_assignments (
+  id uuid primary key default gen_random_uuid(),
+  deck_id uuid not null references counsellor_decks(id) on delete cascade,
+  student_profile_id uuid not null references profiles(id) on delete cascade,
+  assigned_by uuid references profiles(id) on delete set null,
+  message text,
+  created_at timestamptz not null default now(),
+  unique (deck_id, student_profile_id)
+);
+
+create index if not exists deck_assignments_student_idx
+  on deck_assignments (student_profile_id, created_at desc);
+
+create table if not exists saved_searches (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references profiles(id) on delete cascade,
+  name text not null,
+  query text not null default '',
+  -- Array of { group, value } FilterChip objects (src/lib/university-search/search-params.ts).
+  filters jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  last_used_at timestamptz
+);
+
+create index if not exists saved_searches_owner_idx
+  on saved_searches (profile_id, created_at desc);
+
+alter table counsellor_decks enable row level security;
+alter table counsellor_deck_programs enable row level security;
+alter table deck_assignments enable row level security;
+alter table saved_searches enable row level security;
+
+-- Decks: anyone acting as a counsellor can read the deck library; only the
+-- owner mutates their decks. Students may read decks assigned to them.
+drop policy if exists counsellor_decks_select on counsellor_decks;
+create policy counsellor_decks_select on counsellor_decks
+  for select to authenticated
+  using (
+    (select public.can_act_as_counsellor())
+    or exists (
+      select 1 from deck_assignments da
+      where da.deck_id = counsellor_decks.id
+        and da.student_profile_id = (select auth.uid())
+    )
+  );
+
+drop policy if exists counsellor_decks_insert on counsellor_decks;
+create policy counsellor_decks_insert on counsellor_decks
+  for insert to authenticated
+  with check (
+    (select public.can_act_as_counsellor())
+    and counsellor_id = (select auth.uid())
+  );
+
+drop policy if exists counsellor_decks_update on counsellor_decks;
+create policy counsellor_decks_update on counsellor_decks
+  for update to authenticated
+  using (counsellor_id = (select auth.uid()))
+  with check (counsellor_id = (select auth.uid()));
+
+drop policy if exists counsellor_decks_delete on counsellor_decks;
+create policy counsellor_decks_delete on counsellor_decks
+  for delete to authenticated
+  using (counsellor_id = (select auth.uid()));
+
+-- Deck cards: readable wherever the deck is readable; mutable by the deck owner.
+drop policy if exists counsellor_deck_programs_select on counsellor_deck_programs;
+create policy counsellor_deck_programs_select on counsellor_deck_programs
+  for select to authenticated
+  using (
+    exists (
+      select 1 from counsellor_decks d
+      where d.id = counsellor_deck_programs.deck_id
+        and (
+          (select public.can_act_as_counsellor())
+          or exists (
+            select 1 from deck_assignments da
+            where da.deck_id = d.id
+              and da.student_profile_id = (select auth.uid())
+          )
+        )
+    )
+  );
+
+drop policy if exists counsellor_deck_programs_write on counsellor_deck_programs;
+create policy counsellor_deck_programs_write on counsellor_deck_programs
+  for all to authenticated
+  using (
+    exists (
+      select 1 from counsellor_decks d
+      where d.id = counsellor_deck_programs.deck_id
+        and d.counsellor_id = (select auth.uid())
+    )
+  )
+  with check (
+    exists (
+      select 1 from counsellor_decks d
+      where d.id = counsellor_deck_programs.deck_id
+        and d.counsellor_id = (select auth.uid())
+    )
+  );
+
+-- Assignments: counsellors manage; students read their own.
+drop policy if exists deck_assignments_select on deck_assignments;
+create policy deck_assignments_select on deck_assignments
+  for select to authenticated
+  using (
+    student_profile_id = (select auth.uid())
+    or (select public.can_act_as_counsellor())
+  );
+
+drop policy if exists deck_assignments_write on deck_assignments;
+create policy deck_assignments_write on deck_assignments
+  for all to authenticated
+  using (
+    exists (
+      select 1 from counsellor_decks d
+      where d.id = deck_assignments.deck_id
+        and d.counsellor_id = (select auth.uid())
+    )
+  )
+  with check (
+    exists (
+      select 1 from counsellor_decks d
+      where d.id = deck_assignments.deck_id
+        and d.counsellor_id = (select auth.uid())
+    )
+  );
+
+-- Saved searches: strictly self-service.
+drop policy if exists saved_searches_self on saved_searches;
+create policy saved_searches_self on saved_searches
+  for all to authenticated
+  using (profile_id = (select auth.uid()))
+  with check (profile_id = (select auth.uid()));
+
+-- Assignment → student notification (server-side, like the help triggers).
+create or replace function public.notify_on_deck_assignment_insert()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  deck_name text;
+  card_count integer;
+begin
+  select d.name into deck_name from counsellor_decks d where d.id = new.deck_id;
+  select count(*) into card_count
+    from counsellor_deck_programs p where p.deck_id = new.deck_id;
+
+  insert into notifications (profile_id, kind, title, body, href, audience)
+  values (
+    new.student_profile_id,
+    'deck_assignment',
+    'New quest from your counsellor',
+    coalesce(deck_name, 'A university deck')
+      || ' · ' || card_count || ' universit' || case when card_count = 1 then 'y' else 'ies' end
+      || coalesce(' — ' || nullif(trim(new.message), ''), ''),
+    '/dashboard#counsellor-quests',
+    'student'
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_deck_assignment_notify on deck_assignments;
+create trigger trg_deck_assignment_notify
+  after insert on deck_assignments
+  for each row
+  execute function public.notify_on_deck_assignment_insert();
+
+-- =============================================================================
+-- Not included (one-off backfills / data repairs from migrations):
+--   • 20250214120000_student_intake_profile.sql — drops of the legacy
+--     student_academics / student_preferences / student_aspirations tables and
+--     enum re-creates; a fresh DB starts from the final enums/tables above.
+--   • 20250308120000_normalize_course_catalog.sql — the universities_v2 /
+--     programs_v2 copy-and-rename dance, the cities/universities/programs
+--     INSERT…SELECT backfills from legacy metadata, the FK re-pointing, and the
+--     archive_raw_courses / archive_raw_universities legacy archive tables.
+--     The tables above are already in their final (v2) shape.
+--   • 20260628120000_counsellor_real_data.sql — the `update profiles set
+--     role='counsellor' where role='counselor'` data fix and the dynamic
+--     constraint-drop loop; profiles here uses the named British-spelling
+--     constraint from the start.
+--   • 20260713120000_programs_field_id_idx.sql — the `analyze programs;`
+--     maintenance statement (run it after bulk-loading the catalogue).
+-- =============================================================================

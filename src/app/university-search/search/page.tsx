@@ -17,6 +17,7 @@ import { AnimatedBlobBanner } from '@/components/animated-blob-banner';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { IntelligentSearchBar, Suggestion } from '@/components/university-search/IntelligentSearchBar';
+import { SavedSearchesRow } from '@/components/university-search/saved-searches-row';
 import {
   buildSearchResultsUrl,
   buildSuggestionResultsUrl,
@@ -374,6 +375,8 @@ function UniversitySearchPageInner() {
           </div>
         </div>
       </section>
+
+      <SavedSearchesRow />
 
       <section className="surface-card surface-card--static">
         <div className="flex flex-col gap-2 pb-6">

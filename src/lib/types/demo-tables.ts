@@ -163,3 +163,66 @@ export interface StudentDocumentRow {
   notes: string | null;
   created_at: string;
 }
+
+// ── Tables added in 20260713150000_counsellor_decks_saved_searches.sql ────────
+
+export type DeckCardRarity = 'legendary' | 'epic' | 'rare' | 'common';
+export type DeckCardFit = 'reach' | 'match' | 'safety';
+
+export interface DeckTheme {
+  emoji?: string;
+  accent?: string;
+}
+
+export interface CounsellorDeckRow {
+  id: string;
+  counsellor_id: string;
+  name: string;
+  description: string | null;
+  theme: DeckTheme;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CounsellorDeckInsert = Pick<CounsellorDeckRow, 'counsellor_id' | 'name'> &
+  Partial<Pick<CounsellorDeckRow, 'description' | 'theme'>>;
+
+export interface DeckProgramRow {
+  id: string;
+  deck_id: string;
+  program_id: string;
+  rarity: DeckCardRarity;
+  fit: DeckCardFit;
+  note: string | null;
+  position: number;
+  created_at: string;
+}
+
+export type DeckProgramInsert = Pick<DeckProgramRow, 'deck_id' | 'program_id'> &
+  Partial<Pick<DeckProgramRow, 'rarity' | 'fit' | 'note' | 'position'>>;
+
+export interface DeckAssignmentRow {
+  id: string;
+  deck_id: string;
+  student_profile_id: string;
+  assigned_by: string | null;
+  message: string | null;
+  created_at: string;
+}
+
+export type DeckAssignmentInsert = Pick<DeckAssignmentRow, 'deck_id' | 'student_profile_id'> &
+  Partial<Pick<DeckAssignmentRow, 'assigned_by' | 'message'>>;
+
+export interface SavedSearchRow {
+  id: string;
+  profile_id: string;
+  name: string;
+  query: string;
+  // FilterChip[] from src/lib/university-search/search-params.ts
+  filters: { group: string; value: string }[];
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export type SavedSearchInsert = Pick<SavedSearchRow, 'profile_id' | 'name'> &
+  Partial<Pick<SavedSearchRow, 'query' | 'filters'>>;

@@ -20,6 +20,7 @@ const extractHelpRequestId = (href?: string | null): string | null => {
 const KIND_TONE: Record<string, string> = {
   help_request: 'bg-violet-500/10 text-violet-700 dark:text-violet-300',
   help_accepted: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+  deck_assignment: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
   default: 'bg-sky-500/10 text-sky-700 dark:text-sky-300'
 };
 

@@ -66,8 +66,9 @@ export const TaskListPanel = ({ title, tasks }: TaskListPanelProps) => {
     });
   };
 
+  // Renders bare (no card chrome) — the dashboard hub wraps it in a HubCard.
   return (
-    <div className="surface-card surface-card--static">
+    <div>
       <TaskList title={title} tasks={items} onToggle={handleToggle} disabled={isPending} />
       <AnimatePresence>
         {celebration ? (

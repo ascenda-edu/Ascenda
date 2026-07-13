@@ -3,8 +3,7 @@ import type {
   RequirementRow,
   SandboxApplication
 } from '@/lib/data/student-demo-data';
-
-const COUNSELLOR_FIRST_NAME = 'Sarah';
+import { DEMO_COUNSELLOR } from '@/lib/demo/counsellor';
 
 const CATEGORY_FALLBACK: Record<RequirementCategory, string> = {
   subjects: 'subject planning',
@@ -34,7 +33,7 @@ export const draftMessageForApplication = (
   const subject = `Help with my ${app.university} application`;
 
   const lines = [
-    `Hi ${COUNSELLOR_FIRST_NAME},`,
+    `Hi ${DEMO_COUNSELLOR.firstName},`,
     '',
     `I'm working on my ${app.university} application (${app.program}). ${
       progress > 0 ? `I'm about ${progress}% through the requirements` : "I'm just getting started"

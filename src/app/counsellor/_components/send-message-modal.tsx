@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { useSupabase } from '@/hooks/useSupabase';
 import { insertHelpRequest, insertHelpMessage } from '@/lib/demo/help-request-client';
+import { DEMO_COUNSELLOR } from '@/lib/demo/counsellor';
 
 // Counsellor-initiated message context. Slim by design: the modal just needs
 // who it's going to and an optional reason hint to pre-fill the draft.
@@ -25,8 +26,6 @@ interface SendMessageModalProps {
   reason?: SendMessageReason;
 }
 
-const COUNSELLOR_FIRST_NAME = 'Sarah';
-
 const REASON_LABEL: Record<SendMessageReason, string> = {
   general: 'Touching base',
   portfolio_balance: 'Application list review',
@@ -39,7 +38,7 @@ const draftFor = (
   reason: SendMessageReason
 ): { subject: string; body: string } => {
   const greeting = `Hi ${student.firstName},`;
-  const sign = `\n\nBest,\n${COUNSELLOR_FIRST_NAME}`;
+  const sign = `\n\nBest,\n${DEMO_COUNSELLOR.firstName}`;
 
   switch (reason) {
     case 'portfolio_balance':

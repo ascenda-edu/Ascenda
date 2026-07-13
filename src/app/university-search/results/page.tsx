@@ -7,6 +7,7 @@ import type { MatchTier } from '@/lib/matching/match-tier';
 import { UniversityCard } from '@/components/university-card';
 import { UniversityCardSkeleton } from '@/components/university-card-skeleton';
 import { FilterBar } from '@/components/university-search/FilterBar';
+import { SaveSearchButton } from '@/components/university-search/save-search-button';
 import { cn } from '@/lib/utils';
 import { getBrowserSupabaseClient } from '@/lib/supabase/client';
 import { ProgramSearchResult, tierFromScore } from '@/components/university-search/types';
@@ -759,14 +760,17 @@ export default function UniversitySearchResultsPage() {
               Explore programs tailored to your profile and preferences.
             </p>
           </div>
-          <Button asChild size="sm" variant="outline">
-            <Link
-              href={buildSearchHubUrl(searchQuery, readFiltersFromParams(searchParams))}
-              className="gap-2"
-            >
-              ← Refine in search hub
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <SaveSearchButton query={searchQuery} />
+            <Button asChild size="sm" variant="outline">
+              <Link
+                href={buildSearchHubUrl(searchQuery, readFiltersFromParams(searchParams))}
+                className="gap-2"
+              >
+                ← Refine in search hub
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <FilterBar

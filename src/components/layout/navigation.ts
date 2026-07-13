@@ -13,7 +13,8 @@ import {
   UserCircle,
   Users,
   Target,
-  MessageSquare
+  MessageSquare,
+  Layers
 } from 'lucide-react';
 
 export type NavItem = {
@@ -106,6 +107,13 @@ export const NAV_ITEMS: NavItem[] = [
     matchers: [(pathname) => pathname.startsWith('/counsellor/students')]
   },
   {
+    label: 'Universities',
+    href: '/counsellor/universities',
+    icon: Layers,
+    segment: 'counsellor',
+    matchers: [(pathname) => pathname.startsWith('/counsellor/universities')]
+  },
+  {
     label: 'Analytics',
     href: '/counsellor/analytics',
     icon: BarChart2,
@@ -166,6 +174,7 @@ export const TOOLBOX_SECTION_ITEMS: SectionNavItem[] = [
 export const COUNSELLOR_SECTION_ITEMS: SectionNavItem[] = [
   { label: 'Overview', href: '/counsellor', exact: true },
   { label: 'Students', href: '/counsellor/students' },
+  { label: 'Universities', href: '/counsellor/universities' },
   { label: 'Analytics', href: '/counsellor/analytics' },
   { label: 'Deadlines', href: '/counsellor/deadlines' },
   { label: 'Documents', href: '/counsellor/documents' },
