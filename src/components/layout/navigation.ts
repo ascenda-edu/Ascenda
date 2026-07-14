@@ -24,11 +24,6 @@ export type NavItem = {
   exact?: boolean;
   matchers?: Array<(pathname: string) => boolean>;
   segment: 'home' | 'explore' | 'planner' | 'inbox' | 'scholarships' | 'profile' | 'toolbox' | 'admin' | 'counsellor';
-  // Counsellor IA has 10 sections — too many for the horizontal top bar.
-  // The four marked `primaryNav` surface as top-bar pills (Home / Comms /
-  // People / Insights); the full set still lives in the sidebar. See
-  // `counsellorTopNav()` and the Sidebar, which read this flag differently.
-  primaryNav?: boolean;
 };
 
 export type SectionNavItem = {
@@ -102,23 +97,20 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/counsellor',
     icon: LayoutDashboard,
     segment: 'counsellor',
-    exact: true,
-    primaryNav: true
+    exact: true
   },
   {
     label: 'Inbox',
     href: '/counsellor/inbox',
     icon: Inbox,
-    segment: 'counsellor',
-    primaryNav: true
+    segment: 'counsellor'
   },
   {
     label: 'Students',
     href: '/counsellor/students',
     icon: Users,
     segment: 'counsellor',
-    matchers: [(pathname) => pathname.startsWith('/counsellor/students')],
-    primaryNav: true
+    matchers: [(pathname) => pathname.startsWith('/counsellor/students')]
   },
   {
     label: 'Universities',
@@ -131,8 +123,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Analytics',
     href: '/counsellor/analytics',
     icon: BarChart2,
-    segment: 'counsellor',
-    primaryNav: true
+    segment: 'counsellor'
   },
   {
     label: 'Deadlines',
@@ -222,14 +213,72 @@ export const filterNavByRole = (items: NavItem[], role: string | null | undefine
   );
 };
 
-// The desktop top bar can only fit a handful of horizontal pills. On the
-// counsellor side (10 sections) we surface just the four `primaryNav`
-// destinations there and let the always-present sidebar carry the full set.
-// Everywhere else the top bar keeps its usual role-filtered list.
-export const filterTopNavByRole = (items: NavItem[], role: string | null | undefined, pathname?: string) => {
+// ── Top-bar navigation ────────────────────────────────────────────────────
+// The horizontal top bar can only fit a handful of pills. The counsellor IA
+// has 10 sections, so on that side we collapse related destinations into
+// dropdowns — the full set stays reachable, the bar stays uncrowded and
+// visually consistent with the ~7-item student bar. The sidebar is unchanged
+// (it still lists all 10 flat). Student/admin bars stay a flat link list.
+
+export type TopNavEntry =
+  | { type: 'link'; item: NavItem }
+  | { type: 'group'; label: string; icon: LucideIcon; items: NavItem[] };
+
+// Counsellor top-bar layout, expressed as hrefs into NAV_ITEMS so labels and
+// icons stay defined in one place. Groups appear as dropdowns; bare hrefs as
+// direct links. Reorder / regroup here to reshape the bar.
+type CounsellorTopSpec =
+  | { href: string }
+  | { group: string; icon: LucideIcon; hrefs: string[] };
+
+const COUNSELLOR_TOP_NAV: CounsellorTopSpec[] = [
+  { href: '/counsellor' },
+  { href: '/counsellor/inbox' },
+  { href: '/counsellor/students' },
+  {
+    group: 'Applications',
+    icon: ClipboardCheck,
+    hrefs: [
+      '/counsellor/applications',
+      '/counsellor/deadlines',
+      '/counsellor/documents',
+      '/counsellor/outcomes'
+    ]
+  },
+  {
+    group: 'Insights',
+    icon: BarChart2,
+    hrefs: ['/counsellor/analytics', '/counsellor/universities']
+  },
+  { href: '/counsellor/parents' }
+];
+
+// Build the ordered top-bar entries for the current context. Student/admin get
+// their role-filtered items as flat links; counsellor gets the grouped layout.
+export const getTopNavEntries = (
+  items: NavItem[],
+  role: string | null | undefined,
+  pathname?: string
+): TopNavEntry[] => {
   const filtered = filterNavByRole(items, role, pathname);
-  if (pathname?.startsWith('/counsellor')) {
-    return filtered.filter((item) => item.primaryNav);
+
+  if (!pathname?.startsWith('/counsellor')) {
+    return filtered.map((item) => ({ type: 'link', item }));
   }
-  return filtered;
+
+  const byHref = new Map(filtered.map((item) => [item.href, item]));
+  return COUNSELLOR_TOP_NAV.reduce<TopNavEntry[]>((entries, spec) => {
+    if ('group' in spec) {
+      const groupItems = spec.hrefs
+        .map((href) => byHref.get(href))
+        .filter((item): item is NavItem => Boolean(item));
+      if (groupItems.length > 0) {
+        entries.push({ type: 'group', label: spec.group, icon: spec.icon, items: groupItems });
+      }
+    } else {
+      const item = byHref.get(spec.href);
+      if (item) entries.push({ type: 'link', item });
+    }
+    return entries;
+  }, []);
 };

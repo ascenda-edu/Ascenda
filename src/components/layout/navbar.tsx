@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '../theme/theme-toggle';
-import { filterTopNavByRole, NAV_ITEMS } from './navigation';
+import { getTopNavEntries, NAV_ITEMS } from './navigation';
 import { useUserRole } from '@/hooks/use-user-role';
 import { NavLink } from './nav-link';
+import { NavDropdown } from './nav-dropdown';
 
 import { LogOut } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -21,7 +22,7 @@ export const Navbar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = useSupabase();
-  const navItems = filterTopNavByRole(NAV_ITEMS, role, pathname);
+  const navEntries = getTopNavEntries(NAV_ITEMS, role, pathname);
   const logoSrc = '/Ascenda_Logo-removebg-.png';
   const [scrolled, setScrolled] = useState(false);
 
@@ -65,9 +66,18 @@ export const Navbar = () => {
             <span className="navbar-brand text-base sm:text-lg transition-colors">Ascenda</span>
           </Link>
           <nav className="hidden items-center gap-5 text-xs font-medium text-muted-foreground md:flex">
-            {navItems.map((link) => (
-              <NavLink key={link.href} item={link} />
-            ))}
+            {navEntries.map((entry) =>
+              entry.type === 'group' ? (
+                <NavDropdown
+                  key={entry.label}
+                  label={entry.label}
+                  icon={entry.icon}
+                  items={entry.items}
+                />
+              ) : (
+                <NavLink key={entry.item.href} item={entry.item} />
+              )
+            )}
           </nav>
           <div className="flex items-center gap-2">
             <CommandPaletteTrigger />
