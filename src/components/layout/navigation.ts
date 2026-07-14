@@ -245,11 +245,8 @@ const COUNSELLOR_TOP_NAV: CounsellorTopSpec[] = [
       '/counsellor/outcomes'
     ]
   },
-  {
-    group: 'Insights',
-    icon: BarChart2,
-    hrefs: ['/counsellor/analytics', '/counsellor/universities']
-  },
+  { href: '/counsellor/analytics' },
+  { href: '/counsellor/universities' },
   { href: '/counsellor/parents' }
 ];
 
