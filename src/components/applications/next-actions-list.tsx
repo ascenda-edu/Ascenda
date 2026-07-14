@@ -24,7 +24,10 @@ interface Props {
 
 const urgencyTone = (days: number | null): { dot: string; label: string; labelTone: string } => {
   if (days === null) return { dot: 'bg-muted-foreground/40', label: 'No deadline', labelTone: 'text-muted-foreground' };
-  if (days <= 3) return { dot: 'bg-rose-500', label: `Due in ${days} day${days === 1 ? '' : 's'}`, labelTone: 'text-rose-600 dark:text-rose-400' };
+  if (days < 0) return { dot: 'bg-rose-500', label: `${Math.abs(days)}d overdue`, labelTone: 'text-rose-600 dark:text-rose-400' };
+  if (days === 0) return { dot: 'bg-rose-500', label: 'Due today', labelTone: 'text-rose-600 dark:text-rose-400' };
+  if (days === 1) return { dot: 'bg-rose-500', label: 'Due tomorrow', labelTone: 'text-rose-600 dark:text-rose-400' };
+  if (days <= 3) return { dot: 'bg-rose-500', label: `Due in ${days} days`, labelTone: 'text-rose-600 dark:text-rose-400' };
   if (days <= 7) return { dot: 'bg-amber-500', label: `Due in ${days} days`, labelTone: 'text-amber-600 dark:text-amber-400' };
   return { dot: 'bg-sky-400', label: `Due in ${days} days`, labelTone: 'text-sky-600 dark:text-sky-400' };
 };

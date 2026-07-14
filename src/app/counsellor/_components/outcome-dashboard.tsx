@@ -83,7 +83,7 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
         </div>
         <div>
           <p className="text-sm font-semibold text-foreground">Cohort Acceptance Rate</p>
-          <p className="text-xs text-muted-foreground">{stats.accepted} accepted out of {stats.total - stats.pending} decided applications</p>
+          <p className="text-xs text-muted-foreground">{stats.accepted} accepted out of {stats.total - stats.pending - stats.withdrawn} decided applications</p>
         </div>
       </div>
 
@@ -108,7 +108,11 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
+        <label htmlFor="outcome-dashboard-search" className="sr-only">
+          Search student
+        </label>
         <input
+          id="outcome-dashboard-search"
           type="text"
           placeholder="Search student..."
           value={filterStudent}
@@ -117,6 +121,7 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
         />
         <button
           onClick={() => setFilterResult(null)}
+          aria-pressed={!filterResult}
           className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', !filterResult ? 'bg-primary text-primary-foreground' : 'bg-muted/50 text-muted-foreground hover:bg-muted')}
         >All</button>
         {(['accepted', 'rejected', 'waitlisted', 'pending'] as const).map((r) => {
@@ -125,6 +130,7 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
             <button
               key={r}
               onClick={() => setFilterResult(filterResult === r ? null : r)}
+              aria-pressed={filterResult === r}
               className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', filterResult === r ? 'bg-primary text-primary-foreground' : 'bg-muted/50 text-muted-foreground hover:bg-muted')}
             >{cfg.label}</button>
           );
@@ -136,12 +142,12 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left py-2 pr-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Student</th>
-              <th className="text-left py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">University</th>
-              <th className="text-left py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Programme</th>
-              <th className="text-center py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Result</th>
-              <th className="text-center py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tier</th>
-              <th className="text-left py-2 pl-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Date</th>
+              <th scope="col" className="text-left py-2 pr-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Student</th>
+              <th scope="col" className="text-left py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">University</th>
+              <th scope="col" className="text-left py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Programme</th>
+              <th scope="col" className="text-center py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Result</th>
+              <th scope="col" className="text-center py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tier</th>
+              <th scope="col" className="text-left py-2 pl-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Date</th>
             </tr>
           </thead>
           <tbody>

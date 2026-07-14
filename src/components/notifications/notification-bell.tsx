@@ -17,6 +17,13 @@ const extractHelpRequestId = (href?: string | null): string | null => {
   return match?.[1] ?? null;
 };
 
+// Only navigate to relative in-app paths. Under the demo's open RLS any user can
+// write a notification row, so an attacker could inject an external/junk href
+// (phishing). A safe href must be a root-relative path ('/foo') and not a
+// protocol-relative one ('//evil.com', which the browser treats as external).
+const isSafeHref = (href?: string | null): href is string =>
+  !!href && href.startsWith('/') && !href.startsWith('//');
+
 const KIND_TONE: Record<string, string> = {
   help_request: 'bg-violet-500/10 text-violet-700 dark:text-violet-300',
   help_accepted: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
@@ -184,7 +191,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
                     const helpId = extractHelpRequestId(notif.href);
                     return (
                       <li key={notif.id}>
-                        {notif.href && !helpId ? (
+                        {isSafeHref(notif.href) && !helpId ? (
                           <Link href={notif.href} onClick={() => handleItemClick(notif)}>
                             {content}
                           </Link>

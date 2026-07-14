@@ -6,8 +6,10 @@ import {
   PieChart, BarChart2, TrendingUp, CheckCircle, Target, Users
 } from 'lucide-react';
 import { PageHero } from '@/components/layout/page-hero';
+import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
 import type { CohortStats } from '@/lib/counsellor/data';
+import { STAGE_COLORS } from '@/lib/counsellor/stage-colors';
 import {
   ProgrammeSplit,
   IbDistribution,
@@ -161,11 +163,13 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         });
       }
     });
+    // Share the single stage-colour source so the funnel accent matches the
+    // Applications view. Keyed by funnel-stage name → ApplicationStatus.
     const stageColors: Record<string, string> = {
-      planning: 'bg-muted-foreground',
-      inProgress: 'bg-sky-500',
-      submitted: 'bg-violet-500',
-      decision: 'bg-emerald-500'
+      planning: STAGE_COLORS.planning.accent,
+      inProgress: STAGE_COLORS.in_progress.accent,
+      submitted: STAGE_COLORS.submitted.accent,
+      decision: STAGE_COLORS.decision.accent
     };
     const totalAppsAtStage = items.reduce((a, item) => a + item.student.applications.filter((app) => app.status === statusKey).length, 0);
     setDrilldown({
@@ -293,19 +297,18 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         break;
       }
       case 'deadlines_week': {
-        const now = new Date();
-        const weekFromNow = new Date(now);
-        weekFromNow.setDate(weekFromNow.getDate() + 7);
+        // Match the "deadlines this week" tile: daysUntil 0–7, parsed as LOCAL
+        // dates (see lib/utils/dates.ts), same window as deriveCohortStats.
         const items: DrilldownItem[] = [];
         students.forEach((s) => {
           const urgentDeadlines = s.deadlines.filter((d) => {
-            const dd = new Date(d.date);
-            return dd >= now && dd <= weekFromNow;
+            const du = daysUntil(d.date);
+            return du >= 0 && du <= 7;
           });
           if (urgentDeadlines.length > 0) {
             items.push({
               student: s,
-              detail: urgentDeadlines.map((d) => `${d.university} — ${new Date(d.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`).join(' · '),
+              detail: urgentDeadlines.map((d) => `${d.university} — ${parseLocalDate(d.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`).join(' · '),
               badge: { label: `${urgentDeadlines.length} due`, color: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300' }
             });
           }
@@ -414,7 +417,6 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
     <div className="space-y-6">
       <PageHero
         eyebrow="Counsellor"
-        accent="Analytics"
         highlight="Deep dive"
         title="Cohort analytics"
         description="Drill into trends, cohorts, and outcomes across your roster. Use Overview for daily triage."

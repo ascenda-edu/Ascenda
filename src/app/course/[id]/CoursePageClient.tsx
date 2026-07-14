@@ -499,11 +499,12 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
     priority: number;
   };
 
-  const backHref = useMemo(() => {
+  const { backHref, backLabel } = useMemo(() => {
     const from = searchParams.get('from');
-    if (from === 'search') return '/university-search/results';
-    if (from === 'university') return '/university-search/search';
-    return '/dashboard';
+    if (from === 'search') return { backHref: '/university-search/results', backLabel: 'Back to results' };
+    if (from === 'university') return { backHref: '/university-search/search', backLabel: 'Back to search' };
+    if (from === 'quests') return { backHref: '/university-search/quests', backLabel: 'Back to quests' };
+    return { backHref: '/dashboard', backLabel: 'Back' };
   }, [searchParams]);
 
   const moduleItems = useMemo(() => extractBulletItems(course?.modules), [course?.modules]);
@@ -797,7 +798,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
               <Button asChild variant="ghost" size="sm" className="-ml-2 text-muted-foreground hover:text-foreground">
                 <Link href={backHref}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to results
+                  {backLabel}
                 </Link>
               </Button>
             </div>

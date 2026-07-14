@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
+import { Upload, FileText, FileEdit, Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useSupabase } from '@/hooks/useSupabase';
@@ -58,6 +59,8 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }
 
     if (!onUpload) {
       setIsUploading(true);
+      // Start a fresh list per batch — otherwise successive uploads pile up.
+      setUploaded([]);
       setStatus(`Uploading ${files.length} file${files.length > 1 ? 's' : ''}…`);
 
       try {
@@ -151,6 +154,9 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }
   const handleDragLeave = (event: React.DragEvent) => {
     event.preventDefault();
     event.stopPropagation();
+    // Ignore dragleave events fired while moving between child elements inside
+    // the drop zone — only clear when the pointer actually leaves the zone.
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
     setIsDragActive(false);
   };
 
@@ -179,7 +185,7 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }
             : 'border-border bg-muted/60 hover:border-muted-foreground hover:bg-card'
         }`}
       >
-        <span className="text-2xl">⬆️</span>
+        <Upload className="h-6 w-6 text-muted-foreground" aria-hidden />
         <p className="text-sm font-semibold text-foreground">
           {isDragActive ? 'Drop files to upload' : 'Drag & drop or click to browse'}
         </p>
@@ -198,7 +204,7 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }
         {status ?? 'No document selected yet.'}
       </p>
       {error ? (
-        <p className="text-xs text-red-500" role="alert">
+        <p className="text-xs text-rose-600 dark:text-rose-400" role="alert">
           {error}
         </p>
       ) : null}
@@ -206,11 +212,11 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }
         <ul className="space-y-2 text-xs text-muted-foreground">
           {uploaded.map((item) => {
             const ext = item.name.split('.').pop()?.toLowerCase() ?? '';
-            const icon = ext === 'pdf' ? '📄' : ext === 'doc' || ext === 'docx' ? '📝' : '📁';
+            const Icon = ext === 'pdf' ? FileText : ext === 'doc' || ext === 'docx' ? FileEdit : Folder;
             return (
               <li key={`${item.name}-${item.url ?? 'local'}`} className="flex items-center justify-between gap-3 rounded-2xl border border-border px-3 py-2">
                 <span className="flex items-center gap-2 truncate font-medium">
-                  <span aria-hidden>{icon}</span>
+                  <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
                   <span className="truncate">{item.name}</span>
                 </span>
               {item.url ? (
@@ -235,14 +241,10 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }
           disabled={isUploading}
           onClick={() => fileInputRef.current?.click()}
         >
-          {isUploading ? 'Uploading…' : 'Upload to Supabase'}
+          {isUploading ? 'Uploading…' : 'Upload files'}
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => trackEvent('document_drive_connect_clicked')}
-        >
-          Connect Google Drive
+        <Button type="button" variant="ghost" disabled title="Coming soon">
+          Google Drive · coming soon
         </Button>
       </div>
     </div>

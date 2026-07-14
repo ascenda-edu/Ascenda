@@ -37,7 +37,8 @@ export async function POST(request: NextRequest) {
     .eq('program_id', programId)
     .limit(1);
   if (existingError) {
-    return NextResponse.json({ error: existingError.message }, { status: 400 });
+    console.error('[applications/track] lookup failed', existingError);
+    return NextResponse.json({ error: 'Could not start tracking this programme' }, { status: 400 });
   }
   if (existing && existing.length > 0) {
     return NextResponse.json({ status: 'exists', applicationId: existing[0].id });
@@ -53,7 +54,8 @@ export async function POST(request: NextRequest) {
     if (error.code === '23503') {
       return NextResponse.json({ error: 'Programme not found' }, { status: 404 });
     }
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    console.error('[applications/track] insert failed', error);
+    return NextResponse.json({ error: 'Could not start tracking this programme' }, { status: 400 });
   }
 
   return NextResponse.json({ status: 'created', applicationId: data.id });

@@ -98,7 +98,6 @@ export default async function ScholarshipsPage() {
         title="Find money for school"
         description="Filter by country, level, and award size. Save the ones worth chasing and we'll add them to your plan."
         highlight={usingLiveData ? 'Live listings' : 'Sample listings'}
-        accent="For you"
         stats={heroStats}
         breadcrumbs={<Breadcrumbs />}
       />

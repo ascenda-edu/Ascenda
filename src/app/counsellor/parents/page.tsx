@@ -20,7 +20,6 @@ export default async function CounsellorParentsPage() {
     <div className="space-y-6">
       <PageHero
         eyebrow="Counsellor"
-        accent="Comms"
         title="Parent communication"
         description="Counsellor-parent messaging with templates for common updates."
         stats={[

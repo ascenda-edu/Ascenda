@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useSupabase } from '@/hooks/useSupabase';
 import { insertHelpRequest } from '@/lib/demo/help-request-client';
+import { DEMO_COUNSELLOR } from '@/lib/demo/counsellor';
 
 type TopicTone = 'sky' | 'violet' | 'rose' | 'emerald';
 const TOPIC_TONE: Record<TopicTone, { swatch: string; activeBorder: string; text: string; chip: string }> = {
@@ -67,6 +68,11 @@ export default function AppointmentPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Earliest bookable date as a LOCAL 'YYYY-MM-DD' string. `toISOString()` would
+  // emit the UTC date, which rolls a day early/late either side of midnight.
+  const today = new Date();
+  const minDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!date || !time || submitting) return;
@@ -117,11 +123,10 @@ export default function AppointmentPage() {
           tone="student"
           eyebrow="Your counsellor"
           title="Request sent"
-          description="Your request is now in Sarah's queue. She'll reply in your inbox to confirm the time."
+          description={`Your request is now in ${DEMO_COUNSELLOR.firstName}'s queue. She'll reply in your inbox to confirm the time.`}
           highlight="Pending confirmation"
-          accent="On its way"
           stats={[
-            { label: 'Counsellor', value: 'Sarah Mitchell', detail: 'Your assigned counsellor' },
+            { label: 'Counsellor', value: DEMO_COUNSELLOR.fullName, detail: 'Your assigned counsellor' },
             { label: 'When', value: `${date} ${time}`, detail: duration },
             { label: 'Topic', value: TOPICS.find((t) => t.id === topic)?.label ?? 'General', detail: 'Selected focus' }
           ]}
@@ -143,9 +148,9 @@ export default function AppointmentPage() {
               <Check className="h-5 w-5" />
             </div>
             <div className="space-y-2">
-              <p className="text-base font-semibold text-foreground">Got it — Sarah has your request</p>
+              <p className="text-base font-semibold text-foreground">Got it — {DEMO_COUNSELLOR.firstName} has your request</p>
               <p className="text-sm text-muted-foreground">
-                We&apos;ve sent your preferred time to Sarah. Her reply will appear in your{' '}
+                We&apos;ve sent your preferred time to {DEMO_COUNSELLOR.firstName}. Her reply will appear in your{' '}
                 <Link href="/inbox" className="font-semibold text-primary hover:underline">
                   inbox
                 </Link>{' '}
@@ -167,12 +172,11 @@ export default function AppointmentPage() {
       <PageHero
         tone="student"
         eyebrow="Your counsellor"
-        title="Book a chat with Sarah"
-        description="Pick a topic and a time that works for you. Sarah will confirm by email — usually within a day."
-        highlight="Sarah Mitchell · replies within a day"
-        accent="Book a slot"
+        title={`Book a chat with ${DEMO_COUNSELLOR.firstName}`}
+        description={`Pick a topic and a time that works for you. ${DEMO_COUNSELLOR.firstName} will confirm by email — usually within a day.`}
+        highlight={`${DEMO_COUNSELLOR.fullName} · replies within a day`}
         stats={[
-          { label: 'Counsellor', value: 'Sarah Mitchell', detail: 'Your assigned counsellor' },
+          { label: 'Counsellor', value: DEMO_COUNSELLOR.fullName, detail: 'Your assigned counsellor' },
           { label: 'Channel', value: 'Video / In-person', detail: 'Choose at the meeting' },
           { label: 'Slots', value: 'Mon–Fri', detail: '09:00–17:00 local time' }
         ]}
@@ -227,7 +231,7 @@ export default function AppointmentPage() {
                 value={date}
                 onChange={(event) => setDate(event.target.value)}
                 required
-                min={new Date().toISOString().slice(0, 10)}
+                min={minDate}
                 className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </label>
@@ -294,7 +298,7 @@ export default function AppointmentPage() {
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
-            <Mail className="mr-1 inline h-3 w-3" /> Sarah will confirm in your inbox.
+            <Mail className="mr-1 inline h-3 w-3" /> {DEMO_COUNSELLOR.firstName} will confirm in your inbox.
           </p>
           <div className="flex items-center gap-2">
             {(!date || !time) && (

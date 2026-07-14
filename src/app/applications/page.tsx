@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ClipboardCheck } from 'lucide-react';
 import { NextActionsList, type NextActionItem } from '@/components/applications/next-actions-list';
 import { ApplicationList, type ApplicationRow } from '@/components/applications/application-list';
+import { daysUntil } from '@/lib/utils/dates';
 
 export const metadata: Metadata = {
   title: 'Applications'
@@ -100,7 +101,6 @@ export default async function ApplicationsPage() {
           title="Let's get your first one in motion"
           description="Pick a program from your shortlist and we'll set up the tasks, deadlines, and docs for you."
           highlight="Nothing tracked yet"
-          accent="Ready when you are"
           stats={[
             { label: 'Applications', value: '0', detail: 'Tracked' },
             { label: 'Deadlines', value: '—', detail: 'Awaiting programs' },
@@ -147,13 +147,11 @@ export default async function ApplicationsPage() {
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────
-  const now = Date.now();
-  const ONE_DAY = 1000 * 60 * 60 * 24;
-  const daysFromNow = (iso?: string | null): number | null => {
-    if (!iso) return null;
-    const ts = Date.parse(iso);
-    if (Number.isNaN(ts)) return null;
-    return Math.ceil((ts - now) / ONE_DAY);
+  // deadline_date / due_date are date-only strings — parse them as LOCAL dates
+  // so a deadline due today reads as 0 days, not shifted by the UTC offset.
+  const daysFromNow = (value?: string | null): number | null => {
+    if (!value) return null;
+    return daysUntil(value);
   };
 
   // ─── Build next-actions ────────────────────────────────────────────────
@@ -237,7 +235,6 @@ export default async function ApplicationsPage() {
       <PageHero
         tone="student"
         eyebrow="Your applications"
-        accent="Today"
         title="Where everything's at"
         description="The most urgent thing first, then everything you're tracking."
         highlight={highlight}

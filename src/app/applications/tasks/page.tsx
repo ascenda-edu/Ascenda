@@ -92,7 +92,6 @@ export default async function TasksPage() {
         eyebrow="Tasks"
         title="Everything still to do"
         description="Action items across all your applications. Mark them off as you go — changes save to your applications."
-        accent="Action board"
         breadcrumbs={<Breadcrumbs />}
       />
       {applicationOptions.length === 0 ? (

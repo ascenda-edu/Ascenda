@@ -5,15 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutGrid, List, ChevronRight, Filter } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { parseLocalDate } from '@/lib/utils/dates';
 import { stagger, cardFade } from '@/lib/motion';
 import type { ApplicationStatus, ApplicationPlatform, EnrichedApplication } from '@/lib/counsellor/types';
-
-const STATUS_CONFIG: Record<ApplicationStatus, { label: string; color: string; bg: string; border: string }> = {
-  planning: { label: 'Planning', color: 'text-sky-600', bg: 'bg-sky-500/10', border: 'border-l-sky-500' },
-  in_progress: { label: 'In Progress', color: 'text-amber-600', bg: 'bg-amber-500/10', border: 'border-l-amber-500' },
-  submitted: { label: 'Submitted', color: 'text-emerald-600', bg: 'bg-emerald-500/10', border: 'border-l-emerald-500' },
-  decision: { label: 'Decision', color: 'text-violet-600', bg: 'bg-violet-500/10', border: 'border-l-violet-500' },
-};
+import { STAGE_COLORS } from '@/lib/counsellor/stage-colors';
 
 const PLATFORM_COLORS: Record<string, string> = {
   UCAS: 'bg-primary/10 text-primary',
@@ -93,15 +88,19 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex gap-1 surface-subcard p-1 rounded-xl">
-          <button onClick={() => setView('kanban')} className={cn('rounded-lg px-3 py-1 text-xs font-medium transition-colors', view === 'kanban' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}>
+          <button onClick={() => setView('kanban')} aria-pressed={view === 'kanban'} className={cn('rounded-lg px-3 py-1 text-xs font-medium transition-colors', view === 'kanban' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}>
             <LayoutGrid className="h-3.5 w-3.5 inline mr-1" /> Kanban
           </button>
-          <button onClick={() => setView('list')} className={cn('rounded-lg px-3 py-1 text-xs font-medium transition-colors', view === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}>
+          <button onClick={() => setView('list')} aria-pressed={view === 'list'} className={cn('rounded-lg px-3 py-1 text-xs font-medium transition-colors', view === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}>
             <List className="h-3.5 w-3.5 inline mr-1" /> List
           </button>
         </div>
 
+        <label htmlFor="application-overview-search" className="sr-only">
+          Search by student name
+        </label>
         <input
+          id="application-overview-search"
           type="text"
           placeholder="Search student..."
           value={searchStudent}
@@ -113,6 +112,7 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
           <button
             key={p}
             onClick={() => setFilterPlatform(filterPlatform === p ? null : p)}
+            aria-pressed={filterPlatform === p}
             className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', filterPlatform === p ? 'bg-primary text-primary-foreground' : 'bg-muted/50 text-muted-foreground hover:bg-muted')}
           >{p}</button>
         ))}
@@ -122,13 +122,13 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
       {view === 'kanban' && (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {STATUSES.map((status) => {
-            const cfg = STATUS_CONFIG[status];
+            const cfg = STAGE_COLORS[status];
             const studentGroups = kanbanByStudent[status];
             return (
               <div key={status} className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <h3 className={cn('text-sm font-semibold', cfg.color)}>{cfg.label}</h3>
-                  <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold', cfg.bg, cfg.color)}>
+                  <h3 className={cn('text-sm font-semibold', cfg.text)}>{cfg.label}</h3>
+                  <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold', cfg.bg, cfg.text)}>
                     {studentGroups.length} student{studentGroups.length !== 1 ? 's' : ''}
                   </span>
                 </div>
@@ -137,17 +137,17 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
                     <motion.div key={studentId} variants={cardFade}>
                       <Link
                         href={`/counsellor/students/${studentId}`}
-                        className={cn('block surface-subcard p-3 border-l-4 transition-colors hover:bg-muted/30 group', cfg.border)}
+                        className={cn('block surface-subcard p-3 border-l-4 transition-colors hover:bg-muted/30 group', cfg.borderLeft)}
                       >
                         <div className="flex items-start justify-between">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-sm">{flagEmoji}</span>
+                              <span className="text-sm" role="img" aria-label={`${studentName}'s flag`}>{flagEmoji}</span>
                               <span className="text-sm font-semibold text-foreground truncate">{studentName}</span>
                             </div>
                             <div className="mt-1.5 space-y-0.5">
                               {apps.map((app) => (
-                                <div key={app.university} className="flex items-center gap-1.5 text-[11px]">
+                                <div key={`${app.university}-${app.program}`} className="flex items-center gap-1.5 text-[11px]">
                                   <span className="truncate text-muted-foreground">{app.university}</span>
                                   <span className={cn('shrink-0 rounded-full px-1.5 py-0 text-[9px] font-semibold', PLATFORM_COLORS[app.platform] ?? 'bg-muted/50 text-muted-foreground')}>{app.platform}</span>
                                 </div>
@@ -178,22 +178,22 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left py-2 pr-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Student</th>
-                <th className="text-left py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">University</th>
-                <th className="text-left py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Programme</th>
-                <th className="text-center py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Platform</th>
-                <th className="text-center py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Status</th>
-                <th className="text-left py-2 pl-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Deadline</th>
+                <th scope="col" className="text-left py-2 pr-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Student</th>
+                <th scope="col" className="text-left py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">University</th>
+                <th scope="col" className="text-left py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Programme</th>
+                <th scope="col" className="text-center py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Platform</th>
+                <th scope="col" className="text-center py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Status</th>
+                <th scope="col" className="text-left py-2 pl-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Deadline</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((app) => {
-                const cfg = STATUS_CONFIG[app.status];
+                const cfg = STAGE_COLORS[app.status];
                 return (
-                  <tr key={`${app.studentId}-${app.university}`} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
+                  <tr key={`${app.studentId}-${app.university}-${app.program}`} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                     <td className="py-2.5 pr-3">
                       <Link href={`/counsellor/students/${app.studentId}`} className="font-medium text-foreground hover:text-primary">
-                        {app.flagEmoji} {app.studentName}
+                        <span role="img" aria-label={`${app.studentName}'s flag`}>{app.flagEmoji}</span> {app.studentName}
                       </Link>
                     </td>
                     <td className="py-2.5 px-3 text-muted-foreground">{app.university}</td>
@@ -202,9 +202,9 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
                       <span className={cn('rounded-full px-2.5 py-0.5 text-[10px] font-semibold', PLATFORM_COLORS[app.platform] ?? 'bg-muted/50 text-muted-foreground')}>{app.platform}</span>
                     </td>
                     <td className="py-2.5 px-3 text-center">
-                      <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold', cfg.bg, cfg.color)}>{cfg.label}</span>
+                      <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold', cfg.bg, cfg.text)}>{cfg.label}</span>
                     </td>
-                    <td className="py-2.5 pl-3 text-xs text-muted-foreground">{dateFormatter.format(new Date(app.deadline))}</td>
+                    <td className="py-2.5 pl-3 text-xs text-muted-foreground">{dateFormatter.format(parseLocalDate(app.deadline))}</td>
                   </tr>
                 );
               })}

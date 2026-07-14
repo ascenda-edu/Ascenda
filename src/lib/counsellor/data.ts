@@ -840,7 +840,9 @@ export const deriveOutcomeStats = (outcomes: CounsellorOutcome[]): OutcomeStats 
   const waitlisted = outcomes.filter((o) => o.result === 'waitlisted').length;
   const pending = outcomes.filter((o) => o.result === 'pending').length;
   const withdrawn = outcomes.filter((o) => o.result === 'withdrawn').length;
-  const decided = total - pending;
+  // "Decided" = accepted + rejected + waitlisted. Withdrawn applications never
+  // reached a decision, so they don't belong in the acceptance-rate denominator.
+  const decided = total - pending - withdrawn;
   return {
     total, accepted, rejected, waitlisted, pending, withdrawn,
     acceptanceRate: decided > 0 ? Math.round((accepted / decided) * 100) : 0,

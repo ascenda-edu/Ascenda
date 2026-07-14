@@ -64,6 +64,8 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
   const [decks, setDecks] = useState<CounsellorDeck[]>(initialDecks);
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(initialDecks[0]?.id ?? null);
   const selectedDeck = decks.find((d) => d.id === selectedDeckId) ?? null;
+  const [deckPendingDelete, setDeckPendingDelete] = useState<CounsellorDeck | null>(null);
+  const [isDeletingDeck, setIsDeletingDeck] = useState(false);
 
   // ── search state ────────────────────────────────────────────────────────────
   const [query, setQuery] = useState('');
@@ -248,18 +250,23 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
     }
   };
 
-  const deleteDeck = async (deck: CounsellorDeck) => {
-    if (!window.confirm(`Delete deck "${deck.name}"? Students assigned to it will lose the quest.`)) return;
+  const confirmDeleteDeck = async () => {
+    const deck = deckPendingDelete;
+    if (!deck || isDeletingDeck) return;
+    setIsDeletingDeck(true);
     const res = await fetch(`/api/counsellor/decks?id=${deck.id}`, { method: 'DELETE' });
     if (!res.ok) {
       const data = await res.json().catch(() => null);
       showToast({ title: 'Could not delete deck', description: data?.error, variant: 'error' });
+      setIsDeletingDeck(false);
       return;
     }
     const next = decks.filter((d) => d.id !== deck.id);
     setDecks(next);
     if (selectedDeckId === deck.id) setSelectedDeckId(next[0]?.id ?? null);
     showToast({ title: `Deck "${deck.name}" deleted`, variant: 'info' });
+    setIsDeletingDeck(false);
+    setDeckPendingDelete(null);
   };
 
   const patchCard = useCallback(
@@ -470,7 +477,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
               <Loader2 className="h-4 w-4 animate-spin" /> Searching the catalogue…
             </div>
           ) : results.length === 0 ? (
-            <div className="rounded-[24px] border border-dashed border-border bg-muted/40 p-10 text-center">
+            <div className="rounded-[28px] border border-dashed border-border bg-muted/40 p-10 text-center">
               <Sparkles className="mx-auto mb-2 h-5 w-5 text-muted-foreground" />
               <p className="text-sm font-medium text-foreground">
                 {searchFailed
@@ -642,7 +649,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
               </div>
               <button
                 type="button"
-                onClick={() => deleteDeck(selectedDeck)}
+                onClick={() => setDeckPendingDelete(selectedDeck)}
                 aria-label={`Delete deck ${selectedDeck.name}`}
                 className="rounded-full p-2 text-muted-foreground transition hover:bg-rose-500/10 hover:text-rose-600"
               >
@@ -651,7 +658,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
             </div>
 
             {selectedDeck.cards.length === 0 ? (
-              <p className="rounded-[24px] border border-dashed border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+              <p className="rounded-[28px] border border-dashed border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
                 Empty deck — add programmes from the search results.
               </p>
             ) : (
@@ -835,6 +842,56 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                 {isAssigning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 Send quest to {assignSelection.size || 'selected'} student{assignSelection.size === 1 ? '' : 's'}
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Delete deck confirmation — themed, replaces window.confirm ── */}
+      <AnimatePresence>
+        {deckPendingDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+            onClick={() => !isDeletingDeck && setDeckPendingDelete(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Delete deck ${deckPendingDelete.name}`}
+              className="w-full max-w-sm rounded-[28px] border border-border bg-card p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="font-heading text-lg font-bold text-foreground">
+                Delete “{deckPendingDelete.name}”?
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Students assigned to this deck will lose the quest. This can’t be undone.
+              </p>
+              <div className="mt-5 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDeckPendingDelete(null)}
+                  disabled={isDeletingDeck}
+                  className="rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted/60 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteDeck}
+                  disabled={isDeletingDeck}
+                  className="flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-rose-500 disabled:opacity-50"
+                >
+                  {isDeletingDeck ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  Delete deck
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

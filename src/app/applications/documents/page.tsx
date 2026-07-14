@@ -113,7 +113,6 @@ export default async function DocumentsPage() {
         eyebrow="Documents"
         title="Letters, transcripts, the rest"
         description="Keep your recommendation letters, transcripts, and other application docs in one tidy place."
-        accent="Files"
         stats={[
           // Letters intentionally absent: the tracker below is sample data, so a
           // hero "Letters 2/4" stat would misread as the user's real progress.

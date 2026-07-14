@@ -29,12 +29,13 @@ export async function POST() {
       breakdown: scoring.breakdown
     });
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('[recalculate-score] upsert failed', error);
+      return NextResponse.json({ error: 'Could not save your score' }, { status: 500 });
     }
 
     return NextResponse.json({ score: scoring.total_score, band: scoring.student_band, breakdown: scoring.breakdown });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Scoring failed';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('[recalculate-score]', err);
+    return NextResponse.json({ error: 'Scoring failed' }, { status: 500 });
   }
 }

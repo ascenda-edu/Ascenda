@@ -1,7 +1,9 @@
+import type { Metadata } from 'next';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { loadCohort, deriveCohortStats, deriveFieldDistribution } from '@/lib/counsellor/data';
 import { AnalyticsClient } from '../_analytics-client';
 
+export const metadata: Metadata = { title: 'Analytics · Counsellor' };
 export const dynamic = 'force-dynamic';
 
 export default async function CounsellorAnalyticsPage() {

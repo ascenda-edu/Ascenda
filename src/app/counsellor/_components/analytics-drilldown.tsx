@@ -1,11 +1,16 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, GraduationCap, MapPin, ArrowUpRight, Search, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
+
+// Mirrors the focusable-element query in help-thread-drawer.tsx so the modal
+// traps focus with the same semantics as the shared Dialog primitive.
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /* ─── Types ──────────────────────────────────────────────────────────────────── */
 
@@ -38,12 +43,50 @@ interface DrilldownPanelProps {
 export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
 
   // Reset search when modal opens/changes
   useEffect(() => {
     setSearch('');
     setExpanded(null);
   }, [data?.title]);
+
+  // Move focus into the modal on open, restore it to the trigger on close.
+  useEffect(() => {
+    if (data) {
+      previouslyFocused.current = document.activeElement as HTMLElement | null;
+      const node = modalRef.current;
+      const target = node?.querySelector<HTMLElement>(FOCUSABLE) ?? node;
+      target?.focus();
+    } else {
+      previouslyFocused.current?.focus?.();
+    }
+  }, [data]);
+
+  // Trap Tab focus within the modal while it's open.
+  const onTrapKeyDown = (event: ReactKeyboardEvent) => {
+    if (event.key !== 'Tab') return;
+    const node = modalRef.current;
+    if (!node) return;
+    const focusables = Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+      (el) => el.offsetParent !== null
+    );
+    if (focusables.length === 0) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   // Escape to close
   useEffect(() => {
@@ -95,11 +138,17 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
 
           {/* Modal */}
           <motion.div
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={data.title}
+            tabIndex={-1}
+            onKeyDown={onTrapKeyDown}
             initial={{ opacity: 0, scale: 0.96, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
             transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-            className="relative z-10 flex max-h-[min(85vh,720px)] w-full max-w-2xl flex-col overflow-hidden rounded-[24px] border border-border bg-background shadow-[0_24px_80px_rgba(0,0,0,0.15)]"
+            className="relative z-10 flex max-h-[min(85vh,720px)] w-full max-w-2xl flex-col overflow-hidden rounded-[24px] border border-border bg-background shadow-[0_24px_80px_rgba(0,0,0,0.15)] outline-none"
           >
             {/* ── Accent bar ──────────────────────────────────────────────────── */}
             <div className={cn('h-1 w-full', data.accentColor)} />

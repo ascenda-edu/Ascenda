@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, Clock, BookOpen, FileText, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { loadStudentById, loadStudentEvolution } from '@/lib/counsellor/data';
@@ -44,13 +45,12 @@ function getAvgMatchScore(matches: { score: number }[]) {
 }
 
 function getNextDeadlineDays(student: CounsellorStudent) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Date-only strings must be parsed as LOCAL dates (see lib/utils/dates.ts).
   const upcoming = student.deadlines
-    .filter((d) => new Date(d.date) >= today)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .filter((d) => daysUntil(d.date) >= 0)
+    .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
   if (!upcoming[0]) return null;
-  return Math.ceil((new Date(upcoming[0].date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  return daysUntil(upcoming[0].date);
 }
 
 export default async function StudentDetailPage({ params }: Props) {

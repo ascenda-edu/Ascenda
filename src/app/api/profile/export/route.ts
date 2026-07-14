@@ -11,10 +11,14 @@ const stringifyValue = (value: unknown) => {
 };
 
 const escapeCsv = (value: string) => {
-  if (/[",\n]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
+  // Neutralise CSV/spreadsheet formula injection: a cell starting with =, +, -,
+  // or @ is executed as a formula by Excel/Sheets. Prefix it with a single
+  // quote so it's treated as literal text.
+  const guarded = /^[=+\-@]/.test(value) ? `'${value}` : value;
+  if (/[",\n]/.test(guarded)) {
+    return `"${guarded.replace(/"/g, '""')}"`;
   }
-  return value;
+  return guarded;
 };
 
 const buildCsv = (rows: CsvRow[]) => {

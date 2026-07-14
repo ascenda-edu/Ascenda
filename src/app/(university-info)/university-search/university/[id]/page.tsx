@@ -112,7 +112,7 @@ const mapToUniversityData = (program?: ProgramRecord | null, university?: Univer
 
 export default async function UniversityDetailPage({ params, searchParams }: PageProps & { searchParams: { from?: string } }) {
   const supabase = createServerSupabaseClient();
-  const { data: programRecord, error } = await supabase.from('programs').select('*, universities(*)').eq('id', params.id).single();
+  const { data: programRecord, error } = await supabase.from('programs').select('*, universities(*)').eq('id', params.id).maybeSingle();
   const contextSource = searchParams.from === 'course' ? 'course' : searchParams.from === 'search' ? 'search' : 'direct';
 
   if (programRecord) {

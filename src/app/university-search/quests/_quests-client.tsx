@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowUpRight, CheckCircle2, Heart, Scroll, Sparkles, Star, Swords } from 'lucide-react';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
+import { PageHero } from '@/components/layout/page-hero';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
@@ -73,19 +74,14 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
   return (
     <div className="space-y-8 pb-24">
       <header className="space-y-6">
-        <Breadcrumbs className="mb-2" />
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Explore · Quests</p>
-            <h1 className="text-[22px] font-semibold leading-snug text-foreground md:text-[28px]">
-              Quests from your counsellor
-            </h1>
-            <p className="max-w-3xl text-sm text-muted-foreground">
-              Decks your counsellor curated for you. Clear a quest by starting an application — or save it to your
-              shortlist to weigh it against your own picks.
-            </p>
-          </div>
-        </div>
+        <PageHero
+          tone="student"
+          eyebrow="Explore · Quests"
+          title="Quests from your counsellor"
+          description="Decks your counsellor curated for you. Clear a quest by starting an application — or save it to your shortlist to weigh it against your own picks."
+          highlight={decks.length > 0 ? `${totals.cleared}/${totals.quests} cleared` : undefined}
+          breadcrumbs={<Breadcrumbs />}
+        />
 
         {decks.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-3">
@@ -198,7 +194,11 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
                             <Button
                               size="sm"
                               variant="outline"
-                              className={cn('gap-1.5', isShortlisted && 'bg-rose-100 text-rose-700 hover:bg-rose-200')}
+                              className={cn(
+                                'gap-1.5',
+                                isShortlisted &&
+                                  'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20'
+                              )}
                               disabled={isShortlisted}
                               onClick={() => saveToShortlist(quest.programId, quest.courseName, quest.university, quest.country)}
                             >

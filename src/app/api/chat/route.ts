@@ -210,7 +210,7 @@ export async function POST(req: NextRequest) {
         });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.log(`[chat] ${model} failed: ${msg.slice(0, 100)}`);
+        console.warn(`[chat] ${model} failed: ${msg.slice(0, 100)}`);
         continue;
       }
     }

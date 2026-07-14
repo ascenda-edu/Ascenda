@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Inbox, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EmptyState } from '@/components/ui/empty-state';
 import { formatRelativeTime } from '@/lib/utils/dates';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useRealtimePoll } from '@/hooks/use-realtime-poll';
@@ -143,13 +144,11 @@ export function InboxList({ profileId }: InboxListProps) {
 
   if (requests.length === 0) {
     return (
-      <div className="rounded-[28px] border border-dashed border-border bg-muted/40 p-12 text-center">
-        <Inbox className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
-        <p className="font-semibold text-foreground">No messages yet</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          When you raise a help request — or your counsellor reaches out — it’ll land here.
-        </p>
-      </div>
+      <EmptyState
+        icon={Inbox}
+        title="No messages yet"
+        description="When you raise a help request — or your counsellor reaches out — it’ll land here."
+      />
     );
   }
 

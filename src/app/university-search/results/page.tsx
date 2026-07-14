@@ -24,6 +24,9 @@ import type { Database } from '@/lib/types/database';
 
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Button } from '@/components/ui/button';
+import { PageHero } from '@/components/layout/page-hero';
+import { EmptyState } from '@/components/ui/empty-state';
+import { SearchX } from 'lucide-react';
 
 type StudentMatchRow = Database['public']['Tables']['student_matches']['Row'];
 
@@ -120,7 +123,6 @@ export default function UniversitySearchResultsPage() {
   // the filters arriving used to re-fire the whole first-page fetch.
   const allUniversitiesRef = useRef<{ id: string; name: string }[]>([]);
   const [results, setResults] = useState<ProgramSearchResult[]>([]);
-  const [resultCount, setResultCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -417,7 +419,6 @@ export default function UniversitySearchResultsPage() {
             query = query.in('university_id', matchedUniIds);
             // If there are also non-university words (e.g. "oxford economics"), narrow by course name too.
             const skip = new Set(['university', 'college', 'institute', 'school', 'of', 'the', 'and']);
-            const courseWords = words.filter((w) => !skip.has(w) && !matchedUniIds.length);
             // Narrow by course name words that aren't purely university-identifying words
             const matchedIdSet = new Set(matchedUniIds);
             const uniNameWords = (allUniversitiesList.length > 0
@@ -553,7 +554,6 @@ export default function UniversitySearchResultsPage() {
           // So simply:
           const totalFetched = (page * PAGE_SIZE) + pageCount;
           setHasMore(totalFetched < count);
-          setResultCount(count);
         } else {
           setHasMore(pageCount === PAGE_SIZE);
         }
@@ -697,7 +697,6 @@ export default function UniversitySearchResultsPage() {
     setResults([]);
     setPage(0);
     setHasMore(true);
-    setResultCount(0);
     setError(null);
 
     // If there are URL params, clear them to truly reset
@@ -752,26 +751,25 @@ export default function UniversitySearchResultsPage() {
   return (
     <div className="min-h-screen space-y-8 pb-24" >
       <section className="space-y-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="flex flex-col gap-2">
-            <Breadcrumbs className="mb-2" />
-            <h1 className="text-[22px] font-semibold leading-snug tracking-tight text-foreground md:text-[28px]">University matches</h1>
-            <p className="text-muted-foreground">
-              Explore programs tailored to your profile and preferences.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <SaveSearchButton query={searchQuery} />
-            <Button asChild size="sm" variant="outline">
-              <Link
-                href={buildSearchHubUrl(searchQuery, readFiltersFromParams(searchParams))}
-                className="gap-2"
-              >
-                ← Refine in search hub
-              </Link>
-            </Button>
-          </div>
-        </div>
+        <PageHero
+          tone="student"
+          title="University matches"
+          description="Explore programs tailored to your profile and preferences."
+          breadcrumbs={<Breadcrumbs />}
+          actions={
+            <>
+              <SaveSearchButton query={searchQuery} />
+              <Button asChild size="sm" variant="outline">
+                <Link
+                  href={buildSearchHubUrl(searchQuery, readFiltersFromParams(searchParams))}
+                  className="gap-2"
+                >
+                  ← Refine in search hub
+                </Link>
+              </Button>
+            </>
+          }
+        />
 
         <FilterBar
           searchQuery={searchQuery}
@@ -808,36 +806,39 @@ export default function UniversitySearchResultsPage() {
             ))}
           </div>
         ) : error ? (
-          <div className="rounded-[28px] border border-dashed border-red-300 bg-red-50 p-6 text-sm text-red-700">
+          <div
+            role="alert"
+            className="rounded-[28px] border border-dashed border-rose-200/60 bg-rose-500/10 p-6 text-sm text-rose-600 dark:border-rose-500/20 dark:text-rose-400"
+          >
             {error}
           </div>
         ) : filteredResults.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-[28px] border border-dashed border-border bg-muted/30 py-20 text-center">
-            <div className="mb-4 rounded-full bg-muted p-4">
-              <span className="text-4xl">🔍</span>
-            </div>
-            <h3 className="text-lg font-semibold text-foreground">No matches found</h3>
-            <p className="text-muted-foreground">
-              Try adjusting your filters or add one more detail to your profile to unlock matches.
-            </p>
-            <div className="mt-6 flex flex-wrap justify-center gap-2 text-sm font-semibold">
-              <Button asChild size="sm" variant="outline" className="rounded-full px-4">
-                <Link href="/profile/wizard?step=academic_details">Add your grades</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" className="rounded-full px-4">
-                <Link href="/profile/wizard?step=lifestyle_preferences">Set your preferences</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" className="rounded-full px-4">
-                <Link href="/profile/wizard?step=academic_input">Clarify goals & interests</Link>
-              </Button>
-            </div>
-            <button
-              onClick={handleResetFilters}
-              className="mt-4 text-sm font-medium text-primary hover:underline"
-            >
-              Clear all filters
-            </button>
-          </div>
+          <EmptyState
+            icon={SearchX}
+            title="No matches found"
+            description="Try adjusting your filters or add one more detail to your profile to unlock matches."
+            action={
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex flex-wrap justify-center gap-2 text-sm font-semibold">
+                  <Button asChild size="sm" variant="outline" className="rounded-full px-4">
+                    <Link href="/profile/wizard?step=academic_details">Add your grades</Link>
+                  </Button>
+                  <Button asChild size="sm" variant="outline" className="rounded-full px-4">
+                    <Link href="/profile/wizard?step=lifestyle_preferences">Set your preferences</Link>
+                  </Button>
+                  <Button asChild size="sm" variant="outline" className="rounded-full px-4">
+                    <Link href="/profile/wizard?step=academic_input">Clarify goals & interests</Link>
+                  </Button>
+                </div>
+                <button
+                  onClick={handleResetFilters}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Clear all filters
+                </button>
+              </div>
+            }
+          />
         ) : (
           <div
             className={cn(

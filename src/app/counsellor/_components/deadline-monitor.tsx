@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Clock, CalendarDays, AlertTriangle, CheckCircle2, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { parseLocalDate } from '@/lib/utils/dates';
 
 interface DeadlineEntry {
   id: string;
@@ -53,7 +54,7 @@ const URGENCY_CONFIG: Record<UrgencyGroup, { label: string; icon: typeof AlertTr
 };
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  return parseLocalDate(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function urgencyBadge(days: number) {
@@ -95,7 +96,11 @@ export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
     <div className="space-y-5">
       {/* Filter bar */}
       <div className="panel flex flex-col gap-3 rounded-2xl px-4 py-3 sm:flex-row sm:items-center">
+        <label htmlFor="deadline-monitor-search" className="sr-only">
+          Filter by student name
+        </label>
         <input
+          id="deadline-monitor-search"
           type="text"
           placeholder="Filter by student name…"
           value={studentFilter}
@@ -107,6 +112,7 @@ export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
             <button
               key={t}
               onClick={() => setTypeFilter(t)}
+              aria-pressed={typeFilter === t}
               className={cn(
                 'rounded-lg px-3 py-1.5 text-xs font-medium transition',
                 typeFilter === t
@@ -179,7 +185,7 @@ export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
 
                         {/* Student */}
                         <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                          <span>{d.studentFlag}</span>
+                          <span role="img" aria-label={`${d.studentName}'s flag`}>{d.studentFlag}</span>
                           <span className="truncate">{d.studentName}</span>
                         </div>
 

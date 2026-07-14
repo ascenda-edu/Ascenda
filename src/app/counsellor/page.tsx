@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import {
   loadCohort,
@@ -9,6 +10,7 @@ import {
 } from '@/lib/counsellor/data';
 import { DashboardClient } from './_dashboard-client';
 
+export const metadata: Metadata = { title: 'Overview · Counsellor' };
 export const dynamic = 'force-dynamic';
 
 // Re-exported for student-roster.tsx and the students page client, which import

@@ -77,7 +77,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
     saveMatrix(next);
   };
 
-  const avgProgress = Math.round(matrix.reduce((sum, r) => sum + r.progress, 0) / matrix.length);
+  const avgProgress = matrix.length ? Math.round(matrix.reduce((sum, r) => sum + r.progress, 0) / matrix.length) : 0;
   const completedUnis = matrix.filter((r) => r.progress === 100).length;
   const categories: RequirementCategory[] = ['subjects', 'exams', 'interviews', 'documents', 'essays'];
 
@@ -195,6 +195,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                           'mx-auto flex h-9 w-9 items-center justify-center rounded-xl transition-all hover:scale-110 hover:shadow-md',
                           cfg.bg
                         )}
+                        aria-label={`${row.university} — ${CATEGORY_LABELS[cell.category]}: ${cfg.label}. Click to change status.`}
                         title={`${CATEGORY_LABELS[cell.category]}: ${cfg.label}${cell.detail ? ` — ${cell.detail}` : ''}. Click to change.`}
                       >
                         <Icon className={cn('h-4 w-4', cfg.color)} />
@@ -282,6 +283,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                           key={cell.category}
                           onClick={(e) => { e.stopPropagation(); cycleStatus(row.id, cell.category); }}
                           className={cn('flex h-8 w-8 items-center justify-center rounded-lg transition-all hover:scale-110', cfg.bg)}
+                          aria-label={`${CATEGORY_LABELS[cell.category]}: ${cfg.label}. Click to change status.`}
                           title={`${CATEGORY_LABELS[cell.category]}: ${cfg.label}`}
                         >
                           <Icon className={cn('h-3.5 w-3.5', cfg.color)} />
@@ -301,6 +303,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                             <div key={cell.category} className="flex items-start gap-3">
                               <button
                                 onClick={() => cycleStatus(row.id, cell.category)}
+                                aria-label={`${CATEGORY_LABELS[cell.category]}: ${cfg.label}. Click to change status.`}
                                 className={cn('flex h-6 w-6 items-center justify-center rounded-md shrink-0', cfg.bg)}
                               >
                                 {(() => { const Icon = cfg.icon; return <Icon className={cn('h-3 w-3', cfg.color)} />; })()}

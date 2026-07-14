@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { AlertTriangle, Clock, CheckCircle2, BookOpen, Eye, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
 import { MessageStudentButton } from './message-student-button';
 
@@ -36,7 +37,7 @@ const FLAG_LABELS: Record<string, string> = {
 };
 
 function getInitials(first: string, last: string) {
-  return `${first[0]}${last[0]}`.toUpperCase();
+  return `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase() || '–';
 }
 
 const AVATAR_PALETTE = [
@@ -61,11 +62,10 @@ function getCompletionColor(pct: number) {
 }
 
 function getNextDeadline(student: CounsellorStudent) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Date-only strings must be parsed as LOCAL dates (see lib/utils/dates.ts).
   const upcoming = student.deadlines
-    .filter((d) => new Date(d.date) >= today)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .filter((d) => daysUntil(d.date) >= 0)
+    .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
   return upcoming[0] ?? null;
 }
 
@@ -103,10 +103,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
     Safe: student.matches.filter((m) => m.tier === 'Safe').length
   };
 
-  const todayMs = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); })();
-  const daysUntil = nextDeadline
-    ? Math.ceil((new Date(nextDeadline.date).getTime() - todayMs) / (1000 * 60 * 60 * 24))
-    : null;
+  const daysLeft = nextDeadline ? daysUntil(nextDeadline.date) : null;
 
   return (
     <div className="group surface-card surface-card--static relative flex flex-col gap-4 transition-all hover:-translate-y-1 hover:shadow-floating">
@@ -225,11 +222,11 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
       {/* Footer: next deadline */}
       <div className="relative z-10 border-t border-border/60 pt-3">
         {nextDeadline ? (
-          <div className={cn('flex items-center gap-2 text-xs', daysUntil !== null && daysUntil <= 7 ? 'text-red-500' : 'text-muted-foreground')}>
+          <div className={cn('flex items-center gap-2 text-xs', daysLeft !== null && daysLeft <= 7 ? 'text-red-500' : 'text-muted-foreground')}>
             <Clock className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">
-              {daysUntil !== null && daysUntil <= 0 ? 'Overdue: ' : daysUntil !== null && daysUntil <= 7 ? `${daysUntil}d: ` : ''}
-              {nextDeadline.university} · {new Date(nextDeadline.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+              {daysLeft !== null && daysLeft <= 0 ? 'Overdue: ' : daysLeft !== null && daysLeft <= 7 ? `${daysLeft}d: ` : ''}
+              {nextDeadline.university} · {parseLocalDate(nextDeadline.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
             </span>
           </div>
         ) : (

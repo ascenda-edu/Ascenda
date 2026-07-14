@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Clock, CalendarDays, Pin, PinOff, EyeOff, Eye, Settings2, ChevronDown } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { parseLocalDate } from '@/lib/utils/dates';
 
 interface DeadlineItem {
   id: string;
@@ -36,7 +37,7 @@ function urgencyClass(days: number) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return parseLocalDate(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
 function getStudents(deadlines: DeadlineItem[]) {

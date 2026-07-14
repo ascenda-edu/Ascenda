@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CalendarClock, Filter, LayoutGrid, List, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import { stagger, cardFade } from '@/lib/motion';
 import type { TimelineDeadline, TimelineDeadlineType } from '@/lib/data/student-demo-data';
 
@@ -18,12 +19,11 @@ const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 
 const monthFormatter = new Intl.DateTimeFormat('en-GB', { month: 'short', year: 'numeric' });
 const dayOfWeek = new Intl.DateTimeFormat('en-GB', { weekday: 'short' });
 
-function daysUntil(dateStr: string): number {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const target = new Date(dateStr);
-  target.setHours(0, 0, 0, 0);
-  return Math.round((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+// Local-timezone 'YYYY-MM-DD' for a Date. Calendar cells are built from local
+// y/m/d parts, so their keys must be formatted from local parts too — using
+// date.toISOString() would key against a UTC day that can differ from the cell.
+function formatLocalYmd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function urgencyColor(days: number): string {
@@ -230,13 +230,13 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
         <div className="space-y-4">
           {/* Month navigation */}
           <div className="flex items-center justify-between">
-            <button onClick={() => navigateMonth(-1)} className="rounded-lg p-2 hover:bg-muted/60 transition-colors">
+            <button onClick={() => navigateMonth(-1)} aria-label="Previous month" className="rounded-lg p-2 hover:bg-muted/60 transition-colors">
               <ChevronLeft className="h-4 w-4 text-muted-foreground" />
             </button>
             <p className="text-sm font-semibold text-foreground">
               {new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(new Date(calYear, calMonth))}
             </p>
-            <button onClick={() => navigateMonth(1)} className="rounded-lg p-2 hover:bg-muted/60 transition-colors">
+            <button onClick={() => navigateMonth(1)} aria-label="Next month" className="rounded-lg p-2 hover:bg-muted/60 transition-colors">
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
           </div>
@@ -253,15 +253,17 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
             {calendarDays.map((date, i) => {
               if (!date) return <div key={`empty-${i}`} className="h-20" />;
 
-              const dateStr = date.toISOString().slice(0, 10);
+              const dateStr = formatLocalYmd(date);
               const dayDeadlines = deadlinesByDate.get(dateStr) ?? [];
-              const isToday = dateStr === now.toISOString().slice(0, 10);
+              const isToday = dateStr === formatLocalYmd(now);
               const isPast = date < now && !isToday;
+              const dayLabel = date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 
               return (
                 <button
                   key={dateStr}
                   type="button"
+                  aria-label={`${dayLabel} — ${dayDeadlines.length} deadline${dayDeadlines.length === 1 ? '' : 's'}`}
                   onClick={() => dayDeadlines.length > 0 && setSelectedCalendarDate(selectedCalendarDate === dateStr ? null : dateStr)}
                   className={cn(
                     'h-20 rounded-xl border p-1.5 transition-colors overflow-hidden text-left',
@@ -311,7 +313,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                 <div className="rounded-2xl border border-border p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold text-foreground">
-                      {new Date(selectedCalendarDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+                      {parseLocalDate(selectedCalendarDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </p>
                     <button onClick={() => setSelectedCalendarDate(null)} className="text-muted-foreground hover:text-foreground text-xs">
                       Close

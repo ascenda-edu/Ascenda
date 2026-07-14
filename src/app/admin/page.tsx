@@ -37,13 +37,13 @@ export default async function AdminPage() {
   return (
     <DashboardShell>
       <section className="space-y-2">
-        <h1 className="text-3xl font-semibold text-foreground">Admin console</h1>
+        <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground">Admin console</h1>
         <p className="text-sm text-muted-foreground">Manage catalog data, data freshness, and system health.</p>
       </section>
       <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
         <ImportPanel />
-        <aside className="space-y-4 rounded-[28px] border border-border bg-card p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-colors">
-          <h2 className="text-2xl font-semibold text-foreground">Data sources</h2>
+        <aside className="surface-card surface-card--static space-y-4">
+          <h2 className="font-heading text-xl font-semibold tracking-tight text-foreground">Data sources</h2>
           <ul className="space-y-3 text-sm text-muted-foreground">
             {sources.map((source) => (
               <li key={source.id}>

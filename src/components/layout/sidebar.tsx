@@ -9,6 +9,7 @@ import { useUserRole } from '@/hooks/use-user-role';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useSidebar } from './sidebar-context';
 import { SideSwitcher } from './side-switcher';
+import { DEMO_COUNSELLOR } from '@/lib/demo/counsellor';
 
 export const Sidebar = () => {
   const pathname = usePathname();
@@ -108,19 +109,19 @@ export const Sidebar = () => {
               />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold leading-tight text-foreground">Sarah Mitchell</p>
+              <p className="truncate text-sm font-semibold leading-tight text-foreground">{DEMO_COUNSELLOR.fullName}</p>
               <p className="text-[11px] text-muted-foreground">Your counsellor · usually replies same-day</p>
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            Stuck on an essay or shortlist? Sarah&apos;s here to help — book a chat.
+            Stuck on an essay or shortlist? {DEMO_COUNSELLOR.firstName}&apos;s here to help — book a chat.
           </p>
           <Link
             href="/appointment"
             className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
           >
             <CalendarPlus className="h-3.5 w-3.5" />
-            Book a chat with Sarah
+            Book a chat with {DEMO_COUNSELLOR.firstName}
           </Link>
         </div>
       ) : null}

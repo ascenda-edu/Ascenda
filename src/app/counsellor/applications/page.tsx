@@ -20,7 +20,6 @@ export default async function CounsellorApplicationsPage() {
     <div className="space-y-6">
       <PageHero
         eyebrow="Counsellor"
-        accent="Applications"
         title="Application overview"
         description="Every student's applications across platforms — kanban or list, with filters. For deadline-only triage, see Deadlines."
         stats={[

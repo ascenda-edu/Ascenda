@@ -1,8 +1,10 @@
+import type { Metadata } from 'next';
 import { PageHero } from '@/components/layout/page-hero';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { loadCohort, deriveCohortStats } from '@/lib/counsellor/data';
 import { StudentsPageClient } from './_students-page-client';
 
+export const metadata: Metadata = { title: 'Students · Counsellor' };
 export const dynamic = 'force-dynamic';
 
 // Next 14 passes searchParams as a plain object (the Promise shape is Next 15).
@@ -27,7 +29,6 @@ export default async function CounsellorStudentsPage({ searchParams }: Props) {
     <div className="space-y-6">
       <PageHero
         eyebrow="Counsellor"
-        accent="Cohort"
         highlight={`${stats.total} students`}
         title="Student roster"
         description="Search, filter, and open any student to see their profile, matches, and applications."

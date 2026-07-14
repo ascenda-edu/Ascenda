@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ListChecks, Plus, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { MS_PER_DAY, parseLocalDate, startOfToday } from '@/lib/utils/dates';
@@ -53,6 +54,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
   const [newName, setNewName] = useState('');
   const [newAppId, setNewAppId] = useState(applicationOptions[0]?.id ?? '');
   const [adding, setAdding] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<SeedTask | null>(null);
   // Interactions with a temp task while its POST is in flight, replayed once
   // the real id arrives — otherwise a toggle is silently lost on reload and a
   // delete resurrects as a ghost row created by the still-running POST.
@@ -109,7 +111,6 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
   const remove = async (id: string) => {
     const target = tasks.find((t) => t.id === id);
     if (!target) return;
-    if (typeof window !== 'undefined' && !window.confirm(`Remove "${target.name}"?`)) return;
     setTasks((prev) => prev.filter((t) => t.id !== id));
     if (isTempId(id)) {
       // The POST may still be in flight — mark for deletion; add() cleans up.
@@ -305,7 +306,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
                           ) : null}
                           <button
                             type="button"
-                            onClick={() => remove(task.id)}
+                            onClick={() => setPendingDelete(task)}
                             aria-label="Remove task"
                             className="rounded-full p-1 text-muted-foreground/60 opacity-0 transition hover:bg-muted/80 hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
                           >
@@ -321,6 +322,35 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
           })}
         </div>
       )}
+
+      {/* Delete confirmation — replaces the OS window.confirm */}
+      <Dialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}>
+        <DialogContent className="max-w-sm">
+          <div className="space-y-4 p-5">
+            <DialogHeader>
+              <DialogTitle>Remove task?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Remove &ldquo;{pendingDelete?.name}&rdquo; from your tracker? This can&apos;t be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setPendingDelete(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  if (pendingDelete) remove(pendingDelete.id);
+                  setPendingDelete(null);
+                }}
+              >
+                Remove
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

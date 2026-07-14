@@ -14,16 +14,17 @@ import {
 import { ToolboxProgressRing, ToolboxCountdown } from '@/components/toolbox/toolbox-landing-widgets';
 import { TOOL_VISUAL, type ToolboxTool } from '@/lib/theme/categories';
 import { cn } from '@/lib/utils';
+import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 
 export const metadata: Metadata = { title: 'Toolbox' };
 
 const avgProgress = DEMO_REQUIREMENTS.length ? Math.round(DEMO_REQUIREMENTS.reduce((sum, r) => sum + r.progress, 0) / DEMO_REQUIREMENTS.length) : 0;
 const upcoming14 = DEMO_TIMELINE_DEADLINES.filter((d) => {
-  const diff = (new Date(d.date).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+  const diff = daysUntil(d.date);
   return diff >= 0 && diff <= 14;
 }).length;
 const upcoming30 = DEMO_TIMELINE_DEADLINES.filter((d) => {
-  const diff = (new Date(d.date).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+  const diff = daysUntil(d.date);
   return diff >= 0 && diff <= 30;
 }).length;
 
@@ -93,12 +94,10 @@ const TOOL_CARDS: ToolCard[] = [
 export default async function ToolboxPage() {
   // Next action: nearest deadline
   const nextDeadline = DEMO_TIMELINE_DEADLINES
-    .filter((d) => new Date(d.date) > new Date())
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+    .filter((d) => daysUntil(d.date) >= 0)
+    .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime())[0];
 
-  const daysUntil = nextDeadline
-    ? Math.round((new Date(nextDeadline.date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-    : null;
+  const daysUntilNext = nextDeadline ? daysUntil(nextDeadline.date) : null;
 
   return (
     <DashboardShell>
@@ -107,7 +106,6 @@ export default async function ToolboxPage() {
         eyebrow="Toolbox"
         title="Tools to make this easier"
         description="Plan timelines, draft essays, check requirements, see your odds — four ways to take the stress out of applying."
-        accent="Pick a tool"
         stats={[
           { label: 'Tools', value: '4', detail: 'Available' },
           { label: 'Readiness', value: `${avgProgress}%`, detail: 'Overall' },
@@ -123,7 +121,7 @@ export default async function ToolboxPage() {
             <Link href="/toolbox/timeline" className="block surface-card border-l-4 border-l-primary hover:border-l-primary hover:shadow-xl transition-all hover:-translate-y-0.5 group overflow-hidden">
               <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-primary/5 blur-2xl group-hover:bg-primary/10 transition-colors" />
               <div className="relative z-10 flex items-center gap-4">
-                <ToolboxCountdown days={daysUntil ?? 0} />
+                <ToolboxCountdown days={daysUntilNext ?? 0} />
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
@@ -131,9 +129,9 @@ export default async function ToolboxPage() {
                   </p>
                   <p className="text-lg font-semibold text-foreground mt-0.5 truncate">{nextDeadline.title}</p>
                   <p className="text-sm text-muted-foreground">
-                    {nextDeadline.university} — {daysUntil !== null && daysUntil <= 7
-                      ? <span className="text-rose-600 font-semibold">{daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil} days left`}</span>
-                      : new Date(nextDeadline.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                    {nextDeadline.university} — {daysUntilNext !== null && daysUntilNext <= 7
+                      ? <span className="text-rose-600 font-semibold">{daysUntilNext === 0 ? 'Today' : daysUntilNext === 1 ? 'Tomorrow' : `${daysUntilNext} days left`}</span>
+                      : parseLocalDate(nextDeadline.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
                     }
                   </p>
                 </div>

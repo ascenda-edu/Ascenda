@@ -12,7 +12,6 @@ export default function DashboardLoading() {
                 title="Welcome back"
                 description="Pulling together your tasks, deadlines, and matches. One sec."
                 highlight="Loading"
-                accent="Today"
                 stats={[
                     { label: 'Profile', value: '—', detail: 'Loading' },
                     { label: 'Checklist', value: '—', detail: 'Loading' },

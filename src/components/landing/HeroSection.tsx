@@ -133,7 +133,7 @@ export function HeroSection() {
                 <div className="absolute -right-24 bottom-[-20%] h-[45vw] w-[45vw] rounded-full bg-emerald-400/20 blur-3xl" aria-hidden />
                 <Image
                     src="/ascenda-banner.png"
-                    alt="Ascenda hero banner"
+                    alt=""
                     fill
                     priority
                     sizes="100vw"
@@ -169,7 +169,7 @@ export function HeroSection() {
                                 width={160}
                                 height={160}
                                 priority
-                                className="h-auto w-[205px] object-contain"
+                                className="h-auto w-40 object-contain sm:w-[205px]"
                             />
                         </Link>
                         <div className="flex flex-wrap items-center gap-3">
@@ -295,23 +295,23 @@ export function HeroSection() {
                                 </motion.div>
 
                                 {/* Stat strip — hero fit score + secondary stats */}
-                                <motion.div className="relative mt-4 sm:mt-5 grid grid-cols-3 gap-2 sm:gap-3" variants={dashboardItemVariants}>
+                                <motion.div className="relative mt-4 sm:mt-5 grid grid-cols-3 gap-1.5 sm:gap-3" variants={dashboardItemVariants}>
                                     {/* Fit score — hero stat with extra weight */}
-                                    <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-background px-4 py-4 text-center shadow-sm">
+                                    <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-background px-2 py-4 text-center shadow-sm sm:px-4">
                                         <div className="pointer-events-none absolute -top-8 -right-8 h-28 w-28 rounded-full bg-emerald-400 blur-2xl opacity-30" aria-hidden />
                                         <p className="text-[11px] font-medium text-muted-foreground">Fit score</p>
                                         <p className="mt-1 text-2xl sm:text-4xl font-bold text-foreground leading-none tracking-tight">{fitScore}<span className="text-base sm:text-xl text-emerald-500">%</span></p>
                                         <p className="mt-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Top match</p>
                                     </div>
                                     {/* Due soon */}
-                                    <div className="relative overflow-hidden rounded-2xl border border-border bg-background px-4 py-4 text-center shadow-sm">
+                                    <div className="relative overflow-hidden rounded-2xl border border-border bg-background px-2 py-4 text-center shadow-sm sm:px-4">
                                         <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-amber-400 blur-2xl opacity-40" aria-hidden />
                                         <p className="text-[11px] font-medium text-muted-foreground">Due soon</p>
                                         <p className="mt-1 text-xl sm:text-2xl font-semibold text-foreground leading-tight tracking-tight">3</p>
                                         <p className="mt-0.5 text-[10px] text-muted-foreground">This week</p>
                                     </div>
                                     {/* Profile — with animated circular progress */}
-                                    <div className="relative overflow-hidden rounded-2xl border border-border bg-background px-4 py-4 text-center shadow-sm">
+                                    <div className="relative overflow-hidden rounded-2xl border border-border bg-background px-2 py-4 text-center shadow-sm sm:px-4">
                                         <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-primary blur-2xl opacity-40" aria-hidden />
                                         <p className="text-[11px] font-medium text-muted-foreground">Profile</p>
                                         <div className="mt-1 flex items-center justify-center gap-2">
@@ -452,7 +452,7 @@ export function HeroSection() {
                             {!shouldReduceMotion ? (
                                 <motion.div
                                     animate={{ y: [0, 6, 0], opacity: [0.9, 0.5, 0.9] }}
-                                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                                    transition={{ duration: 2, repeat: 2, ease: 'easeInOut' }}
                                 >
                                     <ChevronDown className="h-5 w-5" />
                                 </motion.div>

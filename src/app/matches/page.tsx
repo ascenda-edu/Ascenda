@@ -48,7 +48,6 @@ export default async function MatchesPage() {
           title="We can't pull your matches right now"
           description="Something's off on our side. Give it another go in a minute."
           highlight="Try again soon"
-          accent="Heads up"
           stats={[{ label: 'Matches', value: '—' }, { label: 'Programs', value: '—' }, { label: 'Updates', value: '—' }]}
           breadcrumbs={<Breadcrumbs />}
           actions={
@@ -75,7 +74,6 @@ export default async function MatchesPage() {
           title={MATCHES_TEXT.profileIncomplete.title}
           description={MATCHES_TEXT.profileIncomplete.description}
           highlight={MATCHES_TEXT.profileIncomplete.highlight}
-          accent="Almost there"
           stats={[{ label: 'Matches', value: '—' }, { label: 'Programs', value: '0' }, { label: 'Updates', value: '—' }]}
           actions={
             <Button asChild size="sm">
@@ -118,7 +116,6 @@ export default async function MatchesPage() {
         title={MATCHES_TEXT.hero.title}
         description={MATCHES_TEXT.hero.description}
         highlight={MATCHES_TEXT.hero.highlight}
-        accent="Picked for you"
         stats={heroStats}
         breadcrumbs={<Breadcrumbs />}
         actions={

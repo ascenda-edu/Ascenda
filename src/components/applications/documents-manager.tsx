@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText } from 'lucide-react';
+import { FileText, FileEdit, Folder, type LucideIcon } from 'lucide-react';
 import { DocumentUploader } from './document-uploader';
+import { EmptyState } from '@/components/ui/empty-state';
 
 export interface DocumentManagerApp {
   id: string;
@@ -31,11 +32,11 @@ function formatDate(iso: string | null): string {
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function iconFor(name: string): string {
+function iconFor(name: string): LucideIcon {
   const ext = name.split('.').pop()?.toLowerCase() ?? '';
-  if (ext === 'pdf') return '📄';
-  if (ext === 'doc' || ext === 'docx') return '📝';
-  return '📁';
+  if (ext === 'pdf') return FileText;
+  if (ext === 'doc' || ext === 'docx') return FileEdit;
+  return Folder;
 }
 
 export function DocumentsManager({ applications, documents }: DocumentsManagerProps) {
@@ -75,22 +76,22 @@ export function DocumentsManager({ applications, documents }: DocumentsManagerPr
       )}
 
       {documents.length === 0 ? (
-        <div className="rounded-[28px] border border-dashed border-border bg-muted/30 px-6 py-12 text-center">
-          <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
-          <p className="text-sm font-semibold text-foreground">No documents yet</p>
-          <p className="text-xs text-muted-foreground">
-            Upload a transcript, essay, or certificate above and it&apos;ll show up here.
-          </p>
-        </div>
+        <EmptyState
+          icon={FileText}
+          title="No documents yet"
+          description="Upload a transcript, essay, or certificate above and it'll show up here."
+        />
       ) : (
         <div className="space-y-3">
-          {documents.map((doc) => (
+          {documents.map((doc) => {
+            const DocIcon = iconFor(doc.name);
+            return (
             <div
               key={doc.id}
               className="flex items-center gap-4 rounded-2xl border border-border/60 bg-background/60 px-5 py-4"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-lg" aria-hidden>
-                {iconFor(doc.name)}
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary" aria-hidden>
+                <DocIcon className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-foreground">{doc.name}</p>
@@ -113,7 +114,8 @@ export function DocumentsManager({ applications, documents }: DocumentsManagerPr
                 ) : null}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

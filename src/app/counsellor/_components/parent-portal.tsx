@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Send, Check, CheckCheck, MessageSquare, Clock, Mail, Phone } from 'lucide-react';
+import { Search, Send, Check, CheckCheck, MessageSquare, Clock, Mail, Phone, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ParentContact, ParentMessage } from '@/lib/counsellor/types';
 
@@ -31,6 +31,7 @@ export function ParentPortal({ contacts, messagesByContact }: ParentPortalProps)
   const [search, setSearch] = useState('');
   const [composeText, setComposeText] = useState('');
   const [localMessages, setLocalMessages] = useState<ParentMessage[]>([]);
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const filteredContacts = useMemo(
@@ -52,8 +53,10 @@ export function ParentPortal({ contacts, messagesByContact }: ParentPortalProps)
   }, [messages.length]);
 
   const handleSend = async () => {
+    if (isSending) return;
     const body = composeText.trim();
     if (!body || !selectedId || !selectedContact) return;
+    setIsSending(true);
     const optimistic: ParentMessage = {
       id: `pm-local-${Date.now()}`,
       parentContactId: selectedId,
@@ -83,6 +86,8 @@ export function ParentPortal({ contacts, messagesByContact }: ParentPortalProps)
       }
     } catch {
       setLocalMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -100,7 +105,11 @@ export function ParentPortal({ contacts, messagesByContact }: ParentPortalProps)
         <div className="p-3 border-b border-border">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <label htmlFor="parent-portal-search" className="sr-only">
+              Search parent or student
+            </label>
             <input
+              id="parent-portal-search"
               type="text"
               placeholder="Search parent or student..."
               value={search}
@@ -130,7 +139,7 @@ export function ParentPortal({ contacts, messagesByContact }: ParentPortalProps)
                   <div className={cn('h-2 w-2 rounded-full shrink-0', statusCfg.dot)} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs">{contact.flagEmoji}</span>
+                      <span className="text-xs" role="img" aria-label={`${contact.studentName}'s flag`}>{contact.flagEmoji}</span>
                       <span className="text-sm font-semibold text-foreground truncate">{contact.parentName}</span>
                     </div>
                     <p className="text-[10px] text-muted-foreground">{contact.relationship} of {contact.studentName}</p>
@@ -152,7 +161,7 @@ export function ParentPortal({ contacts, messagesByContact }: ParentPortalProps)
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-foreground">{selectedContact.parentName}</p>
                 <p className="text-xs text-muted-foreground">
-                  {selectedContact.relationship} of {selectedContact.flagEmoji} {selectedContact.studentName}
+                  {selectedContact.relationship} of <span role="img" aria-label={`${selectedContact.studentName}'s flag`}>{selectedContact.flagEmoji}</span> {selectedContact.studentName}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -200,7 +209,7 @@ export function ParentPortal({ contacts, messagesByContact }: ParentPortalProps)
             </div>
 
             {/* Quick templates */}
-            <div className="px-4 py-2 border-t border-border/50 flex gap-2">
+            <div className="px-4 py-2 border-t border-border/50 flex flex-wrap gap-2">
               {TEMPLATES.map((t) => (
                 <button
                   key={t.id}
@@ -214,20 +223,27 @@ export function ParentPortal({ contacts, messagesByContact }: ParentPortalProps)
 
             {/* Compose */}
             <div className="p-3 border-t border-border flex gap-2">
+              <label htmlFor="parent-portal-compose" className="sr-only">
+                Type a message
+              </label>
               <input
+                id="parent-portal-compose"
                 type="text"
                 placeholder="Type a message..."
                 value={composeText}
                 onChange={(e) => setComposeText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isSending) handleSend();
+                }}
                 className="flex-1 rounded-xl border border-border bg-background px-4 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <button
                 onClick={handleSend}
-                disabled={!composeText.trim()}
+                disabled={!composeText.trim() || isSending}
+                aria-label="Send message"
                 className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-40 hover:bg-primary/90 transition-colors"
               >
-                <Send className="h-4 w-4" />
+                {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </button>
             </div>
           </>

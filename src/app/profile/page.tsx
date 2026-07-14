@@ -111,7 +111,7 @@ export default async function ProfilePage() {
 
   const academicSignals = [
     academicInput?.programme_type ? `Programme: ${formatProgramme(academicInput.programme_type)}` : null,
-    typeof academicInput?.ib_total_points === 'number' ? `IB ${academicInput.ib_total_points}/45` : null,
+    typeof academicInput?.ib_total_points === 'number' ? `IB ${academicInput.ib_total_points}/42` : null,
     typeof subjects?.length === 'number' && subjects.length > 0 ? `Subjects: ${subjects.length}` : null,
     academicInput?.english_status ? `English: ${formatEnglishStatus(academicInput.english_status)}` : null
   ].filter(Boolean) as string[];
@@ -153,7 +153,6 @@ export default async function ProfilePage() {
         title="The more we know, the better we can help"
         description="Tell us about you — your grades, what you're into, where you want to be — and we'll tune everything to fit."
         highlight={nextStep ? `Up next · ${nextStep.title}` : 'All done'}
-        accent="About you"
         stats={heroStats}
         breadcrumbs={<Breadcrumbs />}
         actions={

@@ -18,7 +18,6 @@ export default async function CounsellorOutcomesPage() {
     <div className="space-y-6">
       <PageHero
         eyebrow="Counsellor"
-        accent="Outcomes"
         title="Outcome tracking"
         description="Acceptances, rejections, waitlists, and pending responses across the cohort."
         stats={[

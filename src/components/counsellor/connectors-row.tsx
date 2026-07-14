@@ -2,6 +2,7 @@
 
 import { Mail, Calendar, Briefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DEMO_COUNSELLOR } from '@/lib/demo/counsellor';
 
 type Connector = {
   id: string;
@@ -17,14 +18,14 @@ const CONNECTORS: Connector[] = [
     name: 'Gmail',
     icon: Mail,
     status: 'connected',
-    detail: 'sarah.meacha@stmartins.edu'
+    detail: `${DEMO_COUNSELLOR.fullName.toLowerCase().replace(/\s+/g, '.')}@stmartins.edu`
   },
   {
     id: 'gcal',
     name: 'Google Calendar',
     icon: Calendar,
     status: 'connected',
-    detail: "Next: 'Greg Franck 1:1' · Wed 3pm"
+    detail: "Next: student 1:1 · Wed 3pm"
   },
   {
     id: 'outlook',

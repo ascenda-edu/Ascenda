@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '../theme/theme-toggle';
 import { getTopNavEntries, NAV_ITEMS } from './navigation';
@@ -23,8 +23,13 @@ export const Navbar = () => {
   const router = useRouter();
   const supabase = useSupabase();
   const navEntries = getTopNavEntries(NAV_ITEMS, role, pathname);
-  const logoSrc = '/Ascenda_Logo-removebg-.png';
+  const logoSrc = '/ascenda-logo.png';
   const [scrolled, setScrolled] = useState(false);
+  // Two-step confirm — the sign-out button sits a click away from the bell and
+  // theme toggle, so an accidental click during a demo would dump us to the
+  // login screen. First click arms; second click (or Enter) signs out.
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -33,13 +38,21 @@ export const Navbar = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  useEffect(
+    () => () => {
+      if (confirmTimer.current) clearTimeout(confirmTimer.current);
+    },
+    []
+  );
+
   const handleSignOut = async () => {
-    // Confirm before signing out — the button sits a click away from the
-    // bell and theme toggle, so accidental clicks during a demo would
-    // dump us to the login screen with no easy recovery.
-    if (typeof window !== 'undefined' && !window.confirm('Sign out of Ascenda?')) {
+    if (!confirmSignOut) {
+      setConfirmSignOut(true);
+      if (confirmTimer.current) clearTimeout(confirmTimer.current);
+      confirmTimer.current = setTimeout(() => setConfirmSignOut(false), 3000);
       return;
     }
+    if (confirmTimer.current) clearTimeout(confirmTimer.current);
     await supabase.auth.signOut();
     router.refresh();
     router.push('/login');
@@ -55,11 +68,12 @@ export const Navbar = () => {
           )}
         >
           <Link href="/dashboard" className="flex items-center gap-2 sm:gap-3 text-lg font-semibold text-foreground">
-            <div className="relative h-9 w-9 shrink-0 sm:h-12 sm:w-12 sm:scale-125">
+            <div className="relative h-9 w-9 shrink-0 sm:h-[60px] sm:w-[60px]">
               <Image
                 src={logoSrc}
                 alt="Ascenda logo"
                 fill
+                sizes="60px"
                 className={cn('rounded-full object-contain transition')}
               />
             </div>
@@ -84,16 +98,32 @@ export const Navbar = () => {
             <CommandPaletteIconTrigger />
             <NotificationBell />
             <ThemeToggle compact />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSignOut}
-              className="rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-              title="Sign out"
-              aria-label="Sign out"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
+            {confirmSignOut ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSignOut}
+                onBlur={() => setConfirmSignOut(false)}
+                autoFocus
+                className="gap-1.5 rounded-full bg-destructive/10 text-xs text-destructive hover:bg-destructive/20 hover:text-destructive"
+                title="Confirm sign out"
+                aria-label="Confirm sign out"
+              >
+                <LogOut className="h-4 w-4" />
+                Confirm?
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSignOut}
+                className="rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                title="Sign out"
+                aria-label="Sign out"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
       </div>

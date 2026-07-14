@@ -176,7 +176,11 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
       <div className="panel flex flex-col gap-3 rounded-2xl px-4 py-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <label htmlFor="student-roster-search" className="sr-only">
+            Search by name, school, or nationality
+          </label>
           <input
+            id="student-roster-search"
             ref={searchRef}
             type="text"
             placeholder="Search by name, school, nationality…"
@@ -217,6 +221,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                 <button
                   key={key}
                   onClick={() => setSortKey(key)}
+                  aria-pressed={sortKey === key}
                   className={cn(
                     'rounded-xl px-3 py-1.5 text-left text-sm transition',
                     sortKey === key ? 'bg-primary/10 font-semibold text-primary' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
@@ -236,6 +241,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                 <button
                   key={val}
                   onClick={() => setProgramme(val)}
+                  aria-pressed={programme === val}
                   className={cn(
                     'rounded-xl px-3 py-1.5 text-left text-sm transition',
                     programme === val ? 'bg-primary/10 font-semibold text-primary' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
@@ -255,6 +261,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                 <button
                   key={val}
                   onClick={() => setFlagFilter(val)}
+                  aria-pressed={flagFilter === val}
                   className={cn(
                     'rounded-xl px-3 py-1.5 text-left text-sm transition',
                     flagFilter === val ? 'bg-primary/10 font-semibold text-primary' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'

@@ -1,9 +1,11 @@
+import type { Metadata } from 'next';
 import { PageHero } from '@/components/layout/page-hero';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { loadRoster } from '@/lib/counsellor/data';
 import { loadDecks } from '@/lib/counsellor/decks';
 import { UniversitiesClient } from './_universities-client';
 
+export const metadata: Metadata = { title: 'University decks · Counsellor' };
 export const dynamic = 'force-dynamic';
 
 export default async function CounsellorUniversitiesPage() {
@@ -24,7 +26,6 @@ export default async function CounsellorUniversitiesPage() {
     <div className="space-y-6">
       <PageHero
         eyebrow="Counsellor"
-        accent="Quest board"
         highlight={`${decks.length} deck${decks.length === 1 ? '' : 's'}`}
         title="University decks"
         description="Search the catalogue, collect programmes into themed decks, and assign them to students as quests."

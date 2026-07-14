@@ -3,18 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useRealtimePoll } from '@/hooks/use-realtime-poll';
-import {
-  insertNotification,
-  listOpenHelpRequests,
-  updateHelpRequestStatus
-} from '@/lib/demo/help-request-client';
-import type { HelpRequest, HelpRequestStatus } from '@/lib/types/demo-tables';
+import { listOpenHelpRequests } from '@/lib/demo/help-request-client';
+import type { HelpRequest } from '@/lib/types/demo-tables';
 
 export interface UseHelpRequestsResult {
   items: HelpRequest[];
   loading: boolean;
-  accept: (req: HelpRequest) => Promise<void>;
-  resolve: (req: HelpRequest) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -81,42 +75,5 @@ export const useHelpRequests = (): UseHelpRequestsResult => {
     ]
   });
 
-  const updateAndNotify = useCallback(
-    async (req: HelpRequest, status: HelpRequestStatus) => {
-      try {
-        await updateHelpRequestStatus(supabase, req.id, status);
-        if (status === 'accepted') {
-          await insertNotification(supabase, {
-            profile_id: req.student_profile_id,
-            kind: 'help_accepted',
-            title: 'Your counsellor accepted your help request',
-            body: req.university ? `${req.university}${req.program ? ` · ${req.program}` : ''}` : null,
-            // Fall back to the applications board when no specific application is
-            // linked, so the notification never renders a dead click.
-            href: req.application_id ? `/applications/${req.application_id}` : '/applications'
-          });
-        }
-      } catch (err) {
-        console.warn(`useHelpRequests: ${status} failed`, err);
-        throw err;
-      }
-    },
-    [supabase]
-  );
-
-  const accept = useCallback(
-    async (req: HelpRequest) => {
-      await updateAndNotify(req, 'accepted');
-    },
-    [updateAndNotify]
-  );
-
-  const resolve = useCallback(
-    async (req: HelpRequest) => {
-      await updateAndNotify(req, 'resolved');
-    },
-    [updateAndNotify]
-  );
-
-  return { items, loading, accept, resolve, refresh };
+  return { items, loading, refresh };
 };

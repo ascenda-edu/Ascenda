@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useShortlist } from './shortlist-store';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
+import { useToast } from '@/components/ui/toast';
 
 type UniversityData = {
   program: { title?: string | null; level?: string | null; duration?: string | number | null; size?: string | null };
@@ -106,6 +107,7 @@ export const UniversityInformation = ({
   contextSource = 'direct'
 }: UniversityInformationProps) => {
   const { addItem: addShortlist, items: shortlistItems } = useShortlist();
+  const { showToast } = useToast();
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const canRenderContent = !!universityData && !loading && !error;
   const searchFromParam = contextSource === 'search' ? '?from=search' : '';
@@ -127,10 +129,15 @@ export const UniversityInformation = ({
 
   const handleShortlist = () => {
     if (!universityData) return;
-    const id = `${universityData.program?.title ?? universityData.university?.name ?? 'university'}-shortlist`;
+    // Prefer the real programme id so the shortlist "Open course" link resolves
+    // to /course/[id]. Fall back to a title-based id only when this page was
+    // opened without a programme id (which the shortlist page renders as a
+    // non-linkable card).
+    const id = programId ?? `${universityData.program?.title ?? universityData.university?.name ?? 'university'}-shortlist`;
     const already = shortlistItems.some((item) => item.id === id);
     if (already) {
       setStatusMessage('Already on your shortlist.');
+      showToast({ title: 'Already on your shortlist', variant: 'info' });
       return;
     }
     // Store minimal metadata so shortlist panels can render meaningful text.
@@ -145,6 +152,7 @@ export const UniversityInformation = ({
       location: universityData.university?.location ?? undefined
     });
     setStatusMessage('Added to shortlist.');
+    showToast({ title: 'Added to shortlist', variant: 'success' });
   };
 
   return (
@@ -241,7 +249,9 @@ export const UniversityInformation = ({
                 </span>
               </div>
 
-              {statusMessage ? <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-500">{statusMessage}</p> : null}
+              <p aria-live="polite" className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-500 dark:text-emerald-400">
+                {statusMessage}
+              </p>
               <div className="h-[3px] w-full rounded-full bg-gradient-to-r from-primary via-primary/80 to-primary opacity-80" />
               <p className="text-sm text-muted-foreground">Review rankings, experience, and costs to judge overall university fit alongside the course page.</p>
             </div>
@@ -315,11 +325,8 @@ export const UniversityInformation = ({
 const Section = ({ title, description, children }: { title: string; description: string; children: React.ReactNode }) => (
   <section className="space-y-4">
     <div className="space-y-1">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-muted-foreground">{title}</p>
-      <div className="space-y-1">
-        <h2 className="text-3xl font-semibold text-foreground md:text-[34px]">{title}</h2>
-        <p className="text-base text-muted-foreground md:text-lg">{description}</p>
-      </div>
+      <h2 className="text-3xl font-semibold text-foreground md:text-[34px]">{title}</h2>
+      <p className="text-base text-muted-foreground md:text-lg">{description}</p>
     </div>
     <Card className="overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-[0_24px_60px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_30px_80px_rgba(15,23,42,0.1)]">
       <div className="h-1 w-full bg-gradient-to-r from-muted via-background to-muted" />

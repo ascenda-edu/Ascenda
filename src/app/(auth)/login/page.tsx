@@ -7,10 +7,16 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="font-heading text-2xl font-semibold">Sign in</h1>
-        <p className="text-sm text-muted-foreground">Welcome back. Use your email and password to continue.</p>
+    <div className="surface-card surface-card--static space-y-6">
+      <div className="space-y-3">
+        <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-3 py-1 text-xs font-medium shadow-sm backdrop-blur">
+          <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
+          Invite-only access
+        </span>
+        <div className="space-y-1">
+          <h1 className="font-heading text-3xl font-semibold tracking-tight">Sign in</h1>
+          <p className="text-sm text-muted-foreground">Welcome back. Use your email and password to continue.</p>
+        </div>
       </div>
       <AuthForm />
     </div>

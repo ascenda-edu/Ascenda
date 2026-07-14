@@ -1,4 +1,5 @@
 import type { MatchTier } from '@/lib/matching/match-tier';
+import { classifyFitTier } from '@/lib/theme/categories';
 
 export type ProgramSearchResult = {
   id: string;
@@ -25,9 +26,16 @@ export type ProgramSearchResult = {
   ucasCode?: string | null;
 };
 
+// Single source of truth for score→tier thresholds lives in
+// `classifyFitTier` (lib/theme/categories.ts): safety ≥ 80, match ≥ 60, else reach.
+// Delegate here so the results and shortlist surfaces can never drift apart.
+const FIT_TIER_TO_MATCH_TIER = {
+  safety: 'Safe',
+  match: 'Match',
+  reach: 'Reach'
+} as const;
+
 export const tierFromScore = (score?: number | null): MatchTier | null => {
-  if (score === null || score === undefined) return null;
-  if (score >= 80) return 'Safe';
-  if (score >= 45) return 'Match';
-  return 'Reach';
+  const fitTier = classifyFitTier(score);
+  return fitTier ? FIT_TIER_TO_MATCH_TIER[fitTier] : null;
 };

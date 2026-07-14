@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Bot, X, Send, Loader2, Trash2, ArrowRight,
+  Bot, X, Send, Loader2, Trash2, ArrowRight, RotateCcw,
   LayoutDashboard, Search, Zap, Briefcase, Heart, User,
   Wrench, PenTool, BarChart3, ClipboardCheck, CalendarClock,
   Gift, BarChart2, Users, FileText, TrendingUp, UserCircle,
@@ -18,6 +19,8 @@ interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  /** True when this assistant bubble holds a stream/fetch error, not a reply. */
+  error?: boolean;
 }
 
 // ─── Page snippets for preview cards ────────────────────────────────────────
@@ -135,7 +138,7 @@ function PageCard({ snippet, onClick }: { snippet: PageSnippet; onClick: () => v
 
 // ─── Markdown message renderer ──────────────────────────────────────────────
 
-function MessageContent({ content, onNavigate }: { content: string; onNavigate: (route: string) => void }) {
+function MessageContent({ content, onLinkClick }: { content: string; onLinkClick: () => void }) {
   return (
     <ReactMarkdown
       components={{
@@ -145,15 +148,18 @@ function MessageContent({ content, onNavigate }: { content: string; onNavigate: 
         ol: ({ children }) => <ol className="mb-1.5 ml-3 list-decimal space-y-0.5 last:mb-0">{children}</ol>,
         li: ({ children }) => <li className="text-[13px]">{children}</li>,
         a: ({ href, children }) => {
-          // If it's an internal route, make it a navigation link
+          // Internal route → real navigation link (correct semantics: href,
+          // middle-click/open-in-new-tab work). Closing the widget stays on the
+          // click handler so the panel dismisses as the route changes.
           if (href?.startsWith('/')) {
             return (
-              <button
-                onClick={() => onNavigate(href)}
+              <Link
+                href={href}
+                onClick={onLinkClick}
                 className="inline-flex items-center gap-0.5 text-primary underline underline-offset-2 hover:text-primary/80"
               >
                 {children}
-              </button>
+              </Link>
             );
           }
           return (
@@ -268,20 +274,11 @@ export function ChatbotWidget() {
     setIsOpen(false);
   };
 
-  const sendMessage = async (content: string) => {
-    if (!content.trim() || isLoading) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: content.trim(),
-    };
-
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
-    setInput('');
-    // Reset textarea height
-    if (inputRef.current) inputRef.current.style.height = 'auto';
+  // Stream an assistant reply for the given conversation. `history` must end
+  // with the user message being answered; a fresh empty assistant bubble is
+  // appended and filled as chunks arrive. On failure that bubble is marked as
+  // an error row (rendered distinctly, with a Retry affordance).
+  const runAssistant = async (history: Message[]) => {
     setIsLoading(true);
 
     const assistantMessage: Message = {
@@ -290,14 +287,14 @@ export function ChatbotWidget() {
       content: '',
     };
 
-    setMessages([...updatedMessages, assistantMessage]);
+    setMessages([...history, assistantMessage]);
 
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: updatedMessages.map((m) => ({
+          messages: history.map((m) => ({
             role: m.role,
             content: m.content,
           })),
@@ -351,13 +348,41 @@ export function ChatbotWidget() {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMessage.id
-            ? { ...m, content: errorText }
+            ? { ...m, content: errorText, error: true }
             : m
         )
       );
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const sendMessage = (content: string) => {
+    if (!content.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: content.trim(),
+    };
+
+    const history = [...messages, userMessage];
+    setMessages(history);
+    setInput('');
+    // Reset textarea height
+    if (inputRef.current) inputRef.current.style.height = 'auto';
+    void runAssistant(history);
+  };
+
+  // Resend the last user message after an error — drop the failed assistant
+  // bubble and re-run generation from the same history.
+  const retryLast = () => {
+    if (isLoading) return;
+    const lastUserIdx = messages.map((m) => m.role).lastIndexOf('user');
+    if (lastUserIdx === -1) return;
+    const history = messages.slice(0, lastUserIdx + 1);
+    setMessages(history);
+    void runAssistant(history);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -457,7 +482,7 @@ export function ChatbotWidget() {
                 </div>
               ) : (
                 messages.map((msg) => {
-                  const snippets = msg.role === 'assistant' && msg.content
+                  const snippets = msg.role === 'assistant' && msg.content && !msg.error
                     ? getSnippetsForMessage(msg.content, mode)
                     : [];
 
@@ -475,14 +500,28 @@ export function ChatbotWidget() {
                       <div
                         className={cn(
                           'max-w-[85%] rounded-[16px] px-3.5 py-2.5 text-[13px] leading-relaxed',
-                          msg.role === 'user'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted/60 text-foreground'
+                          msg.error
+                            ? 'border border-rose-300/60 bg-rose-500/10 text-rose-700 dark:border-rose-500/30 dark:text-rose-300'
+                            : msg.role === 'user'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted/60 text-foreground'
                         )}
                       >
-                        {msg.content ? (
+                        {msg.error ? (
+                          <div className="space-y-1.5">
+                            <p>{msg.content}</p>
+                            <button
+                              onClick={retryLast}
+                              disabled={isLoading}
+                              className="inline-flex items-center gap-1 rounded-full border border-rose-300/60 px-2.5 py-1 text-[11px] font-semibold text-rose-700 transition hover:bg-rose-500/10 disabled:opacity-50 dark:border-rose-500/40 dark:text-rose-300"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                              Retry
+                            </button>
+                          </div>
+                        ) : msg.content ? (
                           msg.role === 'assistant' ? (
-                            <MessageContent content={msg.content} onNavigate={navigateTo} />
+                            <MessageContent content={msg.content} onLinkClick={() => setIsOpen(false)} />
                           ) : (
                             msg.content
                           )

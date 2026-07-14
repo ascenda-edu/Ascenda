@@ -60,7 +60,7 @@ export const AuthForm = () => {
         .maybeSingle(),
       supabase
         .from('student_academic_input')
-        .select('programme_type,school_name,school_country,graduation_year,intended_clusters,english_required')
+        .select('programme_type,school_name,school_country,graduation_year,intended_clusters,english_required,english_status')
         .eq('profile_id', userId)
         .maybeSingle(),
       supabase.from('student_lifestyle_preference').select('extracurricular_interests').eq('profile_id', userId).maybeSingle(),
@@ -136,18 +136,13 @@ export const AuthForm = () => {
         <Label className="form-label" htmlFor="password">
           Password
         </Label>
-        <div className="relative">
-          <Input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            className="form-input pr-28"
-            {...form.register('password')}
-          />
-          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            Secure login
-          </div>
-        </div>
+        <Input
+          id="password"
+          type="password"
+          autoComplete="current-password"
+          className="form-input"
+          {...form.register('password')}
+        />
         {form.formState.errors.password ? (
           <p className="form-feedback form-feedback--error" role="alert">
             {form.formState.errors.password.message}

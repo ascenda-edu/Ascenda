@@ -82,12 +82,14 @@ export function SendMessageModal({
   const [subject, setSubject] = useState(initialDraft.subject);
   const [body, setBody] = useState(initialDraft.body);
   const [submitting, setSubmitting] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   useEffect(() => {
     if (open && student) {
       const next = draftFor(student, reason);
       setSubject(next.subject);
       setBody(next.body);
+      setShowDiscardConfirm(false);
     }
   }, [open, student, reason]);
 
@@ -95,11 +97,13 @@ export function SendMessageModal({
 
   // Escape/backdrop/Cancel would otherwise silently discard an edited draft.
   // Only prompt when the user has actually changed the pre-filled text —
-  // closing an untouched draft shouldn't nag.
+  // closing an untouched draft shouldn't nag. Themed in-modal confirm instead
+  // of an OS window.confirm.
   const handleOpenChange = (next: boolean) => {
     if (!next && !submitting) {
       const dirty = body !== initialDraft.body || subject !== initialDraft.subject;
-      if (dirty && typeof window !== 'undefined' && !window.confirm('Discard this message?')) {
+      if (dirty) {
+        setShowDiscardConfirm(true);
         return;
       }
     }
@@ -226,6 +230,33 @@ export function SendMessageModal({
             {submitting ? 'Sending…' : `Send to ${student.firstName}`}
           </Button>
         </div>
+
+        {/* Discard confirmation — themed in-modal, replaces window.confirm */}
+        {showDiscardConfirm ? (
+          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-[inherit] bg-background/80 p-6 backdrop-blur-sm">
+            <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-xl">
+              <p className="text-sm font-semibold text-foreground">Discard this message?</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Your edits to this draft will be lost.
+              </p>
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setShowDiscardConfirm(false)}>
+                  Keep editing
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    setShowDiscardConfirm(false);
+                    onOpenChange(false);
+                  }}
+                >
+                  Discard
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

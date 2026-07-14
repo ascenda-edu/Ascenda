@@ -21,7 +21,6 @@ export default async function RequirementsPage() {
         eyebrow="Requirements"
         title="What each uni actually wants"
         description="Subjects, exams, interviews, docs, essays — see exactly what you need for every uni on your list."
-        accent="Checklist"
         stats={[
           { label: 'Universities', value: String(DEMO_REQUIREMENTS.length), detail: 'Being tracked' },
           { label: 'Readiness', value: `${avgProgress}%`, detail: 'Average progress' },

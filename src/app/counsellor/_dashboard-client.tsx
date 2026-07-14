@@ -10,7 +10,6 @@ import type { CohortStats, DeadlineWithStudent, ActivityItem } from '@/lib/couns
 import { AtRiskPanel } from './_components/at-risk-panel';
 import { WidgetGrid, Widget } from './_components/widget-grid';
 import type { WidgetId, DragHandlers } from './_components/widget-grid';
-import { StatsBar } from './_components/stats-bar';
 import { StudentAlerts } from './_components/student-alerts';
 import { ApplicationFunnel } from './_components/application-funnel';
 import { MatchDistribution } from './_components/match-distribution';
@@ -129,7 +128,6 @@ export function DashboardClient({
     <div className="space-y-6">
       <PageHero
         eyebrow="Counsellor"
-        accent="Cohort"
         highlight={`${stats.total} students`}
         title="Overview"
         description="Daily triage — at-risk students, this week's deadlines, recent activity. For trends and cohort breakdowns, see Analytics."
@@ -140,8 +138,6 @@ export function DashboardClient({
           { label: 'Need Attention', value: String(stats.flagged), detail: 'Flags raised' }
         ]}
       />
-
-      <StatsBar stats={stats} />
 
       {/* At-Risk Students */}
       {atRiskAlerts.length > 0 && (
@@ -176,8 +172,8 @@ export function DashboardClient({
             <div className="pt-4">
               <div className="mb-6 flex items-center justify-between pb-4">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Cohort</p>
-                  <h2 className="text-2xl font-semibold text-foreground">Student Roster</h2>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Cohort</p>
+                  <h2 className="text-lg font-semibold text-foreground">Student Roster</h2>
                   <p className="text-xs text-muted-foreground">Manage your cohort and track progress</p>
                 </div>
               </div>

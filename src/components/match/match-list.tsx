@@ -108,11 +108,12 @@ export const MatchList = ({ matches }: MatchListProps) => {
           <div className="hidden sm:flex items-center gap-1.5 mt-1">
             <Info className="h-3 w-3 text-muted-foreground/60 shrink-0" />
             <p className="text-[11px] text-muted-foreground/80">
-              <span className={cn('font-semibold', TIER_VISUAL.reach.text)}>Reach</span>{' '}{'<'}30% admission
+              <span className={cn('font-semibold', TIER_VISUAL.reach.text)}>Reach</span>
               {' \u00B7 '}
-              <span className={cn('font-semibold', TIER_VISUAL.match.text)}>Match</span> 30-60%
+              <span className={cn('font-semibold', TIER_VISUAL.match.text)}>Match</span>
               {' \u00B7 '}
-              <span className={cn('font-semibold', TIER_VISUAL.safety.text)}>Safe</span>{' '}{'>'} 60%
+              <span className={cn('font-semibold', TIER_VISUAL.safety.text)}>Safe</span>
+              {' \u2014 tiers weigh each programme\u2019s selectivity against your academic profile; the % on each card is its estimated admission chance.'}
             </p>
           </div>
         </div>

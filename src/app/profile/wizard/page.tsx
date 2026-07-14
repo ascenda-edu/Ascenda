@@ -95,7 +95,6 @@ export default async function ProfileWizardPage({ searchParams }: ProfileWizardP
           title="Let's set you up"
           description="A few quick questions and we'll personalize your matches, deadlines, and counsellor updates. You can always come back and edit."
           highlight={hasCompletedProfile ? 'All done' : 'Step ' + initialStep + ' of ' + PROFILE_STEPS.length}
-          accent="About you"
           stats={[
             { label: 'Completed', value: completedCount + '/' + PROFILE_STEPS.length, detail: 'Sections finished' },
             { label: 'Current step', value: String(initialStep), detail: currentStepDetail },

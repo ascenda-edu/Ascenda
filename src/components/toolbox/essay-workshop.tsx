@@ -18,6 +18,8 @@ import { stagger, childFade } from '@/lib/motion';
 import type { EssayBuildingBlock, EssayPrompt, BlockCategory, ActivityEntry } from '@/lib/data/student-demo-data';
 import { EssayAIPanel } from './essay-ai-panel';
 import { CATEGORY_CONFIG, CATEGORY_ORDER } from '@/lib/config/toolbox';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 /* ─── Config ─────────────────────────────────────────────────────────────── */
 
@@ -49,6 +51,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
   const [showActivities, setShowActivities] = useState(false);
   const [showAI, setShowAI] = useState(true);
   const [leftTab, setLeftTab] = useState<'blocks' | 'prompts'>('blocks');
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const limit = PLATFORM_LIMITS[platform];
 
@@ -57,7 +60,10 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
     extensions: [
       StarterKit,
       Placeholder.configure({ placeholder: `Start writing your ${platform} essay…` }),
-      CharacterCount.configure({ limit: limit.unit === 'characters' ? limit.max : undefined }),
+      // Count only — no hard `limit`. Platform limits are advisory (see onUpdate
+      // + the over-limit status bar); a hard limit silently swallowed input on
+      // non-UCAS platforms whose word target maps to far more than 4000 chars.
+      CharacterCount,
     ],
     content: '',
     editorProps: {
@@ -100,14 +106,27 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
     }
   }, [platform, editor, drafts]);
 
+  // Keep the empty-editor placeholder in step with the active platform. The
+  // Placeholder extension is configured once at editor creation, so we mutate
+  // its option and dispatch an empty transaction to force ProseMirror to
+  // recompute the placeholder decoration.
+  useEffect(() => {
+    if (!editor) return;
+    const placeholderExt = editor.extensionManager.extensions.find((e) => e.name === 'placeholder');
+    if (!placeholderExt) return;
+    placeholderExt.options.placeholder = `Start writing your ${platform} essay…`;
+    editor.view.dispatch(editor.state.tr);
+  }, [platform, editor]);
+
   const toggleBlock = (id: string) => { setSelectedBlocks((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; }); };
   const insertBlock = useCallback((block: EssayBuildingBlock) => { if (!editor) return; editor.chain().focus().insertContent(`<p><em>[${block.label}]</em> ${block.detail || block.label}</p>`).run(); setSelectedBlocks((prev) => new Set(prev).add(block.id)); }, [editor]);
   const toggleCat = (cat: BlockCategory) => { setCollapsedCats((prev) => { const n = new Set(prev); n.has(cat) ? n.delete(cat) : n.add(cat); return n; }); };
   const handleCopy = () => { navigator.clipboard.writeText(editorText); setCopied(true); setTimeout(() => setCopied(false), 2000); };
-  const handleClear = () => {
-    if (typeof window !== 'undefined' && !window.confirm(`Clear your ${platform} essay? This also removes the saved draft and can't be undone.`)) return;
+  const handleClear = () => setConfirmClear(true);
+  const confirmClearEssay = () => {
     editor?.commands.clearContent();
     setDrafts((prev) => ({ ...prev, [platform]: '' }));
+    setConfirmClear(false);
   };
   const handleDownload = () => {
     const blob = new Blob([editorText], { type: 'text/plain' });
@@ -418,7 +437,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
               animate={{ width: 360, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="border-l border-border/50 bg-card/50 flex flex-col overflow-hidden shrink-0"
+              className="border-l border-border/50 bg-card/50 hidden lg:flex flex-col overflow-hidden shrink-0"
             >
               <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
                 <EssayAIPanel
@@ -438,6 +457,28 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
           )}
         </AnimatePresence>
       </div>
+
+      {/* Clear-essay confirmation — replaces the OS window.confirm */}
+      <Dialog open={confirmClear} onOpenChange={setConfirmClear}>
+        <DialogContent className="max-w-sm">
+          <div className="p-5 space-y-4">
+            <DialogHeader>
+              <DialogTitle>Clear your {platform} essay?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              This also removes the saved draft and can&apos;t be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setConfirmClear(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" size="sm" onClick={confirmClearEssay}>
+                Clear essay
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

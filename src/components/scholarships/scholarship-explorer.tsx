@@ -9,6 +9,7 @@ import { trackEvent } from '@/lib/analytics';
 import type { Scholarship } from './types';
 import { filterScholarships } from './utils';
 import { SCHOLARSHIP_VISUAL, type ScholarshipCategory } from '@/lib/theme/categories';
+import { parseLocalDate, daysUntil } from '@/lib/utils/dates';
 
 interface ScholarshipExplorerProps {
   scholarships: Scholarship[];
@@ -32,7 +33,7 @@ const listVariants = {
 function formatDeadline(dateStr: string | null | undefined): string {
   if (!dateStr) return 'Rolling';
   try {
-    return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    return parseLocalDate(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   } catch {
     return dateStr;
   }
@@ -40,7 +41,7 @@ function formatDeadline(dateStr: string | null | undefined): string {
 
 function isUrgent(dateStr: string | null | undefined): boolean {
   if (!dateStr) return false;
-  const diff = (new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+  const diff = daysUntil(dateStr);
   return diff >= 0 && diff <= 30;
 }
 

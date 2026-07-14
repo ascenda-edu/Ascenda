@@ -17,8 +17,6 @@ interface PageHeroProps {
   description: string;
   /** Short bold value rendered next to the eyebrow (e.g. "13 total"). */
   highlight?: string;
-  /** @deprecated Pill removed — value is no longer rendered. Kept for API compat. */
-  accent?: string;
   stats?: HeroStat[];
   actions?: ReactNode;
   breadcrumbs?: ReactNode;
@@ -130,7 +128,7 @@ export const PageHero = ({
                 {eyebrow ? <span className="font-medium">{eyebrow}</span> : null}
                 {eyebrow && highlight ? <span className="text-muted-foreground/40">·</span> : null}
                 {highlight ? (
-                  <span className={cn('font-semibold', isStudent ? 'text-foreground' : 'text-foreground')}>
+                  <span className="font-semibold text-foreground">
                     {highlight}
                   </span>
                 ) : null}

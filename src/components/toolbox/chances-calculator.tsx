@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, GraduationCap, Calendar, ClipboardList, TrendingUp, Target, Shield, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { parseLocalDate } from '@/lib/utils/dates';
 import { stagger, cardFade } from '@/lib/motion';
 import type { DemoStudentGrades, UniversityChance } from '@/lib/data/student-demo-data';
 
@@ -62,7 +63,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
     if (sortBy === 'chance') {
       return withData.sort((a, b) => b.chance - a.chance);
     }
-    return withData.sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+    return withData.sort((a, b) => parseLocalDate(a.deadline).getTime() - parseLocalDate(b.deadline).getTime());
   }, [universities, sliderScore, sortBy]);
 
   const counts = { reach: 0, match: 0, safety: 0 };
@@ -321,7 +322,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
                             <Calendar className="h-3.5 w-3.5" /> Deadline
                           </div>
                           <p className="text-xs text-foreground">
-                            {new Date(uni.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {parseLocalDate(uni.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </p>
                           {uni.interviewRequired && (
                             <p className="text-xs font-medium text-amber-600">Interview required</p>

@@ -221,7 +221,7 @@ export async function POST(req: NextRequest) {
         });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.log(`[essay-assist] ${model} failed: ${msg.slice(0, 100)}`);
+        console.warn(`[essay-assist] ${model} failed: ${msg.slice(0, 100)}`);
         continue;
       }
     }

@@ -6,6 +6,8 @@ import { ArrowUpRight, Clock, Sparkles, Target, Trash2, GitCompareArrows } from 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
+import { PageHero } from '@/components/layout/page-hero';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useShortlist } from '@/components/university-search/shortlist-store';
 import { ComparisonModal } from '@/components/university-search/ComparisonModal';
 import type { ProgramSearchResult } from '@/components/university-search/types';
@@ -13,9 +15,9 @@ import { cn } from '@/lib/utils';
 import { classifyFitTier, TIER_VISUAL, TIER_LABEL, type FitTier } from '@/lib/theme/categories';
 
 const stageTone = {
-  Researching: 'bg-amber-100 text-amber-900 border-amber-200',
-  Shortlisted: 'bg-blue-100 text-blue-900 border-blue-200',
-  Active: 'bg-emerald-100 text-emerald-900 border-emerald-200'
+  Researching: 'bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/20',
+  Shortlisted: 'bg-sky-100 text-sky-900 border-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:border-sky-500/20',
+  Active: 'bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20'
 };
 
 const classifyFit = classifyFitTier;
@@ -54,8 +56,18 @@ export default function UniversitySearchShortlistPage() {
 
   if (!ready) {
     return (
-      <div className="rounded-3xl border border-border bg-muted/40 p-8 text-sm text-muted-foreground">
-        Loading your shortlist...
+      <div className="space-y-8 pb-24">
+        <Skeleton className="h-24 w-full rounded-[24px]" />
+        <div className="grid gap-4 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-28 w-full rounded-2xl" />
+          ))}
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <Skeleton key={index} className="h-48 w-full rounded-2xl" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -63,27 +75,27 @@ export default function UniversitySearchShortlistPage() {
   return (
     <div className="space-y-8 pb-24">
       <header className="space-y-6">
-        <Breadcrumbs className="mb-2" />
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Explore · Shortlist</p>
-            <h1 className="text-[22px] font-semibold leading-snug text-foreground md:text-[28px]">Shortlist</h1>
-            <p className="max-w-3xl text-sm text-muted-foreground">
-              Courses you saved from search and matches. Track fit, next actions, and reopen them in results to compare.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {items.length >= 2 && (
-              <Button size="sm" onClick={() => setIsComparisonOpen(true)} className="gap-2">
-                <GitCompareArrows className="h-4 w-4" />
-                Compare {items.length} programs
+        <PageHero
+          tone="student"
+          eyebrow="Explore · Shortlist"
+          title="Shortlist"
+          description="Courses you saved from search and matches. Track fit, next actions, and reopen them in results to compare."
+          highlight={`${items.length} saved`}
+          breadcrumbs={<Breadcrumbs />}
+          actions={
+            <>
+              {items.length >= 2 && (
+                <Button size="sm" onClick={() => setIsComparisonOpen(true)} className="gap-2">
+                  <GitCompareArrows className="h-4 w-4" />
+                  Compare {items.length} programs
+                </Button>
+              )}
+              <Button asChild size="sm" variant="secondary">
+                <Link href="/university-search/results">Add more courses</Link>
               </Button>
-            )}
-            <Button asChild size="sm" variant="secondary">
-              <Link href="/university-search/results">Add more courses</Link>
-            </Button>
-          </div>
-        </div>
+            </>
+          }
+        />
 
         <div className="grid gap-4 md:grid-cols-4">
           <Card className="border-dashed border-border/70">
@@ -121,7 +133,7 @@ export default function UniversitySearchShortlistPage() {
           <Card className="border-dashed border-border/70">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <span className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Next steps</span>
-              <Clock className="h-5 w-5 text-indigo-500" aria-hidden />
+              <Clock className="h-5 w-5 text-violet-500" aria-hidden />
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-semibold text-foreground">
@@ -242,11 +254,17 @@ export default function UniversitySearchShortlistPage() {
                       <Trash2 className="h-4 w-4" aria-hidden />
                       Remove
                     </Button>
-                    <Button asChild size="sm" variant="secondary" className="gap-2">
-                      <Link href={`/course/${item.id}`}>
-                        Open course <ArrowUpRight className="h-4 w-4" aria-hidden />
-                      </Link>
-                    </Button>
+                    {item.id.endsWith('-shortlist') ? (
+                      // Legacy title-based ids don't resolve to a real /course/[id]
+                      // row, so we omit the link rather than render a dead end.
+                      <span className="text-xs text-muted-foreground">Open from search to view course</span>
+                    ) : (
+                      <Button asChild size="sm" variant="secondary" className="gap-2">
+                        <Link href={`/course/${item.id}`}>
+                          Open course <ArrowUpRight className="h-4 w-4" aria-hidden />
+                        </Link>
+                      </Button>
+                    )}
                   </CardFooter>
                 </Card>
               );

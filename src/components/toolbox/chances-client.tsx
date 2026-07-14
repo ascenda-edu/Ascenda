@@ -83,7 +83,6 @@ export function ChancesClient({ grades, fallbackUniversities }: ChancesClientPro
         tone="student"
         eyebrow="Chances calculator"
         title="Where do you stand?"
-        accent="Your odds"
         description={
           usingShortlist
             ? 'Showing chances for the universities you\'ve shortlisted. Override your score to explore different scenarios.'

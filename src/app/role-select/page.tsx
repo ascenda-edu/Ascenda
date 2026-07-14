@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { GraduationCap, Briefcase, ArrowRight } from 'lucide-react';
+import { GraduationCap, Briefcase, ArrowRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSupabase } from '@/hooks/useSupabase';
 
@@ -38,6 +38,10 @@ export default function RoleSelectPage() {
   const [selected, setSelected] = useState<RoleId | null>(null);
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  // Set once auth resolves (either path). The 8s safety timeout checks this
+  // before redirecting so a slow-but-successful check can't dump a signed-in
+  // user at /login.
+  const authResolvedRef = useRef(false);
 
   // Pre-warm both destination routes while the user reads the role cards.
   // This sidesteps the cold serverless first-request penalty for the
@@ -50,9 +54,17 @@ export default function RoleSelectPage() {
   useEffect(() => {
     let isMounted = true;
 
-    // Safety timeout: if verification takes > 8s, redirect to login
+    const resolveAuth = () => {
+      authResolvedRef.current = true;
+      if (isMounted) setCheckingAuth(false);
+      clearTimeout(timeout);
+    };
+
+    // Safety timeout: if verification takes > 8s, redirect to login. Guarded by
+    // authResolvedRef so a check that succeeds *after* this timer was queued
+    // can't redirect an already-signed-in user.
     const timeout = setTimeout(() => {
-      if (isMounted && checkingAuth) {
+      if (isMounted && !authResolvedRef.current) {
         console.warn('RoleSelect: Auth verification timed out');
         router.replace('/login');
       }
@@ -63,8 +75,7 @@ export default function RoleSelectPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return;
       if (session) {
-        setCheckingAuth(false);
-        clearTimeout(timeout);
+        resolveAuth();
       }
     });
 
@@ -72,15 +83,12 @@ export default function RoleSelectPage() {
       try {
         const { data: { user }, error } = await supabase.auth.getUser();
 
-        if (isMounted) {
-          if (error || !user) {
-            // Don't redirect immediately — give onAuthStateChange a chance
-            // to pick up the session from cookies
-          } else {
-            setCheckingAuth(false);
-            clearTimeout(timeout);
-          }
+        if (isMounted && !error && user) {
+          resolveAuth();
         }
+        // Otherwise don't redirect immediately — give onAuthStateChange a
+        // chance to pick up the session from cookies (the safety timeout is
+        // the backstop).
       } catch (err) {
         console.error('RoleSelect: Verification error', err);
       }
@@ -93,7 +101,7 @@ export default function RoleSelectPage() {
       clearTimeout(timeout);
       subscription.unsubscribe();
     };
-  }, [router, supabase, checkingAuth]);
+  }, [router, supabase]);
 
   if (checkingAuth) {
     return (
@@ -188,8 +196,17 @@ export default function RoleSelectPage() {
                     : 'text-sky-600 group-hover:text-sky-700 dark:text-sky-400'
                 )}
               >
-                {isSelected && loading ? 'Opening…' : 'Continue'}
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                {isSelected && loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    Opening…
+                  </>
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                  </>
+                )}
               </span>
             </motion.button>
           );

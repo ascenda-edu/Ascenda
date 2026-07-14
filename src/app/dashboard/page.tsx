@@ -113,7 +113,7 @@ export default async function DashboardPage() {
       .maybeSingle(),
     supabase
       .from('student_academic_input')
-      .select('programme_type,school_name,school_country,graduation_year,intended_clusters,english_required')
+      .select('programme_type,school_name,school_country,graduation_year,intended_clusters,english_required,english_status')
       .eq('profile_id', user.id)
       .maybeSingle(),
     supabase

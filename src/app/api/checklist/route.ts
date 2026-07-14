@@ -42,7 +42,8 @@ export async function PATCH(request: NextRequest) {
     .single();
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 400 });
+    console.error('[checklist] update failed', updateError);
+    return NextResponse.json({ error: 'Could not update the task' }, { status: 400 });
   }
 
   return NextResponse.json({ item: data });
@@ -93,7 +94,8 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (insertError) {
-    return NextResponse.json({ error: insertError.message }, { status: 400 });
+    console.error('[checklist] insert failed', insertError);
+    return NextResponse.json({ error: 'Could not create the task' }, { status: 400 });
   }
 
   return NextResponse.json({ item: data }, { status: 201 });
@@ -130,7 +132,8 @@ export async function DELETE(request: NextRequest) {
 
   const { error: deleteError } = await supabase.from('application_checklist').delete().eq('id', id);
   if (deleteError) {
-    return NextResponse.json({ error: deleteError.message }, { status: 400 });
+    console.error('[checklist] delete failed', deleteError);
+    return NextResponse.json({ error: 'Could not delete the task' }, { status: 400 });
   }
 
   return NextResponse.json({ ok: true });
