@@ -3,19 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSupabase } from '@/hooks/useSupabase';
+import { useRealtimePoll } from '@/hooks/use-realtime-poll';
 import {
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead
 } from '@/lib/demo/help-request-client';
 import type { Notification, NotificationAudience } from '@/lib/types/demo-tables';
-
-// Aggressive poll while realtime hasn't confirmed subscription (cold start,
-// flaky network). Once realtime says SUBSCRIBED the interval relaxes — we
-// only need a safety net at that point. Numbers tuned for the live demo:
-// 1.5s feels near-instant when realtime is missing, 10s is cheap insurance.
-const POLL_MS_FAST = 1500;
-const POLL_MS_SLOW = 10000;
 
 export interface UseNotificationsResult {
   items: Notification[];
@@ -85,41 +79,24 @@ export const useNotifications = (): UseNotificationsResult => {
     };
   }, [supabase, profileId, audience]);
 
-  // Realtime: subscribe to inserts for this profile. Poll interval starts
-  // fast (1.5s) and relaxes to 10s once realtime confirms SUBSCRIBED, so
-  // the demo flip-moment is never gated on realtime succeeding.
-  useEffect(() => {
-    if (!profileId) return;
-
-    let pollHandle: number | null = null;
-    const startPoll = (intervalMs: number) => {
-      if (pollHandle !== null) window.clearInterval(pollHandle);
-      pollHandle = window.setInterval(() => {
-        // Don't burn queries while the tab is hidden — the visibilitychange
-        // handler below catches the inbox up as soon as the tab returns.
-        if (document.hidden) return;
-        refresh();
-      }, intervalMs);
-    };
-
-    startPoll(POLL_MS_FAST);
-
-    const onVisibilityChange = () => {
-      if (!document.hidden) refresh();
-    };
-    document.addEventListener('visibilitychange', onVisibilityChange);
-
-    const channel = (supabase as any)
-      .channel(`notif:${profileId}:${audience}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `profile_id=eq.${profileId}`
-        },
-        (payload: { new: Notification }) => {
+  // Realtime: subscribe to inserts/updates for this profile, with the shared
+  // two-speed poll fallback (see use-realtime-poll.ts for the rationale).
+  useRealtimePoll({
+    channelName: `notif:${profileId}:${audience}`,
+    enabled: !!profileId,
+    onPoll: refresh,
+    onStatusChange: (status) => {
+      if (status === 'SUBSCRIBED') realtimeOkRef.current = true;
+      else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        realtimeOkRef.current = false;
+      }
+    },
+    subscriptions: [
+      {
+        event: 'INSERT',
+        table: 'notifications',
+        filter: `profile_id=eq.${profileId}`,
+        handler: (payload: { new: Notification }) => {
           // Realtime filter can only match one column; double-check audience
           // here so we don't surface counsellor inbox items on the student
           // side and vice versa.
@@ -129,42 +106,20 @@ export const useNotifications = (): UseNotificationsResult => {
             return [payload.new, ...prev].slice(0, 25);
           });
         }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `profile_id=eq.${profileId}`
-        },
-        (payload: { new: Notification }) => {
+      },
+      {
+        event: 'UPDATE',
+        table: 'notifications',
+        filter: `profile_id=eq.${profileId}`,
+        handler: (payload: { new: Notification }) => {
           if (payload.new.audience !== audience) return;
           setItems((prev) =>
             prev.map((row) => (row.id === payload.new.id ? payload.new : row))
           );
         }
-      )
-      .subscribe((status: string) => {
-        if (status === 'SUBSCRIBED') {
-          realtimeOkRef.current = true;
-          startPoll(POLL_MS_SLOW);
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          realtimeOkRef.current = false;
-          startPoll(POLL_MS_FAST);
-        }
-      });
-
-    return () => {
-      if (pollHandle !== null) window.clearInterval(pollHandle);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-      try {
-        (supabase as any).removeChannel(channel);
-      } catch {
-        // ignore
       }
-    };
-  }, [supabase, profileId, audience, refresh]);
+    ]
+  });
 
   const markRead = useCallback(
     async (id: string) => {

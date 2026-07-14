@@ -3,12 +3,15 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Inbox, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatRelativeTime } from '@/lib/utils/dates';
 import { useSupabase } from '@/hooks/useSupabase';
+import { useRealtimePoll } from '@/hooks/use-realtime-poll';
 import { useHelpDrawer } from '@/components/help/help-drawer-provider';
 import {
+  countUnreadForStudent,
   listInboxRequests,
-  listUnreadByRequest,
-  markNotificationRead
+  markNotificationRead,
+  resolveProfileNames
 } from '@/lib/demo/help-request-client';
 import type { HelpRequest } from '@/lib/types/demo-tables';
 
@@ -22,32 +25,51 @@ const STATUS_PILL: Record<HelpRequest['status'], { label: string; tone: string }
   resolved: { label: 'Resolved', tone: 'border-emerald-200/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' }
 };
 
-const formatWhen = (iso: string): string => {
-  const d = new Date(iso);
-  const diffH = (Date.now() - d.getTime()) / 36e5;
-  if (diffH < 1) return `${Math.max(1, Math.round(diffH * 60))} min ago`;
-  if (diffH < 24) return `${Math.round(diffH)} h ago`;
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-};
-
-const initiatorLabel = (req: HelpRequest): string =>
-  req.initiated_by === 'counsellor' ? 'From Sarah · your counsellor' : 'From you';
-
 export function InboxList({ profileId }: InboxListProps) {
   const supabase = useSupabase();
   const { openRequest } = useHelpDrawer();
   const [requests, setRequests] = useState<HelpRequest[]>([]);
   const [unreadByRequest, setUnreadByRequest] = useState<Map<string, number>>(new Map());
+  const [counsellorNames, setCounsellorNames] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
+    // Unread comes from student_last_read_at (same source of truth as the "Seen"
+    // receipt and the counsellor's unread count), not notification hrefs — see
+    // countUnreadForStudent. Keeps the badge from contradicting the receipt.
     const [reqs, unread] = await Promise.all([
       listInboxRequests(supabase, profileId),
-      listUnreadByRequest(supabase, profileId)
+      countUnreadForStudent(supabase, profileId)
     ]);
     setRequests(reqs);
     setUnreadByRequest(unread);
+    // Real counsellor names for claimed threads. Best-effort — unclaimed
+    // threads (or a failed lookup) fall back to neutral copy below.
+    const counsellorIds = reqs
+      .map((r) => r.counsellor_profile_id)
+      .filter((id): id is string => Boolean(id));
+    if (counsellorIds.length > 0) {
+      try {
+        // Empty fallback (not 'Your counsellor') so the `name ?` guard in
+        // initiatorLabel selects the neutral 'From your counsellor' branch for a
+        // counsellor with no resolved name — otherwise every row reads
+        // 'From Your counsellor · your counsellor' and the neutral branch is dead.
+        setCounsellorNames(await resolveProfileNames(supabase, counsellorIds, ''));
+      } catch (err) {
+        console.warn('inbox: counsellor name lookup failed', err);
+      }
+    }
   }, [supabase, profileId]);
+
+  const initiatorLabel = (req: HelpRequest): string => {
+    const name = req.counsellor_profile_id
+      ? counsellorNames.get(req.counsellor_profile_id)
+      : undefined;
+    if (req.initiated_by === 'counsellor') {
+      return name ? `From ${name} · your counsellor` : 'From your counsellor';
+    }
+    return 'From you';
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -62,31 +84,19 @@ export function InboxList({ profileId }: InboxListProps) {
     };
   }, [refresh]);
 
-  // Realtime: any new help_request or new notification for this user invalidates
-  // and we refetch. The help_requests subscription is unfiltered because the demo
-  // is single-user; a multi-user rollout would filter on student_profile_id.
-  useEffect(() => {
-    const channel = (supabase as any)
-      .channel('inbox_list')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'help_requests' },
-        () => refresh()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications', filter: `profile_id=eq.${profileId}` },
-        () => refresh()
-      )
-      .subscribe();
-    return () => {
-      try {
-        (supabase as any).removeChannel(channel);
-      } catch {
-        // ignore
-      }
-    };
-  }, [supabase, profileId, refresh]);
+  // Realtime-with-poll-fallback: any change to this student's help_requests, or
+  // a new notification for them, invalidates and we refetch. The shared hook adds
+  // a poll fallback + visibilitychange catch-up so the inbox keeps updating even
+  // if the websocket drops.
+  useRealtimePoll({
+    channelName: 'inbox_list',
+    enabled: !!profileId,
+    onPoll: refresh,
+    subscriptions: [
+      { table: 'help_requests', filter: `student_profile_id=eq.${profileId}`, handler: () => refresh() },
+      { table: 'notifications', filter: `profile_id=eq.${profileId}`, handler: () => refresh() }
+    ]
+  });
 
   const handleOpen = useCallback(
     async (req: HelpRequest) => {
@@ -190,7 +200,7 @@ export function InboxList({ profileId }: InboxListProps) {
               </div>
             </div>
             <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
-              {formatWhen(req.created_at)}
+              {formatRelativeTime(req.created_at)}
             </span>
           </button>
         );

@@ -28,3 +28,20 @@ export const daysUntil = (value: string): number => {
   const targetMidnight = new Date(target.getFullYear(), target.getMonth(), target.getDate());
   return Math.round((targetMidnight.getTime() - startOfToday().getTime()) / MS_PER_DAY);
 };
+
+/** Human-relative time from a full ISO timestamp: 'Just now' under a minute,
+ * then 'Xm ago' / 'Xh ago' / 'Xd ago', falling back to a short 'D Mon' date
+ * beyond a week. Coarse by design — for chat/inbox recency, not durations.
+ * Expects a timestamp with a time component (message/created_at), not a
+ * date-only string. */
+export const formatRelativeTime = (iso: string): string => {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  if (diffMs < 60_000) return 'Just now';
+  const min = Math.round(diffMs / 60_000);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const days = Math.round(hr / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+};
