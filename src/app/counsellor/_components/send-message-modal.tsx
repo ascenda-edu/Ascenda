@@ -6,13 +6,13 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { useSupabase } from '@/hooks/useSupabase';
-import { insertHelpRequest, insertHelpMessage } from '@/lib/demo/help-request-client';
+import { insertHelpRequest } from '@/lib/demo/help-request-client';
 import { DEMO_COUNSELLOR } from '@/lib/demo/counsellor';
 
 // Counsellor-initiated message context. Slim by design: the modal just needs
 // who it's going to and an optional reason hint to pre-fill the draft.
 export interface SendMessageStudent {
-  id: string;             // profiles.id for the student (same auth user in demo)
+  id: string;             // real profiles.id for the student (from loadCohort/loadStudentById)
   firstName: string;
   lastName: string;
 }
@@ -120,23 +120,17 @@ export function SendMessageModal({
       const finalSubject = subject.trim() || initialDraft.subject;
       const finalBody = body.trim() || initialDraft.body;
 
-      // Demo model: counsellor + student are the same auth user, so the
-      // notification routes back to the same profile (audience='student').
-      // student.id is the dummy roster slug ('student-1' etc) and is only
-      // used for the modal's display label.
-      const request = await insertHelpRequest(supabase, {
-        student_profile_id: counsellorId,
+      // The thread belongs to the real student (student.id) and is owned by the
+      // sending counsellor. request.body IS the opening message (the thread view
+      // renders it attributed to initiated_by), so no separate seed row is
+      // needed. The trg_help_request_notify trigger fires a 'counsellor_message'
+      // notification to the student's inbox.
+      await insertHelpRequest(supabase, {
+        student_profile_id: student.id,
+        counsellor_profile_id: counsellorId,
         subject: finalSubject,
         body: finalBody,
         initiated_by: 'counsellor'
-      });
-
-      // Seed the thread with the first message so the inbox view has content.
-      await insertHelpMessage(supabase, {
-        request_id: request.id,
-        author_profile_id: counsellorId,
-        author_role: 'counsellor',
-        body: finalBody
       });
 
       showToast({

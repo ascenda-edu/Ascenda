@@ -100,6 +100,12 @@ export const NAV_ITEMS: NavItem[] = [
     exact: true
   },
   {
+    label: 'Inbox',
+    href: '/counsellor/inbox',
+    icon: Inbox,
+    segment: 'counsellor'
+  },
+  {
     label: 'Students',
     href: '/counsellor/students',
     icon: Users,
@@ -154,7 +160,8 @@ export const NAV_ITEMS: NavItem[] = [
 export const EXPLORE_SECTION_ITEMS: SectionNavItem[] = [
   { label: 'Search', href: '/university-search/search' },
   { label: 'Matches', href: '/matches' },
-  { label: 'Shortlist', href: '/university-search/shortlist' }
+  { label: 'Shortlist', href: '/university-search/shortlist' },
+  { label: 'Quests', href: '/university-search/quests' }
 ];
 
 export const PLANNER_SECTION_ITEMS: SectionNavItem[] = [
@@ -173,6 +180,7 @@ export const TOOLBOX_SECTION_ITEMS: SectionNavItem[] = [
 
 export const COUNSELLOR_SECTION_ITEMS: SectionNavItem[] = [
   { label: 'Overview', href: '/counsellor', exact: true },
+  { label: 'Inbox', href: '/counsellor/inbox' },
   { label: 'Students', href: '/counsellor/students' },
   { label: 'Universities', href: '/counsellor/universities' },
   { label: 'Analytics', href: '/counsellor/analytics' },

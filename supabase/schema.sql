@@ -1278,7 +1278,8 @@ create policy documents_counsellor_read on documents
 -- From 20260512120000 / 20260513120000, with columns added by later migrations
 -- folded in: help_requests.initiated_by (20260517120000),
 -- notifications.audience (20260514130000),
--- help_meetings.status_changed_by (20260702120000).
+-- help_meetings.status_changed_by (20260702120000),
+-- help_requests.counsellor_profile_id + *_last_read_at (20260713170000).
 
 create table if not exists help_requests (
   id uuid primary key default gen_random_uuid(),
@@ -1293,6 +1294,14 @@ create table if not exists help_requests (
   -- side opens the thread drawer first.
   initiated_by text not null default 'student'
     check (initiated_by in ('student', 'counsellor')),
+  -- The counsellor who owns this conversation. Nullable: set when a counsellor
+  -- claims a student-raised request (on accept) or opens a counsellor-initiated
+  -- thread. Folded in: 20260713170000.
+  counsellor_profile_id uuid references profiles(id) on delete set null,
+  -- Per-side last-read timestamps drive inbox unread badges + "Seen" receipts
+  -- (20260713170000).
+  student_last_read_at timestamptz,
+  counsellor_last_read_at timestamptz,
   created_at timestamptz not null default now(),
   accepted_at timestamptz,
   resolved_at timestamptz
@@ -1302,6 +1311,12 @@ create index if not exists help_requests_status_created_idx
   on help_requests (status, created_at desc);
 create index if not exists help_requests_student_idx
   on help_requests (student_profile_id, created_at desc);
+create index if not exists help_requests_counsellor_idx
+  on help_requests (counsellor_profile_id, created_at desc);
+-- Newest-first inbox scan: loadCounsellorInbox does an unfiltered
+-- `order by created_at desc limit 100` (20260714110000).
+create index if not exists help_requests_created_idx
+  on help_requests (created_at desc);
 
 create table if not exists notifications (
   id uuid primary key default gen_random_uuid(),
@@ -1409,7 +1424,11 @@ drop policy if exists help_requests_demo_all on help_requests;
 drop policy if exists help_requests_select on help_requests;
 create policy help_requests_select on help_requests
   for select to authenticated
-  using (student_profile_id = auth.uid() or public.can_act_as_counsellor());
+  using (
+    student_profile_id = auth.uid()
+    or counsellor_profile_id = auth.uid()
+    or public.can_act_as_counsellor()
+  );
 
 drop policy if exists help_requests_insert on help_requests;
 create policy help_requests_insert on help_requests
@@ -1419,10 +1438,20 @@ create policy help_requests_insert on help_requests
   with check (student_profile_id = auth.uid() or public.can_act_as_counsellor());
 
 drop policy if exists help_requests_update on help_requests;
+-- Row access only — column scope (a plain student may touch nothing but
+-- student_last_read_at) is enforced by trg_guard_help_request_update below.
 create policy help_requests_update on help_requests
   for update to authenticated
-  using (student_profile_id = auth.uid() or public.can_act_as_counsellor())
-  with check (student_profile_id = auth.uid() or public.can_act_as_counsellor());
+  using (
+    student_profile_id = auth.uid()
+    or counsellor_profile_id = auth.uid()
+    or public.can_act_as_counsellor()
+  )
+  with check (
+    student_profile_id = auth.uid()
+    or counsellor_profile_id = auth.uid()
+    or public.can_act_as_counsellor()
+  );
 
 drop policy if exists help_messages_demo_all on help_messages;
 
@@ -1613,11 +1642,104 @@ create policy student_documents_student_read on student_documents
   for select to authenticated
   using (student_profile_id = auth.uid() or public.can_act_as_counsellor());
 
+-- ── help_requests write guard: INSERT + UPDATE (20260713170000 →
+--    20260714100000) ────────────────────────────────────────────────────────
+-- RLS with-check validates row ownership only, not which columns a write
+-- touches, so the guard trigger enforces column scope on both paths:
+--   • INSERT — a plain student may only file a fresh, unclaimed,
+--     student-initiated request (no pre-pinned counsellor, no forged
+--     acceptance/resolution or read receipts). Otherwise they could fix
+--     reply-notification routing to an arbitrary counsellor.
+--   • UPDATE — a plain student may only stamp student_last_read_at. Enforced by
+--     a whitelist (copy that one field onto a snapshot of OLD, reject any other
+--     drift) so every current and future column is frozen automatically.
+--   • The owning counsellor (counsellor_profile_id = auth.uid()) is a trusted
+--     participant even if their counsellor capability was later revoked —
+--     matching the RLS policy that still grants them row access.
+--   • Claim-on-accept: accepting an unclaimed thread sets counsellor_profile_id
+--     to the actor and stamps accepted_at, regardless of caller path, so
+--     acceptance always implies ownership.
+-- Mostly a no-op under the open demo posture (everyone is counsellor-capable);
+-- protective once can_act_as_counsellor() is re-restricted.
+
+create or replace function public.guard_help_request_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  r help_requests%rowtype;
+begin
+  if tg_op = 'INSERT' then
+    -- Server-side contexts (service_role / direct SQL: no auth.uid()) and
+    -- counsellor-capable users are trusted to set any column.
+    if auth.uid() is null or public.can_act_as_counsellor() then
+      return new;
+    end if;
+    -- A plain student may only file a fresh, unclaimed, student-initiated
+    -- request. status/initiated_by carry their NOT NULL defaults ('open' /
+    -- 'student') applied before this trigger fires.
+    if new.counsellor_profile_id   is not null
+       or new.counsellor_last_read_at is not null
+       or new.accepted_at is not null
+       or new.resolved_at is not null
+       or coalesce(new.status, 'open')          is distinct from 'open'
+       or coalesce(new.initiated_by, 'student') is distinct from 'student'
+    then
+      raise exception 'students may only file a fresh, unclaimed help request';
+    end if;
+    return new;
+  end if;
+
+  -- tg_op = 'UPDATE' below.
+
+  -- Claim-on-accept: accepting an unclaimed thread implies ownership, whatever
+  -- the caller path. Runs before the trust returns so a counsellor-capable
+  -- updater that only flips status still becomes the owner.
+  if new.status = 'accepted'
+     and old.counsellor_profile_id is null
+     and new.counsellor_profile_id is null
+     and auth.uid() is not null
+     and public.can_act_as_counsellor()
+  then
+    new.counsellor_profile_id := auth.uid();
+    new.accepted_at := coalesce(new.accepted_at, now());
+  end if;
+
+  -- Server-side contexts and counsellor-capable users are trusted.
+  if auth.uid() is null or public.can_act_as_counsellor() then
+    return new;
+  end if;
+  -- The owning counsellor is a trusted participant on this row (see comment
+  -- block above): let them act on the row they own even if their counsellor
+  -- capability was later revoked.
+  if old.counsellor_profile_id = auth.uid() then
+    return new;
+  end if;
+  -- A plain student may only stamp their own read receipt (whitelist).
+  r := old;
+  r.student_last_read_at := new.student_last_read_at;
+  if new is distinct from r then
+    raise exception 'students may only update their own read receipt on a help request';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_guard_help_request_update on help_requests;
+create trigger trg_guard_help_request_update
+  before insert or update on help_requests
+  for each row
+  execute function public.guard_help_request_update();
+
 -- ── Notification routing (SECURITY DEFINER triggers) ─────────────────────────
 -- Final forms: helpers + help_requests/help_messages triggers from
--- 20260702120000_p0_role_guard_notification_routing.sql; the two meeting
--- triggers from 20260712120000_meeting_notification_local_time.sql (render the
--- meeting time in the student's stored IANA timezone instead of UTC).
+-- 20260702120000_p0_role_guard_notification_routing.sql (message routing
+-- updated by 20260713170000: claimed threads notify the owning counsellor
+-- only); the two meeting triggers from
+-- 20260712120000_meeting_notification_local_time.sql (render the meeting time
+-- in the student's stored IANA timezone instead of UTC).
 -- Counsellor notifications fire HERE, via DB trigger, not application code.
 
 -- Every profile that should receive counsellor-audience notifications:
@@ -1675,7 +1797,7 @@ begin
       'help_request',
       'New help request from ' || student_name,
       coalesce(new.university || coalesce(' · ' || new.program, ''), new.subject),
-      '/counsellor?help=' || new.id::text,
+      '/counsellor/inbox?help=' || new.id::text,
       'counsellor'
     from public.counsellor_notification_targets() as target;
   end if;
@@ -1700,6 +1822,7 @@ set search_path = public
 as $$
 declare
   author_name text;
+  owner_id uuid;
 begin
   if new.author_role = 'counsellor' then
     author_name := coalesce(public.profile_display_name(new.author_profile_id, null), 'Your counsellor');
@@ -1709,21 +1832,39 @@ begin
       'help_reply_from_counsellor',
       author_name || ' replied to your help request',
       left(new.body, 120),
-      '/applications?help=' || new.request_id::text,
+      '/inbox?help=' || new.request_id::text,
       'student'
     from help_requests hr
     where hr.id = new.request_id;
   else
     author_name := coalesce(public.profile_display_name(new.author_profile_id, null), 'A student');
-    insert into notifications (profile_id, kind, title, body, href, audience)
-    select
-      target,
-      'help_reply_from_student',
-      author_name || ' replied to a help request',
-      left(new.body, 120),
-      '/counsellor?help=' || new.request_id::text,
-      'counsellor'
-    from public.counsellor_notification_targets() as target;
+    select hr.counsellor_profile_id into owner_id
+    from help_requests hr
+    where hr.id = new.request_id;
+
+    if owner_id is not null then
+      -- Claimed thread: notify only the owning counsellor.
+      insert into notifications (profile_id, kind, title, body, href, audience)
+      values (
+        owner_id,
+        'help_reply_from_student',
+        author_name || ' replied to a help request',
+        left(new.body, 120),
+        '/counsellor/inbox?help=' || new.request_id::text,
+        'counsellor'
+      );
+    else
+      -- Unclaimed thread: fan out to all counsellor targets.
+      insert into notifications (profile_id, kind, title, body, href, audience)
+      select
+        target,
+        'help_reply_from_student',
+        author_name || ' replied to a help request',
+        left(new.body, 120),
+        '/counsellor/inbox?help=' || new.request_id::text,
+        'counsellor'
+      from public.counsellor_notification_targets() as target;
+    end if;
   end if;
   return new;
 end;
@@ -1975,6 +2116,39 @@ alter table counsellor_deck_programs enable row level security;
 alter table deck_assignments enable row level security;
 alter table saved_searches enable row level security;
 
+-- Cross-table membership checks used by the deck policies below. SECURITY
+-- DEFINER (owned by postgres) so their subqueries bypass RLS — without this
+-- the policies re-enter each other's RLS and Postgres raises "infinite
+-- recursion detected in policy". See 20260713160000_fix_deck_rls_recursion.sql.
+create or replace function public.deck_owned_by_me(p_deck_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from counsellor_decks d
+    where d.id = p_deck_id and d.counsellor_id = auth.uid()
+  );
+$$;
+
+create or replace function public.deck_assigned_to_me(p_deck_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from deck_assignments da
+    where da.deck_id = p_deck_id and da.student_profile_id = auth.uid()
+  );
+$$;
+
+grant execute on function public.deck_owned_by_me(uuid) to authenticated;
+grant execute on function public.deck_assigned_to_me(uuid) to authenticated;
+
 -- Decks: anyone acting as a counsellor can read the deck library; only the
 -- owner mutates their decks. Students may read decks assigned to them.
 drop policy if exists counsellor_decks_select on counsellor_decks;
@@ -1982,11 +2156,7 @@ create policy counsellor_decks_select on counsellor_decks
   for select to authenticated
   using (
     (select public.can_act_as_counsellor())
-    or exists (
-      select 1 from deck_assignments da
-      where da.deck_id = counsellor_decks.id
-        and da.student_profile_id = (select auth.uid())
-    )
+    or (select public.deck_assigned_to_me(counsellor_decks.id))
   );
 
 drop policy if exists counsellor_decks_insert on counsellor_decks;
@@ -2013,37 +2183,15 @@ drop policy if exists counsellor_deck_programs_select on counsellor_deck_program
 create policy counsellor_deck_programs_select on counsellor_deck_programs
   for select to authenticated
   using (
-    exists (
-      select 1 from counsellor_decks d
-      where d.id = counsellor_deck_programs.deck_id
-        and (
-          (select public.can_act_as_counsellor())
-          or exists (
-            select 1 from deck_assignments da
-            where da.deck_id = d.id
-              and da.student_profile_id = (select auth.uid())
-          )
-        )
-    )
+    (select public.can_act_as_counsellor())
+    or (select public.deck_assigned_to_me(counsellor_deck_programs.deck_id))
   );
 
 drop policy if exists counsellor_deck_programs_write on counsellor_deck_programs;
 create policy counsellor_deck_programs_write on counsellor_deck_programs
   for all to authenticated
-  using (
-    exists (
-      select 1 from counsellor_decks d
-      where d.id = counsellor_deck_programs.deck_id
-        and d.counsellor_id = (select auth.uid())
-    )
-  )
-  with check (
-    exists (
-      select 1 from counsellor_decks d
-      where d.id = counsellor_deck_programs.deck_id
-        and d.counsellor_id = (select auth.uid())
-    )
-  );
+  using ((select public.deck_owned_by_me(counsellor_deck_programs.deck_id)))
+  with check ((select public.deck_owned_by_me(counsellor_deck_programs.deck_id)));
 
 -- Assignments: counsellors manage; students read their own.
 drop policy if exists deck_assignments_select on deck_assignments;
@@ -2057,20 +2205,8 @@ create policy deck_assignments_select on deck_assignments
 drop policy if exists deck_assignments_write on deck_assignments;
 create policy deck_assignments_write on deck_assignments
   for all to authenticated
-  using (
-    exists (
-      select 1 from counsellor_decks d
-      where d.id = deck_assignments.deck_id
-        and d.counsellor_id = (select auth.uid())
-    )
-  )
-  with check (
-    exists (
-      select 1 from counsellor_decks d
-      where d.id = deck_assignments.deck_id
-        and d.counsellor_id = (select auth.uid())
-    )
-  );
+  using ((select public.deck_owned_by_me(deck_assignments.deck_id)))
+  with check ((select public.deck_owned_by_me(deck_assignments.deck_id)));
 
 -- Saved searches: strictly self-service.
 drop policy if exists saved_searches_self on saved_searches;
@@ -2102,7 +2238,7 @@ begin
     coalesce(deck_name, 'A university deck')
       || ' · ' || card_count || ' universit' || case when card_count = 1 then 'y' else 'ies' end
       || coalesce(' — ' || nullif(trim(new.message), ''), ''),
-    '/dashboard#counsellor-quests',
+    '/university-search/quests',
     'student'
   );
   return new;

@@ -1,28 +1,42 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Inbox, Sparkles, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatRelativeTime } from '@/lib/utils/dates';
+import { useSupabase } from '@/hooks/useSupabase';
 import { useHelpRequests } from '@/hooks/use-help-requests';
 import { useHelpDrawer } from '@/components/help/help-drawer-provider';
-import type { HelpRequest } from '@/lib/types/demo-tables';
-
-const formatRelative = (iso: string): string => {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const sec = Math.max(1, Math.round(diffMs / 1000));
-  if (sec < 60) return `${sec}s ago`;
-  const min = Math.round(sec / 60);
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  return `${Math.round(hr / 24)}d ago`;
-};
-
-const studentDisplayName = (_: HelpRequest): string => 'Greg Franck';
+import { resolveProfileNames } from '@/lib/demo/help-request-client';
 
 export function HelpRequestsWidget() {
+  const supabase = useSupabase();
   const { items, loading } = useHelpRequests();
   const { openRequest } = useHelpDrawer();
+
+  // Real student names for the visible requests. Missing entries fall back to
+  // 'Student' while the lookup is in flight (or if the profile is unreadable).
+  // Keyed on the stable id set — `items` gets a fresh array identity on every
+  // poll tick, which would otherwise re-fire the lookup continuously.
+  const [names, setNames] = useState<Map<string, string>>(new Map());
+  const idsKey = useMemo(
+    () => [...new Set(items.map((row) => row.student_profile_id))].sort().join(','),
+    [items]
+  );
+  useEffect(() => {
+    if (!idsKey) return;
+    let cancelled = false;
+    resolveProfileNames(supabase, idsKey.split(','))
+      .then((map) => {
+        if (!cancelled) setNames(map);
+      })
+      .catch((err) => console.warn('help widget: name lookup failed', err));
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, idsKey]);
 
   const openCount = items.filter((row) => row.status === 'open').length;
 
@@ -50,6 +64,13 @@ export function HelpRequestsWidget() {
               </p>
             </div>
           </div>
+          <Link
+            href="/counsellor/inbox"
+            className="flex shrink-0 items-center gap-1 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition hover:-translate-y-0.5 hover:bg-muted/60"
+          >
+            View inbox
+            <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+          </Link>
         </div>
 
         {items.length > 0 ? (
@@ -86,10 +107,10 @@ export function HelpRequestsWidget() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                           <p className="truncate text-sm font-semibold text-foreground">
-                            {studentDisplayName(req)}
+                            {names.get(req.student_profile_id) ?? 'Student'}
                           </p>
                           <span className="shrink-0 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                            {formatRelative(req.created_at)}
+                            {formatRelativeTime(req.created_at)}
                           </span>
                         </div>
                         <p className="mt-0.5 truncate text-xs text-muted-foreground">

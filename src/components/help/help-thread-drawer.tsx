@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, NotebookPen, CalendarPlus, Check, Sparkles, Clock } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
+import { formatRelativeTime } from '@/lib/utils/dates';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useHelpThread } from '@/hooks/use-help-thread';
-import type { HelpMeetingStatus } from '@/lib/types/demo-tables';
+import { resolveProfileNames } from '@/lib/demo/help-request-client';
+import type { HelpMeetingStatus, HelpRequest } from '@/lib/types/demo-tables';
 
 type Side = 'student' | 'counsellor';
 
@@ -25,17 +27,6 @@ interface HelpThreadDrawerProps {
   side: Side;
   onClose: () => void;
 }
-
-const formatRelative = (iso: string): string => {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const sec = Math.max(1, Math.round(diffMs / 1000));
-  if (sec < 60) return `${sec}s ago`;
-  const min = Math.round(sec / 60);
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  return `${Math.round(hr / 24)}d ago`;
-};
 
 const formatMeetingTime = (iso: string): string =>
   new Date(iso).toLocaleString('en-GB', {
@@ -71,7 +62,7 @@ const defaultMeetingSlot = (): string => {
 
 export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadDrawerProps) {
   const { request, messages, notes, meetings, loading, reply, addNote, proposeMeeting, setMeetingStatus, setStatus } =
-    useHelpThread(requestId);
+    useHelpThread(requestId, side);
   const supabase = useSupabase();
   const { showToast } = useToast();
 
@@ -146,29 +137,33 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
 
   const isCounsellor = side === 'counsellor';
 
-  // Resolve the student's real name from their profile row; fall back to
-  // neutral copy rather than showing a wrong hardcoded name.
+  // Resolve both participants' real names from their profile rows; fall back
+  // to neutral copy rather than showing a wrong hardcoded name.
   const [studentName, setStudentName] = useState('');
+  const [counsellorName, setCounsellorName] = useState('Counsellor');
   useEffect(() => {
-    const profileId = request?.student_profile_id;
-    if (!profileId) {
+    const studentId = request?.student_profile_id;
+    const counsellorId = request?.counsellor_profile_id ?? null;
+    if (!studentId) {
       setStudentName('');
+      setCounsellorName('Counsellor');
       return;
     }
     let cancelled = false;
     setStudentName('Student');
-    supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', profileId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled) setStudentName(data?.full_name?.trim() || 'Student');
+    resolveProfileNames(supabase, counsellorId ? [studentId, counsellorId] : [studentId], '')
+      .then((names) => {
+        if (cancelled) return;
+        setStudentName(names.get(studentId) || 'Student');
+        setCounsellorName((counsellorId && names.get(counsellorId)) || 'Counsellor');
+      })
+      .catch(() => {
+        // keep the neutral fallbacks
       });
     return () => {
       cancelled = true;
     };
-  }, [supabase, request?.student_profile_id]);
+  }, [supabase, request?.student_profile_id, request?.counsellor_profile_id]);
 
   const handleReply = async () => {
     if (busy || !replyText.trim()) return;
@@ -305,15 +300,20 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
             <header className="flex items-start justify-between gap-3 border-b border-border/60 px-5 py-4">
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-                  {isCounsellor ? 'Inbox · help request' : 'Your request'}
+                  {isCounsellor
+                    ? 'Inbox · conversation'
+                    : request?.initiated_by === 'counsellor'
+                      ? 'From your counsellor'
+                      : 'Your request'}
                 </p>
                 <h2 className="truncate text-lg font-semibold text-foreground">
-                  {request?.university ?? 'Loading…'}
+                  {request ? request.university ?? request.subject : 'Loading…'}
                 </h2>
                 {request ? (
                   <p className="truncate text-xs text-muted-foreground">
-                    {request.program ?? 'Programme'} · from {studentName} ·{' '}
-                    {formatRelative(request.created_at)}
+                    {request.university ? `${request.program ?? 'Programme'} · ` : null}
+                    {isCounsellor ? `with ${studentName}` : `with ${counsellorName}`} ·{' '}
+                    {formatRelativeTime(request.created_at)}
                   </p>
                 ) : null}
               </div>
@@ -388,11 +388,11 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
                 <p className="text-sm text-muted-foreground">Request not found.</p>
               ) : tab === 'thread' ? (
                 <ThreadView
-                  initialBody={request.body}
-                  initialSubject={request.subject}
-                  initialAt={request.created_at}
+                  request={request}
                   messages={messages}
                   studentName={studentName}
+                  counsellorName={counsellorName}
+                  side={side}
                 />
               ) : tab === 'notes' ? (
                 <NotesView
@@ -490,62 +490,152 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
 
 /* ─── Subviews ───────────────────────────────────────────────────────────── */
 
+type ThreadEntry = {
+  id: string;
+  role: 'student' | 'counsellor';
+  body: string;
+  at: string;
+  isOpening?: boolean;
+};
+
+const dayKey = (iso: string): string => new Date(iso).toDateString();
+
+const dayLabel = (iso: string): string => {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return 'Today';
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    ...(d.getFullYear() !== today.getFullYear() ? { year: 'numeric' as const } : {})
+  });
+};
+
+const timeLabel = (iso: string): string =>
+  new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
 function ThreadView({
-  initialBody,
-  initialSubject,
-  initialAt,
+  request,
   messages,
-  studentName
+  studentName,
+  counsellorName,
+  side
 }: {
-  initialBody: string;
-  initialSubject: string;
-  initialAt: string;
+  request: HelpRequest;
   messages: ReturnType<typeof useHelpThread>['messages'];
   studentName: string;
+  counsellorName: string;
+  side: Side;
 }) {
+  // The request body is the opening message, attributed to whoever started the
+  // thread; every help_messages row is a reply that follows in order. (Legacy
+  // pre-2026-07-14 threads carried a seeded first help_messages row duplicating
+  // the opening body; those duplicate rows were removed by migration
+  // 20260714110000, so no seed-skip heuristic is needed here.)
+  const entries: ThreadEntry[] = [
+    {
+      id: `opening-${request.id}`,
+      role: request.initiated_by,
+      body: request.body,
+      at: request.created_at,
+      isOpening: true
+    },
+    ...messages.map((m) => ({
+      id: m.id,
+      role: m.author_role,
+      body: m.body,
+      at: m.created_at
+    }))
+  ];
+
+  // "Seen" on the latest own message once the other side's last-read time
+  // passes it.
+  const otherLastReadAt =
+    side === 'counsellor' ? request.student_last_read_at : request.counsellor_last_read_at;
+  const lastOwn = [...entries].reverse().find((e) => e.role === side);
+  const seenEntryId =
+    lastOwn && otherLastReadAt && new Date(otherLastReadAt) >= new Date(lastOwn.at)
+      ? lastOwn.id
+      : null;
+
   return (
-    <div className="space-y-3">
-      <article className="rounded-2xl border border-violet-200/40 bg-violet-500/5 p-3">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-foreground">{studentName}</p>
-          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-            {formatRelative(initialAt)}
-          </span>
-        </div>
-        <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          {initialSubject}
-        </p>
-        <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground/90">
-          {initialBody}
-        </p>
-        <p className="mt-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.2em] text-violet-600 dark:text-violet-400">
-          <Sparkles className="h-3 w-3" />
-          AI-drafted by student · edited before sending
-        </p>
-      </article>
-      {messages.map((m) => (
-        <article
-          key={m.id}
-          className={cn(
-            'rounded-2xl border p-3',
-            m.author_role === 'counsellor'
-              ? 'border-emerald-200/40 bg-emerald-500/5'
-              : 'border-violet-200/40 bg-violet-500/5'
-          )}
-        >
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-foreground">
-              {m.author_role === 'counsellor' ? 'Counsellor' : studentName}
-            </p>
-            <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              {formatRelative(m.created_at)}
-            </span>
+    <div className="space-y-2">
+      <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        {request.subject}
+      </p>
+      {entries.map((entry, index) => {
+        const isOwn = entry.role === side;
+        const name = entry.role === 'counsellor' ? counsellorName : studentName;
+        const isPending = entry.id.startsWith('optimistic-');
+        const showDay = index === 0 || dayKey(entry.at) !== dayKey(entries[index - 1].at);
+        return (
+          <div key={entry.id}>
+            {showDay ? (
+              <div className="flex items-center gap-3 py-2" role="separator" aria-label={dayLabel(entry.at)}>
+                <span className="h-px flex-1 bg-border/60" />
+                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  {dayLabel(entry.at)}
+                </span>
+                <span className="h-px flex-1 bg-border/60" />
+              </div>
+            ) : null}
+            <div className={cn('flex items-end gap-2', isOwn ? 'flex-row-reverse' : 'flex-row')}>
+              <span
+                className={cn(
+                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold',
+                  entry.role === 'counsellor'
+                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-violet-500/15 text-violet-700 dark:text-violet-300'
+                )}
+                aria-hidden
+              >
+                {getInitials(name)}
+              </span>
+              <article
+                className={cn(
+                  'max-w-[80%] rounded-2xl border px-3 py-2',
+                  isOwn ? 'rounded-br-md' : 'rounded-bl-md',
+                  entry.role === 'counsellor'
+                    ? 'border-emerald-200/40 bg-emerald-500/5'
+                    : 'border-violet-200/40 bg-violet-500/5',
+                  isPending && 'opacity-60'
+                )}
+              >
+                <div className={cn('flex items-baseline gap-2', isOwn && 'flex-row-reverse')}>
+                  <p className="text-xs font-semibold text-foreground">{isOwn ? 'You' : name}</p>
+                  <span className="text-[10px] tabular-nums text-muted-foreground">
+                    {isPending ? 'Sending…' : timeLabel(entry.at)}
+                  </span>
+                </div>
+                <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-foreground/90">
+                  {entry.body}
+                </p>
+                {entry.isOpening && entry.role === 'student' ? (
+                  <p className="mt-1.5 inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.2em] text-violet-600 dark:text-violet-400">
+                    <Sparkles className="h-3 w-3" />
+                    AI-drafted · edited before sending
+                  </p>
+                ) : null}
+              </article>
+            </div>
+            {seenEntryId === entry.id ? (
+              <p className={cn('mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground', 'justify-end pr-9')}>
+                <Check className="h-3 w-3" aria-hidden />
+                Seen
+              </p>
+            ) : null}
           </div>
-          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground/90">
-            {m.body}
-          </p>
-        </article>
-      ))}
+        );
+      })}
+      {entries.length === 1 && side === 'counsellor' && request.initiated_by === 'counsellor' ? (
+        <p className="pt-1 text-center text-xs text-muted-foreground">
+          Sent — {studentName} will see this in their inbox.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -615,7 +705,7 @@ function NotesView({
                     Counsellor note
                   </span>
                   <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                    {formatRelative(n.created_at)}
+                    {formatRelativeTime(n.created_at)}
                   </span>
                 </div>
                 <p className="mt-1 whitespace-pre-line">{n.body}</p>

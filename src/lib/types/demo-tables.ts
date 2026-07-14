@@ -8,6 +8,7 @@ export type HelpRequestInitiator = 'student' | 'counsellor';
 export interface HelpRequest {
   id: string;
   student_profile_id: string;
+  counsellor_profile_id: string | null;
   application_id: string | null;
   university: string | null;
   program: string | null;
@@ -15,6 +16,8 @@ export interface HelpRequest {
   body: string;
   status: HelpRequestStatus;
   initiated_by: HelpRequestInitiator;
+  student_last_read_at: string | null;
+  counsellor_last_read_at: string | null;
   created_at: string;
   accepted_at: string | null;
   resolved_at: string | null;
@@ -24,7 +27,12 @@ export type HelpRequestInsert = Pick<
   HelpRequest,
   'student_profile_id' | 'subject' | 'body'
 > &
-  Partial<Pick<HelpRequest, 'application_id' | 'university' | 'program' | 'status' | 'initiated_by'>>;
+  Partial<
+    Pick<
+      HelpRequest,
+      'counsellor_profile_id' | 'application_id' | 'university' | 'program' | 'status' | 'initiated_by'
+    >
+  >;
 
 export type NotificationAudience = 'student' | 'counsellor';
 

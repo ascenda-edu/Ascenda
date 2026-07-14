@@ -20,7 +20,7 @@ import { CounsellorCard } from '@/components/dashboard/hub/counsellor-card';
 import { QuickLinks } from '@/components/dashboard/hub/quick-links';
 import { buildStepCompletion, ProfileRecordGroup } from '@/lib/profile/completion';
 import { PROFILE_STEPS } from '@/lib/profile/steps';
-import { listInboxRequests, listUnreadByRequest } from '@/lib/demo/help-request-client';
+import { countUnreadForStudent, listInboxRequests, resolveProfileNames } from '@/lib/demo/help-request-client';
 import { DEMO_COUNSELLOR } from '@/lib/demo/counsellor';
 import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import type { Database } from '@/lib/types/database';
@@ -126,12 +126,17 @@ export default async function DashboardPage() {
     // compute can take tens of seconds, so the matches cell streams in behind
     // Suspense (see MatchesPeek) instead of blocking the whole hub.
     // Help threads + unread counts feed the counsellor cell; the hub must
-    // still render if the help tables are unreachable. help_requests carries
-    // no counsellor column, so we chain one narrow query for the author of the
-    // most recent counsellor reply — that is who "unread replies" are from.
-    Promise.all([listInboxRequests(supabase, user.id), listUnreadByRequest(supabase, user.id)])
+    // still render if the help tables are unreachable. help_requests carries no
+    // counsellor column on the message side, so we chain one narrow query for
+    // the author of the most recent counsellor reply — normally who "unread
+    // replies" are from. But counsellor-INITIATED threads have no help_messages
+    // row (request.body is the opener), so when there's no reply we fall back to
+    // the counsellor who owns the most relevant thread and resolve the name here
+    // (off the critical path) via resolveProfileNames, which batches + caches.
+    Promise.all([listInboxRequests(supabase, user.id), countUnreadForStudent(supabase, user.id)])
       .then(async ([requests, unread]) => {
-        let lastReplyAuthorId: string | null = null;
+        let inboxCounsellorId: string | null = null;
+        let unreadFromReply = false;
         if (requests.length > 0) {
           const { data: lastReply } = await supabase
             .from('help_messages')
@@ -140,11 +145,32 @@ export default async function DashboardPage() {
             .eq('author_role', 'counsellor')
             .order('created_at', { ascending: false })
             .limit(1);
-          lastReplyAuthorId = lastReply?.[0]?.author_profile_id ?? null;
+          const lastReplyAuthorId = lastReply?.[0]?.author_profile_id ?? null;
+          if (lastReplyAuthorId) {
+            inboxCounsellorId = lastReplyAuthorId;
+            unreadFromReply = true;
+          } else {
+            // No counsellor reply row anywhere — the unread is a counsellor's
+            // opening message. Attribute it to that counsellor, not the demo
+            // persona. requests are ordered created_at DESC, so .find() returns
+            // the most recent counsellor-initiated thread, else the most recent
+            // thread with an owner.
+            inboxCounsellorId =
+              requests.find((r) => r.initiated_by === 'counsellor' && r.counsellor_profile_id)
+                ?.counsellor_profile_id ??
+              requests.find((r) => r.counsellor_profile_id)?.counsellor_profile_id ??
+              null;
+          }
         }
-        return [requests, unread, lastReplyAuthorId] as const;
+        let inboxCounsellorName: string | null = null;
+        if (inboxCounsellorId) {
+          const names = await resolveProfileNames(supabase, [inboxCounsellorId], '');
+          const resolved = names.get(inboxCounsellorId);
+          inboxCounsellorName = resolved && resolved.length > 0 ? resolved : null;
+        }
+        return [requests, unread, inboxCounsellorName, unreadFromReply] as const;
       })
-      .catch(() => [[], new Map<string, number>(), null] as const),
+      .catch(() => [[], new Map<string, number>(), null, false] as const),
     supabase
       .from('help_meetings')
       .select('title, scheduled_for, location, status, counsellor_profile_id')
@@ -199,37 +225,25 @@ export default async function DashboardPage() {
   const nextDeadlineDays = nextDeadline ? safeDaysUntil(nextDeadline.deadline_date) : null;
 
   // ── Counsellor / inbox ──────────────────────────────────────────────────
-  const [helpRequests, unreadByRequest, lastReplyAuthorId] = helpResult;
+  const [helpRequests, unreadByRequest, inboxCounsellorName, unreadFromReply] = helpResult;
   const unreadTotal = Array.from(unreadByRequest.values()).reduce((sum, count) => sum + count, 0);
   const openThreads = helpRequests.filter((request) => request.status !== 'resolved');
   const latestSubject = openThreads[0]?.subject ?? helpRequests[0]?.subject ?? null;
   const meetingRow = meetingResponse.data?.[0] ?? null;
 
-  // Resolve real counsellor names. The counsellor side runs on live Supabase
-  // data, so a second counsellor's replies or meetings must not be attributed
-  // to the demo persona — one narrow profiles lookup for the (at most two)
-  // ids in play; DEMO_COUNSELLOR is only the fallback when nothing resolves.
-  const counsellorIds = Array.from(
-    new Set(
-      [lastReplyAuthorId, meetingRow?.counsellor_profile_id].filter((id): id is string => Boolean(id))
-    )
-  );
-  const counsellorNameById = new Map<string, string>();
-  if (counsellorIds.length > 0) {
-    const { data: counsellorProfiles } = await supabase
-      .from('profiles')
-      .select('id, full_name')
-      .in('id', counsellorIds);
-    for (const profile of counsellorProfiles ?? []) {
-      const name = profile.full_name?.trim();
-      if (name) counsellorNameById.set(profile.id, name);
-    }
+  // Resolve the real counsellor name for the next meeting. The counsellor side
+  // runs on live Supabase data, so a second counsellor's meeting must not be
+  // attributed to the demo persona. The inbox counsellor name is already
+  // resolved above (in the help-threads chain, off the critical path);
+  // resolveProfileNames batches + caches, so this at-most-one-id lookup is cheap.
+  // DEMO_COUNSELLOR is only the fallback when nothing resolves.
+  let meetingCounsellorName: string | null = null;
+  if (meetingRow?.counsellor_profile_id) {
+    const names = await resolveProfileNames(supabase, [meetingRow.counsellor_profile_id], '');
+    const resolved = names.get(meetingRow.counsellor_profile_id);
+    meetingCounsellorName = resolved && resolved.length > 0 ? resolved : null;
   }
   const firstNameOf = (fullName: string) => fullName.split(/\s+/)[0];
-  const inboxCounsellorName = lastReplyAuthorId ? counsellorNameById.get(lastReplyAuthorId) ?? null : null;
-  const meetingCounsellorName = meetingRow?.counsellor_profile_id
-    ? counsellorNameById.get(meetingRow.counsellor_profile_id) ?? null
-    : null;
   const inboxFirstName = inboxCounsellorName ? firstNameOf(inboxCounsellorName) : DEMO_COUNSELLOR.firstName;
   const meetingFirstName = meetingCounsellorName ? firstNameOf(meetingCounsellorName) : DEMO_COUNSELLOR.firstName;
   // The card fronts one counsellor: prefer whoever the next meeting is with,
@@ -262,11 +276,20 @@ export default async function DashboardPage() {
     });
   }
   if (unreadTotal > 0) {
+    // "reply/replies" only when an actual counsellor reply backs the unread; a
+    // counsellor-initiated opening (no help_messages row) is an unread message.
+    const unreadNoun = unreadFromReply
+      ? unreadTotal === 1
+        ? 'reply'
+        : 'replies'
+      : unreadTotal === 1
+        ? 'message'
+        : 'messages';
     focusItems.push({
       id: 'focus-inbox',
       label: 'Inbox',
-      title: `${unreadTotal} unread ${unreadTotal === 1 ? 'reply' : 'replies'} from ${inboxFirstName}`,
-      detail: latestSubject ? `Latest thread: ${latestSubject}` : 'Your counsellor has responded.',
+      title: `${unreadTotal} unread ${unreadNoun} from ${inboxFirstName}`,
+      detail: latestSubject ? `Latest thread: ${latestSubject}` : 'Your counsellor is in touch.',
       href: '/inbox',
       tone: 'violet'
     });

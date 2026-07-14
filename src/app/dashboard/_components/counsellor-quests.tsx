@@ -28,6 +28,7 @@ export async function CounsellorQuests({ profileId }: { profileId: string }) {
         title={`Quest log · ${clearedCount}/${questCount} cleared`}
         icon={Scroll}
         iconClassName="bg-violet-500/10 text-violet-600 ring-violet-500/15 dark:text-violet-300"
+        action={{ label: 'Open quest log', href: '/university-search/quests' }}
       >
         <div className="grid gap-4 md:grid-cols-2">
           {questDecks.map((deck) => (
