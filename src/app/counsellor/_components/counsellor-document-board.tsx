@@ -126,7 +126,9 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
             ? `Your counsellor is asking about ${doc.documentName}`
             : `Your counsellor is following up on ${doc.documentName}`,
         body: askAsStudent,
-        href: null
+        // Land the student on their document manager so tapping the notification
+        // takes them somewhere actionable (a null href renders a dead click).
+        href: '/applications/documents'
       });
 
       setNudges((prev) => ({ ...prev, [doc.id]: { target, at: Date.now() } }));

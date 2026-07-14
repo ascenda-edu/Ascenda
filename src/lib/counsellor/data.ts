@@ -35,6 +35,7 @@ import type {
   ParentMessage,
 } from '@/lib/counsellor/types';
 import type { CounsellorDocument, EvolutionEntry } from '@/lib/data/student-demo-data';
+import { DEMO_EMAIL } from '@/lib/demo/demo-profile';
 
 type Client = SupabaseClient<Database>;
 
@@ -58,8 +59,16 @@ const unwrap = <T,>(
 // appear in the counsellor roster. Seeded students use this email suffix.
 // Remove/relax this scope when onboarding real students to a counsellor.
 const DEMO_COHORT_EMAIL_SUFFIX = '+seed@ascenda.demo';
-const inDemoCohort = (email: string | null | undefined): boolean =>
-  (email ?? '').endsWith(DEMO_COHORT_EMAIL_SUFFIX);
+// The single-account demo also plays the student side as greg@workiflow.com.
+// Keep that profile cohort-eligible so the counsellor can open greg's card in
+// the roster and message him — the message (and its notification) then lands on
+// the student identity the demo actually browses, closing the counsellor→student
+// loop in one login. Only the students roster surfaces greg (see
+// students/page.tsx); the analytics/overview pages still exclude him via excludeId.
+const inDemoCohort = (email: string | null | undefined): boolean => {
+  const normalized = (email ?? '').trim().toLowerCase();
+  return normalized.endsWith(DEMO_COHORT_EMAIL_SUFFIX) || normalized === DEMO_EMAIL;
+};
 
 // ── return types (mirror the dummy helper shapes the components consume) ─────
 

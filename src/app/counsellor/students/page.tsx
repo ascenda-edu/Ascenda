@@ -13,8 +13,12 @@ interface Props {
 export default async function CounsellorStudentsPage({ searchParams }: Props) {
   const params = searchParams;
   const supabase = createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const students = await loadCohort(supabase, { excludeId: user?.id });
+  // Unlike the analytics/overview pages, this roster does NOT exclude the current
+  // user: in the single-account demo that keeps the demo student (greg) in the
+  // list so the counsellor can open his card and message him, and the message
+  // lands on the student side the demo browses. In production the counsellor is a
+  // separate (non-student) account, so this is a no-op there.
+  const students = await loadCohort(supabase);
   const stats = deriveCohortStats(students);
   const flagged = students.filter((s) => s.flags.length > 0).length;
   const complete = students.filter((s) => s.profile.completionPct === 100).length;

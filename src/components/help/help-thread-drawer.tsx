@@ -423,7 +423,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
             {/* Footer composer (Thread tab) */}
             {tab === 'thread' && request ? (
               <div className="border-t border-border/60 bg-card/40 px-5 py-3">
-                <div className="flex items-start gap-2">
+                <div className="flex items-end gap-2">
                   <label htmlFor="help-drawer-reply" className="sr-only">
                     Reply message
                   </label>
@@ -431,17 +431,35 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
                     id="help-drawer-reply"
                     value={replyText}
                     onChange={(event) => setReplyText(event.target.value)}
+                    onKeyDown={(event) => {
+                      // Enter sends; Shift+Enter inserts a newline (standard chat
+                      // behaviour). Don't hijack Enter mid-IME-composition.
+                      if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                        event.preventDefault();
+                        handleReply();
+                      }
+                    }}
                     placeholder={
                       isCounsellor ? `Reply to ${studentName}…` : 'Reply to your counsellor…'
                     }
                     rows={2}
                     className="min-h-[44px] flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   />
-                  <Button size="sm" onClick={handleReply} disabled={busy || !replyText.trim()}>
-                    <Send className="mr-1.5 h-3.5 w-3.5" />
-                    Send
+                  <Button
+                    size="sm"
+                    onClick={handleReply}
+                    disabled={busy || !replyText.trim()}
+                    aria-label="Send reply"
+                    className="h-11 w-11 shrink-0 rounded-full p-0"
+                  >
+                    <Send className="h-4 w-4" />
                   </Button>
                 </div>
+                <p className="mt-1.5 px-1 text-[10px] text-muted-foreground">
+                  <kbd className="rounded border border-border/60 bg-muted/60 px-1 font-sans">Enter</kbd> to send ·{' '}
+                  <kbd className="rounded border border-border/60 bg-muted/60 px-1 font-sans">Shift</kbd>+
+                  <kbd className="rounded border border-border/60 bg-muted/60 px-1 font-sans">Enter</kbd> for a new line
+                </p>
 
                 {isCounsellor ? (
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
@@ -563,76 +581,97 @@ function ThreadView({
       : null;
 
   return (
-    <div className="space-y-2">
-      <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+    <div className="space-y-0.5">
+      <p className="pb-1 text-center text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
         {request.subject}
       </p>
       {entries.map((entry, index) => {
         const isOwn = entry.role === side;
         const name = entry.role === 'counsellor' ? counsellorName : studentName;
         const isPending = entry.id.startsWith('optimistic-');
-        const showDay = index === 0 || dayKey(entry.at) !== dayKey(entries[index - 1].at);
+        const prev = entries[index - 1];
+        const next = entries[index + 1];
+        const showDay = index === 0 || dayKey(entry.at) !== dayKey(prev.at);
+        // Group consecutive messages from the same sender on the same day so a
+        // run reads as one block: only the first shows an avatar + name, only
+        // the last shows a timestamp.
+        const groupedWithPrev = !showDay && !!prev && prev.role === entry.role;
+        const groupedWithNext =
+          !!next && next.role === entry.role && dayKey(next.at) === dayKey(entry.at);
+        const showMeta = !groupedWithNext || seenEntryId === entry.id;
         return (
-          <div key={entry.id}>
+          <div key={entry.id} className={cn(!groupedWithPrev && index > 0 && 'pt-2.5')}>
             {showDay ? (
               <div className="flex items-center gap-3 py-2" role="separator" aria-label={dayLabel(entry.at)}>
-                <span className="h-px flex-1 bg-border/60" />
+                <span className="h-px flex-1 bg-border/50" />
                 <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                   {dayLabel(entry.at)}
                 </span>
-                <span className="h-px flex-1 bg-border/60" />
+                <span className="h-px flex-1 bg-border/50" />
               </div>
             ) : null}
             <div className={cn('flex items-end gap-2', isOwn ? 'flex-row-reverse' : 'flex-row')}>
-              <span
-                className={cn(
-                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold',
-                  entry.role === 'counsellor'
-                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                    : 'bg-violet-500/15 text-violet-700 dark:text-violet-300'
-                )}
-                aria-hidden
-              >
-                {getInitials(name)}
-              </span>
-              <article
-                className={cn(
-                  'max-w-[80%] rounded-2xl border px-3 py-2',
-                  isOwn ? 'rounded-br-md' : 'rounded-bl-md',
-                  entry.role === 'counsellor'
-                    ? 'border-emerald-200/40 bg-emerald-500/5'
-                    : 'border-violet-200/40 bg-violet-500/5',
-                  isPending && 'opacity-60'
-                )}
-              >
-                <div className={cn('flex items-baseline gap-2', isOwn && 'flex-row-reverse')}>
-                  <p className="text-xs font-semibold text-foreground">{isOwn ? 'You' : name}</p>
-                  <span className="text-[10px] tabular-nums text-muted-foreground">
-                    {isPending ? 'Sending…' : timeLabel(entry.at)}
+              {/* Avatar sits on the other side only, and only at the start of a run. */}
+              {!isOwn ? (
+                groupedWithPrev ? (
+                  <span className="w-7 shrink-0" aria-hidden />
+                ) : (
+                  <span
+                    className={cn(
+                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold',
+                      entry.role === 'counsellor'
+                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-violet-500/15 text-violet-700 dark:text-violet-300'
+                    )}
+                    aria-hidden
+                  >
+                    {getInitials(name)}
                   </span>
-                </div>
-                <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-foreground/90">
-                  {entry.body}
-                </p>
-                {entry.isOpening && entry.role === 'student' ? (
-                  <p className="mt-1.5 inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.2em] text-violet-600 dark:text-violet-400">
-                    <Sparkles className="h-3 w-3" />
-                    AI-drafted · edited before sending
-                  </p>
+                )
+              ) : null}
+              <div className={cn('flex max-w-[78%] flex-col', isOwn ? 'items-end' : 'items-start')}>
+                {!isOwn && !groupedWithPrev ? (
+                  <span className="mb-0.5 px-1 text-[11px] font-semibold text-muted-foreground">{name}</span>
                 ) : null}
-              </article>
+                <div
+                  className={cn(
+                    'rounded-2xl px-3.5 py-2 text-sm leading-relaxed shadow-sm',
+                    isOwn
+                      ? 'rounded-br-md bg-primary text-primary-foreground'
+                      : 'rounded-bl-md border border-border/60 bg-muted/60 text-foreground',
+                    isPending && 'opacity-60'
+                  )}
+                >
+                  <p className="whitespace-pre-line">{entry.body}</p>
+                  {entry.isOpening && entry.role === 'student' ? (
+                    <p
+                      className={cn(
+                        'mt-1.5 inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.15em]',
+                        isOwn ? 'text-primary-foreground/70' : 'text-violet-600 dark:text-violet-400'
+                      )}
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      AI-drafted · edited before sending
+                    </p>
+                  ) : null}
+                </div>
+                {showMeta ? (
+                  <span className="mt-0.5 flex items-center gap-1 px-1 text-[10px] tabular-nums text-muted-foreground">
+                    {isPending ? 'Sending…' : timeLabel(entry.at)}
+                    {seenEntryId === entry.id ? (
+                      <span className="inline-flex items-center gap-0.5">
+                        · <Check className="h-3 w-3" aria-hidden /> Seen
+                      </span>
+                    ) : null}
+                  </span>
+                ) : null}
+              </div>
             </div>
-            {seenEntryId === entry.id ? (
-              <p className={cn('mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground', 'justify-end pr-9')}>
-                <Check className="h-3 w-3" aria-hidden />
-                Seen
-              </p>
-            ) : null}
           </div>
         );
       })}
       {entries.length === 1 && side === 'counsellor' && request.initiated_by === 'counsellor' ? (
-        <p className="pt-1 text-center text-xs text-muted-foreground">
+        <p className="pt-2 text-center text-xs text-muted-foreground">
           Sent — {studentName} will see this in their inbox.
         </p>
       ) : null}

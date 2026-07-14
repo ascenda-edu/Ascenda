@@ -91,7 +91,9 @@ export const useHelpRequests = (): UseHelpRequestsResult => {
             kind: 'help_accepted',
             title: 'Your counsellor accepted your help request',
             body: req.university ? `${req.university}${req.program ? ` · ${req.program}` : ''}` : null,
-            href: req.application_id ? `/applications/${req.application_id}` : null
+            // Fall back to the applications board when no specific application is
+            // linked, so the notification never renders a dead click.
+            href: req.application_id ? `/applications/${req.application_id}` : '/applications'
           });
         }
       } catch (err) {
