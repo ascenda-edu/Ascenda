@@ -1523,11 +1523,20 @@ create policy notifications_select on notifications
 drop policy if exists notifications_insert on notifications;
 create policy notifications_insert on notifications
   for insert to authenticated
-  -- Students may only notify themselves; counsellors may notify their
-  -- students (e.g. reply pings, meeting proposals, document nudges).
-  -- DB triggers that fan out notifications run SECURITY DEFINER and are
-  -- unaffected by this policy.
-  with check (profile_id = auth.uid() or public.can_act_as_counsellor());
+  -- Users may notify themselves. The counsellor-capable branch (open to all
+  -- signed-in users under the demo posture) is restricted to the one
+  -- client-authored cross-user kind and root-relative hrefs (20260715120000),
+  -- so it cannot inject arbitrary titles/links into other feeds. All other
+  -- cross-user notifications flow through SECURITY DEFINER triggers, which
+  -- this policy does not constrain.
+  with check (
+    profile_id = auth.uid()
+    or (
+      public.can_act_as_counsellor()
+      and kind = 'doc_nudge'
+      and (href is null or (href like '/%' and href not like '//%'))
+    )
+  );
 
 drop policy if exists notifications_update on notifications;
 create policy notifications_update on notifications
@@ -1810,6 +1819,37 @@ create trigger trg_help_request_notify
   after insert on help_requests
   for each row
   execute function notify_on_help_request_insert();
+
+-- help_requests status → accepted: notify the student (20260715120000).
+-- Skips self-notify when the acting user IS the student (single-account demo).
+create or replace function notify_on_help_request_accepted()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.student_profile_id is distinct from auth.uid() then
+    insert into notifications (profile_id, kind, title, body, href, audience)
+    values (
+      new.student_profile_id,
+      'help_accepted',
+      'Your counsellor accepted your help request',
+      coalesce(new.university || coalesce(' · ' || new.program, ''), new.subject),
+      '/inbox?help=' || new.id::text,
+      'student'
+    );
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_help_request_accepted_notify on help_requests;
+create trigger trg_help_request_accepted_notify
+  after update on help_requests
+  for each row
+  when (old.status is distinct from new.status and new.status = 'accepted')
+  execute function notify_on_help_request_accepted();
 
 -- help_messages insert → notify the other side. A student session cannot
 -- insert onto a counsellor's profile row under notifications_insert RLS, so
