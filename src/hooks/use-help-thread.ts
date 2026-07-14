@@ -8,7 +8,6 @@ import {
   insertHelpMeeting,
   insertHelpMessage,
   insertHelpNote,
-  insertNotification,
   listHelpMeetings,
   listHelpMessages,
   listHelpNotes,
@@ -342,35 +341,12 @@ export const useHelpThread = (
       // so the client must not author that invariant too. refresh() reads the
       // resulting counsellor_profile_id back.
       await updateHelpRequestStatus(supabase, requestId, status);
-      // Status acceptance has no DB notify trigger (unlike messages/meetings),
-      // so the counsellor-side viewer authors the student's "accepted" notice
-      // here — mirroring the old useHelpRequests.updateAndNotify. Skip when the
-      // current user IS the student (single-account demo) — no self-notify.
-      if (
-        side === 'counsellor' &&
-        status === 'accepted' &&
-        request &&
-        request.student_profile_id !== currentProfileId
-      ) {
-        try {
-          await insertNotification(supabase, {
-            profile_id: request.student_profile_id,
-            kind: 'help_accepted',
-            title: 'Your counsellor accepted your help request',
-            body: request.university
-              ? `${request.university}${request.program ? ` · ${request.program}` : ''}`
-              : null,
-            // ?help=<id> so the notification bell opens the thread drawer;
-            // /inbox?help= is the student-side convention (20260713170000).
-            href: `/inbox?help=${requestId}`
-          });
-        } catch (err) {
-          console.warn('useHelpThread: help_accepted notify failed', err);
-        }
-      }
+      // The student's "accepted" notice is authored by the DB trigger
+      // trg_help_request_accepted_notify (migration 20260715120000) — do not
+      // insert it client-side too.
       await refresh();
     },
-    [requestId, supabase, refresh, side, request, currentProfileId]
+    [requestId, supabase, refresh]
   );
 
   return {
