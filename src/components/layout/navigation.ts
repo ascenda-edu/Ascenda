@@ -24,6 +24,11 @@ export type NavItem = {
   exact?: boolean;
   matchers?: Array<(pathname: string) => boolean>;
   segment: 'home' | 'explore' | 'planner' | 'inbox' | 'scholarships' | 'profile' | 'toolbox' | 'admin' | 'counsellor';
+  // Counsellor IA has 10 sections — too many for the horizontal top bar.
+  // The four marked `primaryNav` surface as top-bar pills (Home / Comms /
+  // People / Insights); the full set still lives in the sidebar. See
+  // `counsellorTopNav()` and the Sidebar, which read this flag differently.
+  primaryNav?: boolean;
 };
 
 export type SectionNavItem = {
@@ -97,20 +102,23 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/counsellor',
     icon: LayoutDashboard,
     segment: 'counsellor',
-    exact: true
+    exact: true,
+    primaryNav: true
   },
   {
     label: 'Inbox',
     href: '/counsellor/inbox',
     icon: Inbox,
-    segment: 'counsellor'
+    segment: 'counsellor',
+    primaryNav: true
   },
   {
     label: 'Students',
     href: '/counsellor/students',
     icon: Users,
     segment: 'counsellor',
-    matchers: [(pathname) => pathname.startsWith('/counsellor/students')]
+    matchers: [(pathname) => pathname.startsWith('/counsellor/students')],
+    primaryNav: true
   },
   {
     label: 'Universities',
@@ -123,7 +131,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Analytics',
     href: '/counsellor/analytics',
     icon: BarChart2,
-    segment: 'counsellor'
+    segment: 'counsellor',
+    primaryNav: true
   },
   {
     label: 'Deadlines',
@@ -211,4 +220,16 @@ export const filterNavByRole = (items: NavItem[], role: string | null | undefine
   return items.filter(
     (item) => item.segment !== 'counsellor' && (item.segment !== 'admin' || role === 'admin')
   );
+};
+
+// The desktop top bar can only fit a handful of horizontal pills. On the
+// counsellor side (10 sections) we surface just the four `primaryNav`
+// destinations there and let the always-present sidebar carry the full set.
+// Everywhere else the top bar keeps its usual role-filtered list.
+export const filterTopNavByRole = (items: NavItem[], role: string | null | undefined, pathname?: string) => {
+  const filtered = filterNavByRole(items, role, pathname);
+  if (pathname?.startsWith('/counsellor')) {
+    return filtered.filter((item) => item.primaryNav);
+  }
+  return filtered;
 };

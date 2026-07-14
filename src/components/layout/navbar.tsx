@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '../theme/theme-toggle';
-import { filterNavByRole, NAV_ITEMS } from './navigation';
+import { filterTopNavByRole, NAV_ITEMS } from './navigation';
 import { useUserRole } from '@/hooks/use-user-role';
 import { NavLink } from './nav-link';
 
@@ -21,7 +21,7 @@ export const Navbar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = useSupabase();
-  const navItems = filterNavByRole(NAV_ITEMS, role, pathname);
+  const navItems = filterTopNavByRole(NAV_ITEMS, role, pathname);
   const logoSrc = '/Ascenda_Logo-removebg-.png';
   const [scrolled, setScrolled] = useState(false);
 
