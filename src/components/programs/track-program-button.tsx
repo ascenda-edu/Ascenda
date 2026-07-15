@@ -72,7 +72,8 @@ export const TrackProgramButton = ({
       variant={resolvedVariant}
       className={cn(
         'w-full rounded-xl font-semibold',
-        isTracked && 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200',
+        isTracked &&
+          'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25',
         className
       )}
       onClick={handleClick}

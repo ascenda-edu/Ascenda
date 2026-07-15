@@ -86,6 +86,10 @@ function detectMode(pathname: string): ChatMode {
   return pathname.startsWith('/counsellor') ? 'counsellor' : 'student';
 }
 
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 /** Extract route references like /dashboard, /toolbox/essay-workshop from text */
 function extractRoutes(text: string): string[] {
   const matches = text.match(/\/[a-z][a-z0-9-/]*/gi) ?? [];
@@ -122,7 +126,7 @@ function PageCard({ snippet, onClick }: { snippet: PageSnippet; onClick: () => v
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-[14px] border border-border bg-background p-2.5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-sm"
+      className="flex w-full items-center gap-3 rounded-[14px] border border-border bg-background p-2.5 text-left transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-sm"
     >
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/10">
         <Icon className="h-4 w-4 text-primary" />
@@ -215,6 +219,7 @@ function AutoResizeTextarea({
       onChange={handleInput}
       onKeyDown={handleKeyDown}
       placeholder="Ask Ascendi anything…"
+      aria-label="Ask Ascendi anything"
       disabled={disabled}
       rows={1}
       className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
@@ -233,9 +238,11 @@ export function ChatbotWidget() {
   const [messages, setMessages] = useState<Message[]>(() => loadMessages(mode));
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null) as React.RefObject<HTMLTextAreaElement>;
   const prevModeRef = useRef(mode);
+  const confirmTimerRef = useRef<number | null>(null);
 
   // Switch chat history when mode changes (student <-> counsellor)
   useEffect(() => {
@@ -251,7 +258,7 @@ export function ChatbotWidget() {
   }, [messages, mode]);
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   }, []);
 
   useEffect(() => {
@@ -267,7 +274,26 @@ export function ChatbotWidget() {
   const clearChat = () => {
     setMessages([]);
     localStorage.removeItem(storageKey(mode));
+    setConfirmClear(false);
   };
+
+  // First click arms the confirm state; a second click within a few seconds
+  // clears. Auto-resets so a stray click never wipes history outright.
+  const handleClearClick = () => {
+    if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
+    if (confirmClear) {
+      clearChat();
+      return;
+    }
+    setConfirmClear(true);
+    confirmTimerRef.current = window.setTimeout(() => setConfirmClear(false), 3000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
 
   const navigateTo = (route: string) => {
     router.push(route);
@@ -401,7 +427,7 @@ export function ChatbotWidget() {
             exit={{ scale: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
             onClick={() => setIsOpen(true)}
-            className="fixed right-5 bottom-[calc(env(safe-area-inset-bottom,8px)+72px)] z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30 active:translate-y-0 md:bottom-6 md:right-6 md:z-[60]"
+            className="fixed right-5 bottom-[calc(env(safe-area-inset-bottom,8px)+72px)] z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30 active:translate-y-0 md:bottom-6 md:right-6 md:z-[60]"
             aria-label="Open Ascendi AI assistant"
           >
             <Bot className="h-5 w-5" />
@@ -435,12 +461,18 @@ export function ChatbotWidget() {
               <div className="flex items-center gap-1">
                 {messages.length > 0 && (
                   <button
-                    onClick={clearChat}
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    aria-label="Clear chat"
-                    title="Clear chat"
+                    onClick={handleClearClick}
+                    className={cn(
+                      'flex h-8 items-center justify-center gap-1 rounded-full transition-colors',
+                      confirmClear
+                        ? 'w-auto px-2.5 text-[11px] font-semibold text-rose-600 dark:text-rose-400'
+                        : 'w-8 text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                    aria-label={confirmClear ? 'Confirm clear chat' : 'Clear chat'}
+                    title={confirmClear ? 'Confirm clear chat' : 'Clear chat'}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
+                    {confirmClear ? <span>Clear?</span> : null}
                   </button>
                 )}
                 <button
@@ -454,7 +486,10 @@ export function ChatbotWidget() {
             </div>
 
             {/* Messages area */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+            <div
+              className="flex-1 overflow-y-auto overscroll-contain px-4 py-3 space-y-3"
+              aria-live="polite"
+            >
               {messages.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center text-center">
                   <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
@@ -473,7 +508,7 @@ export function ChatbotWidget() {
                       <button
                         key={s}
                         onClick={() => sendMessage(s)}
-                        className="rounded-full border border-border bg-background px-3 py-1.5 text-[11px] text-muted-foreground transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:text-foreground hover:shadow-sm"
+                        className="rounded-full border border-border bg-background px-3 py-1.5 text-[11px] text-muted-foreground transition-[transform,border-color,color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:text-foreground hover:shadow-sm"
                       >
                         {s}
                       </button>
@@ -499,7 +534,7 @@ export function ChatbotWidget() {
                     >
                       <div
                         className={cn(
-                          'max-w-[85%] rounded-[16px] px-3.5 py-2.5 text-[13px] leading-relaxed',
+                          'max-w-[85%] break-words rounded-[16px] px-3.5 py-2.5 text-[13px] leading-relaxed',
                           msg.error
                             ? 'border border-rose-300/60 bg-rose-500/10 text-rose-700 dark:border-rose-500/30 dark:text-rose-300'
                             : msg.role === 'user'
@@ -568,7 +603,7 @@ export function ChatbotWidget() {
                 <button
                   type="submit"
                   disabled={!input.trim() || isLoading}
-                  className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-all hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
+                  className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[transform,opacity] hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
                   aria-label="Send message"
                 >
                   {isLoading ? (

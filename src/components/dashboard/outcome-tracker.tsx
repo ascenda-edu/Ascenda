@@ -7,7 +7,7 @@ import type { OutcomeRecord } from '@/lib/data/student-demo-data';
 
 const RESULT_CONFIG = {
   accepted: { icon: Check, label: 'Accepted', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-200/60 dark:border-emerald-500/20' },
-  rejected: { icon: X, label: 'Rejected', color: 'text-red-500', bg: 'bg-red-500/10 border-red-200/60 dark:border-red-500/20' },
+  rejected: { icon: X, label: 'Rejected', color: 'text-rose-500', bg: 'bg-rose-500/10 border-rose-200/60 dark:border-rose-500/20' },
   waitlisted: { icon: HelpCircle, label: 'Waitlisted', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-200/60 dark:border-amber-500/20' },
   pending: { icon: Clock, label: 'Pending', color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-500/10 border-sky-200/60 dark:border-sky-500/20' },
   withdrawn: { icon: MinusCircle, label: 'Withdrawn', color: 'text-muted-foreground', bg: 'bg-muted/60 border-border' }
@@ -28,7 +28,7 @@ interface OutcomeTrackerProps {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
 export function OutcomeTracker({ outcomes }: OutcomeTrackerProps) {

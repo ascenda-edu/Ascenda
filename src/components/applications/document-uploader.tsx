@@ -169,7 +169,7 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }
   };
 
   return (
-    <div className="space-y-4 rounded-[28px] border border-border bg-card p-6 text-sm shadow-[0_25px_50px_rgba(15,23,42,0.08)]">
+    <div className="surface-card surface-card--static space-y-4 rounded-[28px] p-6 text-sm">
       <div>
         <Label htmlFor="document-upload">Upload document</Label>
         <p className="text-xs text-muted-foreground">PDF, DOCX up to 20 MB.</p>

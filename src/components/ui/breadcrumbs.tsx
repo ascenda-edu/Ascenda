@@ -47,7 +47,10 @@ export const Breadcrumbs = ({ items, className, homeHref = '/dashboard' }: Bread
                                 {item.label}
                             </Link>
                         ) : (
-                            <span className={cn('font-medium text-foreground', isLast && 'pointer-events-none')}>
+                            <span
+                                className={cn('font-medium text-foreground', isLast && 'pointer-events-none')}
+                                aria-current={isLast ? 'page' : undefined}
+                            >
                                 {item.label}
                             </span>
                         )}

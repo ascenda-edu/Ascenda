@@ -44,7 +44,7 @@ const SOURCE_LABEL: Record<EvolutionSource, { label: string; className: string }
 
 function formatDate(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+  return d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────

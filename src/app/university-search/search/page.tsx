@@ -173,10 +173,13 @@ function FilterDropdown({ group, selected, onToggle }: FilterDropdownProps) {
               key={option}
               type="button"
               onClick={() => onToggle(group.key, option)}
-              className={cn(visual.chip, 'transition hover:opacity-90')}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm transition hover:opacity-90',
+                visual.chip
+              )}
             >
               {option}
-              <X className="h-3 w-3" aria-hidden />
+              <X className="h-3 w-3 shrink-0" aria-hidden />
             </button>
           ))}
         </div>
@@ -190,9 +193,8 @@ function FilterDropdown({ group, selected, onToggle }: FilterDropdownProps) {
               type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={`Search ${group.title.toLowerCase()}...`}
+              placeholder={`Search ${group.title.toLowerCase()}…`}
               className="w-full rounded-lg border border-transparent bg-muted/40 py-1.5 pl-8 pr-3 text-sm focus:border-primary/30 focus:outline-none"
-              autoFocus
             />
           </div>
           <ul className="max-h-60 overflow-y-auto p-1">

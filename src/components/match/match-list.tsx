@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
 import { UniversityCard } from '@/components/university-card';
 import type { MatchTier } from '@/lib/matching/match-tier';
 import { cn } from '@/lib/utils';
@@ -51,8 +52,10 @@ const dedupeByUniversity = (items: EnrichedMatch[], maxPerUni: number): Enriched
 };
 
 export const MatchList = ({ matches }: MatchListProps) => {
-  const [selectedTier, setSelectedTier] = useState<MatchTier | 'All'>('All');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedTierParam, setSelectedTier] = useSearchParamState('tier', 'All');
+  const selectedTier = selectedTierParam as MatchTier | 'All';
+  const [viewModeParam, setViewMode] = useSearchParamState('view', 'grid');
+  const viewMode = viewModeParam as 'grid' | 'list';
   const [tierLimits, setTierLimits] = useState<Record<MatchTier, number>>({
     Reach: INITIAL_PER_TIER,
     Match: INITIAL_PER_TIER,
@@ -125,7 +128,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
                 onClick={() => setSelectedTier(tier)}
                 aria-pressed={selectedTier === tier}
                 className={cn(
-                  'rounded-xl px-3 py-1.5 text-xs font-medium capitalize transition-all',
+                  'rounded-xl px-3 py-1.5 text-xs font-medium capitalize transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                   selectedTier === tier
                     ? 'bg-primary text-primary-foreground shadow-[0_12px_24px_-14px_rgba(79,70,229,0.8)]'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -140,7 +143,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
               onClick={() => setViewMode('grid')}
               aria-pressed={viewMode === 'grid'}
               className={cn(
-                'flex h-8 w-8 items-center justify-center rounded-xl transition-all',
+                'flex h-8 w-8 items-center justify-center rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                 viewMode === 'grid'
                   ? 'bg-primary/10 text-primary shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
@@ -153,7 +156,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
               onClick={() => setViewMode('list')}
               aria-pressed={viewMode === 'list'}
               className={cn(
-                'flex h-8 w-8 items-center justify-center rounded-xl transition-all',
+                'flex h-8 w-8 items-center justify-center rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                 viewMode === 'list'
                   ? 'bg-primary/10 text-primary shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'

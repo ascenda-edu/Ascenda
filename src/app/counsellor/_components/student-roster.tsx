@@ -4,6 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { Search, SlidersHorizontal, ChevronDown, X, Filter, FilterX } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
 import { StudentCard } from './student-card';
 import type { DashboardFilter } from '../page';
@@ -40,13 +41,21 @@ function getAvgScore(s: CounsellorStudent) {
 }
 
 export const StudentRoster = ({ students, externalFilter, onClearExternalFilter, initialProgramme, initialField, initialFlagFilter }: StudentRosterProps) => {
-  const [query, setQuery] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('name');
-  const [programme, setProgramme] = useState<ProgrammeFilter>(initialProgramme ?? 'all');
-  const [flagFilter, setFlagFilter] = useState<FlagFilter>(initialFlagFilter ?? 'all');
-  const [fieldFilter, setFieldFilter] = useState<string | undefined>(initialField);
+  const [sortKey, setSortKey] = useSearchParamState('sort', 'name');
+  const [programme, setProgramme] = useSearchParamState('programme', initialProgramme ?? 'all');
+  const [flagFilter, setFlagFilter] = useSearchParamState('filter', initialFlagFilter ?? 'all');
+  const [fieldFilter, setFieldFilter] = useSearchParamState('field', initialField ?? '');
+  // Free-text query stays in local state for instant filtering; the URL param
+  // trails it on a debounce so keystrokes don't spam router.replace.
+  const [qParam, setQueryParam] = useSearchParamState('q', '');
+  const [query, setQuery] = useState(qParam);
   const [filtersOpen, setFiltersOpen] = useState(!!(initialProgramme || initialField || initialFlagFilter));
   const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setQueryParam(query), 250);
+    return () => clearTimeout(t);
+  }, [query, setQueryParam]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -141,6 +150,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                 onClick={onClearExternalFilter}
                 className="ml-1 rounded-full p-0.5 hover:bg-primary/10"
                 title="Clear dashboard filter"
+                aria-label="Clear filters"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -161,9 +171,10 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
               <Filter className="h-3 w-3" />
               Field: {fieldFilter.replace(/_/g, ' ')}
               <button
-                onClick={() => setFieldFilter(undefined)}
+                onClick={() => setFieldFilter('')}
                 className="ml-1 rounded-full p-0.5 hover:bg-primary/10"
                 title="Clear field filter"
+                aria-label="Clear field filter"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -290,6 +301,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.12 }}
+                className="[content-visibility:auto] [contain-intrinsic-size:auto_220px]"
               >
                 <StudentCard student={student} highlight={query.trim()} />
               </motion.div>
@@ -307,6 +319,8 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                 setQuery('');
                 setProgramme('all');
                 setFlagFilter('all');
+                setFieldFilter('');
+                setSortKey('name');
               }}
               className="mt-4 flex items-center gap-2 mx-auto rounded-full border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted/60"
             >

@@ -18,7 +18,7 @@ export function StatsCard({ label, value, detail, icon, trend, className }: Stat
     return (
         <motion.div
             className={cn(
-                'group relative overflow-hidden rounded-2xl border border-border/50 bg-card/80 backdrop-blur-xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-border/80 dark:border-white/10 dark:hover:border-primary/30',
+                'group surface-card transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-border/80 dark:hover:border-primary/30',
                 className
             )}
             initial={{ opacity: 0, y: 16 }}

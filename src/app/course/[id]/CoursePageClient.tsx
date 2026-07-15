@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ElementType } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
 import { ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Dot, GraduationCap, Landmark, Layers, ListChecks, Loader2, MapPin, ShieldCheck, Wallet } from 'lucide-react';
 import { Navbar } from '@/components/layout/navbar';
 import { Button } from '@/components/ui/button';
@@ -726,7 +727,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
     fetchCourse();
   }, [params.id, initialData, mapRawData]);
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useSearchParamState('tab', 'overview');
 
   const costTuition = useMemo(() => {
     if (!course) return null;
@@ -809,7 +810,10 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                 Loading course…
               </div>
             ) : error ? (
-              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div
+                role="alert"
+                className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300"
+              >
                 {error}
               </div>
             ) : course ? (
@@ -900,7 +904,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
             <div className="sticky top-0 z-20 border-b border-border/40 bg-background/80 backdrop-blur-md">
               <div className="w-full px-4 sm:px-6 lg:px-10">
                 <div className="relative">
-                  <div className="flex gap-1 overflow-x-auto py-2 no-scrollbar">
+                  <div role="tablist" aria-label="Course sections" className="flex gap-1 overflow-x-auto py-2 no-scrollbar">
                     {TABS.map((tab) => {
                       const isActive = activeTab === tab.id;
                       const Icon = tab.icon;
@@ -909,9 +913,13 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                       return (
                         <button
                           key={tab.id}
+                          role="tab"
+                          id={`course-tab-${tab.id}`}
+                          aria-selected={isActive}
+                          aria-controls="course-tabpanel"
                           onClick={() => setActiveTab(tab.id)}
                           className={cn(
-                            'flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all whitespace-nowrap',
+                            'flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                             isActive
                               ? 'bg-primary text-primary-foreground shadow-md'
                               : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -930,11 +938,16 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
             </div>
 
             {/* Tab Content */}
-            <div className="w-full px-4 py-12 sm:px-6 lg:px-10 min-h-[500px]">
+            <div
+              id="course-tabpanel"
+              role="tabpanel"
+              aria-labelledby={`course-tab-${activeTab}`}
+              className="w-full px-4 py-12 sm:px-6 lg:px-10 min-h-[500px]"
+            >
 
               {/* Overview Tab */}
               {activeTab === 'overview' && (
-                <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="w-full space-y-8 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 duration-500">
 
                   {/* Summary Text */}
                   <div className="rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
@@ -1034,7 +1047,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                         {course.averageStartingSalary && (
                           <div className="rounded-2xl bg-card/50 border border-border/40 p-4">
                             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Avg Starting Salary</p>
-                            <p className="text-2xl font-bold text-foreground">£{course.averageStartingSalary.toLocaleString()}</p>
+                            <p className="text-2xl font-bold tabular-nums text-foreground">{new Intl.NumberFormat(undefined, { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(course.averageStartingSalary)}</p>
                             <p className="text-xs text-muted-foreground mt-1">First-year earnings</p>
                           </div>
                         )}
@@ -1060,26 +1073,26 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                         {formattedCostTuition && (
                           <div className="rounded-2xl bg-card/50 border border-border/40 p-4">
                             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">{formattedDomesticTuition ? 'Intl. Tuition' : 'Annual Tuition'}</p>
-                            <p className="text-2xl font-bold text-foreground">{formattedCostTuition}</p>
+                            <p className="text-2xl font-bold tabular-nums text-foreground">{formattedCostTuition}</p>
                           </div>
                         )}
                         {formattedDomesticTuition && (
                           <div className="rounded-2xl bg-card/50 border border-border/40 p-4">
                             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Home Tuition</p>
-                            <p className="text-2xl font-bold text-foreground">{formattedDomesticTuition}</p>
+                            <p className="text-2xl font-bold tabular-nums text-foreground">{formattedDomesticTuition}</p>
                           </div>
                         )}
                         {course.studentDormCost && (
                           <div className="rounded-2xl bg-card/50 border border-border/40 p-4">
                             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Halls of Residence</p>
-                            <p className="text-2xl font-bold text-foreground">{formatCurrencyString(course.studentDormCost, 'GBP')}</p>
+                            <p className="text-2xl font-bold tabular-nums text-foreground">{formatCurrencyString(course.studentDormCost, 'GBP')}</p>
                             <p className="text-xs text-muted-foreground mt-1">per year</p>
                           </div>
                         )}
                         {course.averageRentOutsideCampus && (
                           <div className="rounded-2xl bg-card/50 border border-border/40 p-4">
                             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Off-Campus Rent</p>
-                            <p className="text-2xl font-bold text-foreground">{formatCurrencyString(course.averageRentOutsideCampus, 'GBP')}</p>
+                            <p className="text-2xl font-bold tabular-nums text-foreground">{formatCurrencyString(course.averageRentOutsideCampus, 'GBP')}</p>
                             <p className="text-xs text-muted-foreground mt-1">per month (avg)</p>
                           </div>
                         )}
@@ -1212,17 +1225,10 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                   <div className="grid gap-6 md:grid-cols-2">
 
                     {/* Requirements Preview */}
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      className="group relative cursor-pointer overflow-hidden rounded-3xl border border-border/60 bg-card p-6 transition-all hover:border-primary/50 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    <button
+                      type="button"
+                      className="group relative block w-full overflow-hidden rounded-3xl border border-border/60 bg-card p-6 text-left transition-all hover:border-primary/50 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       onClick={() => setActiveTab('requirements')}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          setActiveTab('requirements');
-                        }
-                      }}
                     >
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-bold flex items-center gap-2">
@@ -1239,23 +1245,16 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                             <span className="font-medium text-foreground truncate max-w-[120px]">{r.value}</span>
                           </div>
                         ))}
-                        {course.requirements.length === 0 && <p className="text-sm text-muted-foreground italic">View requirements details...</p>}
+                        {course.requirements.length === 0 && <p className="text-sm text-muted-foreground italic">View requirements details…</p>}
                       </div>
                       <div className="mt-4 text-xs font-bold text-primary uppercase tracking-wider">View Full Details</div>
-                    </div>
+                    </button>
 
                     {/* Curriculum Preview */}
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      className="group relative cursor-pointer overflow-hidden rounded-3xl border border-border/60 bg-card p-6 transition-all hover:border-primary/50 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    <button
+                      type="button"
+                      className="group relative block w-full overflow-hidden rounded-3xl border border-border/60 bg-card p-6 text-left transition-all hover:border-primary/50 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       onClick={() => setActiveTab('curriculum')}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          setActiveTab('curriculum');
-                        }
-                      }}
                     >
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-bold flex items-center gap-2">
@@ -1266,11 +1265,11 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                       </div>
                       <div className="space-y-2">
                         <p className="text-sm text-muted-foreground line-clamp-3">
-                          {course.modules ? course.modules.slice(0, 150) + "..." : "Explore the modules and subjects you will study."}
+                          {course.modules ? course.modules.slice(0, 150) + "…" : "Explore the modules and subjects you will study."}
                         </p>
                       </div>
                       <div className="mt-4 text-xs font-bold text-primary uppercase tracking-wider">View Modules</div>
-                    </div>
+                    </button>
 
                   </div>
                 </div>
@@ -1278,7 +1277,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
               {/* Curriculum Tab */}
               {activeTab === 'curriculum' && (
-                <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="w-full space-y-8 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 duration-500">
                   <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold">Course Curriculum</h2>
                     {moduleItems.length > 8 && !moduleYearSections.length && (
@@ -1335,7 +1334,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
               {/* Requirements Tab */}
               {activeTab === 'requirements' && (
-                <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="w-full space-y-8 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 duration-500">
                   <h2 className="text-2xl font-bold">Entry Requirements</h2>
 
                   {/* 1. Key Metrics Row (Grades, Points - things that are short) */}
@@ -1413,7 +1412,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
               {/* Assessment Tab */}
               {activeTab === 'assessment' && (
-                <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="w-full space-y-8 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 duration-500">
                   <div className="rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
                     <h2 className="text-2xl font-bold mb-6">Assessment Methods</h2>
                     {course.assessment ? (
@@ -1429,7 +1428,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
               {/* Campus Life Tab */}
               {activeTab === 'campus' && (
-                <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="w-full space-y-8 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 duration-500">
                   <h2 className="text-2xl font-bold">Campus & City Life</h2>
 
                   {/* University Stats Grid */}
@@ -1604,7 +1603,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
               {/* Career Tab */}
               {activeTab === 'career' && (
-                <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="w-full space-y-8 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 duration-500">
                   <h2 className="text-2xl font-bold">Career & Outcomes</h2>
 
                   {/* Career Stats Grid */}
@@ -1741,7 +1740,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
               {/* Costs Tab */}
               {activeTab === 'costs' && (
-                <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="w-full space-y-8 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 duration-500">
                   <h2 className="text-2xl font-bold">Costs & Living Expenses</h2>
 
                   {/* Cost Overview Cards */}

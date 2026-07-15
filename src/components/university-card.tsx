@@ -47,7 +47,7 @@ export function UniversityCard({
     return (
         <article
             className={cn(
-                'group relative flex h-full flex-col overflow-hidden rounded-[28px] border border-border bg-card/80 shadow-[0_22px_50px_-28px_rgba(15,23,42,0.38)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_28px_70px_-30px_rgba(15,23,42,0.42)] dark:bg-muted/20 dark:border-white/10 dark:shadow-none dark:hover:border-primary/50 dark:hover:bg-muted/30',
+                'group relative flex h-full flex-col overflow-hidden rounded-[28px] border border-border bg-card/80 shadow-[0_22px_50px_-28px_rgba(15,23,42,0.38)] backdrop-blur-xl transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1.5 hover:shadow-[0_28px_70px_-30px_rgba(15,23,42,0.42)] dark:bg-muted/20 dark:border-white/10 dark:shadow-none dark:hover:border-primary/50 dark:hover:bg-muted/30',
                 variant === 'compact' ? 'p-4' : 'p-5'
             )}
         >
@@ -153,14 +153,14 @@ export function UniversityCard({
                             <Link
                                 href={courseHref}
                                 className={cn(
-                                    buttonVariants({ size: 'sm', className: 'w-full rounded-xl font-semibold shadow-sm' })
+                                    buttonVariants({ size: 'sm', className: 'w-full rounded-full font-semibold shadow-sm' })
                                 )}
                                 prefetch={false}
                             >
                                 {ACTION_TEXT.viewCourse}
                             </Link>
                         ) : (
-                            <Button size="sm" className="w-full rounded-xl font-semibold shadow-sm" disabled>
+                            <Button size="sm" className="w-full rounded-full font-semibold shadow-sm" disabled>
                                 {ACTION_TEXT.viewCourse}
                             </Button>
                         )}

@@ -35,7 +35,7 @@ export function IntelligentSearchBar({
     value,
     onChange,
     onSelectSuggestion,
-    placeholder = 'Search universities or courses...',
+    placeholder = 'Search universities or courses…',
     className,
     inputClassName,
     variant = 'default',
@@ -381,6 +381,7 @@ export function IntelligentSearchBar({
                     id={inputId}
                     name={inputName}
                     placeholder={placeholder}
+                    spellCheck={false}
                     role="combobox"
                     aria-expanded={shouldShowDropdown}
                     aria-controls={listboxId}
@@ -399,7 +400,7 @@ export function IntelligentSearchBar({
                         onClick={() => onChange('')}
                         aria-label="Clear search"
                         className={cn(
-                            "text-muted-foreground hover:text-foreground",
+                            "rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                             variant === 'default' ? "" : "absolute right-3 top-1/2 -translate-y-1/2"
                         )}
                     >

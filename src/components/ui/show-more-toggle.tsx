@@ -17,6 +17,7 @@ export function ShowMoreToggle({ expanded, onToggle, total, noun }: ShowMoreTogg
     <button
       type="button"
       onClick={onToggle}
+      aria-expanded={expanded}
       className="flex w-full items-center justify-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted"
     >
       {expanded ? (

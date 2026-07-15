@@ -125,7 +125,7 @@ export const AuthForm = () => {
         <Label className="form-label" htmlFor="email">
           Email
         </Label>
-        <Input id="email" type="email" autoComplete="email" className="form-input" {...form.register('email')} />
+        <Input id="email" type="email" autoComplete="email" spellCheck={false} className="form-input" {...form.register('email')} />
         {form.formState.errors.email ? (
           <p className="form-feedback form-feedback--error" role="alert">
             {form.formState.errors.email.message}

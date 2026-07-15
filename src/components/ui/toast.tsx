@@ -57,9 +57,9 @@ export const useToast = () => {
 
 const toneClass = (variant?: ToastVariant) =>
   variant === 'success'
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'
     : variant === 'error'
-      ? 'border-rose-200 bg-rose-50 text-rose-900'
+      ? 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200'
       : 'border-border bg-card text-foreground';
 
 const resolveDuration = (toast: Toast) => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { type FormEvent, type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Check, ChevronDown, ChevronRight, ChevronLeft, GraduationCap, User, Heart, Sparkles,
@@ -15,6 +15,7 @@ import type {
   IntendedCluster, ProgrammeType, StudentAdmissionsTest, StudentProfilePayload, StudentSubject
 } from '@/lib/profile/intake-types';
 import { saveStudentIntake } from '../actions';
+import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,19 @@ type EnglishRequiredState = 'yes' | 'no' | 'not_sure' | '';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const TOTAL_STEPS = PROFILE_STEPS.length + 1; // +1 for Review
+
+// Wizard steps are mirrored to the `?step=` query param so they're deep-linkable
+// and the browser Back button walks the wizard. Steps 1..N map to PROFILE_STEPS
+// keys; the final Review step uses a dedicated key.
+const STEP_PARAM_KEYS: string[] = PROFILE_STEPS.map((step) => step.key);
+const REVIEW_STEP_KEY = 'review';
+const stepKeyForIndex = (index: number): string =>
+  index >= TOTAL_STEPS ? REVIEW_STEP_KEY : STEP_PARAM_KEYS[index - 1] ?? STEP_PARAM_KEYS[0];
+const indexForStepKey = (key: string): number => {
+  if (key === REVIEW_STEP_KEY) return TOTAL_STEPS;
+  const i = STEP_PARAM_KEYS.indexOf(key);
+  return i >= 0 ? i + 1 : 1;
+};
 
 const CLUSTER_OPTIONS: { value: IntendedCluster; label: string; emoji: string }[] = [
   { value: 'computer_science', label: 'Computer science', emoji: '💻' },
@@ -272,7 +286,7 @@ const isValidDraft = (d: unknown): d is IntakeDraft => {
 
 // ─── Reusable field components ────────────────────────────────────────────────
 
-const inputCls = 'flex h-11 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-0 transition-all duration-150';
+const inputCls = 'flex h-11 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-0 transition-[color,border-color,box-shadow] duration-150';
 const selectCls = inputCls + ' cursor-pointer';
 
 /** Stable DOM id for a validation error message, so inputs can point at it via aria-describedby. */
@@ -313,7 +327,7 @@ function SectionTitle({ label, hint, why }: { label: string; hint?: string; why?
   }, [open]);
 
   return (
-    <div ref={containerRef} className="flex items-start justify-between gap-3">
+    <div ref={containerRef} className="relative flex items-start justify-between gap-3">
       <div>
         <p className="font-semibold text-foreground text-sm">{label}</p>
         {hint ? <p className="text-xs text-muted-foreground mt-0.5">{hint}</p> : null}
@@ -346,7 +360,10 @@ function CountryCombobox({
 }: { value: string; onChange: (v: string) => void; placeholder?: string; error?: string; id?: string; errorId?: string }) {
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(-1);
   const ref = useRef<HTMLDivElement>(null);
+  const listboxId = useId();
+  const optionId = (index: number) => `${listboxId}-opt-${index}`;
 
   // Keep display in sync when value changes externally (hydration)
   useEffect(() => { setQuery(value); }, [value]);
@@ -356,6 +373,9 @@ function CountryCombobox({
     const q = query.toLowerCase();
     return COUNTRY_OPTIONS.filter((c) => c.toLowerCase().includes(q)).slice(0, 8);
   }, [query]);
+
+  // Reset the active option whenever the visible list changes.
+  useEffect(() => { setHighlight(-1); }, [query, open]);
 
   // Close on outside click
   useEffect(() => {
@@ -370,6 +390,26 @@ function CountryCombobox({
     onChange(country);
     setQuery(country);
     setOpen(false);
+    setHighlight(-1);
+  };
+
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!open) { setOpen(true); return; }
+      setHighlight((h) => Math.min(filtered.length - 1, h + 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlight((h) => Math.max(0, h - 1));
+    } else if (e.key === 'Enter') {
+      if (open && highlight >= 0 && highlight < filtered.length) {
+        e.preventDefault();
+        select(filtered[highlight]);
+      }
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+      setHighlight(-1);
+    }
   };
 
   return (
@@ -379,6 +419,11 @@ function CountryCombobox({
           id={id}
           type="text"
           autoComplete="off"
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listboxId}
+          aria-autocomplete="list"
+          aria-activedescendant={open && highlight >= 0 ? optionId(highlight) : undefined}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
           className={cn(inputCls, 'pr-9', error && 'border-destructive')}
@@ -386,17 +431,27 @@ function CountryCombobox({
           placeholder={placeholder ?? 'Search country…'}
           onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
+          onKeyDown={onKeyDown}
         />
         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
       </div>
       {open && filtered.length > 0 && (
-        <ul className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-background shadow-lg overflow-hidden max-h-52 overflow-y-auto">
-          {filtered.map((c) => (
-            <li key={c}>
+        <ul
+          id={listboxId}
+          role="listbox"
+          className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-background shadow-lg overflow-hidden max-h-52 overflow-y-auto"
+        >
+          {filtered.map((c, index) => (
+            <li key={c} id={optionId(index)} role="option" aria-selected={index === highlight}>
               <button
                 type="button"
-                className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/60 transition-colors"
+                tabIndex={-1}
+                className={cn(
+                  'w-full text-left px-4 py-2.5 text-sm transition-colors',
+                  index === highlight ? 'bg-muted/60' : 'hover:bg-muted/60'
+                )}
                 onMouseDown={() => select(c)}
+                onMouseEnter={() => setHighlight(index)}
               >
                 {c}
               </button>
@@ -420,9 +475,10 @@ function Chip({
     <button
       type="button"
       disabled={disabled}
+      aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        'group flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left text-sm font-medium transition-all duration-150',
+        'group flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-150',
         selected
           ? 'bg-primary/8 border-primary text-primary shadow-sm'
           : 'bg-background border-border text-foreground hover:border-primary/40 hover:bg-muted/50',
@@ -447,7 +503,10 @@ function SubjectCombobox({
 }: { value: string; onChange: (v: string) => void; error?: string; errorId?: string }) {
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(-1);
   const ref = useRef<HTMLDivElement>(null);
+  const listboxId = useId();
+  const optionId = (index: number) => `${listboxId}-opt-${index}`;
 
   useEffect(() => { setQuery(value); }, [value]);
 
@@ -457,6 +516,8 @@ function SubjectCombobox({
     return SUBJECT_OPTIONS.filter((s) => s.toLowerCase().includes(q)).slice(0, 8);
   }, [query]);
 
+  useEffect(() => { setHighlight(-1); }, [query, open]);
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -465,12 +526,43 @@ function SubjectCombobox({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const select = (subject: string) => {
+    onChange(subject);
+    setQuery(subject);
+    setOpen(false);
+    setHighlight(-1);
+  };
+
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!open) { setOpen(true); return; }
+      setHighlight((h) => Math.min(filtered.length - 1, h + 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlight((h) => Math.max(0, h - 1));
+    } else if (e.key === 'Enter') {
+      if (open && highlight >= 0 && highlight < filtered.length) {
+        e.preventDefault();
+        select(filtered[highlight]);
+      }
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+      setHighlight(-1);
+    }
+  };
+
   return (
     <div ref={ref} className="relative">
       <div className="relative">
         <input
           type="text"
           autoComplete="off"
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listboxId}
+          aria-autocomplete="list"
+          aria-activedescendant={open && highlight >= 0 ? optionId(highlight) : undefined}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
           className={cn(inputCls, 'pr-9', error && 'border-destructive')}
@@ -478,17 +570,27 @@ function SubjectCombobox({
           placeholder="Subject name"
           onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
+          onKeyDown={onKeyDown}
         />
         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
       </div>
       {open && filtered.length > 0 && (
-        <ul className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-background shadow-lg overflow-hidden max-h-52 overflow-y-auto">
-          {filtered.map((s) => (
-            <li key={s}>
+        <ul
+          id={listboxId}
+          role="listbox"
+          className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-background shadow-lg overflow-hidden max-h-52 overflow-y-auto"
+        >
+          {filtered.map((s, index) => (
+            <li key={s} id={optionId(index)} role="option" aria-selected={index === highlight}>
               <button
                 type="button"
-                className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/60 transition-colors"
-                onMouseDown={() => { onChange(s); setQuery(s); setOpen(false); }}
+                tabIndex={-1}
+                className={cn(
+                  'w-full text-left px-4 py-2.5 text-sm transition-colors',
+                  index === highlight ? 'bg-muted/60' : 'hover:bg-muted/60'
+                )}
+                onMouseDown={() => select(s)}
+                onMouseEnter={() => setHighlight(index)}
               >
                 {s}
               </button>
@@ -523,7 +625,18 @@ export const StudentIntakeForm = ({
   initialPayload?: StudentProfilePayload | null;
 }) => {
   const contentTopRef = useRef<HTMLDivElement | null>(null);
-  const [currentStep, setCurrentStep] = useState(initialStep);
+  const [stepParam, setStepParam] = useSearchParamState('step', stepKeyForIndex(initialStep), { push: true });
+  const currentStep = indexForStepKey(stepParam);
+  const currentStepRef = useRef(currentStep);
+  currentStepRef.current = currentStep;
+  const setCurrentStep = useCallback(
+    (next: number | ((prev: number) => number)) => {
+      const resolved = typeof next === 'function' ? next(currentStepRef.current) : next;
+      const clamped = Math.min(TOTAL_STEPS, Math.max(1, resolved));
+      setStepParam(stepKeyForIndex(clamped));
+    },
+    [setStepParam]
+  );
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusIsError, setStatusIsError] = useState(false);
   const [isSaving, startTransition] = useTransition();
@@ -696,7 +809,7 @@ export const StudentIntakeForm = ({
     setActivities({ ...buildInitialActivities(), ...draft.activities });
     setActivityRows(draft.activityRows);
     setCurrentStep(Math.min(TOTAL_STEPS, Math.max(1, draft.currentStep)));
-  }, []);
+  }, [setCurrentStep]);
 
   const clearDraft = useCallback(() => {
     try { window.localStorage.removeItem(DRAFT_KEY); } catch { /* storage unavailable */ }
@@ -815,7 +928,7 @@ export const StudentIntakeForm = ({
     setActivities(buildInitialActivities());
     setActivityRows([]);
     setCurrentStep(1);
-  }, [clearDraft, initialPayload, applyPayload, initialStep]);
+  }, [clearDraft, initialPayload, applyPayload, initialStep, setCurrentStep]);
 
   useEffect(() => {
     if (englishRequired === 'no') {
@@ -1219,7 +1332,7 @@ export const StudentIntakeForm = ({
         setStatusIsError(true);
       }
     });
-  }, [validateStep1, validateStep2, validateStep3, buildPayload, focusFirstError, clearDraft]);
+  }, [validateStep1, validateStep2, validateStep3, buildPayload, focusFirstError, clearDraft, setCurrentStep]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); handleFinalSubmit(); };
 
@@ -1408,7 +1521,7 @@ export const StudentIntakeForm = ({
                     <label className="space-y-1.5" data-field="personal_information.first_name">
                       <span className="text-sm font-medium">First name</span>
                       <input
-                        type="text" className={cn(inputCls, errors['personal_information.first_name'] && 'border-destructive')}
+                        type="text" autoComplete="given-name" className={cn(inputCls, errors['personal_information.first_name'] && 'border-destructive')}
                         {...a11yError('personal_information.first_name')}
                         value={personalInfo.first_name}
                         onChange={(e) => updatePersonalInfo('first_name', e.target.value)}
@@ -1419,7 +1532,7 @@ export const StudentIntakeForm = ({
                     <label className="space-y-1.5" data-field="personal_information.last_name">
                       <span className="text-sm font-medium">Last name</span>
                       <input
-                        type="text" className={cn(inputCls, errors['personal_information.last_name'] && 'border-destructive')}
+                        type="text" autoComplete="family-name" className={cn(inputCls, errors['personal_information.last_name'] && 'border-destructive')}
                         {...a11yError('personal_information.last_name')}
                         value={personalInfo.last_name}
                         onChange={(e) => updatePersonalInfo('last_name', e.target.value)}
@@ -1431,7 +1544,7 @@ export const StudentIntakeForm = ({
                   <label className="space-y-1.5 block" data-field="personal_information.email">
                     <span className="text-sm font-medium">Email</span>
                     <input
-                      type="email" className={cn(inputCls, errors['personal_information.email'] && 'border-destructive')}
+                      type="email" autoComplete="email" inputMode="email" spellCheck={false} className={cn(inputCls, errors['personal_information.email'] && 'border-destructive')}
                       {...a11yError('personal_information.email')}
                       value={personalInfo.email}
                       onChange={(e) => updatePersonalInfo('email', e.target.value)}
@@ -2047,7 +2160,7 @@ export const StudentIntakeForm = ({
                               className="mt-0.5 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
                               onClick={() => removeActivityRow(row.localId)}
                               aria-label="Remove activity">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                              <Trash2 className="w-4 h-4" aria-hidden />
                             </button>
                           </div>
 
@@ -2101,7 +2214,7 @@ export const StudentIntakeForm = ({
                       <button type="button"
                         className="mt-1 flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
                         onClick={addActivityRow}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <PlusCircle className="w-4 h-4" aria-hidden />
                         Add activity
                       </button>
                     )}

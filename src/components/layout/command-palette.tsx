@@ -67,6 +67,9 @@ const COMMANDS: CommandItem[] = [
   { id: 'help-shortcuts', label: 'Keyboard shortcuts', hint: 'Cmd+K · Cmd+B', href: '#shortcuts', icon: Sparkles, group: 'Help' }
 ];
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 const fuzzyScore = (haystack: string, needle: string): number => {
   if (!needle) return 0;
   const h = haystack.toLowerCase();
@@ -92,6 +95,8 @@ export function CommandPalette() {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
   const isMacRef = useRef(false);
 
   useEffect(() => {
@@ -112,17 +117,45 @@ export function CommandPalette() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Reset state on close.
+  // Reset state on close; move focus into the palette on open and restore it
+  // to the previously focused element on close.
   useEffect(() => {
-    if (!open) {
-      setQuery('');
-      setActiveIndex(0);
-    } else {
+    if (open) {
+      previouslyFocused.current = document.activeElement as HTMLElement | null;
       // Defer focus until after the modal mounts.
       const timer = window.setTimeout(() => inputRef.current?.focus(), 30);
       return () => window.clearTimeout(timer);
     }
+    setQuery('');
+    setActiveIndex(0);
+    previouslyFocused.current?.focus?.();
+    previouslyFocused.current = null;
+    return undefined;
   }, [open]);
+
+  // Trap Tab focus within the palette dialog.
+  const onDialogKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Tab') return;
+    const node = dialogRef.current;
+    if (!node) return;
+    const focusables = Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+      (el) => el.offsetParent !== null
+    );
+    if (focusables.length === 0) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   const ranked = useMemo(() => {
     if (!query.trim()) return COMMANDS;
@@ -203,6 +236,8 @@ export function CommandPalette() {
           aria-label="Command menu"
         >
           <motion.div
+            ref={dialogRef}
+            onKeyDown={onDialogKeyDown}
             initial={{ opacity: 0, y: -8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
@@ -217,7 +252,7 @@ export function CommandPalette() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={onInputKeyDown}
-                placeholder="Search pages, actions, or just type..."
+                placeholder="Search pages, actions, or just type…"
                 className="h-12 w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                 aria-label="Search commands"
                 autoComplete="off"
@@ -228,7 +263,7 @@ export function CommandPalette() {
               </kbd>
             </div>
 
-            <div className="max-h-[60vh] overflow-y-auto p-2">
+            <div className="max-h-[60vh] overflow-y-auto overscroll-contain p-2">
               {flat.length === 0 ? (
                 <div className="px-3 py-8 text-center text-sm text-muted-foreground">
                   No results for &quot;{query}&quot;

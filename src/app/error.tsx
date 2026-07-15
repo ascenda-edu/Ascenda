@@ -19,7 +19,7 @@ export default function ErrorBoundary({
       <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Something went wrong</p>
       <h1 className="text-2xl font-semibold text-foreground">We hit a snag loading this view.</h1>
       <p className="max-w-md text-sm text-muted-foreground">
-        The page will auto-refresh, but you can force a retry below. If the issue persists, let the team know so we can investigate.
+        This view didn&apos;t load. Try again below — and if the issue persists, let the team know so we can investigate.
       </p>
       <Button type="button" onClick={() => reset()}>
         Try again

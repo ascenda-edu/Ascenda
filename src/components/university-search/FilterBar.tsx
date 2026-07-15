@@ -67,8 +67,10 @@ function SelectionDropdown({
         <div className="relative">
             <button
                 onClick={() => onOpenChange(isOpen ? null : id)}
+                aria-expanded={isOpen}
+                aria-haspopup="listbox"
                 className={cn(
-                    'flex h-10 items-center gap-2 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground shadow-sm transition-colors',
+                    'flex h-10 items-center gap-2 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                     isOpen ? 'ring-2 ring-primary/70 ring-offset-2 ring-offset-card' : 'hover:bg-muted'
                 )}
             >
@@ -87,7 +89,7 @@ function SelectionDropdown({
                         <Input
                             value={localQuery}
                             onChange={(e) => setLocalQuery(e.target.value)}
-                            placeholder={`Search ${label.toLowerCase()}...`}
+                            placeholder={`Search ${label.toLowerCase()}…`}
                             className="h-9 rounded-lg bg-background"
                         />
                         {localQuery ? (
@@ -111,7 +113,7 @@ function SelectionDropdown({
                                         key={option}
                                         onClick={() => onToggle(option)}
                                         className={cn(
-                                            'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors',
+                                            'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                                             active ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
                                         )}
                                     >
@@ -193,7 +195,7 @@ export function FilterBar({
                             value={searchQuery}
                             onChange={onSearchChange}
                             onSelectSuggestion={onSelectSuggestion}
-                            placeholder="Search universities..."
+                            placeholder="Search universities…"
                             variant="minimal"
                         />
                     </form>
@@ -206,8 +208,9 @@ export function FilterBar({
                             <div className="flex items-center rounded-2xl border border-border/70 bg-background/80 p-1.5 shadow-sm">
                                 <button
                                     onClick={() => onViewModeChange('grid')}
+                                    aria-pressed={viewMode === 'grid'}
                                     className={cn(
-                                        'flex h-8 w-8 items-center justify-center rounded-xl transition-all',
+                                        'flex h-8 w-8 items-center justify-center rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                                         viewMode === 'grid' ? 'bg-primary/10 text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
                                     )}
                                     aria-label="Grid view"
@@ -216,8 +219,9 @@ export function FilterBar({
                                 </button>
                                 <button
                                     onClick={() => onViewModeChange('list')}
+                                    aria-pressed={viewMode === 'list'}
                                     className={cn(
-                                        'flex h-8 w-8 items-center justify-center rounded-xl transition-all',
+                                        'flex h-8 w-8 items-center justify-center rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                                         viewMode === 'list' ? 'bg-primary/10 text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
                                     )}
                                     aria-label="List view"

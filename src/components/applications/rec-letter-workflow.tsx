@@ -229,7 +229,7 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
                     <div key={step.key} className="flex items-center gap-1 flex-1">
                       <div
                         className={cn(
-                          'flex h-8 w-8 items-center justify-center rounded-full border text-xs transition-all',
+                          'flex h-8 w-8 items-center justify-center rounded-full border text-xs transition-[color,background-color,border-color,box-shadow]',
                           isComplete
                             ? cn('border-transparent', STATUS_BG[letter.status], STATUS_COLORS[letter.status])
                             : 'border-border/60 text-muted-foreground/40',

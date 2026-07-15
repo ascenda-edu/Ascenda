@@ -209,7 +209,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
                     }}
                     disabled={disabled}
                     className={cn(
-                      'w-full text-left rounded-xl border border-border/50 p-3 transition-all group',
+                      'w-full text-left rounded-xl border border-border/50 p-3 transition-colors group',
                       disabled
                         ? 'opacity-40 cursor-not-allowed'
                         : 'hover:border-primary/20 hover:bg-muted/20',

@@ -9,7 +9,7 @@ import type { RequirementRow, RequirementStatus, RequirementCategory } from '@/l
 
 const STATUS_CONFIG: Record<RequirementStatus, { icon: typeof CheckCircle2; color: string; bg: string; label: string; ring: string }> = {
   'complete': { icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10', label: 'Complete', ring: 'stroke-emerald-500' },
-  'in-progress': { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10', label: 'In progress', ring: 'stroke-amber-500' },
+  'in-progress': { icon: Clock, color: 'text-sky-500', bg: 'bg-sky-500/10', label: 'In progress', ring: 'stroke-sky-500' },
   'missing': { icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-500/10', label: 'Missing', ring: 'stroke-rose-500' },
   'not-required': { icon: Minus, color: 'text-muted-foreground', bg: 'bg-muted/30', label: 'N/A', ring: 'stroke-muted-foreground' },
 };
@@ -192,7 +192,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                       <button
                         onClick={() => cycleStatus(row.id, cell.category)}
                         className={cn(
-                          'mx-auto flex h-9 w-9 items-center justify-center rounded-xl transition-all hover:scale-110 hover:shadow-md',
+                          'mx-auto flex h-9 w-9 items-center justify-center rounded-xl transition-[transform,box-shadow] hover:scale-110 hover:shadow-md',
                           cfg.bg
                         )}
                         aria-label={`${row.university} — ${CATEGORY_LABELS[cell.category]}: ${cfg.label}. Click to change status.`}
@@ -282,7 +282,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                         <button
                           key={cell.category}
                           onClick={(e) => { e.stopPropagation(); cycleStatus(row.id, cell.category); }}
-                          className={cn('flex h-8 w-8 items-center justify-center rounded-lg transition-all hover:scale-110', cfg.bg)}
+                          className={cn('flex h-8 w-8 items-center justify-center rounded-lg transition-transform hover:scale-110', cfg.bg)}
                           aria-label={`${CATEGORY_LABELS[cell.category]}: ${cfg.label}. Click to change status.`}
                           title={`${CATEGORY_LABELS[cell.category]}: ${cfg.label}`}
                         >

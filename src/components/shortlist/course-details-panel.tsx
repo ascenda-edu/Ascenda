@@ -57,7 +57,7 @@ export const CourseDetailsPanel = ({ courses }: { courses: ShortlistCourse[] }) 
                 type="button"
                 onClick={() => setActiveId(course.id)}
                 className={cn(
-                  'w-full rounded-2xl border px-4 py-3 text-left transition',
+                  'w-full rounded-2xl border px-4 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                   isActive
                     ? 'border-foreground bg-card shadow-[0_18px_40px_rgba(15,23,42,0.12)]'
                     : 'border-border bg-muted/70 hover:border-muted-foreground hover:bg-card'

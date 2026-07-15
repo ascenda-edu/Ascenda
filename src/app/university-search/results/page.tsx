@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
 import Link from 'next/link';
 import type { MatchTier } from '@/lib/matching/match-tier';
 import { UniversityCard } from '@/components/university-card';
@@ -111,8 +112,13 @@ export default function UniversitySearchResultsPage() {
     const handle = window.setTimeout(() => setDebouncedQuery(searchQuery), 250);
     return () => window.clearTimeout(handle);
   }, [searchQuery]);
-  const [selectedTiers, setSelectedTiers] = useState<MatchTier[]>(['Reach', 'Match', 'Safe']);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [tiersParam, setTiersParam] = useSearchParamState('tiers', 'Reach,Match,Safe');
+  const selectedTiers = useMemo(
+    () => tiersParam.split(',').filter(Boolean) as MatchTier[],
+    [tiersParam]
+  );
+  const [viewModeParam, setViewMode] = useSearchParamState('view', 'grid');
+  const viewMode = viewModeParam as 'grid' | 'list';
   const [selectedUniversities, setSelectedUniversities] = useState<string[]>([]);
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
   const [filterOptions, setFilterOptions] = useState<FilterOption[]>([]);
@@ -691,7 +697,7 @@ export default function UniversitySearchResultsPage() {
 
   const handleResetFilters = () => {
     setSearchQuery('');
-    setSelectedTiers(['Reach', 'Match', 'Safe']);
+    setTiersParam('Reach,Match,Safe');
     setSelectedUniversities([]);
     setSelectedPrograms([]);
     setResults([]);
@@ -778,9 +784,10 @@ export default function UniversitySearchResultsPage() {
           onSelectSuggestion={handleSelectSuggestion}
           selectedTiers={selectedTiers}
           onTierChange={(tier) => {
-            setSelectedTiers((prev) =>
-              prev.includes(tier) ? prev.filter((t) => t !== tier) : [...prev, tier]
-            );
+            const next = selectedTiers.includes(tier)
+              ? selectedTiers.filter((t) => t !== tier)
+              : [...selectedTiers, tier];
+            setTiersParam(next.join(','));
           }}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
@@ -849,17 +856,26 @@ export default function UniversitySearchResultsPage() {
             )}
           >
             {filteredResults.map((result) => (
-              <UniversityCard
+              <div
                 key={result.id}
-                id={result.id}
-                name={result.universityName}
-                program={result.programName}
-                location={result.location}
-                logoUrl={result.logoUrl ?? undefined}
-                fitScore={result.fitScore}
-                tier={result.tier ?? undefined}
-                highlights={result.highlights}
-              />
+                className={cn(
+                  '[content-visibility:auto]',
+                  viewMode === 'grid'
+                    ? '[contain-intrinsic-size:auto_360px]'
+                    : '[contain-intrinsic-size:auto_200px]'
+                )}
+              >
+                <UniversityCard
+                  id={result.id}
+                  name={result.universityName}
+                  program={result.programName}
+                  location={result.location}
+                  logoUrl={result.logoUrl ?? undefined}
+                  fitScore={result.fitScore}
+                  tier={result.tier ?? undefined}
+                  highlights={result.highlights}
+                />
+              </div>
             ))}
           </div>
         )}

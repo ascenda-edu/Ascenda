@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
  * formatMeetingTime (help-thread-drawer.tsx) so both surfaces agree.
  */
 const formatMeetingTime = (iso: string): string =>
-  new Date(iso).toLocaleString('en-GB', {
+  new Date(iso).toLocaleString(undefined, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',

@@ -29,7 +29,7 @@ interface HelpThreadDrawerProps {
 }
 
 const formatMeetingTime = (iso: string): string =>
-  new Date(iso).toLocaleString('en-GB', {
+  new Date(iso).toLocaleString(undefined, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -68,6 +68,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
 
   const asideRef = useRef<HTMLElement | null>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+  const scrollPaneRef = useRef<HTMLDivElement | null>(null);
 
   const [replyText, setReplyText] = useState('');
   const [noteText, setNoteText] = useState('');
@@ -110,6 +111,15 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
       previouslyFocused.current?.focus?.();
     }
   }, [open]);
+
+  // Anchor the thread to the newest message: scroll the pane to the bottom on
+  // open and whenever a message arrives. Instant (scrollTop) rather than smooth,
+  // which also keeps it reduced-motion safe.
+  useEffect(() => {
+    if (!open || tab !== 'thread') return;
+    const pane = scrollPaneRef.current;
+    if (pane) pane.scrollTop = pane.scrollHeight;
+  }, [open, tab, messages.length]);
 
   // Trap Tab focus within the drawer while it's open.
   const onTrapKeyDown = (event: ReactKeyboardEvent) => {
@@ -377,10 +387,11 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
 
             {/* Content */}
             <div
+              ref={scrollPaneRef}
               id="help-drawer-tabpanel"
               role="tabpanel"
               aria-labelledby={`help-drawer-tab-${tab}`}
-              className="flex-1 overflow-y-auto px-5 py-4"
+              className="flex-1 overflow-y-auto overscroll-contain px-5 py-4"
             >
               {loading && !request ? (
                 <p className="text-sm text-muted-foreground">Loading…</p>
@@ -525,7 +536,7 @@ const dayLabel = (iso: string): string => {
   yesterday.setDate(today.getDate() - 1);
   if (d.toDateString() === today.toDateString()) return 'Today';
   if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return d.toLocaleDateString('en-GB', {
+  return d.toLocaleDateString(undefined, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -534,7 +545,7 @@ const dayLabel = (iso: string): string => {
 };
 
 const timeLabel = (iso: string): string =>
-  new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
 function ThreadView({
   request,
@@ -581,7 +592,7 @@ function ThreadView({
       : null;
 
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-0.5" aria-live="polite" aria-relevant="additions">
       <p className="pb-1 text-center text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
         {request.subject}
       </p>
@@ -642,7 +653,7 @@ function ThreadView({
                     isPending && 'opacity-60'
                   )}
                 >
-                  <p className="whitespace-pre-line">{entry.body}</p>
+                  <p className="whitespace-pre-line break-words">{entry.body}</p>
                   {entry.isOpening && entry.role === 'student' ? (
                     <p
                       className={cn(
@@ -747,7 +758,7 @@ function NotesView({
                     {formatRelativeTime(n.created_at)}
                   </span>
                 </div>
-                <p className="mt-1 whitespace-pre-line">{n.body}</p>
+                <p className="mt-1 whitespace-pre-line break-words">{n.body}</p>
               </article>
             ))
           )}

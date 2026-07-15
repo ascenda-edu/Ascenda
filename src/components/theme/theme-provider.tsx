@@ -133,8 +133,23 @@ export const useThemeMode = () => {
   return context;
 };
 
+// Matches the resolved `--background` token (globals.css): light 220 16% 96%,
+// dark 224 32% 6%.
+const THEME_COLOR: Record<ThemeMode, string> = {
+  light: '#f3f4f6',
+  dark: '#0a0d14'
+};
+
 const applyDocumentTheme = (mode: ThemeMode) => {
   if (typeof document === 'undefined') return;
   document.documentElement.dataset.theme = mode;
   document.documentElement.style.colorScheme = mode;
+
+  let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.name = 'theme-color';
+    document.head.appendChild(meta);
+  }
+  meta.setAttribute('content', THEME_COLOR[mode]);
 };

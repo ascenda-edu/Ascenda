@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, Clock as ClockIcon, BookOpen, MapPin, GraduationCap, Target, FileText } from 'lucide-react';
+import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
+import { parseLocalDate } from '@/lib/utils/dates';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
 import { NotesPanel } from './notes-panel';
 import { PortfolioBalance } from './portfolio-balance';
@@ -40,11 +41,20 @@ const APP_STATUS = {
 
 function formatDate(iso: string) {
   if (!iso) return 'No deadline';
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  return parseLocalDate(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+// The counsellor document board deep-links here with ?tab=documents; there is no
+// standalone documents tab, so it lands on Applications (the closest doc-bearing view).
+const resolveTab = (id: string): Tab => {
+  if (TABS.some((t) => t.id === id)) return id as Tab;
+  if (id === 'documents') return 'applications';
+  return 'overview';
+};
+
 export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps) => {
-  const [active, setActive] = useState<Tab>('overview');
+  const [tabParam, setTabParam] = useSearchParamState('tab', 'overview');
+  const active = resolveTab(tabParam);
   const matches = student.matches;
 
   const reachCount = matches.filter((m) => m.tier === 'Reach').length;
@@ -54,11 +64,13 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
   return (
     <div className="space-y-6">
       {/* Tab nav */}
-      <nav className="flex items-center gap-2 overflow-x-auto scrollbar-none rounded-[28px] border border-border bg-card px-3 sm:px-4 py-2.5 sm:py-3 shadow-[0_20px_45px_rgba(15,23,42,0.08)]">
+      <nav role="tablist" aria-label="Student detail sections" className="flex items-center gap-2 overflow-x-auto scrollbar-none rounded-[28px] border border-border bg-card px-3 sm:px-4 py-2.5 sm:py-3 shadow-[0_20px_45px_rgba(15,23,42,0.08)]">
         {TABS.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActive(tab.id)}
+            role="tab"
+            aria-selected={active === tab.id}
+            onClick={() => setTabParam(tab.id)}
             className={cn(
               'shrink-0 rounded-full border px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold transition hover:bg-muted/80',
               active === tab.id

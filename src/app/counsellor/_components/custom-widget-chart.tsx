@@ -45,7 +45,7 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
   const pctOf = (count: number) => Math.round((count / rowTotal) * 100);
 
   const tooltip = (bucket: CustomWidgetBucket) => (
-    <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100">
+    <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
       {bucket.count} {unitFor(bucket.count)} · {pctOf(bucket.count)}%{interactive ? ' · Click to explore' : ''}
     </span>
   );
@@ -62,7 +62,7 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
               key={bucket.key}
               onClick={() => clickable && onSelect?.(bucket)}
               className={cn(
-                'flex w-full items-center gap-3 rounded-xl px-1 py-0.5 transition',
+                'group flex w-full items-center gap-3 rounded-xl px-1 py-0.5 transition',
                 clickable ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default',
                 bucket.count === 0 && 'opacity-60'
               )}
@@ -108,7 +108,7 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
                 style={{ width: `${pct}%` }}
               >
                 {pct > 12 && <span className="truncate px-1">{bucket.label}</span>}
-                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100">
+                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                   {bucket.count} {unitFor(bucket.count)} · {pctOf(bucket.count)}%{interactive ? ' · Click to explore' : ''}
                 </span>
               </button>

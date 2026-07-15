@@ -5,7 +5,7 @@
 // a rarity + fit), and assigning a deck sends the student a "quest"
 // notification via the trg_deck_assignment_notify DB trigger.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Layers,
@@ -56,6 +56,62 @@ const DECK_EMOJI = ['🗡️', '🛡️', '🐉', '🏰', '✨', '🔮', '🏹',
 
 const sanitize = (value: string) => value.replace(/[(),%_]/g, ' ').replace(/\s+/g, ' ').trim();
 const UNI_STOP_WORDS = new Set(['university', 'college', 'institute', 'school', 'of', 'the', 'and']);
+
+// Mirrors the focusable-element query used by the shared Dialog primitive and
+// analytics-drilldown so hand-rolled overlays trap focus, close on Escape, and
+// restore focus to the trigger — the same three behaviours.
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function useModalA11y(open: boolean, onClose: () => void) {
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      previouslyFocused.current = document.activeElement as HTMLElement | null;
+      const node = modalRef.current;
+      const target = node?.querySelector<HTMLElement>(FOCUSABLE) ?? node;
+      target?.focus();
+    } else {
+      previouslyFocused.current?.focus?.();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, onClose]);
+
+  const onKeyDown = (event: ReactKeyboardEvent) => {
+    if (event.key !== 'Tab') return;
+    const node = modalRef.current;
+    if (!node) return;
+    const focusables = Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+      (el) => el.offsetParent !== null
+    );
+    if (focusables.length === 0) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
+  return { modalRef, onKeyDown };
+}
 
 export function UniversitiesClient({ initialDecks, roster }: Props) {
   const { showToast } = useToast();
@@ -365,6 +421,13 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
   const [assignMessage, setAssignMessage] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
 
+  const closeAssign = useCallback(() => setAssignOpen(false), []);
+  const closeDelete = useCallback(() => {
+    setDeckPendingDelete((prev) => (isDeletingDeck ? prev : null));
+  }, [isDeletingDeck]);
+  const assign = useModalA11y(assignOpen && !!selectedDeck, closeAssign);
+  const remove = useModalA11y(!!deckPendingDelete, closeDelete);
+
   const assignableRoster = useMemo(() => {
     const assigned = new Set(selectedDeck?.assignees.map((a) => a.profileId) ?? []);
     return roster.filter((s) => !assigned.has(s.id));
@@ -454,6 +517,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search universities or programmes"
               placeholder="Search universities or programmes…"
               className="w-full rounded-full border border-border bg-background/60 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
             />
@@ -773,13 +837,16 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
             onClick={() => setAssignOpen(false)}
           >
             <motion.div
+              ref={assign.modalRef}
+              tabIndex={-1}
+              onKeyDown={assign.onKeyDown}
               initial={{ opacity: 0, scale: 0.96, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
               role="dialog"
               aria-modal="true"
               aria-label={`Assign deck ${selectedDeck.name}`}
-              className="w-full max-w-md rounded-[28px] border border-border bg-card p-6 shadow-xl"
+              className="w-full max-w-md rounded-[28px] border border-border bg-card p-6 shadow-xl outline-none"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-4 flex items-start justify-between">
@@ -858,13 +925,16 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
             onClick={() => !isDeletingDeck && setDeckPendingDelete(null)}
           >
             <motion.div
+              ref={remove.modalRef}
+              tabIndex={-1}
+              onKeyDown={remove.onKeyDown}
               initial={{ opacity: 0, scale: 0.96, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
               role="dialog"
               aria-modal="true"
               aria-label={`Delete deck ${deckPendingDelete.name}`}
-              className="w-full max-w-sm rounded-[28px] border border-border bg-card p-6 shadow-xl"
+              className="w-full max-w-sm rounded-[28px] border border-border bg-card p-6 shadow-xl outline-none"
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="font-heading text-lg font-bold text-foreground">

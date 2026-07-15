@@ -7,7 +7,7 @@ export const UniversityCardSkeleton = ({ variant = 'default' }: { variant?: 'def
   return (
     <article
       className={cn(
-        'group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm',
+        'group relative flex h-full flex-col overflow-hidden rounded-[28px] border border-border/50 bg-card shadow-[0_22px_50px_-28px_rgba(15,23,42,0.38)]',
         isCompact ? 'p-4' : 'p-5'
       )}
       aria-hidden
@@ -36,7 +36,7 @@ export const UniversityCardSkeleton = ({ variant = 'default' }: { variant?: 'def
       </div>
 
       {/* Shimmer */}
-      <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/[0.03] to-transparent pointer-events-none" />
+      <div className="absolute inset-0 -translate-x-full motion-safe:animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/[0.03] to-transparent pointer-events-none" />
     </article>
   );
 };

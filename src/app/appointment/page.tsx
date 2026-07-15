@@ -57,6 +57,15 @@ const TIMES = ['09:00', '11:00', '13:00', '15:00', '17:00'];
 
 const DURATIONS = ['30 min', '45 min', '60 min'];
 
+function formatAppointmentWhen(dateStr: string, timeStr: string): string {
+  if (!dateStr || !timeStr) return `${dateStr} ${timeStr}`.trim();
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const [hour, minute] = timeStr.split(':').map(Number);
+  const when = new Date(year, (month ?? 1) - 1, day ?? 1, hour ?? 0, minute ?? 0);
+  if (Number.isNaN(when.getTime())) return `${dateStr} ${timeStr}`;
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeStyle: 'short' }).format(when);
+}
+
 export default function AppointmentPage() {
   const supabase = useSupabase();
   const [topic, setTopic] = useState<string>('university-choice');
@@ -127,7 +136,7 @@ export default function AppointmentPage() {
           highlight="Pending confirmation"
           stats={[
             { label: 'Counsellor', value: DEMO_COUNSELLOR.fullName, detail: 'Your assigned counsellor' },
-            { label: 'When', value: `${date} ${time}`, detail: duration },
+            { label: 'When', value: formatAppointmentWhen(date, time), detail: duration },
             { label: 'Topic', value: TOPICS.find((t) => t.id === topic)?.label ?? 'General', detail: 'Selected focus' }
           ]}
           breadcrumbs={<Breadcrumbs />}
@@ -232,7 +241,7 @@ export default function AppointmentPage() {
                 onChange={(event) => setDate(event.target.value)}
                 required
                 min={minDate}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </label>
             <label className="block space-y-1.5">
@@ -240,7 +249,7 @@ export default function AppointmentPage() {
               <select
                 value={duration}
                 onChange={(event) => setDuration(event.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {DURATIONS.map((value) => (
                   <option key={value} value={value}>{value}</option>
@@ -292,7 +301,7 @@ export default function AppointmentPage() {
             onChange={(event) => setNotes(event.target.value)}
             rows={4}
             placeholder="e.g. I want to talk through my UK reach list and Imperial interview prep."
-            className="w-full resize-none rounded-2xl border border-border bg-background p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full resize-none rounded-2xl border border-border bg-background p-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </section>
 
@@ -313,7 +322,7 @@ export default function AppointmentPage() {
           </div>
         </div>
         {error ? (
-          <p className="text-sm text-rose-600 dark:text-rose-400" role="alert">
+          <p className="text-sm text-destructive" role="alert">
             {error}
           </p>
         ) : null}
