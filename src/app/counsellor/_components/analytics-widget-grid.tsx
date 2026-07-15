@@ -4,9 +4,12 @@ import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   BarChart2, PieChart, TrendingUp, CheckCircle, Target, Users,
-  X, SlidersHorizontal, GripVertical, Maximize2, Minimize2
+  X, SlidersHorizontal, GripVertical, Maximize2, Minimize2,
+  Plus, Sparkles, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { readJSON, writeJSON } from '@/lib/utils/local-storage';
+import type { CustomWidgetId } from '@/lib/counsellor/custom-widgets';
 
 export type AnalyticsWidgetId =
   | 'programmeSplit'
@@ -16,6 +19,23 @@ export type AnalyticsWidgetId =
   | 'fullFunnel'
   | 'matchTierSummary'
   | 'insights';
+
+// Built-in ids stay a closed union; user-created widgets are `custom:<uuid>`
+// ids that flow through the same visibility/order/size machinery.
+export type AnalyticsWidgetKey = AnalyticsWidgetId | CustomWidgetId;
+
+// Built-in widgets always have a size; custom widgets only gain an entry once
+// resized, so reads by custom id must handle undefined (default 'normal').
+export type AnalyticsWidgetSizes = Record<AnalyticsWidgetId, 'normal' | 'wide'> &
+  Partial<Record<CustomWidgetId, 'normal' | 'wide'>>;
+
+export const isCustomWidgetId = (id: string): id is CustomWidgetId => id.startsWith('custom:');
+
+export interface CustomWidgetPanelEntry {
+  id: CustomWidgetId;
+  label: string;
+  description: string;
+}
 
 export interface AnalyticsWidgetConfig {
   id: AnalyticsWidgetId;
@@ -40,74 +60,66 @@ const STORAGE_KEY_SIZES = 'ascenda-counsellor-analytics-widgets-sizes';
 
 const ALL_IDS: AnalyticsWidgetId[] = ['programmeSplit', 'ibDistribution', 'fieldChart', 'completionBreakdown', 'fullFunnel', 'matchTierSummary', 'insights'];
 
-const DEFAULT_SIZES: Record<AnalyticsWidgetId, 'normal' | 'wide'> = {
+const DEFAULT_SIZES: AnalyticsWidgetSizes = {
   programmeSplit: 'normal', ibDistribution: 'normal', fieldChart: 'normal',
   completionBreakdown: 'normal', fullFunnel: 'normal', matchTierSummary: 'normal', insights: 'wide'
 };
 
-function loadPrefs(): AnalyticsWidgetId[] {
-  if (typeof window === 'undefined') return ALL_IDS;
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return ALL_IDS;
-    const parsed = JSON.parse(stored) as AnalyticsWidgetId[];
-    if (Array.isArray(parsed)) return parsed;
-  } catch { }
-  return ALL_IDS;
-}
+const isKeyArray = (parsed: unknown): parsed is AnalyticsWidgetKey[] => Array.isArray(parsed);
 
-function loadOrder(): AnalyticsWidgetId[] {
-  if (typeof window === 'undefined') return ALL_IDS;
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_ORDER);
-    if (!stored) return ALL_IDS;
-    const parsed = JSON.parse(stored) as AnalyticsWidgetId[];
-    if (Array.isArray(parsed)) return parsed;
-  } catch { }
-  return ALL_IDS;
-}
+function loadPrefs(): AnalyticsWidgetKey[] { return readJSON(STORAGE_KEY, ALL_IDS as AnalyticsWidgetKey[], isKeyArray); }
+function loadOrder(): AnalyticsWidgetKey[] { return readJSON(STORAGE_KEY_ORDER, ALL_IDS as AnalyticsWidgetKey[], isKeyArray); }
 
-function loadSizes(): Record<AnalyticsWidgetId, 'normal' | 'wide'> {
-  if (typeof window === 'undefined') return DEFAULT_SIZES;
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_SIZES);
-    if (!stored) return DEFAULT_SIZES;
-    const parsed = JSON.parse(stored);
-    if (parsed && typeof parsed === 'object') return { ...DEFAULT_SIZES, ...parsed };
-  } catch { }
+function loadSizes(): AnalyticsWidgetSizes {
+  const parsed = readJSON<unknown>(STORAGE_KEY_SIZES, null);
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    return { ...DEFAULT_SIZES, ...(parsed as Partial<AnalyticsWidgetSizes>) };
+  }
   return DEFAULT_SIZES;
 }
 
-function savePrefs(v: AnalyticsWidgetId[]) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch { } }
-function saveOrder(v: AnalyticsWidgetId[]) { try { localStorage.setItem(STORAGE_KEY_ORDER, JSON.stringify(v)); } catch { } }
-function saveSizes(v: Record<AnalyticsWidgetId, 'normal' | 'wide'>) { try { localStorage.setItem(STORAGE_KEY_SIZES, JSON.stringify(v)); } catch { } }
+function savePrefs(v: AnalyticsWidgetKey[]) { writeJSON(STORAGE_KEY, v); }
+function saveOrder(v: AnalyticsWidgetKey[]) { writeJSON(STORAGE_KEY_ORDER, v); }
+function saveSizes(v: AnalyticsWidgetSizes) { writeJSON(STORAGE_KEY_SIZES, v); }
 
 export type AnalyticsDragHandlers = {
-  onDragStart: (id: AnalyticsWidgetId) => void;
-  onDragOver: (e: React.DragEvent, id: AnalyticsWidgetId) => void;
-  onDrop: (id: AnalyticsWidgetId) => void;
+  onDragStart: (id: AnalyticsWidgetKey) => void;
+  onDragOver: (e: React.DragEvent, id: AnalyticsWidgetKey) => void;
+  onDrop: (id: AnalyticsWidgetKey) => void;
   onDragEnd: () => void;
-  dragOver: AnalyticsWidgetId | null;
+  dragOver: AnalyticsWidgetKey | null;
 };
 
 interface AnalyticsWidgetGridProps {
+  /** User-created widgets to list in the customise panel. */
+  customEntries?: CustomWidgetPanelEntry[];
+  /** When set, renders "New widget" affordances that invoke this. */
+  onCreateWidget?: () => void;
+  /** When set, custom entries in the panel get a delete affordance. */
+  onDeleteCustomWidget?: (id: CustomWidgetId) => void;
   children: (
-    visibleWidgets: AnalyticsWidgetId[],
-    removeWidget: (id: AnalyticsWidgetId) => void,
-    sizes: Record<AnalyticsWidgetId, 'normal' | 'wide'>,
-    toggleSize: (id: AnalyticsWidgetId) => void,
+    visibleWidgets: AnalyticsWidgetKey[],
+    removeWidget: (id: AnalyticsWidgetKey) => void,
+    sizes: AnalyticsWidgetSizes,
+    toggleSize: (id: AnalyticsWidgetKey) => void,
     dragHandlers: AnalyticsDragHandlers
   ) => React.ReactNode;
 }
 
-export const AnalyticsWidgetGrid = ({ children }: AnalyticsWidgetGridProps) => {
-  const [visibleWidgets, setVisibleWidgets] = useState<AnalyticsWidgetId[]>(ALL_IDS);
-  const [order, setOrder] = useState<AnalyticsWidgetId[]>(ALL_IDS);
-  const [sizes, setSizes] = useState<Record<AnalyticsWidgetId, 'normal' | 'wide'>>(DEFAULT_SIZES);
+export const AnalyticsWidgetGrid = ({
+  children,
+  customEntries,
+  onCreateWidget,
+  onDeleteCustomWidget
+}: AnalyticsWidgetGridProps) => {
+  const [visibleWidgets, setVisibleWidgets] = useState<AnalyticsWidgetKey[]>(ALL_IDS);
+  const [order, setOrder] = useState<AnalyticsWidgetKey[]>(ALL_IDS);
+  const [sizes, setSizes] = useState<AnalyticsWidgetSizes>(DEFAULT_SIZES);
   const [panelOpen, setPanelOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
-  const [dragOver, setDragOver] = useState<AnalyticsWidgetId | null>(null);
-  const dragId = useRef<AnalyticsWidgetId | null>(null);
+  const [dragOver, setDragOver] = useState<AnalyticsWidgetKey | null>(null);
+  const dragId = useRef<AnalyticsWidgetKey | null>(null);
+  const knownCustomIds = useRef<Set<string> | null>(null);
 
   useEffect(() => {
     setVisibleWidgets(loadPrefs());
@@ -116,7 +128,44 @@ export const AnalyticsWidgetGrid = ({ children }: AnalyticsWidgetGridProps) => {
     setHydrated(true);
   }, []);
 
-  const toggleWidget = (id: AnalyticsWidgetId) => {
+  // Newly created custom widgets become visible immediately; deleted ones are
+  // scrubbed from all three persisted maps (visibility, order, sizes). The
+  // first post-hydration run only snapshots what is already stored, so
+  // previously hidden custom widgets stay hidden.
+  useEffect(() => {
+    if (!hydrated) return;
+    const ids = (customEntries ?? []).map((entry) => entry.id);
+    if (knownCustomIds.current === null) {
+      knownCustomIds.current = new Set(ids);
+      return;
+    }
+    const previous = knownCustomIds.current;
+    const added = ids.filter((id) => !previous.has(id));
+    const removed = [...previous].filter((id) => !ids.includes(id as CustomWidgetId));
+    if (!added.length && !removed.length) return;
+    knownCustomIds.current = new Set(ids);
+    setVisibleWidgets((prev) => {
+      const next = [...prev.filter((id) => !added.includes(id as CustomWidgetId) && !removed.includes(id)), ...added];
+      savePrefs(next);
+      return next;
+    });
+    setOrder((prev) => {
+      const next = [...prev.filter((id) => !added.includes(id as CustomWidgetId) && !removed.includes(id)), ...added];
+      saveOrder(next);
+      return next;
+    });
+    if (removed.length) {
+      setSizes((prev) => {
+        if (!removed.some((id) => id in prev)) return prev;
+        const next = { ...prev };
+        for (const id of removed) delete next[id as CustomWidgetId];
+        saveSizes(next);
+        return next;
+      });
+    }
+  }, [customEntries, hydrated]);
+
+  const toggleWidget = (id: AnalyticsWidgetKey) => {
     setVisibleWidgets((prev) => {
       const next = prev.includes(id) ? prev.filter((w) => w !== id) : [...prev, id];
       savePrefs(next);
@@ -124,7 +173,7 @@ export const AnalyticsWidgetGrid = ({ children }: AnalyticsWidgetGridProps) => {
     });
   };
 
-  const toggleSize = (id: AnalyticsWidgetId) => {
+  const toggleSize = (id: AnalyticsWidgetKey) => {
     setSizes((prev) => {
       const next = { ...prev, [id]: prev[id] === 'wide' ? 'normal' : 'wide' };
       saveSizes(next);
@@ -164,30 +213,47 @@ export const AnalyticsWidgetGrid = ({ children }: AnalyticsWidgetGridProps) => {
 
   if (!hydrated) return null;
 
+  const customList = customEntries ?? [];
+  // Ids without a config (e.g. a deleted custom widget in stale prefs) never
+  // reach the render prop or the counts.
+  const validIds = new Set<string>([...ALL_IDS, ...customList.map((entry) => entry.id)]);
+  const visibleCount = visibleWidgets.filter((id) => validIds.has(id)).length;
+
   const orderedVisible = [
     ...order.filter((id) => visibleWidgets.includes(id)),
     ...visibleWidgets.filter((id) => !order.includes(id))
-  ];
+  ].filter((id) => validIds.has(id));
 
   return (
     <div className="space-y-6">
       {/* Toolbar */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
-          {visibleWidgets.length} of {ANALYTICS_WIDGET_CONFIGS.length} charts · drag to reorder · resize with ⤢
+          {visibleCount} of {ANALYTICS_WIDGET_CONFIGS.length + customList.length} charts · drag to reorder · resize with ⤢
         </p>
-        <button
-          onClick={() => setPanelOpen((o) => !o)}
-          className={cn(
-            'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition hover:-translate-y-0.5 hover:shadow-sm',
-            panelOpen
-              ? 'border-primary bg-primary text-primary-foreground'
-              : 'border-border bg-background text-foreground hover:bg-muted/60'
+        <div className="flex items-center gap-2">
+          {onCreateWidget && (
+            <button
+              onClick={onCreateWidget}
+              className="flex items-center gap-2 rounded-full border border-dashed border-primary/50 bg-primary/5 px-4 py-2 text-sm font-medium text-primary transition hover:-translate-y-0.5 hover:bg-primary/10 hover:shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              New widget
+            </button>
           )}
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          Customise
-        </button>
+          <button
+            onClick={() => setPanelOpen((o) => !o)}
+            className={cn(
+              'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition hover:-translate-y-0.5 hover:shadow-sm',
+              panelOpen
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border bg-background text-foreground hover:bg-muted/60'
+            )}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Customise
+          </button>
+        </div>
       </div>
 
       {/* Customise panel */}
@@ -242,6 +308,58 @@ export const AnalyticsWidgetGrid = ({ children }: AnalyticsWidgetGridProps) => {
                   </button>
                 );
               })}
+              {customList.map((entry) => {
+                const active = visibleWidgets.includes(entry.id);
+                return (
+                  <div key={entry.id} className="relative">
+                    <button
+                      onClick={() => toggleWidget(entry.id)}
+                      className={cn(
+                        'flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-0.5',
+                        active
+                          ? 'border-primary/40 bg-primary/8 text-foreground shadow-sm'
+                          : 'border-border/60 bg-background/60 text-muted-foreground hover:bg-muted/40'
+                      )}
+                    >
+                      <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', active ? 'bg-primary/15' : 'bg-muted/50')}>
+                        <Sparkles className={cn('h-4 w-4', active ? 'text-primary' : 'text-muted-foreground')} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold">{entry.label}</p>
+                        <p className="truncate text-[11px] opacity-70">{entry.description}</p>
+                      </div>
+                      <div className={cn(
+                        'ml-auto h-4 w-4 shrink-0 rounded-full border-2 transition',
+                        active ? 'border-primary bg-primary' : 'border-border bg-background'
+                      )} />
+                    </button>
+                    {onDeleteCustomWidget && (
+                      <button
+                        onClick={() => onDeleteCustomWidget(entry.id)}
+                        aria-label={`Delete ${entry.label} widget`}
+                        title="Delete custom widget"
+                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition hover:border-destructive/40 hover:text-destructive"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              {onCreateWidget && (
+                <button
+                  onClick={onCreateWidget}
+                  className="flex items-center gap-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 px-4 py-3 text-left text-primary transition hover:-translate-y-0.5 hover:bg-primary/10"
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/15">
+                    <Plus className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold">Create custom widget</p>
+                    <p className="truncate text-[11px] opacity-70">Count anything, your way</p>
+                  </div>
+                </button>
+              )}
             </div>
             <div className="mt-3 flex justify-end">
               <button
@@ -273,12 +391,12 @@ export const AnalyticsWidgetGrid = ({ children }: AnalyticsWidgetGridProps) => {
 /* ─── Reusable Analytics Widget wrapper ──────────────────────────────────────── */
 
 export interface AnalyticsWidgetProps {
-  id: AnalyticsWidgetId;
+  id: AnalyticsWidgetKey;
   title: string;
   description?: string;
   icon: typeof BarChart2;
-  onRemove: (id: AnalyticsWidgetId) => void;
-  onToggleSize?: (id: AnalyticsWidgetId) => void;
+  onRemove: (id: AnalyticsWidgetKey) => void;
+  onToggleSize?: (id: AnalyticsWidgetKey) => void;
   size?: 'normal' | 'wide';
   children: React.ReactNode;
   className?: string;

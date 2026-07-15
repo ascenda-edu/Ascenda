@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Inbox, Sparkles, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ShowMoreToggle } from '@/components/ui/show-more-toggle';
 import { formatRelativeTime } from '@/lib/utils/dates';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useHelpRequests } from '@/hooks/use-help-requests';
@@ -15,6 +16,7 @@ export function HelpRequestsWidget() {
   const supabase = useSupabase();
   const { items, loading } = useHelpRequests();
   const { openRequest } = useHelpDrawer();
+  const [expanded, setExpanded] = useState(false);
 
   // Real student names for the visible requests. Missing entries fall back to
   // 'Student' while the lookup is in flight (or if the profile is unreadable).
@@ -39,6 +41,15 @@ export function HelpRequestsWidget() {
   }, [supabase, idsKey]);
 
   const openCount = items.filter((row) => row.status === 'open').length;
+
+  // Open requests first, then accepted; stable within each group so the
+  // newest-first ordering from the data layer is preserved.
+  const sorted = useMemo(
+    () => [...items].sort((a, b) => Number(a.status === 'accepted') - Number(b.status === 'accepted')),
+    [items]
+  );
+  const COLLAPSED_COUNT = 4;
+  const visible = expanded ? sorted : sorted.slice(0, COLLAPSED_COUNT);
 
   return (
     <div className="surface-card surface-card--static">
@@ -76,7 +87,7 @@ export function HelpRequestsWidget() {
         {items.length > 0 ? (
           <ul className="space-y-2">
             <AnimatePresence initial={false}>
-              {items.map((req) => {
+              {visible.map((req) => {
                 const isAccepted = req.status === 'accepted';
                 return (
                   <motion.li
@@ -137,6 +148,15 @@ export function HelpRequestsWidget() {
             </AnimatePresence>
           </ul>
         ) : null}
+
+        {sorted.length > COLLAPSED_COUNT && (
+          <ShowMoreToggle
+            expanded={expanded}
+            onToggle={() => setExpanded((prev) => !prev)}
+            total={sorted.length}
+            noun="requests"
+          />
+        )}
       </div>
     </div>
   );

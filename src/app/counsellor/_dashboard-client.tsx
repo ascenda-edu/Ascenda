@@ -139,22 +139,25 @@ export function DashboardClient({
         ]}
       />
 
-      {/* At-Risk Students */}
-      {atRiskAlerts.length > 0 && (
-        <div className="surface-card surface-card--static">
-          <div className="relative z-10 space-y-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Proactive</p>
-              <h2 className="text-lg font-semibold text-foreground">At-risk students</h2>
-              <p className="text-xs text-muted-foreground">Students who may need your attention based on activity and deadline patterns.</p>
+      {/* At-Risk Students + Live help requests — side-by-side on large screens
+          when there are alerts; the help widget renders full-width otherwise. */}
+      <div className={atRiskAlerts.length > 0 ? 'grid gap-6 lg:grid-cols-2 [&>*]:min-w-0' : undefined}>
+        {atRiskAlerts.length > 0 && (
+          <div className="surface-card surface-card--static">
+            <div className="relative z-10 space-y-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Proactive</p>
+                <h2 className="text-lg font-semibold text-foreground">At-risk students</h2>
+                <p className="text-xs text-muted-foreground">Students who may need your attention based on activity and deadline patterns.</p>
+              </div>
+              <AtRiskPanel alerts={atRiskAlerts} />
             </div>
-            <AtRiskPanel alerts={atRiskAlerts} />
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Live help requests — student-originated, demo segue lands here */}
-      <HelpRequestsWidget />
+        {/* Live help requests — student-originated, demo segue lands here */}
+        <HelpRequestsWidget />
+      </div>
 
       <WidgetGrid>
         {(visibleWidgets, removeWidget, sizes, toggleSize, dragHandlers) => (

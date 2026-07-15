@@ -8,6 +8,7 @@ import {
   GripVertical, Maximize2, Minimize2, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { readJSON, writeJSON } from '@/lib/utils/local-storage';
 
 export type WidgetId =
   | 'alerts'
@@ -51,42 +52,22 @@ const DEFAULT_SIZES: Record<WidgetId, 'normal' | 'wide'> = {
   deadlines: 'normal', activity: 'normal', cohortBreakdown: 'wide', topStudents: 'normal'
 };
 
-function loadPrefs(): WidgetId[] {
-  if (typeof window === 'undefined') return DEFAULT_VISIBLE;
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return DEFAULT_VISIBLE;
-    const parsed = JSON.parse(stored) as WidgetId[];
-    if (Array.isArray(parsed)) return parsed;
-  } catch { }
-  return DEFAULT_VISIBLE;
-}
+const isIdArray = (parsed: unknown): parsed is WidgetId[] => Array.isArray(parsed);
 
-function loadOrder(): WidgetId[] {
-  if (typeof window === 'undefined') return DEFAULT_VISIBLE;
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_ORDER);
-    if (!stored) return DEFAULT_VISIBLE;
-    const parsed = JSON.parse(stored) as WidgetId[];
-    if (Array.isArray(parsed)) return parsed;
-  } catch { }
-  return DEFAULT_VISIBLE;
-}
+function loadPrefs(): WidgetId[] { return readJSON(STORAGE_KEY, DEFAULT_VISIBLE, isIdArray); }
+function loadOrder(): WidgetId[] { return readJSON(STORAGE_KEY_ORDER, DEFAULT_VISIBLE, isIdArray); }
 
 function loadSizes(): Record<WidgetId, 'normal' | 'wide'> {
-  if (typeof window === 'undefined') return DEFAULT_SIZES;
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_SIZES);
-    if (!stored) return DEFAULT_SIZES;
-    const parsed = JSON.parse(stored);
-    if (parsed && typeof parsed === 'object') return { ...DEFAULT_SIZES, ...parsed };
-  } catch { }
+  const parsed = readJSON<unknown>(STORAGE_KEY_SIZES, null);
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    return { ...DEFAULT_SIZES, ...(parsed as Partial<Record<WidgetId, 'normal' | 'wide'>>) };
+  }
   return DEFAULT_SIZES;
 }
 
-function savePrefs(v: WidgetId[]) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch { } }
-function saveOrder(v: WidgetId[]) { try { localStorage.setItem(STORAGE_KEY_ORDER, JSON.stringify(v)); } catch { } }
-function saveSizes(v: Record<WidgetId, 'normal' | 'wide'>) { try { localStorage.setItem(STORAGE_KEY_SIZES, JSON.stringify(v)); } catch { } }
+function savePrefs(v: WidgetId[]) { writeJSON(STORAGE_KEY, v); }
+function saveOrder(v: WidgetId[]) { writeJSON(STORAGE_KEY_ORDER, v); }
+function saveSizes(v: Record<WidgetId, 'normal' | 'wide'>) { writeJSON(STORAGE_KEY_SIZES, v); }
 
 export type DragHandlers = {
   onDragStart: (id: WidgetId) => void;
