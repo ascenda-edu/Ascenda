@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import {
-  PieChart, BarChart2, TrendingUp, CheckCircle, Target, Users
+  PieChart, BarChart2, TrendingUp, CheckCircle, Target, Users, Sparkles
 } from 'lucide-react';
 import { PageHero } from '@/components/layout/page-hero';
 import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
@@ -21,11 +21,21 @@ import {
 import { ExportButton } from './_components/export-button';
 import {
   AnalyticsWidgetGrid,
-  AnalyticsWidget
+  AnalyticsWidget,
+  isCustomWidgetId
 } from './_components/analytics-widget-grid';
-import type { AnalyticsWidgetId, AnalyticsDragHandlers } from './_components/analytics-widget-grid';
+import type { AnalyticsWidgetId, AnalyticsWidgetKey, AnalyticsWidgetSizes, AnalyticsDragHandlers } from './_components/analytics-widget-grid';
 import { DrilldownPanel } from './_components/analytics-drilldown';
 import type { DrilldownState, DrilldownItem } from './_components/analytics-drilldown';
+import { CustomWidgetChart } from './_components/custom-widget-chart';
+import { CustomWidgetBuilder } from './_components/custom-widget-builder';
+import { useCustomWidgets } from './_components/use-custom-widgets';
+import {
+  describeCustomWidget,
+  getCustomWidgetSourceMeta,
+  type CustomWidgetBucket,
+  type CustomWidgetDef
+} from '@/lib/counsellor/custom-widgets';
 
 const WIDGET_ICON_MAP: Record<AnalyticsWidgetId, typeof BarChart2> = {
   programmeSplit: PieChart,
@@ -63,6 +73,17 @@ interface AnalyticsClientProps {
 export function AnalyticsClient({ students, stats, fieldDistribution }: AnalyticsClientProps) {
   const [drilldown, setDrilldown] = useState<DrilldownState | null>(null);
   const closeDrilldown = useCallback(() => setDrilldown(null), []);
+
+  const { customWidgets, addCustomWidget, deleteCustomWidget } = useCustomWidgets();
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const customWidgetById = useMemo(
+    () => new Map(customWidgets.map((def) => [def.id, def])),
+    [customWidgets]
+  );
+  const customEntries = useMemo(
+    () => customWidgets.map((def) => ({ id: def.id, label: def.title, description: describeCustomWidget(def) })),
+    [customWidgets]
+  );
 
   const ibStudents = students.filter((s) => s.academic.programmeType === 'IB');
   const ibBuckets = [
@@ -368,14 +389,66 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
     }
   };
 
+  // Custom widget buckets open the same drill-down panel as the built-in
+  // charts, listing each student in the clicked group with the counted rows
+  // (apps/matches/deadlines) as detail text.
+  const handleCustomSelect = (def: CustomWidgetDef, bucket: CustomWidgetBucket) => {
+    const meta = getCustomWidgetSourceMeta(def.source);
+    const items: DrilldownItem[] = bucket.students.map(({ student, details }) => ({
+      student,
+      detail: details.slice(0, 3).join(' · '),
+      badge:
+        def.source === 'students'
+          ? undefined
+          : {
+              label: `${details.length} ${details.length === 1 ? meta.unitSingular : meta.unitPlural}`,
+              color: 'bg-primary/10 text-primary'
+            }
+    }));
+    setDrilldown({
+      title: bucket.label,
+      subtitle: `${bucket.students.length} student${bucket.students.length !== 1 ? 's' : ''} · ${def.title}`,
+      accentColor: 'bg-primary',
+      summaryStats:
+        def.source === 'students'
+          ? [{ label: 'students', value: String(bucket.students.length) }]
+          : [
+              { label: 'students', value: String(bucket.students.length) },
+              { label: meta.unitPlural, value: String(bucket.count) }
+            ],
+      items
+    });
+  };
+
   function renderWidget(
-    id: AnalyticsWidgetId,
+    id: AnalyticsWidgetKey,
     index: number,
-    removeWidget: (id: AnalyticsWidgetId) => void,
-    sizes: Record<AnalyticsWidgetId, 'normal' | 'wide'>,
-    toggleSize: (id: AnalyticsWidgetId) => void,
+    removeWidget: (id: AnalyticsWidgetKey) => void,
+    sizes: AnalyticsWidgetSizes,
+    toggleSize: (id: AnalyticsWidgetKey) => void,
     dragHandlers: AnalyticsDragHandlers
   ) {
+    if (isCustomWidgetId(id)) {
+      const def = customWidgetById.get(id);
+      if (!def) return null;
+      return (
+        <AnalyticsWidget
+          key={id}
+          id={id}
+          title={def.title}
+          description={describeCustomWidget(def)}
+          icon={Sparkles}
+          onRemove={removeWidget}
+          onToggleSize={toggleSize}
+          size={sizes[id]}
+          index={index}
+          dragHandlers={dragHandlers}
+        >
+          <CustomWidgetChart def={def} students={students} onSelect={(bucket) => handleCustomSelect(def, bucket)} />
+        </AnalyticsWidget>
+      );
+    }
+
     const icon = WIDGET_ICON_MAP[id];
     const meta = WIDGET_META[id];
     const size = sizes[id];
@@ -429,7 +502,11 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         ]}
       />
 
-      <AnalyticsWidgetGrid>
+      <AnalyticsWidgetGrid
+        customEntries={customEntries}
+        onCreateWidget={() => setBuilderOpen(true)}
+        onDeleteCustomWidget={deleteCustomWidget}
+      >
         {(visibleWidgets, removeWidget, sizes, toggleSize, dragHandlers) => (
           <div className="grid gap-6 md:grid-cols-2 [&>*]:min-w-0">
             <AnimatePresence mode="popLayout">
@@ -440,6 +517,13 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
           </div>
         )}
       </AnalyticsWidgetGrid>
+
+      <CustomWidgetBuilder
+        open={builderOpen}
+        onOpenChange={setBuilderOpen}
+        students={students}
+        onCreate={addCustomWidget}
+      />
 
       <DrilldownPanel data={drilldown} onClose={closeDrilldown} />
     </div>

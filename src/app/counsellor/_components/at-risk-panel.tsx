@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, FileX, Clock, UserX, ChevronRight, Timer } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { ShowMoreToggle } from '@/components/ui/show-more-toggle';
 import { stagger, cardFade } from '@/lib/motion';
 import type { AtRiskAlert, RiskType, RiskUrgency } from '@/lib/counsellor/types';
 
@@ -26,10 +27,18 @@ interface AtRiskPanelProps {
   alerts: AtRiskAlert[];
 }
 
+const URGENCY_ORDER: Record<RiskUrgency, number> = { critical: 0, high: 1, medium: 2 };
+const COLLAPSED_COUNT = 5;
+
 export function AtRiskPanel({ alerts }: AtRiskPanelProps) {
   const [urgencyFilter, setUrgencyFilter] = useState<RiskUrgency | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
-  const filtered = urgencyFilter ? alerts.filter((a) => a.urgency === urgencyFilter) : alerts;
+  // Sort by urgency (critical → high → medium), stable within a tier, on the
+  // full list before filtering.
+  const sorted = [...alerts].sort((a, b) => URGENCY_ORDER[a.urgency] - URGENCY_ORDER[b.urgency]);
+  const filtered = urgencyFilter ? sorted.filter((a) => a.urgency === urgencyFilter) : sorted;
+  const visible = expanded ? filtered : filtered.slice(0, COLLAPSED_COUNT);
   const counts: Record<RiskUrgency, number> = { critical: 0, high: 0, medium: 0 };
   alerts.forEach((a) => counts[a.urgency]++);
 
@@ -73,7 +82,7 @@ export function AtRiskPanel({ alerts }: AtRiskPanelProps) {
       {/* Alert list */}
       <motion.div className="space-y-2" variants={stagger} initial="hidden" animate="show">
         <AnimatePresence mode="popLayout">
-          {filtered.map((alert) => {
+          {visible.map((alert) => {
             const risk = RISK_CONFIG[alert.riskType];
             const urgency = URGENCY_CONFIG[alert.urgency];
             const Icon = risk.icon;
@@ -109,6 +118,15 @@ export function AtRiskPanel({ alerts }: AtRiskPanelProps) {
           })}
         </AnimatePresence>
       </motion.div>
+
+      {filtered.length > COLLAPSED_COUNT && (
+        <ShowMoreToggle
+          expanded={expanded}
+          onToggle={() => setExpanded((prev) => !prev)}
+          total={filtered.length}
+          noun="alerts"
+        />
+      )}
     </div>
   );
 }

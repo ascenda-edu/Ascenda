@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { CHART_PALETTE } from './chart-palette';
 import type { CohortStats } from './types';
 
 // ─── Programme Split ──────────────────────────────────────────────────────────
@@ -114,27 +115,8 @@ interface FieldChartProps {
   onSelect?: (field: { key: string; label: string }) => void;
 }
 
-const FIELD_COLORS = [
-  'bg-violet-500/70',
-  'bg-sky-500/70',
-  'bg-emerald-500/70',
-  'bg-amber-500/70',
-  'bg-rose-500/70',
-  'bg-indigo-500/70',
-  'bg-teal-500/70',
-  'bg-orange-500/70'
-];
-
-const FIELD_HOVER_COLORS = [
-  'hover:bg-violet-500/90',
-  'hover:bg-sky-500/90',
-  'hover:bg-emerald-500/90',
-  'hover:bg-amber-500/90',
-  'hover:bg-rose-500/90',
-  'hover:bg-indigo-500/90',
-  'hover:bg-teal-500/90',
-  'hover:bg-orange-500/90'
-];
+const FIELD_COLORS = CHART_PALETTE.map((c) => c.bar);
+const FIELD_HOVER_COLORS = CHART_PALETTE.map((c) => c.barHover);
 
 export const FieldChart = ({ fields, onSelect }: FieldChartProps) => {
   const max = Math.max(...fields.map((f) => f.count), 1);
