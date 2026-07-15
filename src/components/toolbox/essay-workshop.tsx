@@ -166,7 +166,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
               key={p}
               onClick={() => setPlatform(p)}
               className={cn(
-                'rounded-md px-3 py-1 text-[11px] font-semibold transition-all',
+                'rounded-md px-3 py-1 text-[11px] font-semibold transition-[color,background-color,box-shadow]',
                 platform === p ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
               )}
             >{p}</button>
@@ -254,7 +254,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
                                       onClick={() => toggleBlock(block.id)}
                                       onDoubleClick={() => insertBlock(block)}
                                       draggable onDragStart={() => setDraggedBlock(block.id)} onDragEnd={() => setDraggedBlock(null)}
-                                      className={cn('w-full text-left rounded-lg px-2.5 py-1.5 text-[12px] transition-all', isSel ? 'bg-primary/5 ring-1 ring-primary/15' : 'hover:bg-muted/40', draggedBlock === block.id && 'opacity-40')}
+                                      className={cn('w-full text-left rounded-lg px-2.5 py-1.5 text-[12px] transition-[color,background-color,box-shadow,opacity]', isSel ? 'bg-primary/5 ring-1 ring-primary/15' : 'hover:bg-muted/40', draggedBlock === block.id && 'opacity-40 select-none')}
                                     >
                                       <div className="flex items-center gap-1.5">
                                         <GripVertical className="h-3 w-3 text-muted-foreground/20 opacity-0 group-hover/b:opacity-100 transition-opacity shrink-0" />
@@ -392,7 +392,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
 
           {/* Editor surface */}
           <div
-            className="flex-1 overflow-y-auto bg-card"
+            className={cn('flex-1 overflow-y-auto bg-card', draggedBlock && 'select-none')}
             onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
             onDrop={(e) => { e.preventDefault(); if (draggedBlock) { const b = blocks.find((bl) => bl.id === draggedBlock); if (b) insertBlock(b); } }}
           >
@@ -413,7 +413,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
                     {overBy.toLocaleString()} {limit.unit} over the {limit.max.toLocaleString()}-{limit.unit === 'words' ? 'word' : 'character'} limit
                   </span>
                 )}
-                {overBy === 0 && ratio >= 0.95 && <span className="text-[10px] font-semibold text-rose-500 animate-pulse">At limit</span>}
+                {overBy === 0 && ratio >= 0.95 && <span className="text-[10px] font-semibold text-rose-500 motion-safe:animate-pulse">At limit</span>}
                 {ratio >= 0.8 && ratio < 0.95 && <span className="text-[10px] text-amber-500">Getting close</span>}
               </div>
               <span className="text-[10px] text-muted-foreground/50">{limit.tip}</span>

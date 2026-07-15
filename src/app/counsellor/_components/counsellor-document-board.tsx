@@ -21,6 +21,7 @@ import type { CounsellorDocument, CounsellorDocStatus } from '@/lib/data/student
 import { useToast } from '@/components/ui/toast';
 import { useSupabase } from '@/hooks/useSupabase';
 import { insertNotification } from '@/lib/demo/help-request-client';
+import { parseLocalDate } from '@/lib/utils/dates';
 
 type NudgeTarget = 'student' | 'teacher' | 'registrar';
 
@@ -61,7 +62,7 @@ const TYPE_ICON: Record<string, typeof FileText> = {
 type FilterStatus = CounsellorDocStatus | 'all';
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  return parseLocalDate(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 interface CounsellorDocumentBoardProps {
@@ -176,6 +177,7 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search documents by student or document name"
             placeholder="Search by student or document..."
             className="w-full rounded-full border border-border/60 bg-background/80 pl-9 pr-4 py-2 text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
           />
@@ -242,7 +244,7 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
                         <TypeIcon className={cn('h-4 w-4', cfg.color)} />
                       </div>
                       <Link
-                        href={`/counsellor/students/${studentId}?tab=documents`}
+                        href={`/counsellor/students/${studentId}?tab=applications`}
                         className="flex-1 min-w-0 group"
                       >
                         <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary">

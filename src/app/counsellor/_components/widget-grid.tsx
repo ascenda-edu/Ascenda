@@ -98,6 +98,7 @@ export const WidgetGrid = ({ children }: WidgetGridProps) => {
   const [panelOpen, setPanelOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [dragOver, setDragOver] = useState<WidgetId | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const dragId = useRef<WidgetId | null>(null);
 
   useEffect(() => {
@@ -157,7 +158,7 @@ export const WidgetGrid = ({ children }: WidgetGridProps) => {
     dragOver,
     onMove: moveWidget,
     count: visibleWidgets.length,
-    onDragStart: (id) => { dragId.current = id; },
+    onDragStart: (id) => { dragId.current = id; setIsDragging(true); },
     onDragOver: (e, id) => {
       e.preventDefault();
       if (dragId.current && dragId.current !== id) setDragOver(id);
@@ -166,6 +167,7 @@ export const WidgetGrid = ({ children }: WidgetGridProps) => {
       const fromId = dragId.current;
       dragId.current = null;
       setDragOver(null);
+      setIsDragging(false);
       if (!fromId || fromId === targetId) return;
       setOrder((prev) => {
         // Ensure all visible widgets are in the order array
@@ -183,6 +185,7 @@ export const WidgetGrid = ({ children }: WidgetGridProps) => {
     onDragEnd: () => {
       dragId.current = null;
       setDragOver(null);
+      setIsDragging(false);
     }
   };
 
@@ -195,7 +198,7 @@ export const WidgetGrid = ({ children }: WidgetGridProps) => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className={cn('space-y-6', isDragging && 'select-none')}>
       {/* Toolbar */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">

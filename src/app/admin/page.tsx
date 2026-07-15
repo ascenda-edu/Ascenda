@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   title: 'Admin console'
 };
 
+const dateTimeFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
 export default async function AdminPage() {
   const supabase = createServerSupabaseClient();
   const {
@@ -49,7 +51,7 @@ export default async function AdminPage() {
               <li key={source.id}>
                 <p className="font-semibold text-foreground">{source.name}</p>
                 <p>{source.url ?? 'No URL provided'}</p>
-                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Last scraped: {source.last_scraped_at ?? 'Never'}</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Last scraped: {source.last_scraped_at ? dateTimeFormatter.format(new Date(source.last_scraped_at)) : 'Never'}</p>
               </li>
             ))}
             {sources.length === 0 ? <li>No sources yet.</li> : null}

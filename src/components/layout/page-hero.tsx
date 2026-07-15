@@ -13,7 +13,7 @@ interface HeroStat {
 
 interface PageHeroProps {
   eyebrow?: string;
-  title: string;
+  title: ReactNode;
   description: string;
   /** Short bold value rendered next to the eyebrow (e.g. "13 total"). */
   highlight?: string;

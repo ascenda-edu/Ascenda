@@ -156,7 +156,7 @@ export function ApplicationList({ rows }: Props) {
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted/60">
                     <div
                       className={cn(
-                        'h-full rounded-full transition-all',
+                        'h-full rounded-full transition-[width,background-color]',
                         progress >= 75 ? 'bg-emerald-500' : progress >= 40 ? 'bg-sky-500' : 'bg-amber-500'
                       )}
                       style={{ width: `${progress}%` }}

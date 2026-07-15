@@ -10,6 +10,7 @@ import type { Scholarship } from './types';
 import { filterScholarships } from './utils';
 import { SCHOLARSHIP_VISUAL, type ScholarshipCategory } from '@/lib/theme/categories';
 import { parseLocalDate, daysUntil } from '@/lib/utils/dates';
+import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
 
 interface ScholarshipExplorerProps {
   scholarships: Scholarship[];
@@ -33,7 +34,7 @@ const listVariants = {
 function formatDeadline(dateStr: string | null | undefined): string {
   if (!dateStr) return 'Rolling';
   try {
-    return parseLocalDate(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    return parseLocalDate(dateStr).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
   } catch {
     return dateStr;
   }
@@ -46,10 +47,10 @@ function isUrgent(dateStr: string | null | undefined): boolean {
 }
 
 export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) => {
-  const [query, setQuery] = useState('');
-  const [country, setCountry] = useState('');
-  const [level, setLevel] = useState('');
-  const [maxAmount, setMaxAmount] = useState('');
+  const [query, setQuery] = useSearchParamState('q', '');
+  const [country, setCountry] = useSearchParamState('country', '');
+  const [level, setLevel] = useSearchParamState('level', '');
+  const [maxAmount, setMaxAmount] = useSearchParamState('maxAmount', '');
   const [saved, setSaved] = useState<Set<string>>(new Set());
   const [savedLoaded, setSavedLoaded] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -129,10 +130,11 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <input
               type="text"
+              aria-label="Search scholarships"
               placeholder="Search by name, category, or country…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full rounded-xl border border-border bg-background pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-xl border border-border bg-background pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             {query && (
               <button onClick={() => setQuery('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -177,7 +179,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                     id="scholarship-filter-country"
                     value={country}
                     onChange={(e) => setCountry(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="">All countries</option>
                     {countries.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -191,7 +193,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                     id="scholarship-filter-level"
                     value={level}
                     onChange={(e) => setLevel(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="">All levels</option>
                     {levels.map((l) => <option key={l} value={l}>{l}</option>)}
@@ -207,7 +209,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                     placeholder="e.g. 50000"
                     value={maxAmount}
                     onChange={(e) => setMaxAmount(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
               </div>
@@ -265,7 +267,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                   variants={cardVariants}
                   layout
                   className={cn(
-                    'group relative overflow-hidden rounded-2xl border border-l-4 bg-card p-4 sm:p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md',
+                    'group relative overflow-hidden rounded-2xl border border-l-4 bg-card p-4 sm:p-5 shadow-sm transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-md',
                     visual.border,
                     visual.accent
                   )}
@@ -314,7 +316,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                         <button
                           onClick={() => toggleSave(scholarship)}
                           className={cn(
-                            'flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all hover:-translate-y-0.5',
+                            'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-[transform,color,background-color,border-color] hover:-translate-y-0.5',
                             isSaved
                               ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-200/50'
                               : 'border border-border text-muted-foreground hover:border-primary/20 hover:text-primary hover:bg-primary/5'
@@ -328,7 +330,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                             href={scholarship.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:text-foreground hover:bg-muted/40"
+                            className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-[transform,color,background-color,border-color] hover:-translate-y-0.5 hover:border-primary/20 hover:text-foreground hover:bg-muted/40"
                           >
                             <ExternalLink className="h-3.5 w-3.5" />
                             Details

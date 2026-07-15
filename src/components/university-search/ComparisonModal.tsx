@@ -81,7 +81,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                 const { value, badgeClass } = getFitScoreVisuals(uni.fitScore);
                 return (
                     <div className="flex items-center gap-2">
-                        <span className={cn('inline-flex h-9 min-w-[3rem] items-center justify-center rounded-xl px-2 text-sm font-bold ring-1', badgeClass)}>
+                        <span className={cn('inline-flex h-9 min-w-[3rem] items-center justify-center rounded-xl px-2 text-sm font-bold tabular-nums ring-1', badgeClass)}>
                             {value !== null ? `${value}%` : 'N/A'}
                         </span>
                         {uni.tier ? (
@@ -99,7 +99,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
             icon: Sparkles,
             hint: 'Lower means more competitive.',
             valueForCompare: (uni) => formatPercentage(uni.acceptanceRate),
-            render: (uni) => <span className="text-sm font-semibold text-foreground">{formatPercentage(uni.acceptanceRate)}</span>,
+            render: (uni) => <span className="text-sm font-semibold tabular-nums text-foreground">{formatPercentage(uni.acceptanceRate)}</span>,
             numeric: (uni) => uni.acceptanceRate,
             direction: 'lower'
         },
@@ -116,7 +116,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                     currency: uni.currency
                 }),
             render: (uni) => (
-                <span className="text-sm font-semibold text-foreground">
+                <span className="text-sm font-semibold tabular-nums text-foreground">
                     {formatCurrencyRange({
                         low: uni.intlTuitionLow,
                         high: uni.intlTuitionHigh,
@@ -235,7 +235,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                 {isMultiple && (
                                     <button
                                         onClick={() => setHighlightDiffs((v) => !v)}
-                                        className="flex items-center gap-2.5 rounded-full border border-border bg-background px-3.5 py-1.5 text-xs font-semibold text-foreground transition hover:border-primary/50 hover:bg-muted/40"
+                                        className="flex items-center gap-2.5 rounded-full border border-border bg-background px-3.5 py-1.5 text-xs font-semibold text-foreground transition hover:border-primary/50 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                         role="switch"
                                         aria-checked={highlightDiffs}
                                     >
@@ -407,7 +407,7 @@ function ProgramHeaderCard({ uni, onRemove }: { uni: ProgramSearchResult; onRemo
             />
             <button
                 onClick={onRemove}
-                className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/70 text-muted-foreground opacity-0 backdrop-blur-sm transition-all hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+                className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/70 text-muted-foreground opacity-0 backdrop-blur-sm transition-all hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 group-hover:opacity-100"
                 aria-label={`Remove ${uni.universityName}`}
             >
                 <X className="h-3.5 w-3.5" />

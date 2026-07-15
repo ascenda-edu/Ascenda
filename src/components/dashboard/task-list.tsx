@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -67,8 +68,8 @@ export const TaskList = ({ title, tasks, onToggle, disabled }: TaskListProps) =>
           <div className="rounded-full bg-muted/60 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
             {progress}% ready
           </div>
-          <Button size="sm" variant="ghost" className="rounded-full px-3 text-xs uppercase tracking-[0.3em] text-muted-foreground">
-            + Add task
+          <Button asChild size="sm" variant="ghost" className="rounded-full px-3 text-xs uppercase tracking-[0.3em] text-muted-foreground">
+            <Link href="/applications/tasks">+ Add task</Link>
           </Button>
         </div>
       </div>

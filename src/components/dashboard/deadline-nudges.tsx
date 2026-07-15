@@ -5,15 +5,16 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Bell, ChevronRight, Info, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { daysUntil } from '@/lib/utils/dates';
 import type { DeadlineNudge, NudgeUrgency } from '@/lib/data/student-demo-data';
 
 const URGENCY_CONFIG: Record<NudgeUrgency, { icon: typeof Bell; color: string; bg: string; border: string; ring: string }> = {
   critical: {
     icon: AlertTriangle,
-    color: 'text-red-600 dark:text-red-400',
-    bg: 'bg-red-500/10',
-    border: 'border-red-200/60 dark:border-red-500/20',
-    ring: 'ring-red-500/20'
+    color: 'text-rose-600 dark:text-rose-400',
+    bg: 'bg-rose-500/10',
+    border: 'border-rose-200/60 dark:border-rose-500/20',
+    ring: 'ring-rose-500/20'
   },
   warning: {
     icon: Bell,
@@ -46,13 +47,6 @@ interface DeadlineNudgesProps {
   nudges: DeadlineNudge[];
 }
 
-function daysUntil(iso: string) {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const target = new Date(iso);
-  return Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-}
-
 export function DeadlineNudges({ nudges }: DeadlineNudgesProps) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
@@ -76,9 +70,9 @@ export function DeadlineNudges({ nudges }: DeadlineNudgesProps) {
     <div className="space-y-4">
       {/* Summary */}
       {criticalCount > 0 && (
-        <div className="flex items-center gap-2 rounded-2xl border border-red-200/60 bg-red-500/5 px-4 py-3 dark:border-red-500/20">
-          <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
-          <p className="text-sm text-red-600 dark:text-red-400">
+        <div className="flex items-center gap-2 rounded-2xl border border-rose-200/60 bg-rose-500/5 px-4 py-3 dark:border-rose-500/20">
+          <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0" />
+          <p className="text-sm text-rose-600 dark:text-rose-400">
             <span className="font-semibold">{criticalCount}</span> critical{' '}
             {criticalCount === 1 ? 'item needs' : 'items need'} your attention
           </p>
@@ -112,6 +106,7 @@ export function DeadlineNudges({ nudges }: DeadlineNudgesProps) {
                 )}
               >
                 <button
+                  type="button"
                   onClick={() => handleDismiss(nudge.id)}
                   className="absolute right-3 top-3 rounded-full p-1 text-muted-foreground/50 transition hover:bg-muted/60 hover:text-foreground"
                   aria-label="Dismiss"

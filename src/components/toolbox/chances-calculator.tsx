@@ -209,7 +209,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
           return (
             <motion.div key={uni.id} variants={cardFade} layout>
               <div
-                className={cn('relative w-full text-left rounded-2xl border p-4 transition-all hover:shadow-md', cfg.bg)}
+                className={cn('relative w-full text-left rounded-2xl border p-4 transition-shadow hover:shadow-md', cfg.bg)}
               >
                 {/* Stretched toggle: a real button covering the card, kept as a
                     SIBLING of the course Link (interactive elements must not nest). */}

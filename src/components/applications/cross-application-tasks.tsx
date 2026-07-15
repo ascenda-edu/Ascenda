@@ -216,7 +216,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
             value={newAppId}
             onChange={(e) => setNewAppId(e.target.value)}
             aria-label="Attach task to application"
-            className="rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+            className="rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
             {applicationOptions.map((option) => (
               <option key={option.id} value={option.id}>

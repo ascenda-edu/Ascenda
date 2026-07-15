@@ -37,7 +37,7 @@ function urgencyClass(days: number) {
 }
 
 function formatDate(iso: string) {
-  return parseLocalDate(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return parseLocalDate(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
 function getStudents(deadlines: DeadlineItem[]) {

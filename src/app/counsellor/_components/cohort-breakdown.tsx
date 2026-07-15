@@ -67,15 +67,15 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
             >
               <div className="h-5 flex-1 overflow-hidden rounded-lg bg-muted/50">
                 <div
-                  className="h-full rounded-lg bg-primary/60 transition-all duration-700 group-hover:bg-primary/80"
+                  className="h-full rounded-lg bg-primary/60 transition-all duration-700 group-hover:bg-primary/80 group-focus-within:bg-primary/80"
                   style={{ width: `${(count / maxField) * 100}%` }}
                 />
               </div>
               <div className="flex w-44 items-center justify-between">
-                <span className="text-xs text-muted-foreground group-hover:text-foreground transition">{label}</span>
+                <span className="text-xs text-muted-foreground group-hover:text-foreground group-focus-within:text-foreground transition">{label}</span>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-semibold text-foreground">{count}</span>
-                  <span className="text-[10px] text-primary opacity-0 group-hover:opacity-100 transition font-medium">View →</span>
+                  <span className="text-[10px] text-primary opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition font-medium">View →</span>
                 </div>
               </div>
             </button>

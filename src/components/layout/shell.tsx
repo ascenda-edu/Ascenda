@@ -10,12 +10,6 @@ export const DashboardShell = ({ children }: { children: ReactNode }) => {
   return (
     <SidebarProvider>
       <div className="relative min-h-screen bg-background pb-24 text-foreground transition-colors md:pb-16">
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-2 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
-        >
-          Skip to main content
-        </a>
         <Navbar />
         <div className="flex w-full gap-4 px-3 pt-20 sm:gap-6 sm:px-6 md:pt-28 lg:px-10">
           <Sidebar />

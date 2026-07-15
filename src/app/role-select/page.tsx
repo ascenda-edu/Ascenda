@@ -108,9 +108,9 @@ export default function RoleSelectPage() {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="space-y-3 text-center">
           <div className="relative mx-auto h-2 w-48 overflow-hidden rounded-full bg-muted/60">
-            <div className="absolute inset-0 translate-x-[-100%] animate-shimmer bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+            <div className="absolute inset-0 translate-x-[-100%] motion-safe:animate-shimmer bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
           </div>
-          <p className="text-sm text-muted-foreground animate-pulse">Verifying session...</p>
+          <p className="text-sm text-muted-foreground motion-safe:animate-pulse">Verifying session…</p>
         </div>
       </div>
     );

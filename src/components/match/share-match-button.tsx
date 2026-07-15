@@ -42,9 +42,14 @@ export function ShareMatchButton({ programName, universityName, shareUrl }: Shar
   };
 
   return (
-    <Button size="sm" variant="outline" onClick={handleShare} className="gap-2">
-      {copied ? <Check className="h-4 w-4" aria-hidden /> : <Share2 className="h-4 w-4" aria-hidden />}
-      {copied ? 'Link copied' : 'Share'}
-    </Button>
+    <>
+      <Button size="sm" variant="outline" onClick={handleShare} className="gap-2">
+        {copied ? <Check className="h-4 w-4" aria-hidden /> : <Share2 className="h-4 w-4" aria-hidden />}
+        {copied ? 'Link copied' : 'Share'}
+      </Button>
+      <span role="status" aria-live="polite" className="sr-only">
+        {copied ? 'Link copied to clipboard' : ''}
+      </span>
+    </>
   );
 }

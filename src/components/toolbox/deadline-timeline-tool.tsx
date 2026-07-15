@@ -62,7 +62,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
   const universities = useMemo(() => [...new Set(deadlines.map((d) => d.university))], [deadlines]);
 
   const filtered = useMemo(() => {
-    let result = [...deadlines].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    let result = [...deadlines].sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
     if (filterType) result = result.filter((d) => d.type === filterType);
     if (filterUniversity) result = result.filter((d) => d.university === filterUniversity);
     return result;
@@ -81,7 +81,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
   const grouped = useMemo(() => {
     const map = new Map<string, TimelineDeadline[]>();
     filtered.filter((d) => (daysUntilMap.get(d.id) ?? daysUntil(d.date)) >= 0).forEach((d) => {
-      const key = monthFormatter.format(new Date(d.date));
+      const key = monthFormatter.format(parseLocalDate(d.date));
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(d);
     });
@@ -136,11 +136,12 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
               const cfg = TYPE_CONFIG[d.type];
               const days = daysUntilMap.get(d.id) ?? daysUntil(d.date);
               return (
-                <motion.div
+                <motion.button
                   key={d.id}
+                  type="button"
                   variants={cardFade}
                   whileHover={{ scale: 1.02, y: -2 }}
-                  className={cn('rounded-2xl border p-4 space-y-2 cursor-pointer transition-shadow hover:shadow-lg', cfg.bg)}
+                  className={cn('w-full text-left rounded-2xl border p-4 space-y-2 cursor-pointer transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2', cfg.bg)}
                   onClick={() => setSelectedDeadline(selectedDeadline === d.id ? null : d.id)}
                 >
                   <div className="flex items-center justify-between">
@@ -172,7 +173,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                       </motion.p>
                     )}
                   </AnimatePresence>
-                </motion.div>
+                </motion.button>
               );
             })}
           </motion.div>
@@ -376,9 +377,9 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                           <span>{d.university}</span>
                           <span>·</span>
-                          <span>{dateFormatter.format(new Date(d.date))}</span>
+                          <span>{dateFormatter.format(parseLocalDate(d.date))}</span>
                           <span>·</span>
-                          <span>{dayOfWeek.format(new Date(d.date))}</span>
+                          <span>{dayOfWeek.format(parseLocalDate(d.date))}</span>
                         </div>
                         {d.detail && <p className="text-xs text-muted-foreground/80">{d.detail}</p>}
                       </div>

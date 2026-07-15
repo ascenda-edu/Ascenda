@@ -49,6 +49,18 @@ export const NotificationBell = ({ className }: { className?: string }) => {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const prevUnreadRef = useRef(unreadCount);
+  const [announcement, setAnnouncement] = useState('');
+
+  // Announce arriving notifications for screen readers when the unread count
+  // climbs (new rows landing via realtime), independent of the panel being open.
+  useEffect(() => {
+    if (unreadCount > prevUnreadRef.current) {
+      const delta = unreadCount - prevUnreadRef.current;
+      setAnnouncement(`${delta} new notification${delta === 1 ? '' : 's'} · ${unreadCount} unread`);
+    }
+    prevUnreadRef.current = unreadCount;
+  }, [unreadCount]);
 
   // Close on outside click
   useEffect(() => {
@@ -88,6 +100,9 @@ export const NotificationBell = ({ className }: { className?: string }) => {
 
   return (
     <div ref={wrapperRef} className={cn('relative', className)}>
+      <span className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </span>
       <button
         ref={buttonRef}
         type="button"
@@ -138,7 +153,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
               ) : null}
             </div>
 
-            <div className="max-h-[60vh] overflow-y-auto">
+            <div className="max-h-[60vh] overflow-y-auto overscroll-contain">
               {items.length === 0 ? (
                 <div className="px-4 py-8 text-center">
                   <Bell className="mx-auto h-5 w-5 text-muted-foreground/60" aria-hidden />
@@ -176,7 +191,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
                                 tone
                               )}
                             >
-                              {notif.kind.replace('_', ' ')}
+                              {notif.kind.replaceAll('_', ' ')}
                             </span>
                           </div>
                           {notif.body ? (

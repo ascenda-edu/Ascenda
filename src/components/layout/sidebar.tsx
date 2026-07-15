@@ -19,6 +19,14 @@ export const Sidebar = () => {
   const items = filterNavByRole(NAV_ITEMS, role, pathname);
   const { collapsed, toggle } = useSidebar();
 
+  const counsellorInitials = DEMO_COUNSELLOR.fullName
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.refresh();
@@ -80,6 +88,7 @@ export const Sidebar = () => {
         <SideSwitcher className={cn('mt-1 w-full', collapsed ? 'justify-center px-0 rounded-lg' : '')} collapsed={collapsed} />
 
         <button
+          type="button"
           onClick={handleSignOut}
           title={collapsed ? 'Sign out' : undefined}
           aria-label={collapsed ? 'Sign out' : undefined}
@@ -101,12 +110,13 @@ export const Sidebar = () => {
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-primary text-[11px] font-bold text-white shadow-sm"
                 aria-hidden
               >
-                SM
+                {counsellorInitials}
               </div>
               <span
                 className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-emerald-500"
-                aria-label="Available today"
+                aria-hidden
               />
+              <span className="sr-only">Available today</span>
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold leading-tight text-foreground">{DEMO_COUNSELLOR.fullName}</p>

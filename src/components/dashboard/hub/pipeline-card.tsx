@@ -14,7 +14,7 @@ const STAGE_COLOR: Record<string, { bar: string; dot: string }> = {
   planning: { bar: 'bg-slate-400 dark:bg-slate-500', dot: 'bg-slate-400 dark:bg-slate-500' },
   in_progress: { bar: 'bg-sky-500', dot: 'bg-sky-500' },
   submitted: { bar: 'bg-emerald-500', dot: 'bg-emerald-500' },
-  decision: { bar: 'bg-violet-500', dot: 'bg-violet-500' },
+  decision: { bar: 'bg-amber-500', dot: 'bg-amber-500' },
   enrolled: { bar: 'bg-primary', dot: 'bg-primary' }
 };
 

@@ -44,7 +44,12 @@
     --radius: 0.625rem;
   }
 
+  :root {
+    color-scheme: light;
+  }
+
   [data-theme='dark'] {
+    color-scheme: dark;
     --background: 224 32% 6%;
     --foreground: 220 14% 96%;
 
@@ -181,7 +186,7 @@
   }
 
   .hover-lift {
-    @apply transition-all duration-150 hover:-translate-y-px hover:shadow-md;
+    @apply transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-md;
   }
 }
 
@@ -191,7 +196,7 @@
   }
 
   .surface-card {
-    @apply relative overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md dark:border-white/10 dark:bg-card;
+    @apply relative overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-sm transition-[transform,box-shadow,border-color,background-color] duration-200 hover:-translate-y-px hover:shadow-md dark:border-white/10 dark:bg-card;
   }
 
   .surface-card--static {
@@ -211,15 +216,15 @@
   }
 
   .surface-stage {
-    @apply relative overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-sm transition-all duration-200 dark:border-white/10 dark:bg-card;
+    @apply relative overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-sm transition-[border-color,background-color] duration-200 dark:border-white/10 dark:bg-card;
   }
 
   .surface-stat {
-    @apply relative overflow-hidden rounded-xl border border-border bg-card p-4 sm:p-5 shadow-sm transition-all duration-200 dark:border-white/10 dark:bg-card;
+    @apply relative overflow-hidden rounded-xl border border-border bg-card p-4 sm:p-5 shadow-sm transition-[border-color,background-color] duration-200 dark:border-white/10 dark:bg-card;
   }
 
   .nav-pill {
-    @apply relative rounded-lg border border-transparent px-3 py-2 sm:py-1.5 text-xs sm:text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-muted/60 hover:text-foreground;
+    @apply relative rounded-lg border border-transparent px-3 py-2 sm:py-1.5 text-xs sm:text-sm font-medium text-muted-foreground transition-[color,background-color,border-color,box-shadow] duration-200 hover:bg-muted/60 hover:text-foreground;
   }
 
   .nav-pill-active {

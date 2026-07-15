@@ -118,13 +118,13 @@ export default async function ToolboxPage() {
         <div className="grid gap-4 sm:grid-cols-[1fr,auto]">
           {/* Next action card */}
           {nextDeadline && (
-            <Link href="/toolbox/timeline" className="block surface-card border-l-4 border-l-primary hover:border-l-primary hover:shadow-xl transition-all hover:-translate-y-0.5 group overflow-hidden">
+            <Link href="/toolbox/timeline" className="block surface-card border-l-4 border-l-primary hover:border-l-primary hover:shadow-xl transition-[transform,box-shadow] hover:-translate-y-0.5 group overflow-hidden">
               <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-primary/5 blur-2xl group-hover:bg-primary/10 transition-colors" />
               <div className="relative z-10 flex items-center gap-4">
                 <ToolboxCountdown days={daysUntilNext ?? 0} />
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary motion-safe:animate-pulse" />
                     Your next action
                   </p>
                   <p className="text-lg font-semibold text-foreground mt-0.5 truncate">{nextDeadline.title}</p>
@@ -135,7 +135,7 @@ export default async function ToolboxPage() {
                     }
                   </p>
                 </div>
-                <ArrowRight className="h-5 w-5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0" />
+                <ArrowRight className="h-5 w-5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-[color,transform] shrink-0" />
               </div>
             </Link>
           )}
@@ -163,7 +163,7 @@ export default async function ToolboxPage() {
               <Link
                 href={tool.href}
                 className={cn(
-                  'surface-card group relative flex h-full flex-col overflow-hidden border-l-4 transition-all hover:-translate-y-1 hover:shadow-xl',
+                  'surface-card group relative flex h-full flex-col overflow-hidden border-l-4 transition-[transform,box-shadow] hover:-translate-y-1 hover:shadow-xl',
                   visual.border,
                   visual.accent
                 )}
@@ -181,7 +181,7 @@ export default async function ToolboxPage() {
                     <div className="flex-1 min-w-0 pt-0.5">
                       <div className="flex items-center gap-1.5">
                         <p className="text-base font-semibold text-foreground">{tool.title}</p>
-                        <ArrowRight className={cn('h-3.5 w-3.5 opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100', visual.text)} />
+                        <ArrowRight className={cn('h-3.5 w-3.5 opacity-0 transition-[transform,opacity] group-hover:translate-x-1 group-hover:opacity-100', visual.text)} />
                       </div>
                       <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">{tool.description}</p>
                     </div>

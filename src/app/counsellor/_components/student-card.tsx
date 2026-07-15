@@ -82,7 +82,7 @@ function formatRelative(iso: string) {
   if (diffInMins < 60) return `${diffInMins}m ago`;
   if (diffInHours < 24) return `${diffInHours}h ago`;
   if (diffInDays < 7) return `${diffInDays}d ago`;
-  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
 function isActiveSoon(iso: string) {
@@ -144,7 +144,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
         )}
 
         {/* Quick actions */}
-        <div className="absolute right-0 top-0 flex gap-1 opacity-0 transition group-hover:opacity-100 z-20">
+        <div className="absolute right-0 top-0 flex gap-1 opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 group-focus-within:opacity-100 z-20">
           <Link
             href={`/counsellor/students/${student.id}`}
             className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground backdrop-blur-sm transition hover:border-primary/40 hover:text-primary"
@@ -226,7 +226,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
             <Clock className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">
               {daysLeft !== null && daysLeft <= 0 ? 'Overdue: ' : daysLeft !== null && daysLeft <= 7 ? `${daysLeft}d: ` : ''}
-              {nextDeadline.university} · {parseLocalDate(nextDeadline.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+              {nextDeadline.university} · {parseLocalDate(nextDeadline.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
             </span>
           </div>
         ) : (

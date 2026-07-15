@@ -39,7 +39,7 @@ function formatRelative(iso: string) {
   if (diffInMins < 60) return `${diffInMins}m ago`;
   if (diffInHours < 24) return `${diffInHours}h ago`;
   if (diffInDays < 7) return `${diffInDays}d ago`;
-  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
 // Get unique students from activity list

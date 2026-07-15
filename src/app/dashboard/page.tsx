@@ -8,6 +8,7 @@ import { DashboardShell } from '@/components/layout/shell';
 import { DeadlineTimeline } from '@/components/dashboard/deadline-timeline';
 import { MatchesPeek, MatchesPeekSkeleton } from './_components/matches-peek';
 import { CounsellorQuests } from './_components/counsellor-quests';
+import { Greeting } from './_components/greeting';
 import { PageHero } from '@/components/layout/page-hero';
 import { Button } from '@/components/ui/button';
 import { TaskListPanel } from '@/components/dashboard/task-list-panel';
@@ -367,10 +368,7 @@ export default async function DashboardPage() {
   const primaryFocus = visibleFocus[0];
 
   // ── Hero ────────────────────────────────────────────────────────────────
-  const hour = new Date().getHours();
-  const timeGreeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  const firstName = personalResponse.data?.first_name?.trim();
-  const greeting = firstName ? `${timeGreeting}, ${firstName}` : timeGreeting;
+  const firstName = personalResponse.data?.first_name?.trim() ?? null;
   const heroDescription =
     primaryFocus.id === 'focus-clear'
       ? "You're all caught up — everything you're tracking lives on this page."
@@ -404,7 +402,7 @@ export default async function DashboardPage() {
       <PageHero
         tone="student"
         eyebrow="Home"
-        title={greeting}
+        title={<Greeting firstName={firstName} />}
         description={heroDescription}
         highlight={primaryFocus.label}
         stats={heroStats}

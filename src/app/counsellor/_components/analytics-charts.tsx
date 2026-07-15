@@ -26,7 +26,7 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
           style={{ width: `${ibPct}%` }}
         >
           IB {ibPct}%
-          <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100">
+          <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             {breakdown.ib} students · Click to explore
           </span>
         </button>
@@ -36,7 +36,7 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
           style={{ width: `${aLevelPct}%` }}
         >
           A-Level {aLevelPct}%
-          <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100">
+          <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             {breakdown.aLevel} students · Click to explore
           </span>
         </button>
@@ -80,7 +80,7 @@ export const IbDistribution = ({ buckets, onSelect }: IbDistributionProps) => {
             key={label}
             onClick={() => count > 0 && onSelect?.({ label, min, max })}
             className={cn(
-              'flex w-full items-center gap-3 rounded-xl px-1 py-0.5 transition',
+              'group flex w-full items-center gap-3 rounded-xl px-1 py-0.5 transition',
               count > 0 ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default opacity-60'
             )}
           >
@@ -95,7 +95,7 @@ export const IbDistribution = ({ buckets, onSelect }: IbDistributionProps) => {
               >
                 {count > 0 ? count : ''}
                 {count > 0 && (
-                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100">
+                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                     {count} student{count !== 1 ? 's' : ''} · {Math.round((count / total) * 100)}% · Click to explore
                   </span>
                 )}
@@ -130,7 +130,7 @@ export const FieldChart = ({ fields, onSelect }: FieldChartProps) => {
             key={label}
             onClick={() => count > 0 && onSelect?.({ key, label })}
             className={cn(
-              'flex w-full items-center gap-3 rounded-xl px-1 py-0.5 transition',
+              'group flex w-full items-center gap-3 rounded-xl px-1 py-0.5 transition',
               count > 0 ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default opacity-60'
             )}
           >
@@ -146,7 +146,7 @@ export const FieldChart = ({ fields, onSelect }: FieldChartProps) => {
               >
                 {count > 0 ? count : ''}
                 {count > 0 && (
-                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100">
+                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                     {count} student{count !== 1 ? 's' : ''} · {Math.round((count / total) * 100)}% · Click to explore
                   </span>
                 )}
@@ -231,7 +231,7 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
               key={key}
               onClick={() => count > 0 && onSelect?.(key, label)}
               className={cn(
-                'block w-full space-y-1.5 rounded-xl px-1 py-1 transition',
+                'group block w-full space-y-1.5 rounded-xl px-1 py-1 transition',
                 count > 0 ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default'
               )}
             >
@@ -250,7 +250,7 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
                   style={{ width: `${width}%` }}
                 >
                   {count}
-                  <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100">
+                  <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                     {count} student{count !== 1 ? 's' : ''} · {pct}%
                     {compareYoY ? ` · ${delta.label} vs last year` : ''} · Click to explore
                   </span>
@@ -299,7 +299,7 @@ export const MatchTierSummary = ({ tiers, onSelect }: MatchTierSummaryProps) => 
               style={{ width: `${pct}%` }}
             >
               {pct > 8 ? label : ''}
-              <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100">
+              <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                 {count} {label} · {Math.round(pct)}% · Click to explore
               </span>
             </button>
@@ -352,7 +352,7 @@ export const CompletionBreakdown = ({ students, onSelect }: CompletionBreakdownP
             key={label}
             onClick={() => count > 0 && onSelect?.({ label, min, max: bucketMax })}
             className={cn(
-              'flex w-full items-center gap-3 rounded-xl px-1 py-0.5 transition',
+              'group flex w-full items-center gap-3 rounded-xl px-1 py-0.5 transition',
               count > 0 ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default opacity-60'
             )}
           >
@@ -368,7 +368,7 @@ export const CompletionBreakdown = ({ students, onSelect }: CompletionBreakdownP
               >
                 {count > 0 ? count : ''}
                 {count > 0 && (
-                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100">
+                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                     {count} student{count !== 1 ? 's' : ''} · {tooltip} · Click to explore
                   </span>
                 )}

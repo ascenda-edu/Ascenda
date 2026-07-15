@@ -54,7 +54,7 @@ const URGENCY_CONFIG: Record<UrgencyGroup, { label: string; icon: typeof AlertTr
 };
 
 function formatDate(iso: string) {
-  return parseLocalDate(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  return parseLocalDate(iso).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function urgencyBadge(days: number) {

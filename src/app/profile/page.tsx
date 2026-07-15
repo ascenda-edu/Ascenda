@@ -88,9 +88,15 @@ export default async function ProfilePage() {
   const profileEmail = personal?.email ?? user?.email ?? '';
   const formatClusterLabel = (value: string) =>
     value
-      .split('_')
-      .map((segment) => `${segment.charAt(0).toUpperCase()}${segment.slice(1)}`)
-      .join(' ');
+      .split(',')
+      .map((part) =>
+        part
+          .trim()
+          .split('_')
+          .map((segment) => `${segment.charAt(0).toUpperCase()}${segment.slice(1)}`)
+          .join(' ')
+      )
+      .join(', ');
 
   const PROGRAMME_LABEL: Record<string, string> = {
     IB: 'IB',

@@ -159,7 +159,9 @@ export function HelpRequestModal({ open, onOpenChange, app }: HelpRequestModalPr
             </label>
             <input
               id="hr-subject"
+              name="subject"
               type="text"
+              autoComplete="off"
               value={subject}
               onChange={(event) => setSubject(event.target.value)}
               className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
@@ -178,6 +180,8 @@ export function HelpRequestModal({ open, onOpenChange, app }: HelpRequestModalPr
             </div>
             <textarea
               id="hr-body"
+              name="message"
+              autoComplete="off"
               value={body}
               onChange={(event) => setBody(event.target.value)}
               rows={10}
