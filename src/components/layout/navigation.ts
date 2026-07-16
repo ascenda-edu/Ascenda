@@ -70,16 +70,6 @@ export const NAV_ITEMS: NavItem[] = [
     segment: 'inbox'
   },
   {
-    // Full agentic workspace (DB-backed conversations); the floating Ascendi
-    // widget stays for quick questions. NOTE: the counsellor/parent Assistant
-    // entries below must keep segment 'counsellor'/'parent' — filterNavByRole
-    // matches those portals by hard segment equality.
-    label: 'Assistant',
-    href: '/assistant',
-    icon: Bot,
-    segment: 'assistant'
-  },
-  {
     label: 'Scholarships',
     href: '/scholarships',
     icon: Award,
@@ -97,6 +87,19 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Sparkles,
     segment: 'toolbox',
     matchers: [(pathname) => pathname.startsWith('/toolbox')]
+  },
+  {
+    // Full agentic workspace (DB-backed conversations); the floating Ascendi
+    // widget stays for quick questions. Assistant is deliberately the LAST
+    // pill on every portal (see the /counsellor and /parent entries below) —
+    // it's a cross-cutting tool, not a journey step, so it anchors the right
+    // edge of the nav. NOTE: the counsellor/parent Assistant entries must keep
+    // segment 'counsellor'/'parent' — filterNavByRole matches those portals by
+    // hard segment equality.
+    label: 'Assistant',
+    href: '/assistant',
+    icon: Bot,
+    segment: 'assistant'
   },
   {
     label: 'Admin',
@@ -299,7 +302,6 @@ type CounsellorTopSpec =
 const COUNSELLOR_TOP_NAV: CounsellorTopSpec[] = [
   { href: '/counsellor' },
   { href: '/counsellor/inbox' },
-  { href: '/counsellor/assistant' },
   { href: '/counsellor/students' },
   {
     group: 'Applications',
@@ -312,7 +314,9 @@ const COUNSELLOR_TOP_NAV: CounsellorTopSpec[] = [
     ]
   },
   { href: '/counsellor/analytics' },
-  { href: '/counsellor/universities' }
+  { href: '/counsellor/universities' },
+  // Assistant anchors the right edge on every portal (matches student/parent).
+  { href: '/counsellor/assistant' }
 ];
 
 // Build the ordered top-bar entries for the current context. Student/admin get
