@@ -90,6 +90,15 @@ export async function POST(req: NextRequest) {
       surface?: 'widget' | 'assistant';
       conversationId?: string;
     };
+    // DEMO POSTURE: `mode` is client-supplied and only enum-validated, NOT bound
+    // to profiles.role — so any signed-in user can request counsellor/parent
+    // context here, exactly as they can open /counsellor and /parent today. This
+    // is safe only because can_act_as_counsellor() is open to all authenticated
+    // users under the demo posture; the route uses the user-scoped client (no
+    // service-role), so tightening that RLS at real onboarding closes this
+    // automatically. When restoring the profiles.role check (see the matching
+    // markers in counsellor/layout.tsx and parent/layout.tsx), bind `mode` to
+    // the user's role here too.
     const mode: ChatMode = VALID_MODES.includes(rawMode as ChatMode)
       ? (rawMode as ChatMode)
       : 'student';
