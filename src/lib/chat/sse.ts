@@ -8,6 +8,8 @@ export type SseEvent =
   | { type: 'text'; text: string }
   | { type: 'action'; action: unknown }
   | { type: 'results'; hits: unknown }
+  | { type: 'status'; tool: string; label: string }
+  | { type: 'executed'; ok: boolean; message: string; result?: unknown }
   | { type: 'saved'; id: string }
   | { type: 'error'; message: string }
   | { type: 'done' };
@@ -38,6 +40,23 @@ export function createSseParser() {
           if (parsed.action !== undefined) events.push({ type: 'action', action: parsed.action });
           if (parsed.results !== undefined)
             events.push({ type: 'results', hits: (parsed.results as { hits?: unknown })?.hits });
+          {
+            const status = parsed.status as { tool?: unknown; label?: unknown } | undefined;
+            if (typeof status?.tool === 'string' && typeof status?.label === 'string')
+              events.push({ type: 'status', tool: status.tool, label: status.label });
+          }
+          {
+            const executed = parsed.executed as
+              | { ok?: unknown; message?: unknown; result?: unknown }
+              | undefined;
+            if (typeof executed?.ok === 'boolean' && typeof executed?.message === 'string')
+              events.push({
+                type: 'executed',
+                ok: executed.ok,
+                message: executed.message,
+                ...(executed.result !== undefined ? { result: executed.result } : {}),
+              });
+          }
           {
             const savedId = (parsed.saved as { id?: unknown } | undefined)?.id;
             if (typeof savedId === 'string') events.push({ type: 'saved', id: savedId });

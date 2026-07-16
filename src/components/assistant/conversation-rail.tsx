@@ -2,9 +2,9 @@
 
 // Left rail for the Assistant: searchable conversation list (pinned first, as
 // they arrive from listConversations) with per-row pin / rename / delete, plus
-// a collapsible "Sent actions" log at the bottom (student + parent only —
-// counsellor mode proposes no actions). List-card styling follows the
-// counsellor inbox idiom; the two-click delete follows the widget's clear idiom.
+// a collapsible "Sent actions" log at the bottom (every mode — counsellors now
+// propose agentic tool_actions too). List-card styling follows the counsellor
+// inbox idiom; the two-click delete follows the widget's clear idiom.
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -48,7 +48,6 @@ export function ConversationRail({
   onDelete,
   onTogglePin,
   actionHistory,
-  mode,
   busy,
 }: ConversationRailProps) {
   const [query, setQuery] = useState('');
@@ -98,7 +97,9 @@ export function ConversationRail({
     confirmTimerRef.current = window.setTimeout(() => setConfirmDeleteId(null), 3000);
   };
 
-  const showActionHistory = mode !== 'counsellor' && actionHistory.length > 0;
+  // Shown for every mode now that counsellors also propose (agentic tool_action)
+  // — the section is empty-hidden purely by whether any actions exist.
+  const showActionHistory = actionHistory.length > 0;
 
   return (
     <div className="flex h-[calc(100vh-220px)] min-h-[480px] flex-col overflow-hidden rounded-[24px] border border-border bg-card">
@@ -300,8 +301,12 @@ function ActionHistoryItem({ row }: { row: ChatMessageRow }) {
   const action = isChatAction(row.action) ? row.action : null;
   if (!action) return null;
 
-  let href = '/inbox';
+  // Legacy variants deep-link to where the send landed; tool_action has no
+  // single destination, so it renders as a plain (non-navigational) row.
+  let href: string | null = null;
   let label: string;
+  let secondary: string;
+
   if (action.kind === 'help_request') {
     const sentId =
       row.action && typeof (row.action as { sentHelpRequestId?: unknown }).sentHelpRequestId === 'string'
@@ -309,25 +314,38 @@ function ActionHistoryItem({ row }: { row: ChatMessageRow }) {
         : '';
     href = sentId ? `/inbox?help=${sentId}` : '/inbox';
     label = action.subject || action.body;
-  } else {
+    secondary = formatRelativeTime(row.created_at);
+  } else if (action.kind === 'counsellor_message') {
     href = '/parent/messages';
     label = action.body;
+    secondary = formatRelativeTime(row.created_at);
+  } else {
+    label = action.title;
+    secondary = action.resultMessage || action.summary || formatRelativeTime(row.created_at);
   }
+
+  const inner = (
+    <>
+      <ArrowUpRight className="mt-0.5 h-3 w-3 shrink-0 text-primary" aria-hidden />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[11px] font-medium text-foreground">{label}</span>
+        <span className="block truncate text-[10px] text-muted-foreground">{secondary}</span>
+      </span>
+    </>
+  );
 
   return (
     <li>
-      <Link
-        href={href}
-        className="flex items-start gap-2 rounded-[12px] px-2 py-1.5 transition-colors hover:bg-muted/60"
-      >
-        <ArrowUpRight className="mt-0.5 h-3 w-3 shrink-0 text-primary" aria-hidden />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[11px] font-medium text-foreground">{label}</span>
-          <span className="block text-[10px] text-muted-foreground">
-            {formatRelativeTime(row.created_at)}
-          </span>
-        </span>
-      </Link>
+      {href ? (
+        <Link
+          href={href}
+          className="flex items-start gap-2 rounded-[12px] px-2 py-1.5 transition-colors hover:bg-muted/60"
+        >
+          {inner}
+        </Link>
+      ) : (
+        <div className="flex items-start gap-2 rounded-[12px] px-2 py-1.5">{inner}</div>
+      )}
     </li>
   );
 }

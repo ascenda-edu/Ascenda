@@ -92,12 +92,13 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { run, stop, isStreaming, cooldownRemaining, coolingDown } = useChatStream();
+  const { run, runActionExecute, stop, isStreaming, cooldownRemaining, coolingDown } = useChatStream();
 
   const [conversations, setConversations] = useState<ChatConversationRow[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(() => searchParams.get('c'));
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [actionHistory, setActionHistory] = useState<ChatMessageRow[]>([]);
+  const [statusLabel, setStatusLabel] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [suggestions, setSuggestions] = useState<string[] | null>(null);
   const [railOpen, setRailOpen] = useState(false);
@@ -119,7 +120,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
   }, [supabase, userId, mode]);
 
   const refreshActionHistory = useCallback(async () => {
-    if (!userId || mode === 'counsellor') return;
+    if (!userId) return;
     try {
       setActionHistory(await listActionHistory(supabase, userId, mode));
     } catch (err) {
@@ -231,7 +232,11 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
         conversationId,
         currentPage: pathname,
         handlers: {
-          onTextDelta: (fullText) => patch({ content: fullText }),
+          onTextDelta: (fullText) => {
+            setStatusLabel(null);
+            patch({ content: fullText });
+          },
+          onStatus: (_tool, label) => setStatusLabel(label),
           onAction: (action) =>
             setMessages((prev) =>
               prev.map((m) =>
@@ -256,6 +261,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
             ),
         },
       });
+      setStatusLabel(null);
 
       if (result.kind === 'aborted') {
         if (!result.text) setMessages((prev) => prev.filter((m) => m.id !== assistantId));
@@ -349,12 +355,167 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
   );
 
   // ── Actions (send / cancel) ───────────────────────────────────────────────
+  const revertAction = useCallback(
+    (messageId: string) =>
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, actionState: 'pending' } : m))
+      ),
+    []
+  );
+
+  // tool_action: run the WriteTool server-side (POST /api/chat/actions/execute),
+  // then stream the assistant's follow-up turn into a NEW bubble. Mirrors
+  // runAssistant's optimistic-append + patch pattern. Requires a persisted DB id
+  // (the card is disabled until then), so the endpoint can claim the row.
+  const runToolAction = useCallback(
+    async (messageId: string, edited: Extract<ChatAction, { kind: 'tool_action' }>): Promise<boolean> => {
+      if (!selectedId) return false;
+
+      const followId = `a-${Date.now()}`;
+      let executedOk = false;
+      let bubbleCreated = false;
+
+      const ensureBubble = () =>
+        setMessages((prev) => {
+          if (bubbleCreated) return prev;
+          bubbleCreated = true;
+          return [...prev, { id: followId, role: 'assistant', content: '' }];
+        });
+      const patchBubble = (p: Partial<AssistantMessage>) =>
+        setMessages((prev) => prev.map((m) => (m.id === followId ? { ...m, ...p } : m)));
+
+      const result = await runActionExecute(
+        { conversationId: selectedId, messageId, tool: edited.tool, params: edited.params },
+        {
+          onStatus: (_tool, label) => setStatusLabel(label),
+          onExecuted: (ex) => {
+            if (!ex.ok) return; // failure is handled off the terminal result below
+            executedOk = true;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === messageId
+                  ? {
+                      ...m,
+                      actionState: 'sent',
+                      action: {
+                        ...edited,
+                        resultMessage: ex.message,
+                        ...(ex.result !== undefined
+                          ? { result: ex.result as Record<string, unknown> }
+                          : {}),
+                      },
+                    }
+                  : m
+              )
+            );
+            ensureBubble();
+          },
+          onTextDelta: (fullText) => {
+            setStatusLabel(null);
+            ensureBubble();
+            patchBubble({ content: fullText });
+          },
+          onAction: (next) => {
+            ensureBubble();
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === followId
+                  ? {
+                      ...m,
+                      action: next,
+                      actionState: 'pending',
+                      content:
+                        m.content.trim().length === 0
+                          ? "I've put a draft together — review and send it below."
+                          : m.content,
+                    }
+                  : m
+              )
+            );
+          },
+          onResults: (batch) => {
+            ensureBubble();
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === followId ? { ...m, hits: [...(m.hits ?? []), ...batch] } : m
+              )
+            );
+          },
+        }
+      );
+      setStatusLabel(null);
+
+      const dropEmptyBubble = () =>
+        setMessages((prev) => prev.filter((m) => !(m.id === followId && !m.content)));
+
+      // Someone else (another tab / a double-click) already claimed the row.
+      if (result.kind === 'conflict') {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === messageId ? { ...m, actionState: 'sent' } : m))
+        );
+        void refreshActionHistory();
+        void refreshConversations();
+        return true;
+      }
+      // Invalid params — card stays editable and shows its failed hint.
+      if (result.kind === 'invalid') {
+        revertAction(messageId);
+        return false;
+      }
+      if (result.kind === 'error' || result.kind === 'rate_limited') {
+        if (!executedOk) revertAction(messageId);
+        if (bubbleCreated) patchBubble({ content: result.message, error: true });
+        return executedOk;
+      }
+      if (result.kind === 'aborted') {
+        if (!executedOk) revertAction(messageId);
+        if (!result.text) dropEmptyBubble();
+        return executedOk;
+      }
+      if (result.kind === 'empty') {
+        if (!executedOk) {
+          revertAction(messageId);
+          dropEmptyBubble();
+          return false;
+        }
+        dropEmptyBubble();
+        void refreshActionHistory();
+        void refreshConversations();
+        return true;
+      }
+      // completed
+      if (!executedOk) {
+        // executed.ok === false (or never arrived) — the run itself failed.
+        revertAction(messageId);
+        dropEmptyBubble();
+        return false;
+      }
+      if (result.savedId) patchBubble({ id: result.savedId, persisted: true });
+      void refreshActionHistory();
+      await refreshConversations();
+      return true;
+    },
+    [selectedId, runActionExecute, refreshActionHistory, refreshConversations, revertAction]
+  );
+
   const handleActionSend = useCallback(
     async (messageId: string, edited: ChatAction): Promise<boolean> => {
       const persisted = messagesRef.current.find((m) => m.id === messageId)?.persisted ?? false;
       // Optimistic client-only 'sending' — never written to the DB (the check
       // constraint only allows pending/sent/cancelled).
       setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, actionState: 'sending' } : m)));
+
+      // Agentic path: needs a real DB row id (the card's Confirm is disabled
+      // until persisted, but guard anyway).
+      if (edited.kind === 'tool_action') {
+        if (!persisted) {
+          revertAction(messageId);
+          return false;
+        }
+        return runToolAction(messageId, edited);
+      }
+
+      // Legacy client-side sends — byte-identical to before.
       try {
         if (edited.kind === 'help_request') {
           const { id } = await insertHelpRequest(supabase, {
@@ -386,13 +547,11 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
       } catch (err) {
         console.warn('[assistant] action send failed:', err);
         // Revert to pending — the confirm card surfaces its own error.
-        setMessages((prev) =>
-          prev.map((m) => (m.id === messageId ? { ...m, actionState: 'pending' } : m))
-        );
+        revertAction(messageId);
         return false;
       }
     },
-    [supabase, userId, refreshActionHistory]
+    [supabase, userId, refreshActionHistory, revertAction, runToolAction]
   );
 
   const handleActionCancel = useCallback(
@@ -529,6 +688,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
           onRate={handleRate}
           onActionSend={handleActionSend}
           onActionCancel={handleActionCancel}
+          statusLabel={statusLabel}
           input={input}
           onInputChange={setInput}
           onSubmit={() => void sendMessage(input)}

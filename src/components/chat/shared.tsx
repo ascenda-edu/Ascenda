@@ -82,10 +82,13 @@ export function MessageContent({
 }
 
 // ─── Action confirm card ────────────────────────────────────────────────────
-// Renders a model-proposed action (help request / counsellor message) as an
-// editable draft. Nothing is sent until the user hits Send — the model only
-// drafts. Used by the Assistant workspace (the widget surface receives no
-// actions).
+// Renders a model-proposed action as an editable draft. Nothing is sent until
+// the user confirms — the model only drafts. Three variants:
+//   help_request / counsellor_message — legacy client-side sends (subject+body
+//     / body). Parent portal + persisted rows depend on these rendering as-is.
+//   tool_action — the agentic path: fields come from `editable`, execution runs
+//     server-side via POST /api/chat/actions/execute (the workspace wires it).
+// Used by the Assistant workspace (the widget surface receives no actions).
 
 export type ActionState = 'pending' | 'sending' | 'sent' | 'cancelled';
 
@@ -94,8 +97,45 @@ export function ActionConfirmCard({
   state,
   onSend,
   onCancel,
+  sendDisabled,
+  mode = 'student',
 }: {
   action: ChatAction;
+  state: ActionState;
+  onSend: (edited: ChatAction) => Promise<boolean>;
+  onCancel: () => void;
+  /** tool_action only — the workspace disables Confirm until the message row is
+   * persisted (its DB id is required by the execute endpoint). */
+  sendDisabled?: boolean;
+  /** Portal mode — keeps result-message links portal-scoped. */
+  mode?: ChatMode;
+}) {
+  if (action.kind === 'tool_action') {
+    return (
+      <ToolActionCard
+        action={action}
+        state={state}
+        onSend={onSend}
+        onCancel={onCancel}
+        sendDisabled={sendDisabled}
+        mode={mode}
+      />
+    );
+  }
+  return <LegacyActionCard action={action} state={state} onSend={onSend} onCancel={onCancel} />;
+}
+
+// ── Legacy: help request / counsellor message (unchanged behaviour) ──────────
+
+type LegacyAction = Extract<ChatAction, { kind: 'help_request' | 'counsellor_message' }>;
+
+function LegacyActionCard({
+  action,
+  state,
+  onSend,
+  onCancel,
+}: {
+  action: LegacyAction;
   state: ActionState;
   onSend: (edited: ChatAction) => Promise<boolean>;
   onCancel: () => void;
@@ -177,6 +217,192 @@ export function ActionConfirmCard({
         </button>
       </div>
     </div>
+  );
+}
+
+// ── Agentic: tool_action (server-executed) ───────────────────────────────────
+
+type ToolAction = Extract<ChatAction, { kind: 'tool_action' }>;
+
+/** Coerce an arbitrary params value into an editable string sensibly. */
+function paramToInput(value: unknown): string {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return '';
+  }
+}
+
+function ToolActionCard({
+  action,
+  state,
+  onSend,
+  onCancel,
+  sendDisabled,
+  mode,
+}: {
+  action: ToolAction;
+  state: ActionState;
+  onSend: (edited: ChatAction) => Promise<boolean>;
+  onCancel: () => void;
+  sendDisabled?: boolean;
+  mode: ChatMode;
+}) {
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries(action.editable.map((f) => [f.key, paramToInput(action.params[f.key])]))
+  );
+  const [failed, setFailed] = useState(false);
+
+  if (state === 'sent') {
+    return (
+      <div className="rounded-[14px] border border-emerald-300/60 bg-emerald-500/10 px-3 py-2.5 text-xs font-medium text-emerald-700 dark:border-emerald-500/30 dark:text-emerald-300">
+        <div className="flex items-start gap-2">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <MessageContent content={action.resultMessage || 'Done.'} mode={mode} onLinkClick={() => {}} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (state === 'cancelled') {
+    return (
+      <div className="rounded-[14px] border border-border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
+        Draft discarded
+      </div>
+    );
+  }
+
+  const sending = state === 'sending';
+  const setField = (key: string, val: string) => setValues((prev) => ({ ...prev, [key]: val }));
+
+  const handleSend = async () => {
+    setFailed(false);
+    const merged: Record<string, unknown> = { ...action.params };
+    for (const field of action.editable) merged[field.key] = values[field.key] ?? '';
+    const ok = await onSend({ ...action, params: merged });
+    if (!ok) setFailed(true);
+  };
+
+  const controlClass =
+    'w-full rounded-[10px] border border-border bg-background px-2.5 py-1.5 text-xs text-foreground focus:border-primary/40 focus:outline-none disabled:opacity-50';
+
+  return (
+    <div className="space-y-2 rounded-[14px] border border-primary/30 bg-primary/5 p-3">
+      <div>
+        <p className="text-xs font-semibold text-foreground">{action.title}</p>
+        {action.summary && (
+          <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{action.summary}</p>
+        )}
+      </div>
+
+      {action.editable.map((field) => {
+        const id = `tool-field-${field.key}`;
+        return (
+          <div key={field.key} className="space-y-1">
+            <label htmlFor={id} className="block text-[11px] font-medium text-muted-foreground">
+              {field.label}
+            </label>
+            {field.kind === 'textarea' ? (
+              <AutoResizeTextareaField
+                id={id}
+                value={values[field.key] ?? ''}
+                onChange={(v) => setField(field.key, v)}
+                disabled={sending}
+              />
+            ) : field.kind === 'select' ? (
+              <select
+                id={id}
+                value={values[field.key] ?? ''}
+                onChange={(e) => setField(field.key, e.target.value)}
+                disabled={sending}
+                className={controlClass}
+              >
+                {/* Keep a value not present in options selectable rather than silently snapping. */}
+                {values[field.key] &&
+                  !(field.options ?? []).includes(values[field.key]) && (
+                    <option value={values[field.key]}>{values[field.key]}</option>
+                  )}
+                {(field.options ?? []).map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id={id}
+                type={field.kind === 'date' ? 'date' : 'text'}
+                value={values[field.key] ?? ''}
+                onChange={(e) => setField(field.key, e.target.value)}
+                disabled={sending}
+                className={controlClass}
+              />
+            )}
+          </div>
+        );
+      })}
+
+      {failed && (
+        <p className="text-[11px] text-rose-600 dark:text-rose-400">
+          Couldn&apos;t run that — check the details and try again.
+        </p>
+      )}
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleSend}
+          disabled={sending || sendDisabled}
+          className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground transition-[transform,opacity] hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0"
+        >
+          {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+          Confirm
+        </button>
+        <button
+          onClick={onCancel}
+          disabled={sending}
+          className="rounded-full border border-border px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        {sendDisabled && !sending && (
+          <span className="text-[10px] text-muted-foreground">Saving…</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// A minimal auto-growing textarea for tool_action fields — mirrors the composer
+// AutoResizeTextarea, but standalone (its own id/label, no submit-on-Enter).
+function AutoResizeTextareaField({
+  id,
+  value,
+  onChange,
+  disabled,
+}: {
+  id: string;
+  value: string;
+  onChange: (val: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <textarea
+      id={id}
+      value={value}
+      onChange={(e) => {
+        onChange(e.target.value);
+        const el = e.target;
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+      }}
+      disabled={disabled}
+      rows={3}
+      className="w-full resize-none rounded-[10px] border border-border bg-background px-2.5 py-1.5 text-xs leading-relaxed text-foreground focus:border-primary/40 focus:outline-none disabled:opacity-50"
+    />
   );
 }
 
