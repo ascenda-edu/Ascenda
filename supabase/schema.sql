@@ -2316,6 +2316,126 @@ create trigger trg_deck_assignment_notify
   execute function public.notify_on_deck_assignment_insert();
 
 -- =============================================================================
+-- Chatbot feedback + Assistant chat history
+-- From 20260717120000_chat_feedback.sql and 20260718120000_chat_conversations.sql.
+--
+-- chat_feedback: thumbs up/down on Ascendi widget answers (hash-keyed, own-only).
+-- chat_conversations/chat_messages: DB-backed history for the full-page
+-- Assistant section. Strictly own-only RLS (deliberately NOT routed through
+-- can_act_as_counsellor() — chat history stays private under the open demo
+-- posture). last_message_at is bumped by an AFTER INSERT trigger.
+-- =============================================================================
+
+create table if not exists chat_feedback (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references profiles(id) on delete cascade,
+  mode text not null check (mode in ('student', 'counsellor', 'parent')),
+  message_hash text not null,
+  message_excerpt text,
+  rating smallint not null check (rating in (-1, 1)),
+  comment text,
+  created_at timestamptz not null default timezone('utc', now()),
+  unique (profile_id, message_hash)
+);
+
+create index if not exists chat_feedback_profile_idx
+  on chat_feedback (profile_id, created_at desc);
+
+alter table chat_feedback enable row level security;
+
+drop policy if exists chat_feedback_insert_own on chat_feedback;
+create policy chat_feedback_insert_own on chat_feedback
+  for insert to authenticated
+  with check (profile_id = auth.uid());
+
+drop policy if exists chat_feedback_select_own on chat_feedback;
+create policy chat_feedback_select_own on chat_feedback
+  for select to authenticated
+  using (profile_id = auth.uid());
+
+drop policy if exists chat_feedback_update_own on chat_feedback;
+create policy chat_feedback_update_own on chat_feedback
+  for update to authenticated
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+
+create table if not exists chat_conversations (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references profiles(id) on delete cascade,
+  mode text not null check (mode in ('student', 'counsellor', 'parent')),
+  title text,
+  pinned boolean not null default false,
+  last_message_at timestamptz not null default timezone('utc', now()),
+  created_at timestamptz not null default timezone('utc', now())
+);
+
+create index if not exists chat_conversations_owner_idx
+  on chat_conversations (owner_id, pinned desc, last_message_at desc);
+
+create table if not exists chat_messages (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references chat_conversations(id) on delete cascade,
+  role text not null check (role in ('user', 'assistant')),
+  content text not null default '',
+  action jsonb,
+  action_state text check (action_state in ('pending', 'sent', 'cancelled')),
+  tool_results jsonb,
+  rating smallint check (rating in (-1, 1)),
+  created_at timestamptz not null default timezone('utc', now())
+);
+
+create index if not exists chat_messages_conversation_idx
+  on chat_messages (conversation_id, created_at);
+
+-- CRITICAL: without enabling RLS the policies below are inert.
+alter table chat_conversations enable row level security;
+alter table chat_messages enable row level security;
+
+drop policy if exists chat_conversations_all_own on chat_conversations;
+create policy chat_conversations_all_own on chat_conversations
+  for all to authenticated
+  using (owner_id = auth.uid())
+  with check (owner_id = auth.uid());
+
+-- Messages are authorised via ownership of the parent conversation. In the
+-- WITH CHECK context the chat_messages reference resolves to the NEW row.
+drop policy if exists chat_messages_all_own on chat_messages;
+create policy chat_messages_all_own on chat_messages
+  for all to authenticated
+  using (
+    exists (
+      select 1 from chat_conversations c
+      where c.id = chat_messages.conversation_id and c.owner_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1 from chat_conversations c
+      where c.id = chat_messages.conversation_id and c.owner_id = auth.uid()
+    )
+  );
+
+-- Keep the conversation list ordered by activity without a generic updated_at.
+create or replace function public.bump_chat_conversation_last_message()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update chat_conversations
+    set last_message_at = new.created_at
+    where id = new.conversation_id;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_chat_message_bump on chat_messages;
+create trigger trg_chat_message_bump
+  after insert on chat_messages
+  for each row execute function public.bump_chat_conversation_last_message();
+
+-- =============================================================================
 -- Not included (one-off backfills / data repairs from migrations):
 --   • 20250214120000_student_intake_profile.sql — drops of the legacy
 --     student_academics / student_preferences / student_aspirations tables and

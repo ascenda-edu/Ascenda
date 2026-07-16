@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { UserPlus, Search, Rocket } from 'lucide-react';
 import { AnimatedSection } from '@/components/layout/animated-section';
 import { cn } from '@/lib/utils';
@@ -27,8 +27,6 @@ const steps = [
 ];
 
 export function ShortlistSection() {
-    const shouldReduceMotion = useReducedMotion();
-
     return (
         <section className="w-full py-24 bg-background">
             <div className="max-w-7xl mx-auto px-6">
@@ -46,8 +44,8 @@ export function ShortlistSection() {
                             <motion.div
                                 key={step.title}
                                 className="group relative flex flex-col justify-between rounded-3xl border border-border/40 bg-card p-8 hover:shadow-lg transition-all duration-500 hover:-translate-y-1"
-                                initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
-                                whileInView={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+                                initial={{ opacity: 0, y: 24 }}
+                                whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, amount: 0.3 }}
                                 transition={{ duration: 0.5, delay: index * 0.12 }}
                             >

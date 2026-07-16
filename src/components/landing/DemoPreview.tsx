@@ -92,7 +92,7 @@ export function DemoPreview() {
             <motion.div
               key={i}
               className="flex-1 rounded-lg bg-muted/60 border border-border/40 py-1.5 text-center"
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 4 }}
+              initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.15, duration: 0.3 }}
             >
@@ -102,7 +102,7 @@ export function DemoPreview() {
                   <motion.p
                     key={grade}
                     className="text-base font-bold text-foreground tabular-nums"
-                    initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.5 }}
+                    initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.15 + 0.6, type: 'spring', stiffness: 400 }}
                   >
@@ -114,7 +114,7 @@ export function DemoPreview() {
           ))}
           <motion.div
             className="flex items-end"
-            initial={shouldReduceMotion ? false : { opacity: 0 }}
+            initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.2 }}
           >
@@ -130,7 +130,7 @@ export function DemoPreview() {
         {phase >= 1 && (
           <motion.div
             className="px-4 pb-3 flex-1"
-            initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.5 }}
@@ -143,7 +143,7 @@ export function DemoPreview() {
                 <motion.div
                   key={uni.name}
                   className="flex items-center gap-2.5 rounded-xl bg-muted/30 border border-border/30 px-3 py-2"
-                  initial={shouldReduceMotion ? false : { opacity: 0, x: -16 }}
+                  initial={{ opacity: 0, x: -16 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.12, duration: 0.4, ease: 'easeOut' }}
                 >
@@ -179,7 +179,7 @@ export function DemoPreview() {
         {phase >= 2 && (
           <motion.div
             className="px-4 pb-4"
-            initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4 }}
@@ -192,7 +192,7 @@ export function DemoPreview() {
                 <motion.div
                   key={d.uni}
                   className="flex items-center gap-2 text-[11px]"
-                  initial={shouldReduceMotion ? false : { opacity: 0, x: -8 }}
+                  initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.1, duration: 0.3 }}
                 >

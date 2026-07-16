@@ -1,26 +1,38 @@
 'use client';
 
+// Ascendi floating widget — the QUICK-ANSWER surface. Context-aware but
+// read-only: it answers from the user's live account data but has no tools
+// (no programme search, no action proposals — those live in the full-page
+// Assistant, and the header offers a handoff that carries the conversation
+// there). Streaming/cooldown behaviour comes from useChatStream; shared render
+// primitives from ./shared.
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Bot, X, Send, Loader2, Trash2, ArrowRight, RotateCcw,
+  Bot, X, Send, Loader2, Trash2, ArrowRight, RotateCcw, ArrowUpRight,
   LayoutDashboard, Search, Zap, Briefcase, Heart, User,
   Wrench, PenTool, BarChart3, ClipboardCheck, CalendarClock,
   Gift, BarChart2, Users, FileText, TrendingUp, Wallet, MessageCircle,
-  Square, ThumbsUp, ThumbsDown, CheckCircle2,
+  Square, ThumbsUp, ThumbsDown,
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import { useSupabase } from '@/hooks/useSupabase';
-import { insertHelpRequest } from '@/lib/demo/help-request-client';
-import type { ChatAction } from '@/lib/chat/actions';
-import { createSseParser } from '@/lib/chat/sse';
+import { useChatStream } from '@/hooks/use-chat-stream';
+import { createConversation, appendMessages } from '@/lib/chat/history';
+import type { ChatMode } from '@/lib/chat/prompts';
+import type { ChatMessageInsert } from '@/lib/types/demo-tables';
+import {
+  MessageContent,
+  AutoResizeTextarea,
+  assistantPathForMode,
+  isAssistantRoute,
+  detectMode,
+  prefersReducedMotion,
+} from './shared';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
-
-type ActionState = 'pending' | 'sending' | 'sent' | 'cancelled';
 
 interface Message {
   id: string;
@@ -28,11 +40,12 @@ interface Message {
   content: string;
   /** True when this assistant bubble holds a stream/fetch error, not a reply. */
   error?: boolean;
-  /** An action the model proposed; the user confirms or cancels it below the bubble. */
-  action?: ChatAction;
-  actionState?: ActionState;
   /** Thumbs feedback the user gave on this answer. */
   rating?: 1 | -1;
+  // Legacy fields from the pre-split widget (actions now live in the
+  // Assistant). Kept so old localStorage histories still parse; not rendered.
+  action?: unknown;
+  actionState?: string;
 }
 
 // ─── Page snippets for preview cards ────────────────────────────────────────
@@ -79,8 +92,6 @@ const PARENT_SNIPPETS: PageSnippet[] = [
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-type ChatMode = 'student' | 'counsellor' | 'parent';
-
 function storageKey(mode: ChatMode) {
   return `ascendi-chat-${mode}`;
 }
@@ -99,39 +110,6 @@ function saveMessages(messages: Message[], mode: ChatMode) {
   try {
     localStorage.setItem(storageKey(mode), JSON.stringify(messages));
   } catch { /* quota exceeded — ignore */ }
-}
-
-function detectMode(pathname: string): ChatMode {
-  if (pathname.startsWith('/counsellor')) return 'counsellor';
-  if (pathname.startsWith('/parent')) return 'parent';
-  return 'student';
-}
-
-/**
- * The chatbot is section-scoped: it must never link a user out of the portal
- * it's running in. Counsellor mode may only link under /counsellor, parent
- * mode under /parent, and student mode anywhere else (the student app).
- */
-function isRouteInMode(route: string, mode: ChatMode): boolean {
-  const inCounsellor = route === '/counsellor' || route.startsWith('/counsellor/');
-  const inParent = route === '/parent' || route.startsWith('/parent/');
-  if (mode === 'counsellor') return inCounsellor;
-  if (mode === 'parent') return inParent;
-  return !inCounsellor && !inParent && !route.startsWith('/admin');
-}
-
-/** Runtime guard for the `action` SSE event — never trust the wire shape. */
-function isValidAction(value: unknown): value is ChatAction {
-  if (!value || typeof value !== 'object') return false;
-  const a = value as Record<string, unknown>;
-  if (a.kind === 'help_request') return typeof a.subject === 'string' && typeof a.body === 'string';
-  if (a.kind === 'counsellor_message')
-    return typeof a.body === 'string' && typeof a.contactId === 'string';
-  return false;
-}
-
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 /** Extract route references like /dashboard, /toolbox/essay-workshop from text */
@@ -153,8 +131,8 @@ function getSnippetsForMessage(text: string, mode: ChatMode): PageSnippet[] {
 const STUDENT_SUGGESTIONS = [
   'How do I improve my match score?',
   'Where can I track my applications?',
-  'Help me get started with essays',
   'What should I do first?',
+  'When is my next deadline?',
 ];
 
 const COUNSELLOR_SUGGESTIONS = [
@@ -192,227 +170,24 @@ function PageCard({ snippet, onClick }: { snippet: PageSnippet; onClick: () => v
   );
 }
 
-// ─── Action confirm card ────────────────────────────────────────────────────
-// Renders a model-proposed action (help request / counsellor message) as an
-// editable draft. Nothing is sent until the user hits Send — the model only
-// drafts.
-
-function ActionConfirmCard({
-  action,
-  state,
-  onSend,
-  onCancel,
-}: {
-  action: ChatAction;
-  state: ActionState;
-  onSend: (edited: ChatAction) => Promise<boolean>;
-  onCancel: () => void;
-}) {
-  const [subject, setSubject] = useState(action.kind === 'help_request' ? action.subject : '');
-  const [body, setBody] = useState(action.body);
-  const [failed, setFailed] = useState(false);
-
-  const title =
-    action.kind === 'help_request' ? 'Help request to your counsellor' : 'Message to the counsellor';
-
-  if (state === 'sent') {
-    return (
-      <div className="flex items-center gap-2 rounded-[14px] border border-emerald-300/60 bg-emerald-500/10 px-3 py-2.5 text-xs font-medium text-emerald-700 dark:border-emerald-500/30 dark:text-emerald-300">
-        <CheckCircle2 className="h-4 w-4 shrink-0" />
-        Sent to your counsellor
-      </div>
-    );
-  }
-  if (state === 'cancelled') {
-    return (
-      <div className="rounded-[14px] border border-border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
-        Draft discarded
-      </div>
-    );
-  }
-
-  const sending = state === 'sending';
-  const handleSend = async () => {
-    setFailed(false);
-    const edited: ChatAction =
-      action.kind === 'help_request'
-        ? { ...action, subject: subject.trim(), body: body.trim() }
-        : { ...action, body: body.trim() };
-    const ok = await onSend(edited);
-    if (!ok) setFailed(true);
-  };
-
-  return (
-    <div className="space-y-2 rounded-[14px] border border-primary/30 bg-primary/5 p-3">
-      <p className="text-xs font-semibold text-foreground">{title}</p>
-      {action.kind === 'help_request' && (
-        <input
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-          disabled={sending}
-          aria-label="Subject"
-          className="w-full rounded-[10px] border border-border bg-background px-2.5 py-1.5 text-xs text-foreground focus:border-primary/40 focus:outline-none disabled:opacity-50"
-        />
-      )}
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        disabled={sending}
-        rows={3}
-        aria-label="Message body"
-        className="w-full resize-none rounded-[10px] border border-border bg-background px-2.5 py-1.5 text-xs leading-relaxed text-foreground focus:border-primary/40 focus:outline-none disabled:opacity-50"
-      />
-      {failed && (
-        <p className="text-[11px] text-rose-600 dark:text-rose-400">
-          Couldn&apos;t send — try again in a moment.
-        </p>
-      )}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={handleSend}
-          disabled={sending || !body.trim() || (action.kind === 'help_request' && !subject.trim())}
-          className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground transition-[transform,opacity] hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0"
-        >
-          {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-          Send
-        </button>
-        <button
-          onClick={onCancel}
-          disabled={sending}
-          className="rounded-full border border-border px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Markdown message renderer ──────────────────────────────────────────────
-
-function MessageContent({
-  content,
-  mode,
-  onLinkClick,
-}: {
-  content: string;
-  mode: ChatMode;
-  onLinkClick: () => void;
-}) {
-  return (
-    <ReactMarkdown
-      components={{
-        p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
-        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-        ul: ({ children }) => <ul className="mb-1.5 ml-3 list-disc space-y-0.5 last:mb-0">{children}</ul>,
-        ol: ({ children }) => <ol className="mb-1.5 ml-3 list-decimal space-y-0.5 last:mb-0">{children}</ol>,
-        li: ({ children }) => <li className="text-[13px]">{children}</li>,
-        a: ({ href, children }) => {
-          // Internal route → real navigation link (correct semantics: href,
-          // middle-click/open-in-new-tab work). Closing the widget stays on the
-          // click handler so the panel dismisses as the route changes.
-          if (href?.startsWith('/')) {
-            // Safety net on top of the prompt rules: a link that would take
-            // the user out of this portal renders as plain text.
-            if (!isRouteInMode(href, mode)) {
-              return <span>{children}</span>;
-            }
-            return (
-              <Link
-                href={href}
-                onClick={onLinkClick}
-                className="inline-flex items-center gap-0.5 text-primary underline underline-offset-2 hover:text-primary/80"
-              >
-                {children}
-              </Link>
-            );
-          }
-          return (
-            <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:text-primary/80">
-              {children}
-            </a>
-          );
-        },
-        code: ({ children }) => (
-          <code className="rounded bg-muted px-1 py-0.5 text-[12px]">{children}</code>
-        ),
-      }}
-    >
-      {content}
-    </ReactMarkdown>
-  );
-}
-
-// ─── Auto-resize textarea ───────────────────────────────────────────────────
-
-function AutoResizeTextarea({
-  value,
-  onChange,
-  onSubmit,
-  disabled,
-  inputRef,
-}: {
-  value: string;
-  onChange: (val: string) => void;
-  onSubmit: () => void;
-  disabled: boolean;
-  inputRef: React.RefObject<HTMLTextAreaElement>;
-}) {
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(e.target.value);
-    // Auto-resize
-    const el = e.target;
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 96) + 'px';
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      onSubmit();
-    }
-  };
-
-  return (
-    <textarea
-      ref={inputRef}
-      value={value}
-      onChange={handleInput}
-      onKeyDown={handleKeyDown}
-      placeholder="Ask Ascendi anything…"
-      aria-label="Ask Ascendi anything"
-      disabled={disabled}
-      rows={1}
-      className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
-      style={{ maxHeight: 96 }}
-    />
-  );
-}
-
 // ─── Main widget ────────────────────────────────────────────────────────────
-
-// Only the most recent turns ride along on each request — the server holds the
-// system prompt + live account context, so old turns add cost, not quality.
-const HISTORY_LIMIT = 12;
-const COOLDOWN_SECONDS = 60;
 
 export function ChatbotWidget() {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = useSupabase();
   const mode = detectMode(pathname);
+  const { run, stop, isStreaming, cooldownRemaining, coolingDown } = useChatStream();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>(() => loadMessages(mode));
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
-  const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [dynamicSuggestions, setDynamicSuggestions] = useState<string[] | null>(null);
+  const [handoffBusy, setHandoffBusy] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null) as React.RefObject<HTMLTextAreaElement>;
   const prevModeRef = useRef(mode);
   const confirmTimerRef = useRef<number | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
 
   // Switch chat history when mode changes (student <-> counsellor <-> parent)
   useEffect(() => {
@@ -422,35 +197,6 @@ export function ChatbotWidget() {
       prevModeRef.current = mode;
     }
   }, [mode]);
-
-  // Count the rate-limit cooldown back down to zero.
-  const coolingDown = cooldownRemaining > 0;
-  useEffect(() => {
-    if (!coolingDown) return;
-    const iv = window.setInterval(
-      () => setCooldownRemaining((s) => (s <= 1 ? 0 : s - 1)),
-      1000
-    );
-    return () => window.clearInterval(iv);
-  }, [coolingDown]);
-
-  // Personalised starter chips for the empty state. Also pre-warms the
-  // server's context cache so the first real message answers faster.
-  useEffect(() => {
-    if (!isOpen || messages.length > 0 || dynamicSuggestions !== null) return;
-    let stale = false;
-    fetch(`/api/chat/suggestions?mode=${mode}`)
-      .then((res) => (res.ok ? res.json() : { suggestions: [] }))
-      .then((data: { suggestions?: string[] }) => {
-        if (!stale) setDynamicSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
-      })
-      .catch(() => {
-        if (!stale) setDynamicSuggestions([]);
-      });
-    return () => {
-      stale = true;
-    };
-  }, [isOpen, messages.length, dynamicSuggestions, mode]);
 
   // Persist messages
   useEffect(() => {
@@ -471,6 +217,30 @@ export function ChatbotWidget() {
     }
   }, [isOpen]);
 
+  // Personalised starter chips for the empty state. Also pre-warms the
+  // server's context cache so the first real message answers faster.
+  useEffect(() => {
+    if (!isOpen || messages.length > 0 || dynamicSuggestions !== null) return;
+    let stale = false;
+    fetch(`/api/chat/suggestions?mode=${mode}`)
+      .then((res) => (res.ok ? res.json() : { suggestions: [] }))
+      .then((data: { suggestions?: string[] }) => {
+        if (!stale) setDynamicSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+      })
+      .catch(() => {
+        if (!stale) setDynamicSuggestions([]);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [isOpen, messages.length, dynamicSuggestions, mode]);
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
+
   const clearChat = () => {
     setMessages([]);
     localStorage.removeItem(storageKey(mode));
@@ -489,12 +259,6 @@ export function ChatbotWidget() {
     confirmTimerRef.current = window.setTimeout(() => setConfirmClear(false), 3000);
   };
 
-  useEffect(() => {
-    return () => {
-      if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
-    };
-  }, []);
-
   const navigateTo = (route: string) => {
     router.push(route);
     setIsOpen(false);
@@ -506,189 +270,46 @@ export function ChatbotWidget() {
   // an error row (rendered distinctly, with a Retry affordance). A user Stop
   // keeps whatever streamed so far as a normal bubble.
   const runAssistant = async (history: Message[]) => {
-    setIsLoading(true);
-    const controller = new AbortController();
-    abortRef.current = controller;
-
     const assistantMessage: Message = {
       id: (Date.now() + 1).toString(),
       role: 'assistant',
       content: '',
     };
-
     setMessages([...history, assistantMessage]);
-    let accumulated = '';
 
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          // The server holds context; only recent turns need to travel.
-          messages: history.slice(-HISTORY_LIMIT).map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-          currentPage: pathname,
-          mode,
-        }),
-      });
+    const setBubble = (patch: Partial<Message>) =>
+      setMessages((prev) =>
+        prev.map((m) => (m.id === assistantMessage.id ? { ...m, ...patch } : m))
+      );
 
-      if (res.status === 429) {
-        setCooldownRemaining(COOLDOWN_SECONDS);
-        throw new Error('You’ve sent a lot of messages — give it a minute and try again.');
-      }
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Something went wrong');
-      }
-
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      let gotAction = false;
-
-      if (reader) {
-        // Buffered parser: events split across network reads are reassembled,
-        // never dropped (matters most for the ~2KB action payload).
-        const parser = createSseParser();
-        let finished = false;
-        while (!finished) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          for (const event of parser.push(decoder.decode(value, { stream: true }))) {
-            if (event.type === 'done') {
-              finished = true;
-              break;
-            }
-            if (event.type === 'error') {
-              throw new Error(event.message);
-            }
-            if (event.type === 'text') {
-              accumulated += event.text;
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantMessage.id
-                    ? { ...m, content: accumulated }
-                    : m
-                )
-              );
-            }
-            if (event.type === 'action' && isValidAction(event.action)) {
-              gotAction = true;
-              const action = event.action;
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantMessage.id
-                    ? {
-                        ...m,
-                        // An action-only turn must not leave an empty bubble
-                        // (it would render as an eternal spinner).
-                        content:
-                          m.content || 'I’ve put a draft together — review and send it below.',
-                        action,
-                        actionState: 'pending' as const,
-                      }
-                    : m
-                )
-              );
-            }
-          }
-        }
-      }
-
-      // Stream ended with nothing to show (e.g. the model exhausted its tool
-      // rounds) — surface it as a retryable error, never a stuck spinner.
-      if (!accumulated && !gotAction) {
-        throw new Error('No reply came back — please try again.');
-      }
-    } catch (err) {
-      // Some environments surface fetch aborts as plain Errors, not DOMException.
-      if ((err instanceof DOMException || err instanceof Error) && err.name === 'AbortError') {
-        // User pressed Stop: keep the partial answer; drop an empty bubble.
-        if (!accumulated) {
-          setMessages((prev) => prev.filter((m) => m.id !== assistantMessage.id));
-        }
-      } else {
-        const errorText = err instanceof Error ? err.message : 'Something went wrong. Try again.';
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantMessage.id
-              ? { ...m, content: errorText, error: true }
-              : m
-          )
-        );
-      }
-    } finally {
-      abortRef.current = null;
-      setIsLoading(false);
-    }
-  };
-
-  const stopGeneration = () => {
-    abortRef.current?.abort();
-  };
-
-  // ── Feedback & actions ────────────────────────────────────────────────────
-
-  const sendFeedback = (msg: Message, rating: 1 | -1) => {
-    setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, rating } : m)));
-    void fetch('/api/chat/feedback', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode, messageContent: msg.content, rating }),
-    }).catch(() => {
-      /* feedback is best-effort */
+    const result = await run({
+      history: history.map((m) => ({ role: m.role, content: m.content })),
+      mode,
+      surface: 'widget',
+      currentPage: pathname,
+      handlers: {
+        onTextDelta: (fullText) => setBubble({ content: fullText }),
+      },
     });
-  };
 
-  // Execute a confirmed action through the same write paths the rest of the
-  // app uses (RLS + notification triggers included). Returns success.
-  const executeAction = async (msg: Message, edited: ChatAction): Promise<boolean> => {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === msg.id ? { ...m, action: edited, actionState: 'sending' } : m))
-    );
-    try {
-      if (edited.kind === 'help_request') {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not signed in');
-        await insertHelpRequest(supabase, {
-          student_profile_id: user.id,
-          subject: edited.subject,
-          body: edited.body,
-          ...(edited.applicationId ? { application_id: edited.applicationId } : {}),
-        });
-      } else {
-        const res = await fetch('/api/parent/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contactId: edited.contactId, body: edited.body }),
-        });
-        if (!res.ok) throw new Error('Send failed');
+    if (result.kind === 'aborted') {
+      // User pressed Stop: keep the partial answer; drop an empty bubble.
+      if (!result.text) {
+        setMessages((prev) => prev.filter((m) => m.id !== assistantMessage.id));
       }
-      setMessages((prev) =>
-        prev.map((m) => (m.id === msg.id ? { ...m, actionState: 'sent' } : m))
-      );
-      return true;
-    } catch {
-      setMessages((prev) =>
-        prev.map((m) => (m.id === msg.id ? { ...m, actionState: 'pending' } : m))
-      );
-      return false;
+      return;
     }
-  };
-
-  const cancelAction = (msg: Message) => {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === msg.id ? { ...m, actionState: 'cancelled' } : m))
-    );
+    if (result.kind === 'empty') {
+      setBubble({ content: 'No reply came back — please try again.', error: true });
+      return;
+    }
+    if (result.kind === 'rate_limited' || result.kind === 'error') {
+      setBubble({ content: result.message, error: true });
+    }
   };
 
   const sendMessage = (content: string) => {
-    if (!content.trim() || isLoading || coolingDown) return;
+    if (!content.trim() || isStreaming || coolingDown) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -707,7 +328,7 @@ export function ChatbotWidget() {
   // Resend the last user message after an error — drop the failed assistant
   // bubble and re-run generation from the same history.
   const retryLast = () => {
-    if (isLoading) return;
+    if (isStreaming) return;
     const lastUserIdx = messages.map((m) => m.role).lastIndexOf('user');
     if (lastUserIdx === -1) return;
     const history = messages.slice(0, lastUserIdx + 1);
@@ -715,10 +336,63 @@ export function ChatbotWidget() {
     void runAssistant(history);
   };
 
+  const sendFeedback = (msg: Message, rating: 1 | -1) => {
+    setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, rating } : m)));
+    void fetch('/api/chat/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode, messageContent: msg.content, rating }),
+    }).catch(() => {
+      /* feedback is best-effort */
+    });
+  };
+
+  // Carry the recent exchange into a new Assistant conversation and jump
+  // there. Error bubbles and legacy action metadata are stripped — only clean
+  // role+content rows travel. Widget history is left intact.
+  const handoffToAssistant = async () => {
+    if (handoffBusy) return;
+    setHandoffBusy(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not signed in');
+
+      const carried = messages
+        .filter((m) => !m.error && m.content.trim().length > 0)
+        .slice(-12);
+      const firstUser = carried.find((m) => m.role === 'user');
+      const { id } = await createConversation(supabase, {
+        ownerId: user.id,
+        mode,
+        title: firstUser ? firstUser.content.trim().slice(0, 60) : null,
+      });
+      if (carried.length > 0) {
+        const rows: ChatMessageInsert[] = carried.map((m) => ({
+          conversation_id: id,
+          role: m.role,
+          content: m.content,
+        }));
+        await appendMessages(supabase, rows);
+      }
+      setIsOpen(false);
+      router.push(`${assistantPathForMode(mode)}?c=${id}`);
+    } catch (err) {
+      console.warn('[chat] handoff failed:', err);
+      setHandoffBusy(false);
+      return;
+    }
+    setHandoffBusy(false);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     sendMessage(input);
   };
+
+  // The full-page Assistant replaces the widget on its own routes.
+  if (isAssistantRoute(pathname)) return null;
 
   return (
     <>
@@ -767,6 +441,20 @@ export function ChatbotWidget() {
                 </div>
               </div>
               <div className="flex items-center gap-1">
+                <button
+                  onClick={handoffToAssistant}
+                  disabled={handoffBusy}
+                  className="flex h-8 items-center gap-1 rounded-full px-2.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
+                  aria-label="Continue in Assistant"
+                  title="Continue this conversation in the Assistant"
+                >
+                  {handoffBusy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  )}
+                  Assistant
+                </button>
                 {messages.length > 0 && (
                   <button
                     onClick={handleClearClick}
@@ -806,12 +494,12 @@ export function ChatbotWidget() {
                   <p className="font-heading text-sm font-semibold text-foreground">
                     Hey! I&apos;m Ascendi
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
+                  <p className="mt-1 text-xs text-muted-foreground max-w-[260px]">
                     {mode === 'counsellor'
-                      ? 'I can help you manage your cohort, track progress, and navigate the counsellor tools.'
+                      ? 'Quick questions about your cohort and tools. For programme search and deeper work, open the Assistant.'
                       : mode === 'parent'
-                        ? "I can help you follow your child's journey, understand deadlines, and explain admissions terms."
-                        : 'I can help you navigate the platform, understand your profile, and plan applications.'}
+                        ? "Quick questions about your child's journey. To message the counsellor, open the Assistant."
+                        : 'Quick questions about your journey. For programme search or contacting your counsellor, open the Assistant.'}
                   </p>
                   <div className="mt-4 flex flex-wrap justify-center gap-1.5">
                     {(dynamicSuggestions && dynamicSuggestions.length > 0
@@ -838,7 +526,7 @@ export function ChatbotWidget() {
                     ? getSnippetsForMessage(msg.content, mode)
                     : [];
                   const isStreamingThis =
-                    isLoading && msg.role === 'assistant' && idx === messages.length - 1;
+                    isStreaming && msg.role === 'assistant' && idx === messages.length - 1;
                   const showFeedback =
                     msg.role === 'assistant' && Boolean(msg.content) && !msg.error && !isStreamingThis;
 
@@ -868,7 +556,7 @@ export function ChatbotWidget() {
                             <p>{msg.content}</p>
                             <button
                               onClick={retryLast}
-                              disabled={isLoading}
+                              disabled={isStreaming}
                               className="inline-flex items-center gap-1 rounded-full border border-rose-300/60 px-2.5 py-1 text-[11px] font-semibold text-rose-700 transition hover:bg-rose-500/10 disabled:opacity-50 dark:border-rose-500/40 dark:text-rose-300"
                             >
                               <RotateCcw className="h-3 w-3" />
@@ -894,19 +582,6 @@ export function ChatbotWidget() {
                           </span>
                         )}
                       </div>
-
-                      {/* Proposed action → editable confirm card */}
-                      {msg.action && msg.actionState && !isStreamingThis && (
-                        <div className="mt-1.5 w-full max-w-[85%]">
-                          <ActionConfirmCard
-                            key={`${msg.id}-action`}
-                            action={msg.action}
-                            state={msg.actionState}
-                            onSend={(edited) => executeAction(msg, edited)}
-                            onCancel={() => cancelAction(msg)}
-                          />
-                        </div>
-                      )}
 
                       {/* Page preview snippets */}
                       {snippets.length > 0 && (
@@ -974,13 +649,13 @@ export function ChatbotWidget() {
                   value={input}
                   onChange={setInput}
                   onSubmit={() => sendMessage(input)}
-                  disabled={isLoading || coolingDown}
+                  disabled={isStreaming || coolingDown}
                   inputRef={inputRef}
                 />
-                {isLoading ? (
+                {isStreaming ? (
                   <button
                     type="button"
-                    onClick={stopGeneration}
+                    onClick={stop}
                     className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-foreground transition-[transform] hover:-translate-y-0.5"
                     aria-label="Stop generating"
                     title="Stop generating"

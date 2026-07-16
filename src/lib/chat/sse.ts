@@ -7,6 +7,8 @@
 export type SseEvent =
   | { type: 'text'; text: string }
   | { type: 'action'; action: unknown }
+  | { type: 'results'; hits: unknown }
+  | { type: 'saved'; id: string }
   | { type: 'error'; message: string }
   | { type: 'done' };
 
@@ -34,6 +36,12 @@ export function createSseParser() {
           const parsed = JSON.parse(data) as Record<string, unknown>;
           if (typeof parsed.text === 'string') events.push({ type: 'text', text: parsed.text });
           if (parsed.action !== undefined) events.push({ type: 'action', action: parsed.action });
+          if (parsed.results !== undefined)
+            events.push({ type: 'results', hits: (parsed.results as { hits?: unknown })?.hits });
+          {
+            const savedId = (parsed.saved as { id?: unknown } | undefined)?.id;
+            if (typeof savedId === 'string') events.push({ type: 'saved', id: savedId });
+          }
           if (typeof parsed.error === 'string') events.push({ type: 'error', message: parsed.error });
         } catch {
           // A malformed COMPLETE line is server garbage — drop it. Partial

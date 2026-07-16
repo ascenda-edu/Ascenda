@@ -42,6 +42,28 @@ describe('createSseParser', () => {
     expect(parser.push('xt":"b"}\n\n')).toEqual([{ type: 'text', text: 'b' }]);
   });
 
+  it('parses results events', () => {
+    const events = collect([
+      'data: {"results":{"tool":"search_programs","hits":[{"id":"p1","course":"CS"}]}}\n\n',
+    ]);
+    expect(events).toEqual([{ type: 'results', hits: [{ id: 'p1', course: 'CS' }] }]);
+  });
+
+  it('reassembles a results payload split across reads', () => {
+    const hits = Array.from({ length: 8 }, (_, i) => ({
+      id: `prog-${i}`,
+      course: 'Computer Science BSc',
+      university: 'University of Oxford',
+      country: 'United Kingdom',
+      city: 'Oxford',
+      level: 'Undergraduate',
+    }));
+    const wire = `data: ${JSON.stringify({ results: { tool: 'search_programs', hits } })}\n\n`;
+    const third = Math.floor(wire.length / 3);
+    const events = collect([wire.slice(0, third), wire.slice(third, 2 * third), wire.slice(2 * third)]);
+    expect(events).toEqual([{ type: 'results', hits }]);
+  });
+
   it('emits error events (so the widget can show a retryable bubble)', () => {
     expect(collect(['data: {"error":"Stream interrupted. Try again."}\n\n'])).toEqual([
       { type: 'error', message: 'Stream interrupted. Try again.' },

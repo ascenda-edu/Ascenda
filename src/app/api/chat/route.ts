@@ -1,13 +1,28 @@
-// Ascendi chatbot endpoint. Orchestration only — system prompts live in
-// lib/chat/prompts.ts, live-account context in lib/chat/context.ts (cached,
-// lib/chat/cache.ts), tools in lib/chat/tools.ts, action payloads in
-// lib/chat/actions.ts.
+// Ascendi chat endpoint — one brain, two surfaces. Orchestration only: system
+// prompts live in lib/chat/prompts.ts, live-account context in
+// lib/chat/context.ts (cached, lib/chat/cache.ts), tools in lib/chat/tools.ts,
+// action payloads in lib/chat/actions.ts, history persistence in
+// lib/chat/history.ts.
+//
+// Surfaces:
+//   'widget'    (default — back-compat hinge, never change): context-aware but
+//               read-only. NO tools: no programme search, no action proposals.
+//   'assistant' : full agentic suite. Tools enabled; when `conversationId` is
+//               provided the turn is persisted to chat_conversations /
+//               chat_messages (RLS own-only; the route's client is the user's).
 //
 // SSE protocol (all events `data: <json>\n\n`, terminated by `data: [DONE]`):
-//   {"text": "..."}    — streamed prose chunk (unchanged from v1)
-//   {"error": "..."}   — stream-level failure (unchanged from v1)
-//   {"action": {...}}  — ≤1 per turn: a ChatAction the user must confirm
-//                        client-side; the server never executes actions.
+//   {"text": "..."}     — streamed prose chunk
+//   {"action": {...}}   — ≤1 per turn: a ChatAction the user must confirm
+//                         client-side; the server never executes actions.
+//   {"results": {"tool": "search_programs", "hits": [...]}}
+//                       — structured tool results for rich cards (assistant
+//                         surface only, by construction — widget has no tools)
+//   {"saved": {"id": "..."}}
+//                       — the persisted assistant message's row id (assistant
+//                         surface with conversationId only), so the client can
+//                         adopt it for follow-up action/rating writes
+//   {"error": "..."}    — stream-level failure
 
 import { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
@@ -25,8 +40,14 @@ import { ACTIVE_CHILD_COOKIE } from '@/lib/parent/active-child';
 import { getSystemPrompt, getToolAddendum, MODELS, type ChatMode } from '@/lib/chat/prompts';
 import { buildContextForMode } from '@/lib/chat/context';
 import { contextCacheKey, getCachedContext, setCachedContext } from '@/lib/chat/cache';
-import { buildToolsForMode, executeSearchPrograms } from '@/lib/chat/tools';
-import { isActionCall, toActionPayload } from '@/lib/chat/actions';
+import { buildToolsForMode, executeSearchPrograms, type ProgramHit } from '@/lib/chat/tools';
+import { isActionCall, toActionPayload, type ChatAction } from '@/lib/chat/actions';
+import {
+  appendMessage,
+  getConversation,
+  getLatestMessage,
+  renameConversation,
+} from '@/lib/chat/history';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? '' });
 
@@ -35,6 +56,7 @@ export const runtime = 'nodejs';
 // Bound on tool-calling rounds per message: round 1 may request searches,
 // round 2 answers from results (or searches once more), round 3 must answer.
 const MAX_TOOL_ROUNDS = 3;
+const TITLE_LENGTH = 60;
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -61,14 +83,17 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { messages, currentPage, mode: rawMode } = body as {
+    const { messages, currentPage, mode: rawMode, surface: rawSurface, conversationId } = body as {
       messages: ChatMessage[];
       currentPage?: string;
       mode?: ChatMode;
+      surface?: 'widget' | 'assistant';
+      conversationId?: string;
     };
     const mode: ChatMode = VALID_MODES.includes(rawMode as ChatMode)
       ? (rawMode as ChatMode)
       : 'student';
+    const surface = rawSurface === 'assistant' ? 'assistant' : 'widget';
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: 'No messages provided' }), { status: 400 });
@@ -84,6 +109,48 @@ export async function POST(req: NextRequest) {
       return new Response(JSON.stringify({ error: 'AI service not configured.' }), { status: 503 });
     }
 
+    // ── Persistence pre-flight (assistant surface only) ─────────────────────
+    // Ownership + mode are verified BEFORE any model spend. RLS would reject
+    // the writes anyway (the route's client is user-scoped), but failing fast
+    // gives a clean status instead of a broken stream.
+    const persist = surface === 'assistant' && typeof conversationId === 'string';
+    const lastMessage = messages[messages.length - 1];
+    if (persist) {
+      const conversation = await getConversation(supabase, conversationId!);
+      if (!conversation || conversation.owner_id !== user.id) {
+        return new Response(JSON.stringify({ error: 'Conversation not found' }), { status: 403 });
+      }
+      if (conversation.mode !== mode) {
+        return new Response(JSON.stringify({ error: 'Conversation mode mismatch' }), { status: 400 });
+      }
+      if (lastMessage.role === 'user') {
+        try {
+          // A retry re-sends the same trailing user text (the previous turn
+          // errored after the user row was stored) — don't store it twice.
+          const latest = await getLatestMessage(supabase, conversationId!);
+          const isRetry = latest?.role === 'user' && latest.content === lastMessage.content;
+          if (!isRetry) {
+            // Persist the ORIGINAL user text — the page-context prefix below
+            // is model-only framing, not conversation content.
+            await appendMessage(supabase, {
+              conversation_id: conversationId!,
+              role: 'user',
+              content: lastMessage.content,
+            });
+          }
+          if (!conversation.title) {
+            await renameConversation(
+              supabase,
+              conversationId!,
+              lastMessage.content.trim().slice(0, TITLE_LENGTH)
+            );
+          }
+        } catch (err) {
+          console.warn('[chat] user-message persist failed:', err);
+        }
+      }
+    }
+
     // ── Live account context (cached 60s per user+mode) ─────────────────────
     const activeChildId =
       mode === 'parent' ? cookies().get(ACTIVE_CHILD_COOKIE)?.value : undefined;
@@ -95,7 +162,10 @@ export async function POST(req: NextRequest) {
     }
     const parentContactId = chatContext.parentContactId;
 
-    const tools = buildToolsForMode(mode, Boolean(parentContactId));
+    // The widget surface is read-only by design: no tools means no programme
+    // search and no action proposals — those live in the Assistant section.
+    const tools =
+      surface === 'assistant' ? buildToolsForMode(mode, Boolean(parentContactId)) : undefined;
     const systemInstruction = [
       getSystemPrompt(mode),
       tools ? getToolAddendum(mode, Boolean(parentContactId)) : '',
@@ -171,6 +241,41 @@ export async function POST(req: NextRequest) {
         };
         const send = (payload: unknown) => sendRaw(JSON.stringify(payload));
 
+        // Turn-level accumulators. The happy path persists BEFORE [DONE] and
+        // announces the row id (`saved` event) so the client can adopt it for
+        // follow-up writes (action sent-state, ratings); the `finally` is the
+        // backstop for aborts/disconnects, guarded against double-persisting.
+        let turnText = '';
+        const collectedHits: ProgramHit[] = [];
+        let emittedAction: ChatAction | null = null;
+        let assistantPersisted = false;
+
+        const persistAssistantMessage = async (): Promise<string | null> => {
+          if (!persist || assistantPersisted) return null;
+          if (!turnText && !emittedAction && collectedHits.length === 0) return null;
+          assistantPersisted = true;
+          try {
+            const { id } = await appendMessage(supabase, {
+              conversation_id: conversationId!,
+              role: 'assistant',
+              content: turnText,
+              ...(emittedAction
+                ? {
+                    action: emittedAction as unknown as Record<string, unknown>,
+                    action_state: 'pending',
+                  }
+                : {}),
+              ...(collectedHits.length > 0
+                ? { tool_results: collectedHits as unknown as Record<string, unknown>[] }
+                : {}),
+            });
+            return id;
+          } catch (err) {
+            console.warn('[chat] assistant-message persist failed:', err);
+            return null;
+          }
+        };
+
         try {
           let activeStream = stream!;
           for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -181,6 +286,7 @@ export async function POST(req: NextRequest) {
               if (chunk.text) {
                 send({ text: chunk.text });
                 textParts.push(chunk.text);
+                turnText += chunk.text;
               }
               for (const fc of chunk.functionCalls ?? []) calls.push(fc);
             }
@@ -192,7 +298,10 @@ export async function POST(req: NextRequest) {
             const actionCall = calls.find((c) => isActionCall(c.name));
             if (actionCall) {
               const payload = toActionPayload(actionCall, { parentContactId });
-              if (payload) send({ action: payload });
+              if (payload) {
+                emittedAction = payload;
+                send({ action: payload });
+              }
               break;
             }
 
@@ -203,6 +312,10 @@ export async function POST(req: NextRequest) {
             for (const fc of calls) {
               if (fc.name === 'search_programs') {
                 const result = await executeSearchPrograms(supabase, fc.args ?? {});
+                if (result.results.length > 0) {
+                  collectedHits.push(...result.results);
+                  send({ results: { tool: 'search_programs', hits: result.results } });
+                }
                 responseParts.push({
                   functionResponse: {
                     name: fc.name,
@@ -230,10 +343,17 @@ export async function POST(req: NextRequest) {
             });
           }
 
+          // Persist before [DONE] and hand the row id to the client so its
+          // in-session bubble can adopt it (action/rating writes need it).
+          const savedId = await persistAssistantMessage();
+          if (savedId) send({ saved: { id: savedId } });
           sendRaw('[DONE]');
         } catch {
           send({ error: 'Stream interrupted. Try again.' });
         } finally {
+          // Backstop for aborts/disconnects — no-op when the happy path
+          // already persisted; failures never break the delivered stream.
+          await persistAssistantMessage();
           if (!closed) {
             try {
               controller.close();

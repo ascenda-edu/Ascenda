@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Sparkles, Search, GraduationCap, NotepadText } from 'lucide-react';
 import { AnimatedSection } from '@/components/layout/animated-section';
 import { cn } from '@/lib/utils';
@@ -37,8 +37,6 @@ const features = [
 ];
 
 export function FeaturesSection() {
-    const shouldReduceMotion = useReducedMotion();
-
     return (
         <section id="features" className="section-fade w-full py-24 bg-secondary/40 sm:py-32">
             <div className="max-w-7xl mx-auto px-6 space-y-12">
@@ -57,8 +55,8 @@ export function FeaturesSection() {
                             <motion.div
                                 key={feature.title}
                                 className="group relative flex flex-col gap-5 rounded-2xl border border-border bg-card p-8 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
-                                initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
-                                whileInView={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, amount: 0.3 }}
                                 transition={{ duration: 0.5, delay: index * 0.1 }}
                             >

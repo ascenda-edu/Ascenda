@@ -269,3 +269,40 @@ export type ChatFeedbackUpsert = Pick<
   'profile_id' | 'mode' | 'message_hash' | 'rating'
 > &
   Partial<Pick<ChatFeedbackRow, 'message_excerpt' | 'comment'>>;
+
+// ── chat_conversations / chat_messages (migration 20260718120000) ────────────
+// DB-backed history for the full-page Assistant. `action` is the ChatAction
+// union from lib/chat/actions (plus an optional sentHelpRequestId stamped on
+// successful send); `tool_results` is ProgramHit[] from lib/chat/tools.
+
+export interface ChatConversationRow {
+  id: string;
+  owner_id: string;
+  mode: 'student' | 'counsellor' | 'parent';
+  title: string | null;
+  pinned: boolean;
+  last_message_at: string;
+  created_at: string;
+}
+
+export type ChatConversationInsert = Pick<ChatConversationRow, 'owner_id' | 'mode'> &
+  Partial<Pick<ChatConversationRow, 'title' | 'pinned'>>;
+
+export type ChatMessageActionState = 'pending' | 'sent' | 'cancelled';
+
+export interface ChatMessageRow {
+  id: string;
+  conversation_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  // ChatAction (lib/chat/actions), optionally with sentHelpRequestId
+  action: Record<string, unknown> | null;
+  action_state: ChatMessageActionState | null;
+  // ProgramHit[] (lib/chat/tools)
+  tool_results: Record<string, unknown>[] | null;
+  rating: 1 | -1 | null;
+  created_at: string;
+}
+
+export type ChatMessageInsert = Pick<ChatMessageRow, 'conversation_id' | 'role' | 'content'> &
+  Partial<Pick<ChatMessageRow, 'action' | 'action_state' | 'tool_results'>>;

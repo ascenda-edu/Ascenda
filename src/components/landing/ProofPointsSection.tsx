@@ -39,7 +39,7 @@ export function ProofPointsSection() {
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 border-b border-border/40 pb-8">
                     <motion.div
                         className="max-w-xl"
-                        initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
+                        initial={{ opacity: 0, y: 16 }}
                         animate={inView ? { opacity: 1, y: 0 } : undefined}
                         transition={{ duration: 0.5 }}
                     >
@@ -48,7 +48,7 @@ export function ProofPointsSection() {
                     </motion.div>
                     <motion.p
                         className="text-muted-foreground max-w-md text-lg"
-                        initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
+                        initial={{ opacity: 0, y: 16 }}
                         animate={inView ? { opacity: 1, y: 0 } : undefined}
                         transition={{ duration: 0.5, delay: 0.1 }}
                     >
@@ -61,7 +61,7 @@ export function ProofPointsSection() {
                         <motion.div
                             key={metric.label}
                             className="group relative flex flex-col justify-between p-8 rounded-3xl border border-border/30 bg-card hover:bg-card/80 transition-all duration-500 hover:shadow-lg hover:-translate-y-1 overflow-hidden"
-                            initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
+                            initial={{ opacity: 0, y: 24 }}
                             animate={inView ? { opacity: 1, y: 0 } : undefined}
                             transition={{ duration: 0.5, delay: index * 0.15 }}
                         >

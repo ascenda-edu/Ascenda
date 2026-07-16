@@ -31,8 +31,8 @@ export function DemoSection() {
         <section className="section-fade w-full bg-secondary/40 py-24 sm:py-32">
             <motion.div
                 className="max-w-7xl mx-auto px-6 grid gap-12 md:grid-cols-[0.9fr_1.1fr] items-center"
-                initial={shouldReduceMotion ? false : 'hidden'}
-                whileInView={shouldReduceMotion ? undefined : 'visible'}
+                initial="hidden"
+                whileInView="visible"
                 viewport={{ once: true, amount: 0.3 }}
                 variants={fadeIn}
             >

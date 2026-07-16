@@ -20,6 +20,17 @@ export function isActionCall(name: string | undefined): boolean {
   return Boolean(name && ACTION_TOOL_NAMES.has(name));
 }
 
+/** Runtime guard for action payloads arriving over the wire or from storage —
+ * never trust the shape. */
+export function isChatAction(value: unknown): value is ChatAction {
+  if (!value || typeof value !== 'object') return false;
+  const a = value as Record<string, unknown>;
+  if (a.kind === 'help_request') return typeof a.subject === 'string' && typeof a.body === 'string';
+  if (a.kind === 'counsellor_message')
+    return typeof a.body === 'string' && typeof a.contactId === 'string';
+  return false;
+}
+
 const clampText = (value: unknown, max: number): string =>
   typeof value === 'string' ? value.trim().slice(0, max) : '';
 
