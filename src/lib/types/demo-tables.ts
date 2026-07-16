@@ -250,3 +250,22 @@ export interface SavedSearchRow {
 
 export type SavedSearchInsert = Pick<SavedSearchRow, 'profile_id' | 'name'> &
   Partial<Pick<SavedSearchRow, 'query' | 'filters'>>;
+
+// ── chat_feedback (migration 20260717120000) ────────────────────────────────
+
+export interface ChatFeedbackRow {
+  id: string;
+  profile_id: string;
+  mode: 'student' | 'counsellor' | 'parent';
+  message_hash: string;
+  message_excerpt: string | null;
+  rating: 1 | -1;
+  comment: string | null;
+  created_at: string;
+}
+
+export type ChatFeedbackUpsert = Pick<
+  ChatFeedbackRow,
+  'profile_id' | 'mode' | 'message_hash' | 'rating'
+> &
+  Partial<Pick<ChatFeedbackRow, 'message_excerpt' | 'comment'>>;

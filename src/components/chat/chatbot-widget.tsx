@@ -9,11 +9,17 @@ import {
   LayoutDashboard, Search, Zap, Briefcase, Heart, User,
   Wrench, PenTool, BarChart3, ClipboardCheck, CalendarClock,
   Gift, BarChart2, Users, FileText, TrendingUp, Wallet, MessageCircle,
+  Square, ThumbsUp, ThumbsDown, CheckCircle2,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
+import { useSupabase } from '@/hooks/useSupabase';
+import { insertHelpRequest } from '@/lib/demo/help-request-client';
+import type { ChatAction } from '@/lib/chat/actions';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
+
+type ActionState = 'pending' | 'sending' | 'sent' | 'cancelled';
 
 interface Message {
   id: string;
@@ -21,6 +27,11 @@ interface Message {
   content: string;
   /** True when this assistant bubble holds a stream/fetch error, not a reply. */
   error?: boolean;
+  /** An action the model proposed; the user confirms or cancels it below the bubble. */
+  action?: ChatAction;
+  actionState?: ActionState;
+  /** Thumbs feedback the user gave on this answer. */
+  rating?: 1 | -1;
 }
 
 // ─── Page snippets for preview cards ────────────────────────────────────────
@@ -108,6 +119,16 @@ function isRouteInMode(route: string, mode: ChatMode): boolean {
   return !inCounsellor && !inParent && !route.startsWith('/admin');
 }
 
+/** Runtime guard for the `action` SSE event — never trust the wire shape. */
+function isValidAction(value: unknown): value is ChatAction {
+  if (!value || typeof value !== 'object') return false;
+  const a = value as Record<string, unknown>;
+  if (a.kind === 'help_request') return typeof a.subject === 'string' && typeof a.body === 'string';
+  if (a.kind === 'counsellor_message')
+    return typeof a.body === 'string' && typeof a.contactId === 'string';
+  return false;
+}
+
 function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
@@ -167,6 +188,102 @@ function PageCard({ snippet, onClick }: { snippet: PageSnippet; onClick: () => v
       </div>
       <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
     </button>
+  );
+}
+
+// ─── Action confirm card ────────────────────────────────────────────────────
+// Renders a model-proposed action (help request / counsellor message) as an
+// editable draft. Nothing is sent until the user hits Send — the model only
+// drafts.
+
+function ActionConfirmCard({
+  action,
+  state,
+  onSend,
+  onCancel,
+}: {
+  action: ChatAction;
+  state: ActionState;
+  onSend: (edited: ChatAction) => Promise<boolean>;
+  onCancel: () => void;
+}) {
+  const [subject, setSubject] = useState(action.kind === 'help_request' ? action.subject : '');
+  const [body, setBody] = useState(action.body);
+  const [failed, setFailed] = useState(false);
+
+  const title =
+    action.kind === 'help_request' ? 'Help request to your counsellor' : 'Message to the counsellor';
+
+  if (state === 'sent') {
+    return (
+      <div className="flex items-center gap-2 rounded-[14px] border border-emerald-300/60 bg-emerald-500/10 px-3 py-2.5 text-xs font-medium text-emerald-700 dark:border-emerald-500/30 dark:text-emerald-300">
+        <CheckCircle2 className="h-4 w-4 shrink-0" />
+        Sent to your counsellor
+      </div>
+    );
+  }
+  if (state === 'cancelled') {
+    return (
+      <div className="rounded-[14px] border border-border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
+        Draft discarded
+      </div>
+    );
+  }
+
+  const sending = state === 'sending';
+  const handleSend = async () => {
+    setFailed(false);
+    const edited: ChatAction =
+      action.kind === 'help_request'
+        ? { ...action, subject: subject.trim(), body: body.trim() }
+        : { ...action, body: body.trim() };
+    const ok = await onSend(edited);
+    if (!ok) setFailed(true);
+  };
+
+  return (
+    <div className="space-y-2 rounded-[14px] border border-primary/30 bg-primary/5 p-3">
+      <p className="text-xs font-semibold text-foreground">{title}</p>
+      {action.kind === 'help_request' && (
+        <input
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          disabled={sending}
+          aria-label="Subject"
+          className="w-full rounded-[10px] border border-border bg-background px-2.5 py-1.5 text-xs text-foreground focus:border-primary/40 focus:outline-none disabled:opacity-50"
+        />
+      )}
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        disabled={sending}
+        rows={3}
+        aria-label="Message body"
+        className="w-full resize-none rounded-[10px] border border-border bg-background px-2.5 py-1.5 text-xs leading-relaxed text-foreground focus:border-primary/40 focus:outline-none disabled:opacity-50"
+      />
+      {failed && (
+        <p className="text-[11px] text-rose-600 dark:text-rose-400">
+          Couldn&apos;t send — try again in a moment.
+        </p>
+      )}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleSend}
+          disabled={sending || !body.trim() || (action.kind === 'help_request' && !subject.trim())}
+          className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground transition-[transform,opacity] hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0"
+        >
+          {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+          Send
+        </button>
+        <button
+          onClick={onCancel}
+          disabled={sending}
+          className="rounded-full border border-border px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -273,27 +390,66 @@ function AutoResizeTextarea({
 
 // ─── Main widget ────────────────────────────────────────────────────────────
 
+// Only the most recent turns ride along on each request — the server holds the
+// system prompt + live account context, so old turns add cost, not quality.
+const HISTORY_LIMIT = 12;
+const COOLDOWN_SECONDS = 60;
+
 export function ChatbotWidget() {
   const pathname = usePathname();
   const router = useRouter();
+  const supabase = useSupabase();
   const mode = detectMode(pathname);
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>(() => loadMessages(mode));
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [dynamicSuggestions, setDynamicSuggestions] = useState<string[] | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null) as React.RefObject<HTMLTextAreaElement>;
   const prevModeRef = useRef(mode);
   const confirmTimerRef = useRef<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  // Switch chat history when mode changes (student <-> counsellor)
+  // Switch chat history when mode changes (student <-> counsellor <-> parent)
   useEffect(() => {
     if (prevModeRef.current !== mode) {
       setMessages(loadMessages(mode));
+      setDynamicSuggestions(null);
       prevModeRef.current = mode;
     }
   }, [mode]);
+
+  // Count the rate-limit cooldown back down to zero.
+  const coolingDown = cooldownRemaining > 0;
+  useEffect(() => {
+    if (!coolingDown) return;
+    const iv = window.setInterval(
+      () => setCooldownRemaining((s) => (s <= 1 ? 0 : s - 1)),
+      1000
+    );
+    return () => window.clearInterval(iv);
+  }, [coolingDown]);
+
+  // Personalised starter chips for the empty state. Also pre-warms the
+  // server's context cache so the first real message answers faster.
+  useEffect(() => {
+    if (!isOpen || messages.length > 0 || dynamicSuggestions !== null) return;
+    let stale = false;
+    fetch(`/api/chat/suggestions?mode=${mode}`)
+      .then((res) => (res.ok ? res.json() : { suggestions: [] }))
+      .then((data: { suggestions?: string[] }) => {
+        if (!stale) setDynamicSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+      })
+      .catch(() => {
+        if (!stale) setDynamicSuggestions([]);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [isOpen, messages.length, dynamicSuggestions, mode]);
 
   // Persist messages
   useEffect(() => {
@@ -346,9 +502,12 @@ export function ChatbotWidget() {
   // Stream an assistant reply for the given conversation. `history` must end
   // with the user message being answered; a fresh empty assistant bubble is
   // appended and filled as chunks arrive. On failure that bubble is marked as
-  // an error row (rendered distinctly, with a Retry affordance).
+  // an error row (rendered distinctly, with a Retry affordance). A user Stop
+  // keeps whatever streamed so far as a normal bubble.
   const runAssistant = async (history: Message[]) => {
     setIsLoading(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     const assistantMessage: Message = {
       id: (Date.now() + 1).toString(),
@@ -357,13 +516,16 @@ export function ChatbotWidget() {
     };
 
     setMessages([...history, assistantMessage]);
+    let accumulated = '';
 
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
-          messages: history.map((m) => ({
+          // The server holds context; only recent turns need to travel.
+          messages: history.slice(-HISTORY_LIMIT).map((m) => ({
             role: m.role,
             content: m.content,
           })),
@@ -372,6 +534,10 @@ export function ChatbotWidget() {
         }),
       });
 
+      if (res.status === 429) {
+        setCooldownRemaining(COOLDOWN_SECONDS);
+        throw new Error('You’ve sent a lot of messages — give it a minute and try again.');
+      }
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Something went wrong');
@@ -379,7 +545,6 @@ export function ChatbotWidget() {
 
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
-      let accumulated = '';
 
       if (reader) {
         while (true) {
@@ -405,6 +570,15 @@ export function ChatbotWidget() {
                     )
                   );
                 }
+                if (parsed.action && isValidAction(parsed.action)) {
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantMessage.id
+                        ? { ...m, action: parsed.action as ChatAction, actionState: 'pending' }
+                        : m
+                    )
+                  );
+                }
               } catch {
                 // skip malformed chunks
               }
@@ -413,21 +587,90 @@ export function ChatbotWidget() {
         }
       }
     } catch (err) {
-      const errorText = err instanceof Error ? err.message : 'Something went wrong. Try again.';
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantMessage.id
-            ? { ...m, content: errorText, error: true }
-            : m
-        )
-      );
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        // User pressed Stop: keep the partial answer; drop an empty bubble.
+        if (!accumulated) {
+          setMessages((prev) => prev.filter((m) => m.id !== assistantMessage.id));
+        }
+      } else {
+        const errorText = err instanceof Error ? err.message : 'Something went wrong. Try again.';
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMessage.id
+              ? { ...m, content: errorText, error: true }
+              : m
+          )
+        );
+      }
     } finally {
+      abortRef.current = null;
       setIsLoading(false);
     }
   };
 
+  const stopGeneration = () => {
+    abortRef.current?.abort();
+  };
+
+  // ── Feedback & actions ────────────────────────────────────────────────────
+
+  const sendFeedback = (msg: Message, rating: 1 | -1) => {
+    setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, rating } : m)));
+    void fetch('/api/chat/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode, messageContent: msg.content, rating }),
+    }).catch(() => {
+      /* feedback is best-effort */
+    });
+  };
+
+  // Execute a confirmed action through the same write paths the rest of the
+  // app uses (RLS + notification triggers included). Returns success.
+  const executeAction = async (msg: Message, edited: ChatAction): Promise<boolean> => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === msg.id ? { ...m, action: edited, actionState: 'sending' } : m))
+    );
+    try {
+      if (edited.kind === 'help_request') {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not signed in');
+        await insertHelpRequest(supabase, {
+          student_profile_id: user.id,
+          subject: edited.subject,
+          body: edited.body,
+          ...(edited.applicationId ? { application_id: edited.applicationId } : {}),
+        });
+      } else {
+        const res = await fetch('/api/parent/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contactId: edited.contactId, body: edited.body }),
+        });
+        if (!res.ok) throw new Error('Send failed');
+      }
+      setMessages((prev) =>
+        prev.map((m) => (m.id === msg.id ? { ...m, actionState: 'sent' } : m))
+      );
+      return true;
+    } catch {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === msg.id ? { ...m, actionState: 'pending' } : m))
+      );
+      return false;
+    }
+  };
+
+  const cancelAction = (msg: Message) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === msg.id ? { ...m, actionState: 'cancelled' } : m))
+    );
+  };
+
   const sendMessage = (content: string) => {
-    if (!content.trim() || isLoading) return;
+    if (!content.trim() || isLoading || coolingDown) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -553,11 +796,13 @@ export function ChatbotWidget() {
                         : 'I can help you navigate the platform, understand your profile, and plan applications.'}
                   </p>
                   <div className="mt-4 flex flex-wrap justify-center gap-1.5">
-                    {(mode === 'counsellor'
-                      ? COUNSELLOR_SUGGESTIONS
-                      : mode === 'parent'
-                        ? PARENT_SUGGESTIONS
-                        : STUDENT_SUGGESTIONS
+                    {(dynamicSuggestions && dynamicSuggestions.length > 0
+                      ? dynamicSuggestions
+                      : mode === 'counsellor'
+                        ? COUNSELLOR_SUGGESTIONS
+                        : mode === 'parent'
+                          ? PARENT_SUGGESTIONS
+                          : STUDENT_SUGGESTIONS
                     ).map((s) => (
                       <button
                         key={s}
@@ -570,10 +815,14 @@ export function ChatbotWidget() {
                   </div>
                 </div>
               ) : (
-                messages.map((msg) => {
+                messages.map((msg, idx) => {
                   const snippets = msg.role === 'assistant' && msg.content && !msg.error
                     ? getSnippetsForMessage(msg.content, mode)
                     : [];
+                  const isStreamingThis =
+                    isLoading && msg.role === 'assistant' && idx === messages.length - 1;
+                  const showFeedback =
+                    msg.role === 'assistant' && Boolean(msg.content) && !msg.error && !isStreamingThis;
 
                   return (
                     <motion.div
@@ -622,6 +871,19 @@ export function ChatbotWidget() {
                         )}
                       </div>
 
+                      {/* Proposed action → editable confirm card */}
+                      {msg.action && msg.actionState && !isStreamingThis && (
+                        <div className="mt-1.5 w-full max-w-[85%]">
+                          <ActionConfirmCard
+                            key={`${msg.id}-action`}
+                            action={msg.action}
+                            state={msg.actionState}
+                            onSend={(edited) => executeAction(msg, edited)}
+                            onCancel={() => cancelAction(msg)}
+                          />
+                        </div>
+                      )}
+
                       {/* Page preview snippets */}
                       {snippets.length > 0 && (
                         <div className="mt-1.5 w-full max-w-[85%] space-y-1.5">
@@ -632,6 +894,38 @@ export function ChatbotWidget() {
                               onClick={() => navigateTo(snippet.route)}
                             />
                           ))}
+                        </div>
+                      )}
+
+                      {/* Thumbs feedback */}
+                      {showFeedback && (
+                        <div className="mt-1 flex items-center gap-0.5">
+                          <button
+                            onClick={() => sendFeedback(msg, 1)}
+                            aria-label="Good answer"
+                            aria-pressed={msg.rating === 1}
+                            className={cn(
+                              'flex h-6 w-6 items-center justify-center rounded-full transition-colors',
+                              msg.rating === 1
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-muted-foreground/60 hover:bg-muted hover:text-foreground'
+                            )}
+                          >
+                            <ThumbsUp className="h-3 w-3" />
+                          </button>
+                          <button
+                            onClick={() => sendFeedback(msg, -1)}
+                            aria-label="Bad answer"
+                            aria-pressed={msg.rating === -1}
+                            className={cn(
+                              'flex h-6 w-6 items-center justify-center rounded-full transition-colors',
+                              msg.rating === -1
+                                ? 'text-rose-600 dark:text-rose-400'
+                                : 'text-muted-foreground/60 hover:bg-muted hover:text-foreground'
+                            )}
+                          >
+                            <ThumbsDown className="h-3 w-3" />
+                          </button>
                         </div>
                       )}
                     </motion.div>
@@ -646,26 +940,39 @@ export function ChatbotWidget() {
               onSubmit={handleSubmit}
               className="border-t border-border bg-card px-3 py-2.5"
             >
+              {coolingDown && (
+                <p className="mb-1.5 text-center text-[11px] text-muted-foreground" role="status">
+                  Message limit reached — you can send again in {cooldownRemaining}s
+                </p>
+              )}
               <div className="flex items-end gap-2 rounded-[18px] border border-border bg-background px-3 py-1.5 transition-colors focus-within:border-primary/40">
                 <AutoResizeTextarea
                   value={input}
                   onChange={setInput}
                   onSubmit={() => sendMessage(input)}
-                  disabled={isLoading}
+                  disabled={isLoading || coolingDown}
                   inputRef={inputRef}
                 />
-                <button
-                  type="submit"
-                  disabled={!input.trim() || isLoading}
-                  className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[transform,opacity] hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
-                  aria-label="Send message"
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
+                {isLoading ? (
+                  <button
+                    type="button"
+                    onClick={stopGeneration}
+                    className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-foreground transition-[transform] hover:-translate-y-0.5"
+                    aria-label="Stop generating"
+                    title="Stop generating"
+                  >
+                    <Square className="h-3 w-3 fill-current" />
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={!input.trim() || coolingDown}
+                    className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[transform,opacity] hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
+                    aria-label="Send message"
+                  >
                     <Send className="h-3.5 w-3.5" />
-                  )}
-                </button>
+                  </button>
+                )}
               </div>
             </form>
           </motion.div>
