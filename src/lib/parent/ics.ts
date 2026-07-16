@@ -8,7 +8,25 @@
 import type { ChildDeadline } from '@/lib/parent/types';
 
 const escapeText = (value: string): string =>
-  value.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  value
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r/g, '')
+    .replace(/\n/g, '\\n');
+
+// RFC 5545 §3.1: content lines longer than 75 octets should be folded with a
+// CRLF + single space. Folded at 74 UTF-16 units for simplicity — close
+// enough to the octet rule for the latin-plus-emoji strings we emit, and
+// consumers unfold by the leading space regardless of where the break falls.
+const foldLine = (line: string): string => {
+  if (line.length <= 75) return line;
+  const parts: string[] = [line.slice(0, 75)];
+  for (let i = 75; i < line.length; i += 74) {
+    parts.push(` ${line.slice(i, i + 74)}`);
+  }
+  return parts.join('\r\n');
+};
 
 /** 'YYYY-MM-DD' → 'YYYYMMDD'; returns null for anything malformed. */
 const toDateValue = (value: string): string | null => {
@@ -50,5 +68,7 @@ export const buildDeadlinesIcs = (deadlines: ChildDeadline[], childName: string)
     'CALSCALE:GREGORIAN',
     ...events,
     'END:VCALENDAR',
-  ].join('\r\n');
+  ]
+    .map(foldLine)
+    .join('\r\n');
 };

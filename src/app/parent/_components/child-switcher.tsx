@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -21,6 +21,31 @@ export function ChildSwitcher({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Dismiss on outside-click and Escape (returning focus to the trigger) so
+  // the dropdown behaves like the rest of the app's popovers.
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
 
   const active = linkedChildren.find((c) => c.profileId === activeChildId) ?? linkedChildren[0];
   if (!active) return null;
@@ -43,8 +68,9 @@ export function ChildSwitcher({
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={rootRef}>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
@@ -66,7 +92,7 @@ export function ChildSwitcher({
           className="absolute left-0 top-full z-20 mt-1 min-w-[180px] overflow-hidden rounded-xl border border-border bg-card py-1 shadow-md"
         >
           {linkedChildren.map((child) => (
-            <li key={child.profileId}>
+            <li key={child.profileId} role="presentation">
               <button
                 type="button"
                 role="option"

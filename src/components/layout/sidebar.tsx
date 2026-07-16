@@ -85,7 +85,7 @@ export const Sidebar = () => {
           );
         })}
 
-        <SideSwitcher className={cn('mt-1 w-full', collapsed ? 'justify-center px-0 rounded-lg' : '')} collapsed={collapsed} />
+        <SideSwitcher className="mt-1 w-full" collapsed={collapsed} />
 
         <button
           type="button"

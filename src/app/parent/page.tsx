@@ -1,24 +1,23 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
 import {
   ArrowRight,
   CalendarClock,
+  Check,
+  Circle,
   ClipboardCheck,
   MessageSquare,
   UserCircle,
 } from 'lucide-react';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { PageHero } from '@/components/layout/page-hero';
 import { SectionNav } from '@/components/layout/section-nav';
 import { PARENT_SECTION_ITEMS } from '@/components/layout/navigation';
 import { AnimatedSection } from '@/components/layout/animated-section';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { loadChildOverview, loadLinkedChildren, pickActiveChild } from '@/lib/parent/data';
-import { ACTIVE_CHILD_COOKIE } from '@/lib/parent/active-child';
+import { loadChildOverview } from '@/lib/parent/data';
 import { parseLocalDate, formatRelativeTime } from '@/lib/utils/dates';
+import { resolveParentContext } from './_lib/context';
 import { ChildSwitcher } from './_components/child-switcher';
 import { NoLinkedChildren } from './_components/no-linked-children';
 
@@ -35,12 +34,7 @@ const formatDateOnly = (value?: string | null) => {
 };
 
 export default async function ParentOverviewPage() {
-  const supabase = createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const linkedChildren = await loadLinkedChildren(supabase, user.id);
-  const activeChild = pickActiveChild(linkedChildren, cookies().get(ACTIVE_CHILD_COOKIE)?.value);
+  const { supabase, linkedChildren, activeChild } = await resolveParentContext();
 
   if (!activeChild) {
     return (
@@ -251,14 +245,13 @@ export default async function ParentOverviewPage() {
                         : 'border-border bg-muted/20 text-muted-foreground'
                     )}
                   >
-                    <span
-                      className={cn(
-                        'h-2 w-2 shrink-0 rounded-full',
-                        step.done ? 'bg-emerald-500' : 'bg-amber-500/70'
-                      )}
-                      aria-hidden
-                    />
-                    {step.title}
+                    {step.done ? (
+                      <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-300" aria-hidden />
+                    ) : (
+                      <Circle className="h-3.5 w-3.5 shrink-0 text-amber-500/70" aria-hidden />
+                    )}
+                    <span className="flex-1">{step.title}</span>
+                    <span className="sr-only">{step.done ? '— complete' : '— not complete yet'}</span>
                   </li>
                 ))}
               </ul>

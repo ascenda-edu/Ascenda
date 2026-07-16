@@ -3,6 +3,9 @@ import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
 import { parseJsonBody } from '@/lib/api/guards';
 import { resolveLinkedChildIds } from '@/lib/parent/data';
 
+const MAX_BODY_LENGTH = 4000;
+const MAX_TEMPLATE_LENGTH = 100;
+
 // Persist a parent → counsellor message and flag the contact for a response.
 //
 // Linkage check (defence in depth beyond the client's scoped UI): the target
@@ -19,8 +22,12 @@ export async function POST(request: NextRequest) {
 
   const payload = await parseJsonBody<{ contactId?: string; body?: string; template?: string | null }>(request);
   const { contactId, body, template } = payload ?? {};
-  if (!contactId || !body?.trim()) {
+  const trimmedBody = body?.trim();
+  if (!contactId || !trimmedBody) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+  }
+  if (trimmedBody.length > MAX_BODY_LENGTH || (template && template.length > MAX_TEMPLATE_LENGTH)) {
+    return NextResponse.json({ error: 'Message too long' }, { status: 400 });
   }
 
   // Verify the contact belongs to a linked child before writing anything.
@@ -33,7 +40,8 @@ export async function POST(request: NextRequest) {
     resolveLinkedChildIds(supabase, user.id),
   ]);
   if (contactLookupError) {
-    return NextResponse.json({ error: contactLookupError.message }, { status: 400 });
+    console.error('[parent-messages] contact lookup failed:', contactLookupError.message);
+    return NextResponse.json({ error: 'Unable to send message' }, { status: 400 });
   }
   if (!contact || !linkedChildIds.includes(contact.student_profile_id)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -41,12 +49,13 @@ export async function POST(request: NextRequest) {
 
   const { data, error } = await (supabase as any)
     .from('parent_messages')
-    .insert({ contact_id: contactId, sender: 'parent', body: body.trim(), template: template ?? null })
+    .insert({ contact_id: contactId, sender: 'parent', body: trimmedBody, template: template ?? null })
     .select('id, contact_id, sender, body, template, read_at, created_at')
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    console.error('[parent-messages] insert failed:', error.message);
+    return NextResponse.json({ error: 'Unable to send message' }, { status: 400 });
   }
 
   // A parent message needs the counsellor's attention — surface it in their
@@ -58,8 +67,9 @@ export async function POST(request: NextRequest) {
   if (contactError) {
     // The message row exists but the thread state didn't move — tell the
     // caller instead of returning a clean 200 with the thread stuck.
+    console.error('[parent-messages] contact status update failed:', contactError.message);
     return NextResponse.json(
-      { error: `Message saved but contact status update failed: ${contactError.message}` },
+      { error: 'Message saved but the conversation state could not be updated' },
       { status: 500 }
     );
   }

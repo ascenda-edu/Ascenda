@@ -61,7 +61,14 @@ export default async function ParentMessagesPage() {
       />
 
       <AnimatedSection>
-        <ParentThreadPanel thread={thread} childFirstName={activeChild.firstName} />
+        {/* key resets the panel's optimistic local state when the active child
+            (and so the contact/thread) changes — without it, messages sent to
+            one child would linger in another child's thread view. */}
+        <ParentThreadPanel
+          key={thread?.contactId ?? 'no-thread'}
+          thread={thread}
+          childFirstName={activeChild.firstName}
+        />
       </AnimatedSection>
     </div>
   );

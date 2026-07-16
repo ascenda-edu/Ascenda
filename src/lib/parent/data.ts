@@ -229,9 +229,12 @@ export const loadChildOverview = async (
       .select('first_name,last_name,email,nationality,resident_country')
       .eq('profile_id', childId)
       .maybeSingle(),
+    // english_status included so a "Not sure" English answer (english_required
+    // = null) doesn't cap the parent-visible completion at 80% — see the
+    // academic_details comment in lib/profile/completion.ts.
     supabase
       .from('student_academic_input')
-      .select('programme_type,school_name,school_country,graduation_year,intended_clusters,english_required')
+      .select('programme_type,school_name,school_country,graduation_year,intended_clusters,english_required,english_status')
       .eq('profile_id', childId)
       .maybeSingle(),
     supabase
