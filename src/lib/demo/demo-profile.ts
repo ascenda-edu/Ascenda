@@ -1,7 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/types/database';
 
-export const DEMO_EMAIL = 'greg@workiflow.com';
+// The demo-user discriminator; override per environment without a code change.
+export const DEMO_EMAIL =
+  process.env.NEXT_PUBLIC_DEMO_EMAIL?.trim().toLowerCase() || 'greg@workiflow.com';
 
 const normalize = (email?: string | null) => email?.trim().toLowerCase() ?? null;
 

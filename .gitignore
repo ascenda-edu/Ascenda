@@ -14,7 +14,7 @@ Interview Transcripts/
 transcripts/
 
 # Generated import CSVs (recreated by scripts/all-countries-to-supabase.ts)
-supabase/imports/*.csv
+supabase/imports/**/*.csv
 .vercel
 
 # Supabase CLI local state (project ref, pooler URL, versions)

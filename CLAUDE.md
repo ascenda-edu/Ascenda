@@ -7,7 +7,7 @@ npm run dev          # Start dev server (localhost:3000)
 npm run build        # Production build
 npm run typecheck    # tsc --noEmit (run after every change)
 npm run lint         # ESLint
-npm run test         # Jest (note: CI has a known pre-existing Jest/Request failure — does not block Vercel)
+npm run test         # Jest (route-handler tests use ./jest.environment-node.js via @jest-environment docblock)
 
 # Regenerate Supabase TypeScript types after schema changes
 npm run supabase:types   # requires SUPABASE_PROJECT_ID in env
@@ -101,7 +101,7 @@ SUPABASE_PROJECT_ID
 
 - **Vercel project:** https://ascenda-ashy.vercel.app
 - **Branch:** `main` → auto-deploys to production
-- **CI:** GitHub Actions has a pre-existing Jest failure (`ReferenceError: Request is not defined` in route handlers) — does not block Vercel deploys, safe to ignore
+- **CI:** GitHub Actions runs lint, typecheck, test, and a production build (placeholder Supabase env vars). Route-handler tests run in a node environment via the `./jest.environment-node.js` wrapper (Node ≥22 webstorage clash — see the file header)
 
 ## Gotchas
 
