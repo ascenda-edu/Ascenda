@@ -1,6 +1,10 @@
-// ─── Student Demo Data ───────────────────────────────────────────────────────
-// Mock data for MVP demo features: evolution timeline, essay toolbox,
-// chatbot, rec letters, application sandbox.
+// ─── Student Demo Data (DEMO FIXTURES — deliberate seam) ─────────────────────
+// Static fixture data that intentionally backs the demo-stage sections instead
+// of Supabase queries. Consumed by: the entire Toolbox area (/toolbox, chances,
+// requirements, timeline, essay-workshop), dashboard widgets (outcome-tracker,
+// deadline-nudges), and some counsellor tabs. When one of these features gets a
+// real data layer, migrate its consumers off this file — see docs/architecture.md
+// ("Demo posture") for the full seam map.
 // Demo student: "Alex Morgan" — IB student interested in Business → Engineering.
 
 // ─── Date helper (same pattern as counsellor-dummy-data.ts) ──────────────────

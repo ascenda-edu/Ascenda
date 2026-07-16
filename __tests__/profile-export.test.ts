@@ -1,9 +1,16 @@
+/**
+ * @jest-environment ./jest.environment-node.js
+ *
+ * Route handlers need the fetch globals (Request/Response), which the default
+ * jsdom environment lacks; the node environment provides them natively. The
+ * local wrapper exists only to sidestep a Node >=22 / jest 29 webstorage clash.
+ */
 import { GET } from '@/app/api/profile/export/route';
 
 const buildSingleQuery = (data: unknown, error: unknown = null) => ({
   select: jest.fn().mockReturnThis(),
   eq: jest.fn().mockReturnThis(),
-  single: jest.fn().mockResolvedValue({ data, error })
+  maybeSingle: jest.fn().mockResolvedValue({ data, error })
 });
 
 const buildOrderQuery = (data: unknown, error: unknown = null) => ({
