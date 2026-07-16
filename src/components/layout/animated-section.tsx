@@ -1,9 +1,14 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { fadeUp, stagger as staggerVariant, childFade } from '@/lib/motion';
+
+// These render the same motion.div for every user — branching to a plain <div>
+// on useReducedMotion() caused SSR hydration mismatches (the hook is false on
+// the server). MotionConfig reducedMotion="user" (providers.tsx) already snaps
+// the transforms for reduced-motion users.
 
 interface AnimatedSectionProps {
   children: ReactNode;
@@ -12,11 +17,8 @@ interface AnimatedSectionProps {
 }
 
 export function AnimatedSection({ children, className, delay = 0 }: AnimatedSectionProps) {
-  const reduced = useReducedMotion();
   const showTarget = typeof fadeUp.show === 'object' ? fadeUp.show as Record<string, unknown> : {};
   const showTransition = (showTarget.transition ?? {}) as Record<string, unknown>;
-
-  if (reduced) return <div className={cn(className)}>{children}</div>;
 
   return (
     <motion.div
@@ -35,9 +37,6 @@ export function AnimatedSection({ children, className, delay = 0 }: AnimatedSect
 }
 
 export function AnimatedGrid({ children, className }: { children: ReactNode; className?: string }) {
-  const reduced = useReducedMotion();
-  if (reduced) return <div className={cn(className)}>{children}</div>;
-
   return (
     <motion.div
       className={cn(className)}
@@ -52,9 +51,6 @@ export function AnimatedGrid({ children, className }: { children: ReactNode; cla
 }
 
 export function AnimatedGridItem({ children, className }: { children: ReactNode; className?: string }) {
-  const reduced = useReducedMotion();
-  if (reduced) return <div className={cn(className)}>{children}</div>;
-
   return (
     <motion.div className={cn(className)} variants={childFade}>
       {children}

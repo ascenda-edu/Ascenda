@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Award,
   BarChart2,
+  Bot,
   CalendarClock,
   ClipboardCheck,
   FileText,
@@ -25,7 +26,7 @@ export type NavItem = {
   icon: LucideIcon;
   exact?: boolean;
   matchers?: Array<(pathname: string) => boolean>;
-  segment: 'home' | 'explore' | 'planner' | 'inbox' | 'scholarships' | 'profile' | 'toolbox' | 'admin' | 'counsellor' | 'parent';
+  segment: 'home' | 'explore' | 'planner' | 'inbox' | 'assistant' | 'scholarships' | 'profile' | 'toolbox' | 'admin' | 'counsellor' | 'parent';
 };
 
 export type SectionNavItem = {
@@ -67,6 +68,16 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/inbox',
     icon: Inbox,
     segment: 'inbox'
+  },
+  {
+    // Full agentic workspace (DB-backed conversations); the floating Ascendi
+    // widget stays for quick questions. NOTE: the counsellor/parent Assistant
+    // entries below must keep segment 'counsellor'/'parent' — filterNavByRole
+    // matches those portals by hard segment equality.
+    label: 'Assistant',
+    href: '/assistant',
+    icon: Bot,
+    segment: 'assistant'
   },
   {
     label: 'Scholarships',
@@ -151,6 +162,12 @@ export const NAV_ITEMS: NavItem[] = [
     icon: ClipboardCheck,
     segment: 'counsellor'
   },
+  {
+    label: 'Assistant',
+    href: '/counsellor/assistant',
+    icon: Bot,
+    segment: 'counsellor'
+  },
   // Parent items (only shown on /parent routes — see filterNavByRole)
   {
     label: 'Overview',
@@ -181,6 +198,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Messages',
     href: '/parent/messages',
     icon: MessageSquare,
+    segment: 'parent'
+  },
+  {
+    label: 'Assistant',
+    href: '/parent/assistant',
+    icon: Bot,
     segment: 'parent'
   }
 ];
@@ -276,6 +299,7 @@ type CounsellorTopSpec =
 const COUNSELLOR_TOP_NAV: CounsellorTopSpec[] = [
   { href: '/counsellor' },
   { href: '/counsellor/inbox' },
+  { href: '/counsellor/assistant' },
   { href: '/counsellor/students' },
   {
     group: 'Applications',

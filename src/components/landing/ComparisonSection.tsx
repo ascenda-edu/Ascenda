@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { fadeIn } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { X, Check } from 'lucide-react';
@@ -43,14 +43,12 @@ const comparisonPairs = comparisons[0].bullets.map((bullet, index) => {
 });
 
 export function ComparisonSection() {
-    const shouldReduceMotion = useReducedMotion();
-
     return (
         <section className="section-fade w-full bg-secondary/40 py-24 sm:py-32">
             <motion.div
                 className="max-w-7xl mx-auto px-6"
-                initial={shouldReduceMotion ? false : 'hidden'}
-                whileInView={shouldReduceMotion ? undefined : 'visible'}
+                initial="hidden"
+                whileInView="visible"
                 viewport={{ once: true, amount: 0.2 }}
                 variants={fadeIn}
             >
@@ -96,8 +94,8 @@ export function ComparisonSection() {
                                 <motion.div
                                     key={`${pair.without.headline}-${pair.with.headline}-${index}`}
                                     className="grid items-stretch gap-4 md:grid-cols-[1fr_auto_1fr]"
-                                    initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
-                                    whileInView={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+                                    initial={{ opacity: 0, y: 12 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
                                     viewport={{ once: true, amount: 0.2 }}
                                     transition={{ duration: 0.4, delay: index * 0.08 }}
                                 >

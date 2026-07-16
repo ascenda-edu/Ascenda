@@ -1,5 +1,9 @@
 # Ascenda — Claude Code Project Context
 
+## Implementation workflow
+
+Use the agentic loop — **Fable as coordinator** (planning, reviewing, integrating), delegating hands-on coding to **Opus subagents** (`model: "opus"` on Agent/Workflow calls) — for work that's large, parallelizable, or would blow out a single context window (multi-file refactors, independent components built concurrently, broad sweeps). For small or subtle single-threaded changes (RLS/scoping fixes, date-parsing edge cases, targeted bug fixes), Fable should implement directly rather than delegating — the coordinator is the stronger model, and review catches less than writing does.
+
 ## Commands
 
 ```bash

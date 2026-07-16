@@ -1,17 +1,36 @@
 'use client';
 
+// Ascendi floating widget — the QUICK-ANSWER surface. Context-aware but
+// read-only: it answers from the user's live account data but has no tools
+// (no programme search, no action proposals — those live in the full-page
+// Assistant, and the header offers a handoff that carries the conversation
+// there). Streaming/cooldown behaviour comes from useChatStream; shared render
+// primitives from ./shared.
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Bot, X, Send, Loader2, Trash2, ArrowRight, RotateCcw,
+  Bot, X, Send, Loader2, Trash2, ArrowRight, RotateCcw, ArrowUpRight,
   LayoutDashboard, Search, Zap, Briefcase, Heart, User,
   Wrench, PenTool, BarChart3, ClipboardCheck, CalendarClock,
-  Gift, BarChart2, Users, FileText, TrendingUp,
+  Gift, BarChart2, Users, FileText, TrendingUp, Wallet, MessageCircle,
+  Square, ThumbsUp, ThumbsDown,
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
+import { useSupabase } from '@/hooks/useSupabase';
+import { useChatStream } from '@/hooks/use-chat-stream';
+import { createConversation, appendMessages } from '@/lib/chat/history';
+import type { ChatMode } from '@/lib/chat/prompts';
+import type { ChatMessageInsert } from '@/lib/types/demo-tables';
+import {
+  MessageContent,
+  AutoResizeTextarea,
+  assistantPathForMode,
+  isAssistantRoute,
+  detectMode,
+  prefersReducedMotion,
+} from './shared';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -21,6 +40,12 @@ interface Message {
   content: string;
   /** True when this assistant bubble holds a stream/fetch error, not a reply. */
   error?: boolean;
+  /** Thumbs feedback the user gave on this answer. */
+  rating?: 1 | -1;
+  // Legacy fields from the pre-split widget (actions now live in the
+  // Assistant). Kept so old localStorage histories still parse; not rendered.
+  action?: unknown;
+  actionState?: string;
 }
 
 // ─── Page snippets for preview cards ────────────────────────────────────────
@@ -57,9 +82,15 @@ const COUNSELLOR_SNIPPETS: PageSnippet[] = [
   { route: '/counsellor/applications', name: 'Applications', description: 'Overview of all student applications by status and deadline.', icon: Briefcase },
 ];
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+const PARENT_SNIPPETS: PageSnippet[] = [
+  { route: '/parent', name: 'Overview', description: 'How your child is doing at a glance — progress, deadlines, and highlights.', icon: LayoutDashboard },
+  { route: '/parent/progress', name: 'Progress', description: "Each application's stage, fit, and remaining work — read-only.", icon: TrendingUp },
+  { route: '/parent/deadlines', name: 'Deadlines', description: 'Every application deadline, grouped by urgency.', icon: CalendarClock },
+  { route: '/parent/finances', name: 'Costs & value', description: 'Tuition, living costs, and graduate outcomes for every programme in play.', icon: Wallet },
+  { route: '/parent/messages', name: 'Messages', description: "A direct line to the counsellor guiding your child's applications.", icon: MessageCircle },
+];
 
-type ChatMode = 'student' | 'counsellor';
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function storageKey(mode: ChatMode) {
   return `ascendi-chat-${mode}`;
@@ -81,14 +112,6 @@ function saveMessages(messages: Message[], mode: ChatMode) {
   } catch { /* quota exceeded — ignore */ }
 }
 
-function detectMode(pathname: string): ChatMode {
-  return pathname.startsWith('/counsellor') ? 'counsellor' : 'student';
-}
-
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
 /** Extract route references like /dashboard, /toolbox/essay-workshop from text */
 function extractRoutes(text: string): string[] {
   const matches = text.match(/\/[a-z][a-z0-9-/]*/gi) ?? [];
@@ -97,7 +120,8 @@ function extractRoutes(text: string): string[] {
 
 /** Find page snippets that match routes mentioned in a message */
 function getSnippetsForMessage(text: string, mode: ChatMode): PageSnippet[] {
-  const snippets = mode === 'counsellor' ? COUNSELLOR_SNIPPETS : STUDENT_SNIPPETS;
+  const snippets =
+    mode === 'counsellor' ? COUNSELLOR_SNIPPETS : mode === 'parent' ? PARENT_SNIPPETS : STUDENT_SNIPPETS;
   const routes = extractRoutes(text);
   return snippets.filter((s) =>
     routes.some((r) => r === s.route || r.startsWith(s.route + '/'))
@@ -107,8 +131,8 @@ function getSnippetsForMessage(text: string, mode: ChatMode): PageSnippet[] {
 const STUDENT_SUGGESTIONS = [
   'How do I improve my match score?',
   'Where can I track my applications?',
-  'Help me get started with essays',
   'What should I do first?',
+  'When is my next deadline?',
 ];
 
 const COUNSELLOR_SUGGESTIONS = [
@@ -116,6 +140,13 @@ const COUNSELLOR_SUGGESTIONS = [
   'Show me the analytics dashboard',
   'How do I track deadlines across students?',
   'What can I do from this section?',
+];
+
+const PARENT_SUGGESTIONS = [
+  'How is my child doing overall?',
+  'Where do I see upcoming deadlines?',
+  'What does reach/match/safety mean?',
+  'How do I contact the counsellor?',
 ];
 
 // ─── Page snippet card ──────────────────────────────────────────────────────
@@ -139,114 +170,30 @@ function PageCard({ snippet, onClick }: { snippet: PageSnippet; onClick: () => v
   );
 }
 
-// ─── Markdown message renderer ──────────────────────────────────────────────
-
-function MessageContent({ content, onLinkClick }: { content: string; onLinkClick: () => void }) {
-  return (
-    <ReactMarkdown
-      components={{
-        p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
-        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-        ul: ({ children }) => <ul className="mb-1.5 ml-3 list-disc space-y-0.5 last:mb-0">{children}</ul>,
-        ol: ({ children }) => <ol className="mb-1.5 ml-3 list-decimal space-y-0.5 last:mb-0">{children}</ol>,
-        li: ({ children }) => <li className="text-[13px]">{children}</li>,
-        a: ({ href, children }) => {
-          // Internal route → real navigation link (correct semantics: href,
-          // middle-click/open-in-new-tab work). Closing the widget stays on the
-          // click handler so the panel dismisses as the route changes.
-          if (href?.startsWith('/')) {
-            return (
-              <Link
-                href={href}
-                onClick={onLinkClick}
-                className="inline-flex items-center gap-0.5 text-primary underline underline-offset-2 hover:text-primary/80"
-              >
-                {children}
-              </Link>
-            );
-          }
-          return (
-            <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:text-primary/80">
-              {children}
-            </a>
-          );
-        },
-        code: ({ children }) => (
-          <code className="rounded bg-muted px-1 py-0.5 text-[12px]">{children}</code>
-        ),
-      }}
-    >
-      {content}
-    </ReactMarkdown>
-  );
-}
-
-// ─── Auto-resize textarea ───────────────────────────────────────────────────
-
-function AutoResizeTextarea({
-  value,
-  onChange,
-  onSubmit,
-  disabled,
-  inputRef,
-}: {
-  value: string;
-  onChange: (val: string) => void;
-  onSubmit: () => void;
-  disabled: boolean;
-  inputRef: React.RefObject<HTMLTextAreaElement>;
-}) {
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(e.target.value);
-    // Auto-resize
-    const el = e.target;
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 96) + 'px';
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      onSubmit();
-    }
-  };
-
-  return (
-    <textarea
-      ref={inputRef}
-      value={value}
-      onChange={handleInput}
-      onKeyDown={handleKeyDown}
-      placeholder="Ask Ascendi anything…"
-      aria-label="Ask Ascendi anything"
-      disabled={disabled}
-      rows={1}
-      className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
-      style={{ maxHeight: 96 }}
-    />
-  );
-}
-
 // ─── Main widget ────────────────────────────────────────────────────────────
 
 export function ChatbotWidget() {
   const pathname = usePathname();
   const router = useRouter();
+  const supabase = useSupabase();
   const mode = detectMode(pathname);
+  const { run, stop, isStreaming, cooldownRemaining, coolingDown } = useChatStream();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>(() => loadMessages(mode));
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [dynamicSuggestions, setDynamicSuggestions] = useState<string[] | null>(null);
+  const [handoffBusy, setHandoffBusy] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null) as React.RefObject<HTMLTextAreaElement>;
   const prevModeRef = useRef(mode);
   const confirmTimerRef = useRef<number | null>(null);
 
-  // Switch chat history when mode changes (student <-> counsellor)
+  // Switch chat history when mode changes (student <-> counsellor <-> parent)
   useEffect(() => {
     if (prevModeRef.current !== mode) {
       setMessages(loadMessages(mode));
+      setDynamicSuggestions(null);
       prevModeRef.current = mode;
     }
   }, [mode]);
@@ -270,6 +217,30 @@ export function ChatbotWidget() {
     }
   }, [isOpen]);
 
+  // Personalised starter chips for the empty state. Also pre-warms the
+  // server's context cache so the first real message answers faster.
+  useEffect(() => {
+    if (!isOpen || messages.length > 0 || dynamicSuggestions !== null) return;
+    let stale = false;
+    fetch(`/api/chat/suggestions?mode=${mode}`)
+      .then((res) => (res.ok ? res.json() : { suggestions: [] }))
+      .then((data: { suggestions?: string[] }) => {
+        if (!stale) setDynamicSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+      })
+      .catch(() => {
+        if (!stale) setDynamicSuggestions([]);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [isOpen, messages.length, dynamicSuggestions, mode]);
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
+
   const clearChat = () => {
     setMessages([]);
     localStorage.removeItem(storageKey(mode));
@@ -288,12 +259,6 @@ export function ChatbotWidget() {
     confirmTimerRef.current = window.setTimeout(() => setConfirmClear(false), 3000);
   };
 
-  useEffect(() => {
-    return () => {
-      if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
-    };
-  }, []);
-
   const navigateTo = (route: string) => {
     router.push(route);
     setIsOpen(false);
@@ -302,88 +267,49 @@ export function ChatbotWidget() {
   // Stream an assistant reply for the given conversation. `history` must end
   // with the user message being answered; a fresh empty assistant bubble is
   // appended and filled as chunks arrive. On failure that bubble is marked as
-  // an error row (rendered distinctly, with a Retry affordance).
+  // an error row (rendered distinctly, with a Retry affordance). A user Stop
+  // keeps whatever streamed so far as a normal bubble.
   const runAssistant = async (history: Message[]) => {
-    setIsLoading(true);
-
     const assistantMessage: Message = {
       id: (Date.now() + 1).toString(),
       role: 'assistant',
       content: '',
     };
-
     setMessages([...history, assistantMessage]);
 
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: history.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-          currentPage: pathname,
-          mode,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Something went wrong');
-      }
-
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      let accumulated = '';
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              if (data === '[DONE]') break;
-              try {
-                const parsed = JSON.parse(data);
-                if (parsed.text) {
-                  accumulated += parsed.text;
-                  setMessages((prev) =>
-                    prev.map((m) =>
-                      m.id === assistantMessage.id
-                        ? { ...m, content: accumulated }
-                        : m
-                    )
-                  );
-                }
-              } catch {
-                // skip malformed chunks
-              }
-            }
-          }
-        }
-      }
-    } catch (err) {
-      const errorText = err instanceof Error ? err.message : 'Something went wrong. Try again.';
+    const setBubble = (patch: Partial<Message>) =>
       setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantMessage.id
-            ? { ...m, content: errorText, error: true }
-            : m
-        )
+        prev.map((m) => (m.id === assistantMessage.id ? { ...m, ...patch } : m))
       );
-    } finally {
-      setIsLoading(false);
+
+    const result = await run({
+      history: history.map((m) => ({ role: m.role, content: m.content })),
+      mode,
+      surface: 'widget',
+      currentPage: pathname,
+      handlers: {
+        onTextDelta: (fullText) => setBubble({ content: fullText }),
+      },
+    });
+
+    if (result.kind === 'aborted') {
+      // User pressed Stop: keep the partial answer; drop an empty bubble.
+      if (!result.text) {
+        setMessages((prev) => prev.filter((m) => m.id !== assistantMessage.id));
+      }
+      return;
+    }
+    if (result.kind === 'empty') {
+      setBubble({ content: 'No reply came back — please try again.', error: true });
+      return;
+    }
+    if (result.kind === 'rate_limited' || result.kind === 'error') {
+      setBubble({ content: result.message, error: true });
     }
   };
 
   const sendMessage = (content: string) => {
-    if (!content.trim() || isLoading) return;
+    if (!content.trim() || isStreaming || coolingDown) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -402,7 +328,7 @@ export function ChatbotWidget() {
   // Resend the last user message after an error — drop the failed assistant
   // bubble and re-run generation from the same history.
   const retryLast = () => {
-    if (isLoading) return;
+    if (isStreaming) return;
     const lastUserIdx = messages.map((m) => m.role).lastIndexOf('user');
     if (lastUserIdx === -1) return;
     const history = messages.slice(0, lastUserIdx + 1);
@@ -410,10 +336,63 @@ export function ChatbotWidget() {
     void runAssistant(history);
   };
 
+  const sendFeedback = (msg: Message, rating: 1 | -1) => {
+    setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, rating } : m)));
+    void fetch('/api/chat/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode, messageContent: msg.content, rating }),
+    }).catch(() => {
+      /* feedback is best-effort */
+    });
+  };
+
+  // Carry the recent exchange into a new Assistant conversation and jump
+  // there. Error bubbles and legacy action metadata are stripped — only clean
+  // role+content rows travel. Widget history is left intact.
+  const handoffToAssistant = async () => {
+    if (handoffBusy) return;
+    setHandoffBusy(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not signed in');
+
+      const carried = messages
+        .filter((m) => !m.error && m.content.trim().length > 0)
+        .slice(-12);
+      const firstUser = carried.find((m) => m.role === 'user');
+      const { id } = await createConversation(supabase, {
+        ownerId: user.id,
+        mode,
+        title: firstUser ? firstUser.content.trim().slice(0, 60) : null,
+      });
+      if (carried.length > 0) {
+        const rows: ChatMessageInsert[] = carried.map((m) => ({
+          conversation_id: id,
+          role: m.role,
+          content: m.content,
+        }));
+        await appendMessages(supabase, rows);
+      }
+      setIsOpen(false);
+      router.push(`${assistantPathForMode(mode)}?c=${id}`);
+    } catch (err) {
+      console.warn('[chat] handoff failed:', err);
+      setHandoffBusy(false);
+      return;
+    }
+    setHandoffBusy(false);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     sendMessage(input);
   };
+
+  // The full-page Assistant replaces the widget on its own routes.
+  if (isAssistantRoute(pathname)) return null;
 
   return (
     <>
@@ -453,11 +432,29 @@ export function ChatbotWidget() {
                 <div>
                   <p className="font-heading text-sm font-semibold text-foreground">Ascendi</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {mode === 'counsellor' ? 'Counsellor assistant' : 'Student assistant'}
+                    {mode === 'counsellor'
+                      ? 'Counsellor assistant'
+                      : mode === 'parent'
+                        ? 'Parent assistant'
+                        : 'Student assistant'}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
+                <button
+                  onClick={handoffToAssistant}
+                  disabled={handoffBusy}
+                  className="flex h-8 items-center gap-1 rounded-full px-2.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
+                  aria-label="Continue in Assistant"
+                  title="Continue this conversation in the Assistant"
+                >
+                  {handoffBusy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  )}
+                  Assistant
+                </button>
                 {messages.length > 0 && (
                   <button
                     onClick={handleClearClick}
@@ -497,13 +494,22 @@ export function ChatbotWidget() {
                   <p className="font-heading text-sm font-semibold text-foreground">
                     Hey! I&apos;m Ascendi
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
+                  <p className="mt-1 text-xs text-muted-foreground max-w-[260px]">
                     {mode === 'counsellor'
-                      ? 'I can help you manage your cohort, track progress, and navigate the counsellor tools.'
-                      : 'I can help you navigate the platform, understand your profile, and plan applications.'}
+                      ? 'Quick questions about your cohort and tools. For programme search and deeper work, open the Assistant.'
+                      : mode === 'parent'
+                        ? "Quick questions about your child's journey. To message the counsellor, open the Assistant."
+                        : 'Quick questions about your journey. For programme search or contacting your counsellor, open the Assistant.'}
                   </p>
                   <div className="mt-4 flex flex-wrap justify-center gap-1.5">
-                    {(mode === 'counsellor' ? COUNSELLOR_SUGGESTIONS : STUDENT_SUGGESTIONS).map((s) => (
+                    {(dynamicSuggestions && dynamicSuggestions.length > 0
+                      ? dynamicSuggestions
+                      : mode === 'counsellor'
+                        ? COUNSELLOR_SUGGESTIONS
+                        : mode === 'parent'
+                          ? PARENT_SUGGESTIONS
+                          : STUDENT_SUGGESTIONS
+                    ).map((s) => (
                       <button
                         key={s}
                         onClick={() => sendMessage(s)}
@@ -515,10 +521,14 @@ export function ChatbotWidget() {
                   </div>
                 </div>
               ) : (
-                messages.map((msg) => {
+                messages.map((msg, idx) => {
                   const snippets = msg.role === 'assistant' && msg.content && !msg.error
                     ? getSnippetsForMessage(msg.content, mode)
                     : [];
+                  const isStreamingThis =
+                    isStreaming && msg.role === 'assistant' && idx === messages.length - 1;
+                  const showFeedback =
+                    msg.role === 'assistant' && Boolean(msg.content) && !msg.error && !isStreamingThis;
 
                   return (
                     <motion.div
@@ -546,7 +556,7 @@ export function ChatbotWidget() {
                             <p>{msg.content}</p>
                             <button
                               onClick={retryLast}
-                              disabled={isLoading}
+                              disabled={isStreaming}
                               className="inline-flex items-center gap-1 rounded-full border border-rose-300/60 px-2.5 py-1 text-[11px] font-semibold text-rose-700 transition hover:bg-rose-500/10 disabled:opacity-50 dark:border-rose-500/40 dark:text-rose-300"
                             >
                               <RotateCcw className="h-3 w-3" />
@@ -555,15 +565,21 @@ export function ChatbotWidget() {
                           </div>
                         ) : msg.content ? (
                           msg.role === 'assistant' ? (
-                            <MessageContent content={msg.content} onLinkClick={() => setIsOpen(false)} />
+                            <MessageContent content={msg.content} mode={mode} onLinkClick={() => setIsOpen(false)} />
                           ) : (
                             msg.content
                           )
-                        ) : (
+                        ) : isStreamingThis ? (
                           <div className="flex items-center gap-1.5">
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                             <span className="text-xs text-muted-foreground">Thinking…</span>
                           </div>
+                        ) : (
+                          // Empty bubble that's no longer streaming (e.g. stale
+                          // persisted state) — never show an eternal spinner.
+                          <span className="text-xs text-muted-foreground">
+                            No reply — try asking again.
+                          </span>
                         )}
                       </div>
 
@@ -579,6 +595,38 @@ export function ChatbotWidget() {
                           ))}
                         </div>
                       )}
+
+                      {/* Thumbs feedback */}
+                      {showFeedback && (
+                        <div className="mt-1 flex items-center gap-0.5">
+                          <button
+                            onClick={() => sendFeedback(msg, 1)}
+                            aria-label="Good answer"
+                            aria-pressed={msg.rating === 1}
+                            className={cn(
+                              'flex h-6 w-6 items-center justify-center rounded-full transition-colors',
+                              msg.rating === 1
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-muted-foreground/60 hover:bg-muted hover:text-foreground'
+                            )}
+                          >
+                            <ThumbsUp className="h-3 w-3" />
+                          </button>
+                          <button
+                            onClick={() => sendFeedback(msg, -1)}
+                            aria-label="Bad answer"
+                            aria-pressed={msg.rating === -1}
+                            className={cn(
+                              'flex h-6 w-6 items-center justify-center rounded-full transition-colors',
+                              msg.rating === -1
+                                ? 'text-rose-600 dark:text-rose-400'
+                                : 'text-muted-foreground/60 hover:bg-muted hover:text-foreground'
+                            )}
+                          >
+                            <ThumbsDown className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
                     </motion.div>
                   );
                 })
@@ -591,26 +639,39 @@ export function ChatbotWidget() {
               onSubmit={handleSubmit}
               className="border-t border-border bg-card px-3 py-2.5"
             >
+              {coolingDown && (
+                <p className="mb-1.5 text-center text-[11px] text-muted-foreground" role="status">
+                  Message limit reached — you can send again in {cooldownRemaining}s
+                </p>
+              )}
               <div className="flex items-end gap-2 rounded-[18px] border border-border bg-background px-3 py-1.5 transition-colors focus-within:border-primary/40">
                 <AutoResizeTextarea
                   value={input}
                   onChange={setInput}
                   onSubmit={() => sendMessage(input)}
-                  disabled={isLoading}
+                  disabled={isStreaming || coolingDown}
                   inputRef={inputRef}
                 />
-                <button
-                  type="submit"
-                  disabled={!input.trim() || isLoading}
-                  className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[transform,opacity] hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
-                  aria-label="Send message"
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
+                {isStreaming ? (
+                  <button
+                    type="button"
+                    onClick={stop}
+                    className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-foreground transition-[transform] hover:-translate-y-0.5"
+                    aria-label="Stop generating"
+                    title="Stop generating"
+                  >
+                    <Square className="h-3 w-3 fill-current" />
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={!input.trim() || coolingDown}
+                    className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[transform,opacity] hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
+                    aria-label="Send message"
+                  >
                     <Send className="h-3.5 w-3.5" />
-                  )}
-                </button>
+                  </button>
+                )}
               </div>
             </form>
           </motion.div>

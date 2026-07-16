@@ -33,43 +33,41 @@ export function CTASection() {
 
     return (
         <section className="relative w-full py-32 bg-foreground text-background overflow-hidden">
-            {/* Animated gradient orbs — paused when off-screen or reduced motion */}
+            {/* Animated gradient orbs — same DOM/`initial` for all users (SSR-safe).
+                The reduced-motion branch lives in `transition`, which never serialises
+                into the SSR HTML: duration 0 + no repeat snaps the orb to its final
+                keyframe (a static dim glow) so the perpetual opacity/transform loop
+                never runs for reduced-motion users. */}
             <motion.div
                 className="absolute -left-32 -top-32 h-[400px] w-[400px] rounded-full bg-primary/20 blur-[100px]"
-                {...(shouldReduceMotion
-                    ? { style: { opacity: 0.27 } }
-                    : {
-                        whileInView: { x: [0, 40, -20, 0], y: [0, 20, -10, 0], opacity: [0.2, 0.35, 0.2] },
-                        viewport: { once: false },
-                        transition: { duration: 12, repeat: Infinity, ease: 'easeInOut' },
-                    }
-                )}
+                whileInView={{ x: [0, 40, -20, 0], y: [0, 20, -10, 0], opacity: [0.2, 0.35, 0.2] }}
+                viewport={{ once: false }}
+                transition={shouldReduceMotion
+                    ? { duration: 0 }
+                    : { duration: 12, repeat: Infinity, ease: 'easeInOut' }}
             />
             <motion.div
                 className="absolute -right-32 -bottom-32 h-[350px] w-[350px] rounded-full bg-emerald-500/15 blur-[100px]"
-                {...(shouldReduceMotion
-                    ? { style: { opacity: 0.22 } }
-                    : {
-                        whileInView: { x: [0, -30, 20, 0], y: [0, -15, 25, 0], opacity: [0.15, 0.3, 0.15] },
-                        viewport: { once: false },
-                        transition: { duration: 14, repeat: Infinity, ease: 'easeInOut' },
-                    }
-                )}
+                whileInView={{ x: [0, -30, 20, 0], y: [0, -15, 25, 0], opacity: [0.15, 0.3, 0.15] }}
+                viewport={{ once: false }}
+                transition={shouldReduceMotion
+                    ? { duration: 0 }
+                    : { duration: 14, repeat: Infinity, ease: 'easeInOut' }}
             />
 
             <div className="relative z-10">
                 <div className="mx-auto h-px max-w-5xl bg-background/10 mb-12" />
                 <motion.div
                     className="max-w-4xl mx-auto px-6 text-center space-y-8"
-                    initial={shouldReduceMotion ? false : 'hidden'}
-                    whileInView={shouldReduceMotion ? undefined : 'visible'}
+                    initial="hidden"
+                    whileInView="visible"
                     viewport={{ once: true, amount: 0.3 }}
                     variants={fadeIn}
                 >
                     <motion.div
                         className="inline-flex items-center gap-2 rounded-full border border-background/20 bg-background/5 px-4 py-1.5 text-sm font-medium text-background/80 backdrop-blur-sm"
-                        initial={shouldReduceMotion ? false : { opacity: 0, y: -10 }}
-                        whileInView={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+                        initial={{ opacity: 0, y: -10 }}
+                        whileInView={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
                         viewport={{ once: true }}
                     >
@@ -102,8 +100,8 @@ export function CTASection() {
                     {/* Social proof bar */}
                     <motion.div
                         className="flex flex-wrap items-center justify-center gap-6 pt-8 text-sm text-background/50"
-                        initial={shouldReduceMotion ? false : { opacity: 0 }}
-                        whileInView={shouldReduceMotion ? undefined : { opacity: 1 }}
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
                         transition={{ delay: 0.6 }}
                         viewport={{ once: true }}
                     >

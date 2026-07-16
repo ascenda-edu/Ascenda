@@ -14,6 +14,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Award,
   BookOpen,
+  Bot,
   CalendarClock,
   CalendarPlus,
   ClipboardCheck,
@@ -58,6 +59,7 @@ const COMMANDS: CommandItem[] = [
   { id: 'goto-timeline', label: 'Deadline timeline', href: '/toolbox/timeline', icon: CalendarClock, group: 'Go to' },
   { id: 'goto-profile', label: 'Profile', hint: 'Your information', href: '/profile', icon: UserCircle, group: 'Go to' },
   { id: 'goto-counsellor', label: 'Counsellor view', hint: 'Faculty surface', href: '/counsellor', icon: Users, group: 'Go to', keywords: ['faculty'] },
+  { id: 'goto-assistant', label: 'Assistant', hint: 'AI workspace', href: '/assistant', icon: Bot, group: 'Go to', keywords: ['ai', 'chat', 'ascendi'] },
 
   // Actions ───────────────────────────────────────────────────────────────
   { id: 'action-wizard', label: 'Open profile wizard', href: '/profile/wizard', icon: Compass, group: 'Actions', keywords: ['edit profile'] },

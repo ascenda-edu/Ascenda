@@ -78,7 +78,9 @@ export default function RootLayout({
           Skip to content
         </a>
         <ThemeProvider>
-          <div className="relative min-h-screen overflow-hidden bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground">
+          {/* overflow-x-clip (not overflow-hidden): clips decorative blob overflow without creating a
+              scroll container, which would neutralise every position:sticky element in the app */}
+          <div className="relative min-h-screen overflow-x-clip bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground">
             <Providers messages={messages}>
               <PageWrapper>
                 {children}

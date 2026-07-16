@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { fadeIn } from '@/lib/motion';
 import { Plus, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -40,15 +40,14 @@ const faqs = [
 
 export function FAQSection() {
     const [openFaq, setOpenFaq] = useState<string | null>(faqs[0].question);
-    const shouldReduceMotion = useReducedMotion();
 
     return (
         <section className="w-full py-24 bg-background">
             <div className="max-w-7xl mx-auto px-6 grid gap-12 lg:grid-cols-[0.4fr_0.6fr]">
                 <motion.div
                     className="space-y-4"
-                    initial={shouldReduceMotion ? false : 'hidden'}
-                    whileInView={shouldReduceMotion ? undefined : 'visible'}
+                    initial="hidden"
+                    whileInView="visible"
                     viewport={{ once: true, amount: 0.3 }}
                     variants={fadeIn}
                 >
@@ -80,8 +79,8 @@ export function FAQSection() {
                                         ? 'border-primary/20 bg-primary/[0.03] shadow-sm'
                                         : 'border-border/50 bg-card hover:bg-muted/20'
                                 )}
-                                initial={shouldReduceMotion ? false : 'hidden'}
-                                whileInView={shouldReduceMotion ? undefined : 'visible'}
+                                initial="hidden"
+                                whileInView="visible"
                                 viewport={{ once: true, amount: 0.3 }}
                                 variants={{
                                     hidden: { opacity: 0, y: 12 },
