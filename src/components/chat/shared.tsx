@@ -4,7 +4,7 @@
 // Assistant workspace. Moved out of chatbot-widget.tsx verbatim — behaviour
 // changes here affect BOTH surfaces.
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Loader2, Send } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -255,6 +255,9 @@ function ToolActionCard({
     Object.fromEntries(action.editable.map((f) => [f.key, paramToInput(action.params[f.key])]))
   );
   const [failed, setFailed] = useState(false);
+  // Per-card id prefix — several cards can be on screen at once.
+  const uid = useId();
+  const hintId = `${uid}-hint`;
 
   if (state === 'sent') {
     return (
@@ -300,7 +303,7 @@ function ToolActionCard({
       </div>
 
       {action.editable.map((field) => {
-        const id = `tool-field-${field.key}`;
+        const id = `${uid}-${field.key}`;
         return (
           <div key={field.key} className="space-y-1">
             <label htmlFor={id} className="block text-[11px] font-medium text-muted-foreground">
@@ -356,6 +359,7 @@ function ToolActionCard({
         <button
           onClick={handleSend}
           disabled={sending || sendDisabled}
+          aria-describedby={sendDisabled && !sending ? `${hintId}` : undefined}
           className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground transition-[transform,opacity] hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0"
         >
           {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
@@ -369,7 +373,9 @@ function ToolActionCard({
           Cancel
         </button>
         {sendDisabled && !sending && (
-          <span className="text-[10px] text-muted-foreground">Saving…</span>
+          <span id={hintId} className="text-[10px] text-muted-foreground">
+            Hold on a moment…
+          </span>
         )}
       </div>
     </div>

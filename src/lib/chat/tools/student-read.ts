@@ -5,6 +5,7 @@
 
 import { Type, type FunctionDeclaration } from '@google/genai';
 import { resolvePrograms } from '@/lib/counsellor/data';
+import { isMissingShortlistTable } from '@/lib/shortlist/server';
 import type { ReadTool, ToolContext } from './types';
 
 const MAX_APPS = 20;
@@ -188,6 +189,13 @@ const getMyShortlist: ReadTool = {
         .eq('profile_id', ctx.userId);
 
       if (error) {
+        if (isMissingShortlistTable(error)) {
+          // The client falls back to localStorage in this posture — the server
+          // genuinely cannot see the shortlist, and "empty" would be a lie.
+          return {
+            note: "Shortlist sync isn't enabled on this deployment; the user's shortlist is stored only in their browser and is not visible here. Do NOT claim it is empty — point them at the Shortlist page.",
+          };
+        }
         return { error: 'Could not load your shortlist right now.' };
       }
 

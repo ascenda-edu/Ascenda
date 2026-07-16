@@ -9,6 +9,18 @@ type Client = SupabaseClient<any, any, any>;
 
 const TABLE_NAME = 'shortlisted_programs';
 
+/** The table may be absent on a remote deployment (see CLAUDE.md); the client
+ * hook then falls back to localStorage, which the server can never see. Detect
+ * that case so tools report "sync unavailable" instead of a misleading generic
+ * failure (42P01 = Postgres undefined_table, PGRST205 = PostgREST missing from
+ * schema cache). */
+export const isMissingShortlistTable = (
+  error: { code?: string; message?: string } | null | undefined
+): boolean => error?.code === '42P01' || error?.code === 'PGRST205';
+
+export const SHORTLIST_SYNC_UNAVAILABLE =
+  "Shortlist sync isn't enabled on this deployment — the shortlist lives in the user's browser and can't be changed from here. Suggest the Shortlist page instead.";
+
 export type AddToShortlistResult =
   | { ok: true; already: boolean; programName: string; universityName: string }
   | { ok: false; error: string };
@@ -37,12 +49,15 @@ export async function addToShortlist(
 
   // Detect a pre-existing row first so the confirm-card message can distinguish
   // "added" from "already on your shortlist".
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from(TABLE_NAME)
     .select('program_id')
     .eq('profile_id', userId)
     .eq('program_id', programId)
     .limit(1);
+  if (isMissingShortlistTable(existingError)) {
+    return { ok: false, error: SHORTLIST_SYNC_UNAVAILABLE };
+  }
   const already = Boolean(existing && existing.length > 0);
 
   const { error: upsertError } = await supabase.from(TABLE_NAME).upsert(
@@ -62,6 +77,9 @@ export async function addToShortlist(
   );
 
   if (upsertError) {
+    if (isMissingShortlistTable(upsertError)) {
+      return { ok: false, error: SHORTLIST_SYNC_UNAVAILABLE };
+    }
     return { ok: false, error: 'Could not add to your shortlist' };
   }
 

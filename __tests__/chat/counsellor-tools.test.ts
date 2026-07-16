@@ -22,7 +22,7 @@ jest.mock('@/lib/demo/help-request-client', () => ({
 }));
 
 import { loadCohort, loadStudentById, deriveUpcomingDeadlines } from '@/lib/counsellor/data';
-import { COUNSELLOR_READ_TOOLS } from '@/lib/chat/tools/counsellor-read';
+import { COUNSELLOR_READ_TOOLS, __resetCohortCache } from '@/lib/chat/tools/counsellor-read';
 import { COUNSELLOR_WRITE_TOOLS } from '@/lib/chat/tools/counsellor-write';
 
 const ctx: ToolContext = {
@@ -50,7 +50,12 @@ const student = (id: string, firstName: string, lastName: string) => ({
 
 const VALID_UUID = '11111111-1111-1111-1111-111111111111';
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  // The cohort memo is module-level and keyed by userId — clear it so each
+  // test's loadCohort mock is actually consulted.
+  __resetCohortCache();
+});
 
 describe('add_student_note.validateParams', () => {
   const tool = writeTool('add_student_note');

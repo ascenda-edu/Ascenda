@@ -15,6 +15,31 @@ import {
 } from '@/lib/counsellor/data';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
 
+// loadCohort is a whole-cohort load and every tool here starts from it — one
+// multi-tool turn (or the execute endpoint's resume loop) would otherwise run
+// it several times. Memoise per user with a short TTL, mirroring the 60s
+// context cache; keyed by user (not globally) so it stays correct if the
+// counsellor RLS posture is ever tightened per-user.
+const COHORT_TTL_MS = 60_000;
+const cohortCache = new Map<string, { at: number; students: CounsellorStudent[] }>();
+
+/** Test hook, mirroring cache.ts's __resetContextCache. */
+export const __resetCohortCache = (): void => {
+  cohortCache.clear();
+};
+
+async function loadCohortCached(ctx: ToolContext): Promise<CounsellorStudent[]> {
+  const hit = cohortCache.get(ctx.userId);
+  if (hit && Date.now() - hit.at < COHORT_TTL_MS) return hit.students;
+  const students = await loadCohort(ctx.supabase as CohortClient);
+  cohortCache.set(ctx.userId, { at: Date.now(), students });
+  if (cohortCache.size > 100) {
+    const oldest = [...cohortCache.entries()].sort((a, b) => a[1].at - b[1].at)[0];
+    if (oldest) cohortCache.delete(oldest[0]);
+  }
+  return students;
+}
+
 // loadCohort/loadStudentById return the user-scoped client's Database generic;
 // the counsellor data layer already casts through `any` internally, so the tool
 // context client is compatible at the call site.
@@ -48,7 +73,7 @@ const getCohortOverview: ReadTool = {
   },
   async execute(ctx: ToolContext) {
     try {
-      const students = await loadCohort(ctx.supabase as CohortClient);
+      const students = await loadCohortCached(ctx);
       const stats = deriveCohortStats(students);
       const atRisk = deriveAtRiskAlerts(students)
         .slice(0, 10)
@@ -103,7 +128,7 @@ const getStudentOverview: ReadTool = {
 
       let id = studentId;
       if (!id) {
-        const cohort = await loadCohort(ctx.supabase as CohortClient);
+        const cohort = await loadCohortCached(ctx);
         const needle = name.toLowerCase();
         const matches = cohort.filter((s) => fullName(s).toLowerCase().includes(needle));
         if (matches.length === 0) return { error: `No student matching "${name}".` };
@@ -173,7 +198,7 @@ const getCohortDeadlines: ReadTool = {
   async execute(ctx: ToolContext, args) {
     try {
       const withinDays = clampWithinDays(args.within_days);
-      const students = await loadCohort(ctx.supabase as CohortClient);
+      const students = await loadCohortCached(ctx);
       const deadlines = deriveUpcomingDeadlines(students, withinDays).map((d) => ({
         studentId: d.studentId,
         studentName: d.studentName,

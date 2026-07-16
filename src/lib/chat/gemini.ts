@@ -122,6 +122,24 @@ export async function runToolLoop(opts: {
       (c) => getWriteTool(c.name ?? '', toolCtx.mode) || isActionCall(c.name)
     );
     if (actionable) {
+      // Reads co-emitted with a write can't reach the model (the action ends
+      // the turn), but ones with a client card (search results) should still
+      // render instead of being silently dropped. Model-fuel-only reads are
+      // skipped — executing them would be invisible DB work.
+      for (const fc of calls) {
+        if (fc === actionable) continue;
+        const readTool = getReadTool(fc.name ?? '', toolCtx.mode);
+        if (!readTool?.toClientResults) continue;
+        if (readTool.statusLabel) {
+          send({ status: { tool: readTool.name, label: readTool.statusLabel } });
+        }
+        const result = await readTool.execute(toolCtx, fc.args ?? {});
+        const clientResults = readTool.toClientResults(result);
+        if (clientResults) {
+          acc.hits.push(...(clientResults.hits as ProgramHit[]));
+          send({ results: clientResults });
+        }
+      }
       const writeTool = getWriteTool(actionable.name ?? '', toolCtx.mode);
       let payload: ChatAction | null = null;
       if (writeTool) {

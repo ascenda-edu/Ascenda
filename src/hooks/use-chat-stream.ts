@@ -88,7 +88,12 @@ export type ActionExecuteResult =
 export function useChatStream() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
-  const abortRef = useRef<AbortController | null>(null);
+  // One controller PER in-flight stream. Callers should prevent concurrent
+  // streams (guards on isStreaming), but if two ever overlap — e.g. a confirm
+  // racing a turn — each keeps its own controller, stop() aborts them all, and
+  // isStreaming stays true until the last one settles, instead of the first
+  // finisher clobbering shared state.
+  const controllersRef = useRef<Set<AbortController>>(new Set());
 
   // Count the rate-limit cooldown back down to zero.
   const coolingDown = cooldownRemaining > 0;
@@ -102,7 +107,7 @@ export function useChatStream() {
   }, [coolingDown]);
 
   const stop = useCallback(() => {
-    abortRef.current?.abort();
+    for (const controller of controllersRef.current) controller.abort();
   }, []);
 
   // Shared fetch → parse → dispatch → terminal-result core. `onNonOk` owns the
@@ -116,7 +121,7 @@ export function useChatStream() {
       onNonOk: (res: Response) => Promise<ActionExecuteResult>
     ): Promise<ActionExecuteResult> => {
       const controller = new AbortController();
-      abortRef.current = controller;
+      controllersRef.current.add(controller);
       setIsStreaming(true);
 
       let accumulated = '';
@@ -209,8 +214,8 @@ export function useChatStream() {
           message: err instanceof Error ? err.message : 'Something went wrong. Try again.',
         };
       } finally {
-        abortRef.current = null;
-        setIsStreaming(false);
+        controllersRef.current.delete(controller);
+        if (controllersRef.current.size === 0) setIsStreaming(false);
       }
     },
     []

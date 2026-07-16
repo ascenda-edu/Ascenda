@@ -65,6 +65,12 @@ const STATIC_CHIPS: Record<ChatMode, string[]> = {
   ],
 };
 
+// Client-generated message ids: unique even within one millisecond, so two
+// bubbles created back-to-back (a turn + an action follow-up) can never
+// collide.
+let clientIdSeq = 0;
+const nextClientId = (prefix: string) => `${prefix}-${Date.now()}-${++clientIdSeq}`;
+
 // ─── Row → UI message ───────────────────────────────────────────────────────
 
 function mapRow(row: ChatMessageRow): AssistantMessage {
@@ -108,6 +114,15 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
   const messagesRef = useRef<AssistantMessage[]>([]);
   const didInit = useRef(false);
   messagesRef.current = messages;
+
+  // Mirrors selectedId synchronously (state lags a render) so in-flight stream
+  // callbacks can tell whether the user has switched conversations and drop
+  // their patches instead of contaminating the other thread.
+  const selectedIdRef = useRef<string | null>(selectedId);
+  const selectId = useCallback((id: string | null) => {
+    selectedIdRef.current = id;
+    setSelectedId(id);
+  }, []);
 
   // ── Data loaders ──────────────────────────────────────────────────────────
   const refreshConversations = useCallback(async () => {
@@ -196,12 +211,12 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
       setRailOpen(false);
       if (id === selectedId) return;
       if (isStreaming) stop();
-      setSelectedId(id);
+      selectId(id);
       updateUrl(id);
       await loadMessagesFor(id);
       inputRef.current?.focus();
     },
-    [selectedId, isStreaming, stop, updateUrl, loadMessagesFor, inputRef]
+    [selectedId, isStreaming, stop, selectId, updateUrl, loadMessagesFor, inputRef]
   );
 
   // New chat only resets local state — the conversation row is created on the
@@ -210,20 +225,31 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
   const handleNewChat = useCallback(() => {
     if (isStreaming) stop();
     setMessages([]);
-    setSelectedId(null);
+    selectId(null);
     router.replace(pathname, { scroll: false });
     setRailOpen(false);
     inputRef.current?.focus();
-  }, [isStreaming, stop, router, pathname, inputRef]);
+  }, [isStreaming, stop, selectId, router, pathname, inputRef]);
 
   // ── Streaming ───────────────────────────────────────────────────────────────
   const runAssistant = useCallback(
     async (history: AssistantMessage[], conversationId: string) => {
-      const assistantId = `a-${Date.now()}`;
-      setMessages([...history, { id: assistantId, role: 'assistant', content: '' }]);
+      const assistantId = nextClientId('a');
+      // clientKey keeps the React key stable when the message later adopts its
+      // DB row id — an id swap must not remount the bubble (it would wipe any
+      // in-progress edits inside an action card).
+      setMessages([
+        ...history,
+        { id: assistantId, clientKey: assistantId, role: 'assistant', content: '' },
+      ]);
 
-      const patch = (p: Partial<AssistantMessage>) =>
+      // Drop stream patches once the user has switched threads — they'd land
+      // in whichever conversation is now on screen.
+      const active = () => selectedIdRef.current === conversationId;
+      const patch = (p: Partial<AssistantMessage>) => {
+        if (!active()) return;
         setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, ...p } : m)));
+      };
 
       const result = await run({
         history: history.map((m) => ({ role: m.role, content: m.content })),
@@ -236,8 +262,11 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
             setStatusLabel(null);
             patch({ content: fullText });
           },
-          onStatus: (_tool, label) => setStatusLabel(label),
-          onAction: (action) =>
+          onStatus: (_tool, label) => {
+            if (active()) setStatusLabel(label);
+          },
+          onAction: (action) => {
+            if (!active()) return;
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId
@@ -252,16 +281,20 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
                     }
                   : m
               )
-            ),
-          onResults: (batch) =>
+            );
+          },
+          onResults: (batch) => {
+            if (!active()) return;
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId ? { ...m, hits: [...(m.hits ?? []), ...batch] } : m
               )
-            ),
+            );
+          },
         },
       });
       setStatusLabel(null);
+      if (!active()) return; // switched away — the new thread was loaded fresh
 
       if (result.kind === 'aborted') {
         if (!result.text) setMessages((prev) => prev.filter((m) => m.id !== assistantId));
@@ -300,7 +333,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
         try {
           const { id } = await createConversation(supabase, { ownerId: userId, mode, title: null });
           conversationId = id;
-          setSelectedId(id);
+          selectId(id);
           updateUrl(id);
           await refreshConversations();
         } catch (err) {
@@ -311,7 +344,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
         setBusy(false);
       }
 
-      const userMessage: AssistantMessage = { id: `u-${Date.now()}`, role: 'user', content: text };
+      const userMessage: AssistantMessage = { id: nextClientId('u'), role: 'user', content: text };
       const history = [...messagesRef.current, userMessage];
       setMessages(history);
       setInput('');
@@ -322,6 +355,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
       isStreaming,
       coolingDown,
       selectedId,
+      selectId,
       busy,
       supabase,
       userId,
@@ -371,26 +405,41 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
     async (messageId: string, edited: Extract<ChatAction, { kind: 'tool_action' }>): Promise<boolean> => {
       if (!selectedId) return false;
 
-      const followId = `a-${Date.now()}`;
+      const convId = selectedId;
+      const followId = nextClientId('a');
       let executedOk = false;
       let bubbleCreated = false;
 
-      const ensureBubble = () =>
-        setMessages((prev) => {
-          if (bubbleCreated) return prev;
-          bubbleCreated = true;
-          return [...prev, { id: followId, role: 'assistant', content: '' }];
-        });
-      const patchBubble = (p: Partial<AssistantMessage>) =>
+      // As in runAssistant: drop UI patches once the user switches threads.
+      // The server keeps writing to convId regardless — the card's sent state
+      // and the follow-up message are re-read from the DB when convId reopens.
+      const active = () => selectedIdRef.current === convId;
+      const ensureBubble = () => {
+        if (bubbleCreated || !active()) return;
+        bubbleCreated = true;
+        setMessages((prev) => [
+          ...prev,
+          { id: followId, clientKey: followId, role: 'assistant', content: '' },
+        ]);
+      };
+      const patchBubble = (p: Partial<AssistantMessage>) => {
+        if (!active()) return;
         setMessages((prev) => prev.map((m) => (m.id === followId ? { ...m, ...p } : m)));
+      };
 
       const result = await runActionExecute(
-        { conversationId: selectedId, messageId, tool: edited.tool, params: edited.params },
+        { conversationId: convId, messageId, tool: edited.tool, params: edited.params },
         {
-          onStatus: (_tool, label) => setStatusLabel(label),
+          onStatus: (_tool, label) => {
+            if (active()) setStatusLabel(label);
+          },
           onExecuted: (ex) => {
-            if (!ex.ok) return; // failure is handled off the terminal result below
+            // The endpoint only streams after a successful execute (failures
+            // return 400 JSON → 'invalid'), so !ok is defensive dead code kept
+            // for contract drift; the terminal-result branches handle it.
+            if (!ex.ok) return;
             executedOk = true;
+            if (!active()) return;
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === messageId
@@ -411,11 +460,13 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
             ensureBubble();
           },
           onTextDelta: (fullText) => {
+            if (!active()) return;
             setStatusLabel(null);
             ensureBubble();
             patchBubble({ content: fullText });
           },
           onAction: (next) => {
+            if (!active()) return;
             ensureBubble();
             setMessages((prev) =>
               prev.map((m) =>
@@ -434,6 +485,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
             );
           },
           onResults: (batch) => {
+            if (!active()) return;
             ensureBubble();
             setMessages((prev) =>
               prev.map((m) =>
@@ -444,6 +496,13 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
         }
       );
       setStatusLabel(null);
+      if (!active()) {
+        // Switched threads mid-execute. The server outcome stands; nothing on
+        // screen belongs to convId anymore, so skip all UI patches.
+        void refreshActionHistory();
+        void refreshConversations();
+        return executedOk;
+      }
 
       const dropEmptyBubble = () =>
         setMessages((prev) => prev.filter((m) => !(m.id === followId && !m.content)));
@@ -472,6 +531,8 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
         if (!result.text) dropEmptyBubble();
         return executedOk;
       }
+      // 'empty' is unreachable under the current contract (the endpoint always
+      // sends an `executed` frame before streaming) — kept for contract drift.
       if (result.kind === 'empty') {
         if (!executedOk) {
           revertAction(messageId);
@@ -500,6 +561,11 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
 
   const handleActionSend = useCallback(
     async (messageId: string, edited: ChatAction): Promise<boolean> => {
+      // Agentic confirms open a second stream — never allow one while a turn
+      // is already streaming or we're cooling down (the card's Confirm is also
+      // disabled in the UI; this is the backstop).
+      if (edited.kind === 'tool_action' && (isStreaming || coolingDown)) return false;
+
       const persisted = messagesRef.current.find((m) => m.id === messageId)?.persisted ?? false;
       // Optimistic client-only 'sending' — never written to the DB (the check
       // constraint only allows pending/sent/cancelled).
@@ -551,7 +617,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
         return false;
       }
     },
-    [supabase, userId, refreshActionHistory, revertAction, runToolAction]
+    [supabase, userId, isStreaming, coolingDown, refreshActionHistory, revertAction, runToolAction]
   );
 
   const handleActionCancel = useCallback(
@@ -580,7 +646,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
     (id: string) => {
       setConversations((prev) => prev.filter((c) => c.id !== id));
       if (id === selectedId) {
-        setSelectedId(null);
+        selectId(null);
         setMessages([]);
         router.replace(pathname, { scroll: false });
       }
@@ -588,7 +654,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
         .then(() => refreshConversations())
         .catch((err) => console.warn('[assistant] delete failed:', err));
     },
-    [supabase, selectedId, router, pathname, refreshConversations]
+    [supabase, selectedId, selectId, router, pathname, refreshConversations]
   );
 
   const handleTogglePin = useCallback(
@@ -688,6 +754,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
           onRate={handleRate}
           onActionSend={handleActionSend}
           onActionCancel={handleActionCancel}
+          actionsLocked={isStreaming || coolingDown}
           statusLabel={statusLabel}
           input={input}
           onInputChange={setInput}
