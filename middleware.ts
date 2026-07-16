@@ -14,6 +14,7 @@ const PROTECTED_PREFIXES = [
   '/shortlist',
   '/scholarships',
   '/counsellor',
+  '/parent',
   '/role-select',
   '/inbox'
 ];
@@ -155,7 +156,7 @@ export async function middleware(req: NextRequest) {
     return redirectResponse;
   }
 
-  if (user && isProtected && !pathname.startsWith('/profile') && !pathname.startsWith('/counsellor') && !pathname.startsWith('/role-select')) {
+  if (user && isProtected && !pathname.startsWith('/profile') && !pathname.startsWith('/counsellor') && !pathname.startsWith('/parent') && !pathname.startsWith('/role-select')) {
     // Skip the onboarding check on the very first request after OAuth callback —
     // the session cookie has just been written and downstream DB reads can race.
     // Let the page render; the next request will hit the onboarding check normally.
@@ -177,5 +178,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/(dashboard|profile|matches|applications|admin|university-search|course|shortlist|scholarships|counsellor|role-select|inbox)(.*)', '/login', '/signup']
+  matcher: ['/(dashboard|profile|matches|applications|admin|university-search|course|shortlist|scholarships|counsellor|parent|role-select|inbox)(.*)', '/login', '/signup']
 };

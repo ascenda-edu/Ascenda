@@ -85,7 +85,7 @@ export const Sidebar = () => {
           );
         })}
 
-        <SideSwitcher className={cn('mt-1 w-full', collapsed ? 'justify-center px-0 rounded-lg' : '')} collapsed={collapsed} />
+        <SideSwitcher className="mt-1 w-full" collapsed={collapsed} />
 
         <button
           type="button"
@@ -102,7 +102,7 @@ export const Sidebar = () => {
         </button>
       </nav>
 
-      {!pathname.startsWith('/counsellor') && !collapsed ? (
+      {!pathname.startsWith('/counsellor') && !pathname.startsWith('/parent') && !collapsed ? (
         <div className="mt-4 space-y-3 rounded-2xl border border-primary/20 bg-primary/5 p-3 text-foreground transition-colors">
           <div className="flex items-center gap-2.5">
             <div className="relative shrink-0">
@@ -136,7 +136,7 @@ export const Sidebar = () => {
         </div>
       ) : null}
 
-      {!pathname.startsWith('/counsellor') && collapsed ? (
+      {!pathname.startsWith('/counsellor') && !pathname.startsWith('/parent') && collapsed ? (
         <Link
           href="/appointment"
           title="Request appointment"

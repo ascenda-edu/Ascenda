@@ -172,6 +172,22 @@ export interface StudentDocumentRow {
   created_at: string;
 }
 
+// ── Table added in 20260716120000_guardian_links.sql ─────────────────────────
+
+export type GuardianLinkStatus = 'pending' | 'active' | 'revoked';
+
+export interface GuardianLinkRow {
+  id: string;
+  parent_profile_id: string;
+  student_profile_id: string;
+  relationship: string;
+  status: GuardianLinkStatus;
+  created_at: string;
+}
+
+// Links are written only by migration/service role (select-only RLS) — no
+// Insert type on purpose; browser sessions never insert guardian_links.
+
 // ── Tables added in 20260713150000_counsellor_decks_saved_searches.sql ────────
 
 export type DeckCardRarity = 'legendary' | 'epic' | 'rare' | 'common';

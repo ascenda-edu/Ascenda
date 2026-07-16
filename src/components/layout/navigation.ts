@@ -10,11 +10,13 @@ import {
   Search,
   Settings,
   Sparkles,
+  TrendingUp,
   UserCircle,
   Users,
   Target,
   MessageSquare,
-  Layers
+  Layers,
+  Wallet
 } from 'lucide-react';
 
 export type NavItem = {
@@ -23,7 +25,7 @@ export type NavItem = {
   icon: LucideIcon;
   exact?: boolean;
   matchers?: Array<(pathname: string) => boolean>;
-  segment: 'home' | 'explore' | 'planner' | 'inbox' | 'scholarships' | 'profile' | 'toolbox' | 'admin' | 'counsellor';
+  segment: 'home' | 'explore' | 'planner' | 'inbox' | 'scholarships' | 'profile' | 'toolbox' | 'admin' | 'counsellor' | 'parent';
 };
 
 export type SectionNavItem = {
@@ -154,6 +156,38 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/counsellor/parents',
     icon: MessageSquare,
     segment: 'counsellor'
+  },
+  // Parent items (only shown on /parent routes — see filterNavByRole)
+  {
+    label: 'Overview',
+    href: '/parent',
+    icon: LayoutDashboard,
+    segment: 'parent',
+    exact: true
+  },
+  {
+    label: 'Progress',
+    href: '/parent/progress',
+    icon: TrendingUp,
+    segment: 'parent'
+  },
+  {
+    label: 'Deadlines',
+    href: '/parent/deadlines',
+    icon: CalendarClock,
+    segment: 'parent'
+  },
+  {
+    label: 'Finances',
+    href: '/parent/finances',
+    icon: Wallet,
+    segment: 'parent'
+  },
+  {
+    label: 'Messages',
+    href: '/parent/messages',
+    icon: MessageSquare,
+    segment: 'parent'
   }
 ];
 
@@ -191,6 +225,14 @@ export const COUNSELLOR_SECTION_ITEMS: SectionNavItem[] = [
   { label: 'Parents', href: '/counsellor/parents' },
 ];
 
+export const PARENT_SECTION_ITEMS: SectionNavItem[] = [
+  { label: 'Overview', href: '/parent', exact: true },
+  { label: 'Progress', href: '/parent/progress' },
+  { label: 'Deadlines', href: '/parent/deadlines' },
+  { label: 'Finances', href: '/parent/finances' },
+  { label: 'Messages', href: '/parent/messages' },
+];
+
 export const isNavActive = (item: NavItem, pathname: string) => {
   if (!pathname) return false;
   if (item.exact) return pathname === item.href;
@@ -201,15 +243,22 @@ export const isNavActive = (item: NavItem, pathname: string) => {
 
 export const filterNavByRole = (items: NavItem[], role: string | null | undefined, pathname?: string) => {
   // Demo mode: determine active section from the current route so that
-  // a single profile can navigate both student and counsellor views.
+  // a single profile can navigate student, counsellor, and parent views.
   const inCounsellor = pathname?.startsWith('/counsellor');
+  const inParent = pathname?.startsWith('/parent');
 
   if (inCounsellor) {
     return items.filter((item) => item.segment === 'counsellor');
   }
+  if (inParent) {
+    return items.filter((item) => item.segment === 'parent');
+  }
 
   return items.filter(
-    (item) => item.segment !== 'counsellor' && (item.segment !== 'admin' || role === 'admin')
+    (item) =>
+      item.segment !== 'counsellor' &&
+      item.segment !== 'parent' &&
+      (item.segment !== 'admin' || role === 'admin')
   );
 };
 
