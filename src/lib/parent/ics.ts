@@ -16,14 +16,18 @@ const escapeText = (value: string): string =>
     .replace(/\n/g, '\\n');
 
 // RFC 5545 §3.1: content lines longer than 75 octets should be folded with a
-// CRLF + single space. Folded at 74 UTF-16 units for simplicity — close
-// enough to the octet rule for the latin-plus-emoji strings we emit, and
-// consumers unfold by the leading space regardless of where the break falls.
+// CRLF + single space. Folded at ~74 code points for simplicity — close
+// enough to the octet rule for the strings we emit, and consumers unfold by
+// the leading space regardless of where the break falls. Iterating code
+// points (Array.from) rather than UTF-16 units so a fold can never split an
+// emoji surrogate pair into lone surrogates (which UTF-8 Blob encoding would
+// corrupt to U+FFFD).
 const foldLine = (line: string): string => {
-  if (line.length <= 75) return line;
-  const parts: string[] = [line.slice(0, 75)];
-  for (let i = 75; i < line.length; i += 74) {
-    parts.push(` ${line.slice(i, i + 74)}`);
+  const chars = Array.from(line);
+  if (chars.length <= 75) return line;
+  const parts: string[] = [chars.slice(0, 75).join('')];
+  for (let i = 75; i < chars.length; i += 74) {
+    parts.push(` ${chars.slice(i, i + 74).join('')}`);
   }
   return parts.join('\r\n');
 };
