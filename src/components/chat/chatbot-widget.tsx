@@ -8,7 +8,7 @@ import {
   Bot, X, Send, Loader2, Trash2, ArrowRight, RotateCcw,
   LayoutDashboard, Search, Zap, Briefcase, Heart, User,
   Wrench, PenTool, BarChart3, ClipboardCheck, CalendarClock,
-  Gift, BarChart2, Users, FileText, TrendingUp,
+  Gift, BarChart2, Users, FileText, TrendingUp, Wallet, MessageCircle,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
@@ -57,9 +57,17 @@ const COUNSELLOR_SNIPPETS: PageSnippet[] = [
   { route: '/counsellor/applications', name: 'Applications', description: 'Overview of all student applications by status and deadline.', icon: Briefcase },
 ];
 
+const PARENT_SNIPPETS: PageSnippet[] = [
+  { route: '/parent', name: 'Overview', description: 'How your child is doing at a glance — progress, deadlines, and highlights.', icon: LayoutDashboard },
+  { route: '/parent/progress', name: 'Progress', description: "Each application's stage, fit, and remaining work — read-only.", icon: TrendingUp },
+  { route: '/parent/deadlines', name: 'Deadlines', description: 'Every application deadline, grouped by urgency.', icon: CalendarClock },
+  { route: '/parent/finances', name: 'Costs & value', description: 'Tuition, living costs, and graduate outcomes for every programme in play.', icon: Wallet },
+  { route: '/parent/messages', name: 'Messages', description: "A direct line to the counsellor guiding your child's applications.", icon: MessageCircle },
+];
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-type ChatMode = 'student' | 'counsellor';
+type ChatMode = 'student' | 'counsellor' | 'parent';
 
 function storageKey(mode: ChatMode) {
   return `ascendi-chat-${mode}`;
@@ -82,7 +90,22 @@ function saveMessages(messages: Message[], mode: ChatMode) {
 }
 
 function detectMode(pathname: string): ChatMode {
-  return pathname.startsWith('/counsellor') ? 'counsellor' : 'student';
+  if (pathname.startsWith('/counsellor')) return 'counsellor';
+  if (pathname.startsWith('/parent')) return 'parent';
+  return 'student';
+}
+
+/**
+ * The chatbot is section-scoped: it must never link a user out of the portal
+ * it's running in. Counsellor mode may only link under /counsellor, parent
+ * mode under /parent, and student mode anywhere else (the student app).
+ */
+function isRouteInMode(route: string, mode: ChatMode): boolean {
+  const inCounsellor = route === '/counsellor' || route.startsWith('/counsellor/');
+  const inParent = route === '/parent' || route.startsWith('/parent/');
+  if (mode === 'counsellor') return inCounsellor;
+  if (mode === 'parent') return inParent;
+  return !inCounsellor && !inParent && !route.startsWith('/admin');
 }
 
 function prefersReducedMotion(): boolean {
@@ -97,7 +120,8 @@ function extractRoutes(text: string): string[] {
 
 /** Find page snippets that match routes mentioned in a message */
 function getSnippetsForMessage(text: string, mode: ChatMode): PageSnippet[] {
-  const snippets = mode === 'counsellor' ? COUNSELLOR_SNIPPETS : STUDENT_SNIPPETS;
+  const snippets =
+    mode === 'counsellor' ? COUNSELLOR_SNIPPETS : mode === 'parent' ? PARENT_SNIPPETS : STUDENT_SNIPPETS;
   const routes = extractRoutes(text);
   return snippets.filter((s) =>
     routes.some((r) => r === s.route || r.startsWith(s.route + '/'))
@@ -116,6 +140,13 @@ const COUNSELLOR_SUGGESTIONS = [
   'Show me the analytics dashboard',
   'How do I track deadlines across students?',
   'What can I do from this section?',
+];
+
+const PARENT_SUGGESTIONS = [
+  'How is my child doing overall?',
+  'Where do I see upcoming deadlines?',
+  'What does reach/match/safety mean?',
+  'How do I contact the counsellor?',
 ];
 
 // ─── Page snippet card ──────────────────────────────────────────────────────
@@ -141,7 +172,15 @@ function PageCard({ snippet, onClick }: { snippet: PageSnippet; onClick: () => v
 
 // ─── Markdown message renderer ──────────────────────────────────────────────
 
-function MessageContent({ content, onLinkClick }: { content: string; onLinkClick: () => void }) {
+function MessageContent({
+  content,
+  mode,
+  onLinkClick,
+}: {
+  content: string;
+  mode: ChatMode;
+  onLinkClick: () => void;
+}) {
   return (
     <ReactMarkdown
       components={{
@@ -155,6 +194,11 @@ function MessageContent({ content, onLinkClick }: { content: string; onLinkClick
           // middle-click/open-in-new-tab work). Closing the widget stays on the
           // click handler so the panel dismisses as the route changes.
           if (href?.startsWith('/')) {
+            // Safety net on top of the prompt rules: a link that would take
+            // the user out of this portal renders as plain text.
+            if (!isRouteInMode(href, mode)) {
+              return <span>{children}</span>;
+            }
             return (
               <Link
                 href={href}
@@ -453,7 +497,11 @@ export function ChatbotWidget() {
                 <div>
                   <p className="font-heading text-sm font-semibold text-foreground">Ascendi</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {mode === 'counsellor' ? 'Counsellor assistant' : 'Student assistant'}
+                    {mode === 'counsellor'
+                      ? 'Counsellor assistant'
+                      : mode === 'parent'
+                        ? 'Parent assistant'
+                        : 'Student assistant'}
                   </p>
                 </div>
               </div>
@@ -500,10 +548,17 @@ export function ChatbotWidget() {
                   <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
                     {mode === 'counsellor'
                       ? 'I can help you manage your cohort, track progress, and navigate the counsellor tools.'
-                      : 'I can help you navigate the platform, understand your profile, and plan applications.'}
+                      : mode === 'parent'
+                        ? "I can help you follow your child's journey, understand deadlines, and explain admissions terms."
+                        : 'I can help you navigate the platform, understand your profile, and plan applications.'}
                   </p>
                   <div className="mt-4 flex flex-wrap justify-center gap-1.5">
-                    {(mode === 'counsellor' ? COUNSELLOR_SUGGESTIONS : STUDENT_SUGGESTIONS).map((s) => (
+                    {(mode === 'counsellor'
+                      ? COUNSELLOR_SUGGESTIONS
+                      : mode === 'parent'
+                        ? PARENT_SUGGESTIONS
+                        : STUDENT_SUGGESTIONS
+                    ).map((s) => (
                       <button
                         key={s}
                         onClick={() => sendMessage(s)}
@@ -555,7 +610,7 @@ export function ChatbotWidget() {
                           </div>
                         ) : msg.content ? (
                           msg.role === 'assistant' ? (
-                            <MessageContent content={msg.content} onLinkClick={() => setIsOpen(false)} />
+                            <MessageContent content={msg.content} mode={mode} onLinkClick={() => setIsOpen(false)} />
                           ) : (
                             msg.content
                           )
