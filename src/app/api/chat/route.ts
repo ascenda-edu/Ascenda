@@ -26,22 +26,20 @@
 
 import { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
-import {
-  GoogleGenAI,
-  type Content,
-  type FunctionCall,
-  type GenerateContentConfig,
-  type GenerateContentResponse,
-  type Part,
-} from '@google/genai';
+import { type Content } from '@google/genai';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/api/rate-limit';
 import { ACTIVE_CHILD_COOKIE } from '@/lib/parent/active-child';
-import { getSystemPrompt, getToolAddendum, MODELS, type ChatMode } from '@/lib/chat/prompts';
+import { getSystemPrompt, getToolAddendum, type ChatMode } from '@/lib/chat/prompts';
 import { buildContextForMode } from '@/lib/chat/context';
 import { contextCacheKey, getCachedContext, setCachedContext } from '@/lib/chat/cache';
-import { buildToolsForMode, executeSearchPrograms, type ProgramHit } from '@/lib/chat/tools';
-import { isActionCall, toActionPayload, type ChatAction } from '@/lib/chat/actions';
+import { buildToolsForMode } from '@/lib/chat/tools';
+import { buildGeminiTools } from '@/lib/chat/tools/registry';
+import {
+  newTurnAccumulator,
+  openStreamWithFallback,
+  runToolLoop,
+} from '@/lib/chat/gemini';
 import {
   appendMessage,
   getConversation,
@@ -49,13 +47,8 @@ import {
   renameConversation,
 } from '@/lib/chat/history';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? '' });
-
 export const runtime = 'nodejs';
 
-// Bound on tool-calling rounds per message: round 1 may request searches,
-// round 2 answers from results (or searches once more), round 3 must answer.
-const MAX_TOOL_ROUNDS = 3;
 const TITLE_LENGTH = 60;
 
 interface ChatMessage {
@@ -173,8 +166,14 @@ export async function POST(req: NextRequest) {
 
     // The widget surface is read-only by design: no tools means no programme
     // search and no action proposals — those live in the Assistant section.
+    // Student/counsellor toolsets come from the registry; parent keeps its
+    // legacy single-tool path (message tool only when a contact thread exists).
     const tools =
-      surface === 'assistant' ? buildToolsForMode(mode, Boolean(parentContactId)) : undefined;
+      surface === 'assistant'
+        ? mode === 'parent'
+          ? buildToolsForMode(mode, Boolean(parentContactId))
+          : buildGeminiTools(mode)
+        : undefined;
     const systemInstruction = [
       getSystemPrompt(mode),
       tools ? getToolAddendum(mode, Boolean(parentContactId)) : '',
@@ -199,38 +198,15 @@ export async function POST(req: NextRequest) {
       parts: [{ text: m.content }],
     }));
 
-    // gemini-2.5-flash burns the output budget on hidden thinking unless it's
-    // zeroed; 2.0 models reject thinkingConfig outright, which would silently
-    // kill the fallback chain — so it's applied per-model.
-    const configForModel = (model: string): GenerateContentConfig => ({
-      systemInstruction,
-      temperature: 0.7,
-      maxOutputTokens: 1024,
-      abortSignal: req.signal,
-      ...(tools ? { tools } : {}),
-      ...(model.startsWith('gemini-2.5') ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
-    });
-
     // Establish the first stream with the model fallback chain; later tool
     // rounds reuse whichever model succeeded.
-    let stream: AsyncGenerator<GenerateContentResponse> | null = null;
-    let chosenModel = '';
-    for (const model of MODELS) {
-      try {
-        stream = await ai.models.generateContentStream({
-          model,
-          contents: convo,
-          config: configForModel(model),
-        });
-        chosenModel = model;
-        break;
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`[chat] ${model} failed: ${msg.slice(0, 100)}`);
-        continue;
-      }
-    }
-    if (!stream) {
+    const streamOptions = {
+      systemInstruction,
+      ...(tools ? { tools } : {}),
+      abortSignal: req.signal,
+    };
+    const opened = await openStreamWithFallback(convo, streamOptions);
+    if (!opened) {
       return new Response(JSON.stringify({
         error: 'AI is rate-limited right now. Please wait a moment and try again.',
       }), { status: 503 });
@@ -250,32 +226,31 @@ export async function POST(req: NextRequest) {
         };
         const send = (payload: unknown) => sendRaw(JSON.stringify(payload));
 
-        // Turn-level accumulators. The happy path persists BEFORE [DONE] and
-        // announces the row id (`saved` event) so the client can adopt it for
-        // follow-up writes (action sent-state, ratings); the `finally` is the
-        // backstop for aborts/disconnects, guarded against double-persisting.
-        let turnText = '';
-        const collectedHits: ProgramHit[] = [];
-        let emittedAction: ChatAction | null = null;
+        // Turn-level accumulators (mutated live by the tool loop). The happy
+        // path persists BEFORE [DONE] and announces the row id (`saved` event)
+        // so the client can adopt it for follow-up writes (action sent-state,
+        // ratings); the `finally` is the backstop for aborts/disconnects,
+        // guarded against double-persisting.
+        const acc = newTurnAccumulator();
         let assistantPersisted = false;
 
         const persistAssistantMessage = async (): Promise<string | null> => {
           if (!persist || assistantPersisted) return null;
-          if (!turnText && !emittedAction && collectedHits.length === 0) return null;
+          if (!acc.text && !acc.action && acc.hits.length === 0) return null;
           assistantPersisted = true;
           try {
             const { id } = await appendMessage(supabase, {
               conversation_id: conversationId!,
               role: 'assistant',
-              content: turnText,
-              ...(emittedAction
+              content: acc.text,
+              ...(acc.action
                 ? {
-                    action: emittedAction as unknown as Record<string, unknown>,
+                    action: acc.action as unknown as Record<string, unknown>,
                     action_state: 'pending',
                   }
                 : {}),
-              ...(collectedHits.length > 0
-                ? { tool_results: collectedHits as unknown as Record<string, unknown>[] }
+              ...(acc.hits.length > 0
+                ? { tool_results: acc.hits as unknown as Record<string, unknown>[] }
                 : {}),
             });
             return id;
@@ -286,71 +261,15 @@ export async function POST(req: NextRequest) {
         };
 
         try {
-          let activeStream = stream!;
-          for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-            const calls: FunctionCall[] = [];
-            const textParts: string[] = [];
-
-            for await (const chunk of activeStream) {
-              if (chunk.text) {
-                send({ text: chunk.text });
-                textParts.push(chunk.text);
-                turnText += chunk.text;
-              }
-              for (const fc of chunk.functionCalls ?? []) calls.push(fc);
-            }
-
-            if (calls.length === 0) break; // model finished with prose
-
-            // Action proposals are emitted for client-side confirmation and
-            // end the turn — the server never executes them.
-            const actionCall = calls.find((c) => isActionCall(c.name));
-            if (actionCall) {
-              const payload = toActionPayload(actionCall, { parentContactId });
-              if (payload) {
-                emittedAction = payload;
-                send({ action: payload });
-              }
-              break;
-            }
-
-            // Last round: don't execute tools we can't answer from.
-            if (round === MAX_TOOL_ROUNDS - 1) break;
-
-            const responseParts: Part[] = [];
-            for (const fc of calls) {
-              if (fc.name === 'search_programs') {
-                const result = await executeSearchPrograms(supabase, fc.args ?? {});
-                if (result.results.length > 0) {
-                  collectedHits.push(...result.results);
-                  send({ results: { tool: 'search_programs', hits: result.results } });
-                }
-                responseParts.push({
-                  functionResponse: {
-                    name: fc.name,
-                    ...(fc.id ? { id: fc.id } : {}),
-                    response: result as unknown as Record<string, unknown>,
-                  },
-                });
-              }
-            }
-            if (responseParts.length === 0) break; // unknown tool — bail out
-
-            convo.push({
-              role: 'model',
-              parts: [
-                ...(textParts.length > 0 ? [{ text: textParts.join('') }] : []),
-                ...calls.map((c) => ({ functionCall: c })),
-              ],
-            });
-            convo.push({ role: 'user', parts: responseParts });
-
-            activeStream = await ai.models.generateContentStream({
-              model: chosenModel,
-              contents: convo,
-              config: configForModel(chosenModel),
-            });
-          }
+          await runToolLoop({
+            opened,
+            contents: convo,
+            streamOptions,
+            toolCtx: { supabase, userId: user.id, mode },
+            ...(parentContactId ? { parentContactId } : {}),
+            acc,
+            send,
+          });
 
           // Persist before [DONE] and hand the row id to the client so its
           // in-session bubble can adopt it (action/rating writes need it).

@@ -1,8 +1,13 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
 import { parseJsonBody } from '@/lib/api/guards';
+import { createChecklistTask, updateChecklistTaskStatus } from '@/lib/applications/server-actions';
 
 const VALID_STATUSES = new Set(['todo', 'doing', 'done']);
+
+// Map an expected-failure helper code to the HTTP status the route used before.
+const statusForCode = (code?: 'not_found' | 'unauthorized' | '23503'): number =>
+  code === 'not_found' ? 404 : code === 'unauthorized' ? 401 : 400;
 
 export async function PATCH(request: NextRequest) {
   const supabase = createRouteHandlerSupabaseClient();
@@ -20,33 +25,12 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   }
 
-  const { data: checklistRow, error: checklistError } = await supabase
-    .from('application_checklist')
-    .select('id, application_id, status, applications!inner(profile_id)')
-    .eq('id', id)
-    .single();
-
-  if (checklistError || !checklistRow) {
-    return NextResponse.json({ error: 'Checklist item not found' }, { status: 404 });
+  const result = await updateChecklistTaskStatus(supabase, user.id, { taskId: id, status });
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: statusForCode(result.code) });
   }
 
-  if (checklistRow.applications?.profile_id !== user.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { data, error: updateError } = await supabase
-    .from('application_checklist')
-    .update({ status })
-    .eq('id', id)
-    .select('*')
-    .single();
-
-  if (updateError) {
-    console.error('[checklist] update failed', updateError);
-    return NextResponse.json({ error: 'Could not update the task' }, { status: 400 });
-  }
-
-  return NextResponse.json({ item: data });
+  return NextResponse.json({ item: result.item });
 }
 
 // Create a new checklist task under one of the user's own applications.
@@ -68,37 +52,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   }
 
-  // Confirm the target application belongs to the caller before inserting.
-  const { data: application, error: appError } = await supabase
-    .from('applications')
-    .select('id, profile_id')
-    .eq('id', application_id)
-    .single();
-
-  if (appError || !application) {
-    return NextResponse.json({ error: 'Application not found' }, { status: 404 });
-  }
-  if (application.profile_id !== user.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const result = await createChecklistTask(supabase, user.id, {
+    applicationId: application_id,
+    taskName: trimmedName,
+    dueDate: typeof due_date === 'string' && due_date ? due_date : null
+  });
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: statusForCode(result.code) });
   }
 
-  const { data, error: insertError } = await supabase
-    .from('application_checklist')
-    .insert({
-      application_id,
-      task_name: trimmedName,
-      status: 'todo',
-      due_date: typeof due_date === 'string' && due_date ? due_date : null
-    })
-    .select('*')
-    .single();
-
-  if (insertError) {
-    console.error('[checklist] insert failed', insertError);
-    return NextResponse.json({ error: 'Could not create the task' }, { status: 400 });
-  }
-
-  return NextResponse.json({ item: data }, { status: 201 });
+  return NextResponse.json({ item: result.task }, { status: 201 });
 }
 
 // Delete a checklist task the caller owns.

@@ -29,6 +29,10 @@ import { ProgramResultCard } from './program-result-card';
 
 export interface AssistantMessage {
   id: string;
+  /** Stable React key for optimistic bubbles: `id` is swapped for the DB row
+   * id on persist, and a key change would remount the bubble (wiping any
+   * in-progress action-card edits). DB-loaded rows leave it unset. */
+  clientKey?: string;
   role: 'user' | 'assistant';
   content: string;
   error?: boolean;
@@ -50,6 +54,11 @@ interface ThreadPaneProps {
   onRate: (messageId: string, rating: 1 | -1) => void;
   onActionSend: (messageId: string, edited: ChatAction) => Promise<boolean>;
   onActionCancel: (messageId: string) => void;
+  /** Disables tool_action Confirm buttons while a stream is active or the
+   * rate-limit cooldown is running — confirming opens a second stream. */
+  actionsLocked?: boolean;
+  /** Transient "agent is working" line, shown on the streaming bubble. */
+  statusLabel?: string | null;
   // Composer
   input: string;
   onInputChange: (value: string) => void;
@@ -71,6 +80,8 @@ export function ThreadPane({
   onRate,
   onActionSend,
   onActionCancel,
+  actionsLocked,
+  statusLabel,
   input,
   onInputChange,
   onSubmit,
@@ -122,7 +133,7 @@ export function ThreadPane({
 
               return (
                 <motion.div
-                  key={msg.id}
+                  key={msg.clientKey ?? msg.id}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25 }}
@@ -152,14 +163,22 @@ export function ThreadPane({
                       </div>
                     ) : msg.content ? (
                       msg.role === 'assistant' ? (
-                        <MessageContent content={msg.content} mode={mode} onLinkClick={() => {}} />
+                        <>
+                          {isStreamingThis && statusLabel && (
+                            <div className="mb-1.5 flex items-center gap-1.5">
+                              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                              <span className="text-[11px] text-muted-foreground">{statusLabel}</span>
+                            </div>
+                          )}
+                          <MessageContent content={msg.content} mode={mode} onLinkClick={() => {}} />
+                        </>
                       ) : (
                         msg.content
                       )
                     ) : isStreamingThis ? (
                       <div className="flex items-center gap-1.5">
                         <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">Thinking…</span>
+                        <span className="text-xs text-muted-foreground">{statusLabel || 'Thinking…'}</span>
                       </div>
                     ) : (
                       <span className="text-xs text-muted-foreground">No reply — try asking again.</span>
@@ -183,6 +202,11 @@ export function ThreadPane({
                         state={msg.actionState ?? 'pending'}
                         onSend={(edited) => onActionSend(msg.id, edited)}
                         onCancel={() => onActionCancel(msg.id)}
+                        mode={mode}
+                        sendDisabled={
+                          msg.action.kind === 'tool_action' &&
+                          (!msg.persisted || Boolean(actionsLocked))
+                        }
                       />
                     </div>
                   )}

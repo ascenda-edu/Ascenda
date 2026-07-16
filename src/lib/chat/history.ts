@@ -105,6 +105,18 @@ export const listMessages = async (
   return ((data ?? []) as ChatMessageRow[]).reverse();
 };
 
+export const getMessage = async (
+  supabase: AnyClient,
+  id: string
+): Promise<ChatMessageRow | null> => {
+  const { data, error } = await tbl(supabase, 'chat_messages')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as ChatMessageRow) ?? null;
+};
+
 /** Most recent message in a conversation, or null. Used by the route to
  * detect a retry (same user text re-sent after an error) and skip the
  * duplicate insert. */
@@ -142,6 +154,21 @@ export const appendMessages = async (
   if (rows.length === 0) return;
   const { error } = await tbl(supabase, 'chat_messages').insert(rows);
   if (error) throw error;
+};
+
+/** Atomically claim a pending action for server-side execution
+ * (pending → sent). The conditional predicate makes double-clicks and
+ * second-tab confirms lose the race: returns false when the row was already
+ * claimed or cancelled — callers treat that as "already handled" (409), never
+ * retry. On execution failure the caller reverts via updateMessageAction. */
+export const claimMessageAction = async (supabase: AnyClient, id: string): Promise<boolean> => {
+  const { data, error } = await tbl(supabase, 'chat_messages')
+    .update({ action_state: 'sent' })
+    .eq('id', id)
+    .eq('action_state', 'pending')
+    .select('id');
+  if (error) throw error;
+  return ((data ?? []) as Array<{ id: string }>).length > 0;
 };
 
 export const updateMessageAction = async (

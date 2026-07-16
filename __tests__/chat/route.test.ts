@@ -211,13 +211,47 @@ describe('POST /api/chat', () => {
     expect(mockGenerate.mock.calls[0][0].config.tools).toBeUndefined();
   });
 
-  it('gives the assistant surface the full toolset', async () => {
+  it('gives the assistant surface the full registry toolset for the mode', async () => {
     mockGenerate.mockResolvedValueOnce(streamOf([{ text: 'hi' }]));
     await (await POST(chatRequest({ ...validBody, surface: 'assistant' }))).text();
     const tools = mockGenerate.mock.calls[0][0].config.tools;
     expect(tools).toBeDefined();
     const names = tools[0].functionDeclarations.map((d: { name: string }) => d.name);
-    expect(names).toEqual(['search_programs', 'propose_help_request']);
+    expect(names).toEqual([
+      'search_programs',
+      'get_my_applications',
+      'get_my_matches',
+      'get_my_shortlist',
+      'track_application',
+      'create_task',
+      'update_task_status',
+      'add_to_shortlist',
+      'send_help_request',
+    ]);
+  });
+
+  it('gives the counsellor assistant its own registry toolset', async () => {
+    mockGenerate.mockResolvedValueOnce(streamOf([{ text: 'hi' }]));
+    (getConversation as jest.Mock).mockResolvedValue({
+      id: 'conv-1',
+      owner_id: 'user-123',
+      mode: 'counsellor',
+      title: 'T',
+    });
+    await (
+      await POST(chatRequest({ ...validBody, mode: 'counsellor', surface: 'assistant' }))
+    ).text();
+    const names = mockGenerate.mock.calls[0][0].config.tools[0].functionDeclarations.map(
+      (d: { name: string }) => d.name
+    );
+    expect(names).toEqual([
+      'search_programs',
+      'get_cohort_overview',
+      'get_student_overview',
+      'get_cohort_deadlines',
+      'add_student_note',
+      'message_student',
+    ]);
   });
 
   // ── Persistence (assistant surface + conversationId) ───────────────────
