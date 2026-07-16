@@ -1,7 +1,10 @@
 node_modules
 .next
 out
-.env.local
+# Environment secrets — keep every variant out of git (.env.example is the only tracked one)
+.env
+.env.*
+!.env.example
 tsconfig.tsbuildinfo
 .DS_Store
 npm-debug.log*
