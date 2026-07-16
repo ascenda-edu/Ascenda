@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useSupabase } from '@/hooks/useSupabase';
 import { insertHelpRequest } from '@/lib/demo/help-request-client';
 import type { ChatAction } from '@/lib/chat/actions';
+import { createSseParser } from '@/lib/chat/sse';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -545,49 +546,66 @@ export function ChatbotWidget() {
 
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
+      let gotAction = false;
 
       if (reader) {
-        while (true) {
+        // Buffered parser: events split across network reads are reassembled,
+        // never dropped (matters most for the ~2KB action payload).
+        const parser = createSseParser();
+        let finished = false;
+        while (!finished) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              if (data === '[DONE]') break;
-              try {
-                const parsed = JSON.parse(data);
-                if (parsed.text) {
-                  accumulated += parsed.text;
-                  setMessages((prev) =>
-                    prev.map((m) =>
-                      m.id === assistantMessage.id
-                        ? { ...m, content: accumulated }
-                        : m
-                    )
-                  );
-                }
-                if (parsed.action && isValidAction(parsed.action)) {
-                  setMessages((prev) =>
-                    prev.map((m) =>
-                      m.id === assistantMessage.id
-                        ? { ...m, action: parsed.action as ChatAction, actionState: 'pending' }
-                        : m
-                    )
-                  );
-                }
-              } catch {
-                // skip malformed chunks
-              }
+          for (const event of parser.push(decoder.decode(value, { stream: true }))) {
+            if (event.type === 'done') {
+              finished = true;
+              break;
+            }
+            if (event.type === 'error') {
+              throw new Error(event.message);
+            }
+            if (event.type === 'text') {
+              accumulated += event.text;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMessage.id
+                    ? { ...m, content: accumulated }
+                    : m
+                )
+              );
+            }
+            if (event.type === 'action' && isValidAction(event.action)) {
+              gotAction = true;
+              const action = event.action;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMessage.id
+                    ? {
+                        ...m,
+                        // An action-only turn must not leave an empty bubble
+                        // (it would render as an eternal spinner).
+                        content:
+                          m.content || 'I’ve put a draft together — review and send it below.',
+                        action,
+                        actionState: 'pending' as const,
+                      }
+                    : m
+                )
+              );
             }
           }
         }
       }
+
+      // Stream ended with nothing to show (e.g. the model exhausted its tool
+      // rounds) — surface it as a retryable error, never a stuck spinner.
+      if (!accumulated && !gotAction) {
+        throw new Error('No reply came back — please try again.');
+      }
     } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
+      // Some environments surface fetch aborts as plain Errors, not DOMException.
+      if ((err instanceof DOMException || err instanceof Error) && err.name === 'AbortError') {
         // User pressed Stop: keep the partial answer; drop an empty bubble.
         if (!accumulated) {
           setMessages((prev) => prev.filter((m) => m.id !== assistantMessage.id));
@@ -863,11 +881,17 @@ export function ChatbotWidget() {
                           ) : (
                             msg.content
                           )
-                        ) : (
+                        ) : isStreamingThis ? (
                           <div className="flex items-center gap-1.5">
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                             <span className="text-xs text-muted-foreground">Thinking…</span>
                           </div>
+                        ) : (
+                          // Empty bubble that's no longer streaming (e.g. stale
+                          // persisted state) — never show an eternal spinner.
+                          <span className="text-xs text-muted-foreground">
+                            No reply — try asking again.
+                          </span>
                         )}
                       </div>
 

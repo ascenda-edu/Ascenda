@@ -12,6 +12,10 @@ import { buildContextForMode, buildStarterSuggestions } from '@/lib/chat/context
 import { contextCacheKey, getCachedContext, setCachedContext } from '@/lib/chat/cache';
 
 export const runtime = 'nodejs';
+// The catch-all below would swallow Next's DynamicServerError during build
+// prerendering (auth reads cookies), baking a static empty response — force
+// the route dynamic explicitly.
+export const dynamic = 'force-dynamic';
 
 const VALID_MODES: ChatMode[] = ['student', 'counsellor', 'parent'];
 

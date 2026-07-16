@@ -47,7 +47,9 @@ export interface ChatContext {
   /** Plain-text block appended to the system prompt ('' when unavailable). */
   context: string;
   /** parent mode only: the counsellor thread's contact id, kept out of the
-   * LLM text — the route injects it into the action payload. */
+   * LLM text — the route injects it into the action payload. Rides the 60s
+   * context cache, so it can be up to a minute stale; a send against a
+   * just-deleted thread fails safely (403/404 → the card's retry state). */
   parentContactId?: string;
   signals: ContextSignals;
 }
@@ -208,6 +210,14 @@ async function buildStudentContext(
     return `- ${info?.courseName ?? 'Programme'} at ${info?.university ?? 'University'} (${info?.country ?? '—'}) — score ${Math.round(m.score)}, tier ${tierText}`;
   });
 
+  // Keep the prompt bounded for heavy users: stats above cover ALL apps,
+  // only the first 15 get their own line.
+  const MAX_APP_LINES = 15;
+  const shownAppLines =
+    appLines.length > MAX_APP_LINES
+      ? [...appLines.slice(0, MAX_APP_LINES), `- …and ${appLines.length - MAX_APP_LINES} more applications`]
+      : appLines;
+
   const sections = [
     `STUDENT${firstName ? `: ${firstName}` : ''}`,
     `Profile: ${completionPercent}% complete${
@@ -218,7 +228,7 @@ async function buildStudentContext(
     apps.length > 0
       ? `Applications (${apps.length} tracked, ${plural(openTasks, 'open task')}${
           overdueTasks > 0 ? `, ${overdueTasks} OVERDUE` : ''
-        }):\n${appLines.join('\n')}`
+        }):\n${shownAppLines.join('\n')}`
       : 'Applications: none tracked yet.',
     matchLines.length > 0
       ? `Top matches:\n${matchLines.join('\n')}`
