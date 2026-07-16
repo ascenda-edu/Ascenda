@@ -8,7 +8,7 @@ import {
   Bot, X, Send, Loader2, Trash2, ArrowRight, RotateCcw,
   LayoutDashboard, Search, Zap, Briefcase, Heart, User,
   Wrench, PenTool, BarChart3, ClipboardCheck, CalendarClock,
-  Gift, BarChart2, Users, FileText, TrendingUp, UserCircle,
+  Gift, BarChart2, Users, FileText, TrendingUp,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
@@ -55,7 +55,6 @@ const COUNSELLOR_SNIPPETS: PageSnippet[] = [
   { route: '/counsellor/documents', name: 'Documents', description: 'Track references, transcripts, and predicted grade submissions.', icon: FileText },
   { route: '/counsellor/outcomes', name: 'Outcomes', description: 'Analyse offer and rejection results across the cohort.', icon: TrendingUp },
   { route: '/counsellor/applications', name: 'Applications', description: 'Overview of all student applications by status and deadline.', icon: Briefcase },
-  { route: '/counsellor/parents', name: 'Parent Portal', description: 'Communication hub for parent updates and engagement.', icon: UserCircle },
 ];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

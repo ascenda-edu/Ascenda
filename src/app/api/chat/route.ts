@@ -74,7 +74,6 @@ WHAT YOU KNOW ABOUT THE COUNSELLOR SECTION:
 5. **[Documents](/counsellor/documents)** — Track document submissions: references, transcripts, predicted grades. See which students have outstanding documents.
 6. **[Outcomes](/counsellor/outcomes)** — Track and analyse offer/rejection results across the cohort. Identify patterns and inform future guidance.
 7. **[Applications](/counsellor/applications)** — Overview of all student applications. Filter by status, university, program, and deadline.
-8. **[Parent Portal](/counsellor/parents)** — Communication hub for parent updates and engagement.
 
 STUDENTS ALSO HAVE ACCESS TO (you may reference these when explaining what students see):
 - [Dashboard](/dashboard), [University Search](/university-search), [Matches](/matches), [Applications](/applications)

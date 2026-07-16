@@ -151,12 +151,6 @@ export const NAV_ITEMS: NavItem[] = [
     icon: ClipboardCheck,
     segment: 'counsellor'
   },
-  {
-    label: 'Parents',
-    href: '/counsellor/parents',
-    icon: MessageSquare,
-    segment: 'counsellor'
-  },
   // Parent items (only shown on /parent routes — see filterNavByRole)
   {
     label: 'Overview',
@@ -222,7 +216,6 @@ export const COUNSELLOR_SECTION_ITEMS: SectionNavItem[] = [
   { label: 'Documents', href: '/counsellor/documents' },
   { label: 'Outcomes', href: '/counsellor/outcomes' },
   { label: 'Applications', href: '/counsellor/applications' },
-  { label: 'Parents', href: '/counsellor/parents' },
 ];
 
 export const PARENT_SECTION_ITEMS: SectionNavItem[] = [
@@ -264,10 +257,10 @@ export const filterNavByRole = (items: NavItem[], role: string | null | undefine
 
 // ── Top-bar navigation ────────────────────────────────────────────────────
 // The horizontal top bar can only fit a handful of pills. The counsellor IA
-// has 10 sections, so on that side we collapse related destinations into
+// has 9 sections, so on that side we collapse related destinations into
 // dropdowns — the full set stays reachable, the bar stays uncrowded and
 // visually consistent with the ~7-item student bar. The sidebar is unchanged
-// (it still lists all 10 flat). Student/admin bars stay a flat link list.
+// (it still lists all 9 flat). Student/admin bars stay a flat link list.
 
 export type TopNavEntry =
   | { type: 'link'; item: NavItem }
@@ -295,8 +288,7 @@ const COUNSELLOR_TOP_NAV: CounsellorTopSpec[] = [
     ]
   },
   { href: '/counsellor/analytics' },
-  { href: '/counsellor/universities' },
-  { href: '/counsellor/parents' }
+  { href: '/counsellor/universities' }
 ];
 
 // Build the ordered top-bar entries for the current context. Student/admin get
