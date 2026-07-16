@@ -1624,6 +1624,30 @@ create policy parent_messages_all on parent_messages
   using (public.can_act_as_counsellor())
   with check (public.can_act_as_counsellor());
 
+-- From 20260716120000_guardian_links.sql — parent portal linkage primitive.
+-- The /parent section scopes every query through this table (a parent only
+-- ever sees their linked children). Select-only RLS: links are written by
+-- migration/service role, never by browser sessions. The demo seed (greg →
+-- one +seed@ascenda.demo student) lives in the migration, not here.
+create table if not exists guardian_links (
+  id uuid primary key default gen_random_uuid(),
+  parent_profile_id uuid not null references profiles(id) on delete cascade,
+  student_profile_id uuid not null references profiles(id) on delete cascade,
+  relationship text not null default 'Guardian', -- Mother | Father | Guardian
+  status text not null default 'active' check (status in ('pending', 'active', 'revoked')),
+  created_at timestamptz not null default timezone('utc', now()),
+  unique (parent_profile_id, student_profile_id)
+);
+create index if not exists guardian_links_parent_idx
+  on guardian_links (parent_profile_id, status);
+
+alter table guardian_links enable row level security;
+
+drop policy if exists guardian_links_self on guardian_links;
+create policy guardian_links_self on guardian_links
+  for select to authenticated
+  using (parent_profile_id = auth.uid());
+
 create table if not exists student_documents (
   id uuid primary key default gen_random_uuid(),
   student_profile_id uuid not null references profiles(id) on delete cascade,
