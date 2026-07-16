@@ -131,26 +131,3 @@ export interface EnrichedApplication {
   country: string;
 }
 
-export interface ParentContact {
-  id: string;
-  studentId: string;
-  studentName: string;
-  flagEmoji: string;
-  parentName: string;
-  relationship: 'Mother' | 'Father' | 'Guardian';
-  email: string;
-  phone: string;
-  lastContacted: string;
-  status: 'active' | 'needs-response' | 'resolved';
-}
-
-export interface ParentMessage {
-  id: string;
-  parentContactId: string;
-  studentId: string;
-  sender: 'counsellor' | 'parent';
-  content: string;
-  date: string;
-  read: boolean;
-  template: string | null;
-}

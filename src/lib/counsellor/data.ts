@@ -31,8 +31,6 @@ import type {
   ApplicationPlatform,
   CounsellorOutcome,
   OutcomeResult,
-  ParentContact,
-  ParentMessage,
 } from '@/lib/counsellor/types';
 import type { CounsellorDocument, EvolutionEntry } from '@/lib/data/student-demo-data';
 import { DEMO_EMAIL } from '@/lib/demo/demo-profile';
@@ -847,66 +845,6 @@ export const deriveOutcomeStats = (outcomes: CounsellorOutcome[]): OutcomeStats 
     total, accepted, rejected, waitlisted, pending, withdrawn,
     acceptanceRate: decided > 0 ? Math.round((accepted / decided) * 100) : 0,
   };
-};
-
-// ── parents ──────────────────────────────────────────────────────────────────
-
-export const loadParentContacts = async (supabase: Client): Promise<ParentContact[]> => {
-  const rows = (unwrap(
-    await supabase.from('parent_contacts').select('*'),
-    'parent_contacts'
-  ) ?? []) as any[];
-  if (rows.length === 0) return [];
-  const names = await nameMap(supabase, rows.map((r) => r.student_profile_id));
-  const order = { 'needs-response': 0, active: 1, resolved: 2 } as const;
-  return rows
-    .map((r): ParentContact => ({
-      id: r.id,
-      studentId: r.student_profile_id,
-      studentName: names.get(r.student_profile_id)?.name ?? 'Student',
-      flagEmoji: names.get(r.student_profile_id)?.flag ?? '🎓',
-      parentName: r.parent_name,
-      relationship: (r.relationship ?? 'Guardian') as ParentContact['relationship'],
-      email: r.email ?? '',
-      phone: r.phone ?? '',
-      lastContacted: r.last_contacted ?? r.created_at,
-      status: r.status as ParentContact['status'],
-    }))
-    .sort((a, b) => order[a.status] - order[b.status]);
-};
-
-export const loadParentMessagesByContact = async (
-  supabase: Client
-): Promise<Record<string, ParentMessage[]>> => {
-  const contacts = (unwrap(
-    await supabase.from('parent_contacts').select('id, student_profile_id'),
-    'parent_contacts'
-  ) ?? []) as any[];
-  const studentByContact = new Map<string, string>(contacts.map((c) => [c.id, c.student_profile_id]));
-  const msgs = (unwrap(
-    await supabase
-      .from('parent_messages')
-      .select('id, contact_id, sender, body, template, read_at, created_at'),
-    'parent_messages'
-  ) ?? []) as any[];
-  const grouped: Record<string, ParentMessage[]> = {};
-  for (const m of msgs) {
-    const entry: ParentMessage = {
-      id: m.id,
-      parentContactId: m.contact_id,
-      studentId: studentByContact.get(m.contact_id) ?? '',
-      sender: m.sender,
-      content: m.body,
-      date: m.created_at,
-      read: Boolean(m.read_at),
-      template: m.template ?? null,
-    };
-    (grouped[m.contact_id] ??= []).push(entry);
-  }
-  for (const key of Object.keys(grouped)) {
-    grouped[key].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }
-  return grouped;
 };
 
 // ── documents ─────────────────────────────────────────────────────────────────

@@ -89,8 +89,7 @@ export const MobileNav = () => {
     Analytics: 'Stats',
     Deadlines: 'Dates',
     Documents: 'Docs',
-    Outcomes: 'Results',
-    Parents: 'Parents'
+    Outcomes: 'Results'
   };
 
   const overflowActive = overflowItems.some((item) => isNavActive(item, pathname));

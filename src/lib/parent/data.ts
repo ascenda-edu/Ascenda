@@ -438,9 +438,9 @@ export const loadChildFinances = async (
 
 // ── messages (/parent/messages) ──────────────────────────────────────────────
 //
-// Reuses the existing parent_contacts / parent_messages tables (the counsellor
-// side of the same thread lives at /counsellor/parents). Scoped to the active
-// child's contact row.
+// Reads the parent_contacts / parent_messages tables, scoped to the active
+// child's contact row. There is currently no counsellor-facing UI for these
+// threads — messages sent here are stored but only visible on the parent side.
 
 export const loadChildThread = async (
   supabase: Client,
