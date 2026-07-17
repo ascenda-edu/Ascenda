@@ -1,11 +1,13 @@
 'use client';
 
-// Ascendi floating widget — the QUICK-ANSWER surface. Context-aware but
-// read-only: it answers from the user's live account data but has no tools
-// (no programme search, no action proposals — those live in the full-page
-// Assistant, and the header offers a handoff that carries the conversation
-// there). Streaming/cooldown behaviour comes from useChatStream; shared render
-// primitives from ./shared.
+// Ascendi floating widget — the QUICK-ANSWER surface. Context-aware and
+// read-only: READ tools run server-side (programme search, matches,
+// applications, university lookups) and their results render as the same rich
+// cards as the Assistant — but there are NO actions on this surface (the
+// server refuses write calls for surface 'widget'); those live in the
+// full-page Assistant, and the header offers a handoff that carries the
+// conversation (cards included) there. Streaming/cooldown behaviour comes
+// from useChatStream; shared render primitives from ./shared.
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -21,6 +23,8 @@ import { cn } from '@/lib/utils';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { createConversation, appendMessages } from '@/lib/chat/history';
+import { isChatWidget, mergeWidgets, type ChatWidget } from '@/lib/chat/widgets';
+import { WidgetRenderer } from '@/components/assistant/widgets';
 import type { ChatMode } from '@/lib/chat/prompts';
 import type { ChatMessageInsert } from '@/lib/types/demo-tables';
 import {
@@ -42,6 +46,8 @@ interface Message {
   error?: boolean;
   /** Thumbs feedback the user gave on this answer. */
   rating?: 1 | -1;
+  /** Rich widget groups from read tools (see lib/chat/widgets). */
+  widgets?: ChatWidget[];
   // Legacy fields from the pre-split widget (actions now live in the
   // Assistant). Kept so old localStorage histories still parse; not rendered.
   action?: unknown;
@@ -100,7 +106,14 @@ function loadMessages(mode: ChatMode): Message[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(storageKey(mode));
-    return raw ? JSON.parse(raw) : [];
+    const parsed: Message[] = raw ? JSON.parse(raw) : [];
+    // localStorage is user-owned but still untrusted shape — drop widget
+    // groups that don't pass the guard rather than feeding them a renderer.
+    return parsed.map((m) =>
+      Array.isArray(m.widgets)
+        ? { ...m, widgets: (m.widgets as unknown[]).filter(isChatWidget) as ChatWidget[] }
+        : m
+    );
   } catch {
     return [];
   }
@@ -183,6 +196,7 @@ export function ChatbotWidget() {
   const [input, setInput] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
   const [dynamicSuggestions, setDynamicSuggestions] = useState<string[] | null>(null);
+  const [statusLabel, setStatusLabel] = useState<string | null>(null);
   const [handoffBusy, setHandoffBusy] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null) as React.RefObject<HTMLTextAreaElement>;
@@ -288,9 +302,22 @@ export function ChatbotWidget() {
       surface: 'widget',
       currentPage: pathname,
       handlers: {
-        onTextDelta: (fullText) => setBubble({ content: fullText }),
+        onTextDelta: (fullText) => {
+          setStatusLabel(null);
+          setBubble({ content: fullText });
+        },
+        onStatus: (_tool, label) => setStatusLabel(label),
+        onWidgets: (batch) =>
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMessage.id
+                ? { ...m, widgets: mergeWidgets(m.widgets ?? [], batch) }
+                : m
+            )
+          ),
       },
     });
+    setStatusLabel(null);
 
     if (result.kind === 'aborted') {
       // User pressed Stop: keep the partial answer; drop an empty bubble.
@@ -373,6 +400,10 @@ export function ChatbotWidget() {
           conversation_id: id,
           role: m.role,
           content: m.content,
+          // Cards travel too — the Assistant restores them from tool_results.
+          ...(m.widgets && m.widgets.length > 0
+            ? { tool_results: m.widgets as unknown as Record<string, unknown>[] }
+            : {}),
         }));
         await appendMessages(supabase, rows);
       }
@@ -496,10 +527,10 @@ export function ChatbotWidget() {
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground max-w-[260px]">
                     {mode === 'counsellor'
-                      ? 'Quick questions about your cohort and tools. For programme search and deeper work, open the Assistant.'
+                      ? 'Quick answers about your cohort — deadlines, at-risk students, programmes. To take action (notes, messages), open the Assistant.'
                       : mode === 'parent'
                         ? "Quick questions about your child's journey. To message the counsellor, open the Assistant."
-                        : 'Quick questions about your journey. For programme search or contacting your counsellor, open the Assistant.'}
+                        : 'Quick answers — search programmes, check your matches, deadlines, and tasks. To take action, open the Assistant.'}
                   </p>
                   <div className="mt-4 flex flex-wrap justify-center gap-1.5">
                     {(dynamicSuggestions && dynamicSuggestions.length > 0
@@ -572,7 +603,9 @@ export function ChatbotWidget() {
                         ) : isStreamingThis ? (
                           <div className="flex items-center gap-1.5">
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">Thinking…</span>
+                            <span className="text-xs text-muted-foreground">
+                              {statusLabel || 'Thinking…'}
+                            </span>
                           </div>
                         ) : (
                           // Empty bubble that's no longer streaming (e.g. stale
@@ -582,6 +615,23 @@ export function ChatbotWidget() {
                           </span>
                         )}
                       </div>
+
+                      {/* Rich tool widgets (same registry as the Assistant).
+                          A click on any card link navigates — close the panel
+                          so the page behind is visible; toggle buttons etc.
+                          (none on this surface) would not match the anchor. */}
+                      {msg.widgets && msg.widgets.length > 0 && (
+                        <div
+                          className="mt-1.5 flex w-full max-w-[85%] flex-col gap-1.5"
+                          onClickCapture={(e) => {
+                            if ((e.target as HTMLElement).closest('a')) setIsOpen(false);
+                          }}
+                        >
+                          {msg.widgets.map((widget) => (
+                            <WidgetRenderer key={widget.kind} widget={widget} mode={mode} />
+                          ))}
+                        </div>
+                      )}
 
                       {/* Page preview snippets */}
                       {snippets.length > 0 && (

@@ -5,11 +5,14 @@
 // lib/chat/history.ts.
 //
 // Surfaces:
-//   'widget'    (default — back-compat hinge, never change): context-aware but
-//               read-only. NO tools: no programme search, no action proposals.
-//   'assistant' : full agentic suite. Tools enabled; when `conversationId` is
-//               provided the turn is persisted to chat_conversations /
-//               chat_messages (RLS own-only; the route's client is the user's).
+//   'widget'    (default — back-compat hinge): READ tools only (student /
+//               counsellor; parent none) with rich widget cards, but NO
+//               actions — write/propose calls are refused inside the loop
+//               (allowActions: false). Nothing is persisted.
+//   'assistant' : full agentic suite. Read + write tools; when
+//               `conversationId` is provided the turn is persisted to
+//               chat_conversations / chat_messages (RLS own-only; the route's
+//               client is the user's).
 //
 // SSE protocol (all events `data: <json>\n\n`, terminated by `data: [DONE]`):
 //   {"text": "..."}     — streamed prose chunk
@@ -31,11 +34,16 @@ import { type Content } from '@google/genai';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/api/rate-limit';
 import { ACTIVE_CHILD_COOKIE } from '@/lib/parent/active-child';
-import { getSystemPrompt, getToolAddendum, type ChatMode } from '@/lib/chat/prompts';
+import {
+  getSystemPrompt,
+  getToolAddendum,
+  getWidgetToolAddendum,
+  type ChatMode,
+} from '@/lib/chat/prompts';
 import { buildContextForMode } from '@/lib/chat/context';
 import { contextCacheKey, getCachedContext, setCachedContext } from '@/lib/chat/cache';
 import { buildToolsForMode } from '@/lib/chat/tools';
-import { buildGeminiTools } from '@/lib/chat/tools/registry';
+import { buildGeminiTools, buildGeminiReadTools } from '@/lib/chat/tools/registry';
 import {
   newTurnAccumulator,
   openStreamWithFallback,
@@ -165,19 +173,25 @@ export async function POST(req: NextRequest) {
     }
     const parentContactId = chatContext.parentContactId;
 
-    // The widget surface is read-only by design: no tools means no programme
-    // search and no action proposals — those live in the Assistant section.
-    // Student/counsellor toolsets come from the registry; parent keeps its
-    // legacy single-tool path (message tool only when a contact thread exists).
+    // Surface → toolset. Assistant: full read+write registry set (parent keeps
+    // its legacy single-tool path — message tool only when a contact thread
+    // exists). Widget: READ tools only, no actions (parent widget none) — the
+    // loop additionally refuses write calls via allowActions below.
     const tools =
       surface === 'assistant'
         ? mode === 'parent'
           ? buildToolsForMode(mode, Boolean(parentContactId))
           : buildGeminiTools(mode)
-        : undefined;
+        : mode === 'parent'
+          ? undefined
+          : buildGeminiReadTools(mode);
+    const toolAddendum =
+      surface === 'assistant'
+        ? getToolAddendum(mode, Boolean(parentContactId))
+        : getWidgetToolAddendum(mode);
     const systemInstruction = [
       getSystemPrompt(mode),
-      tools ? getToolAddendum(mode, Boolean(parentContactId)) : '',
+      tools ? toolAddendum : '',
       chatContext.context,
     ]
       .filter(Boolean)
@@ -268,6 +282,7 @@ export async function POST(req: NextRequest) {
             streamOptions,
             toolCtx: { supabase, userId: user.id, mode },
             ...(parentContactId ? { parentContactId } : {}),
+            allowActions: surface === 'assistant',
             acc,
             send,
           });

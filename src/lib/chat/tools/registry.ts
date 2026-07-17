@@ -54,6 +54,16 @@ export const buildGeminiTools = (mode: ChatMode): Tool[] | undefined => {
   return declarations.length > 0 ? [{ functionDeclarations: declarations }] : undefined;
 };
 
+/** READ-ONLY declarations for a mode — the floating widget's toolset. The
+ * widget stays a no-actions surface (its read-only contract): lookups and
+ * rich cards yes, confirm-card writes only in the full Assistant. */
+export const buildGeminiReadTools = (mode: ChatMode): Tool[] | undefined => {
+  const declarations = toolsForMode(mode)
+    .filter((tool) => tool.kind === 'read')
+    .map((tool) => tool.declaration);
+  return declarations.length > 0 ? [{ functionDeclarations: declarations }] : undefined;
+};
+
 export const getReadTool = (name: string, mode: ChatMode): ReadTool | null => {
   const tool = CHAT_TOOLS.get(name);
   return tool && tool.kind === 'read' && tool.modes.includes(mode) ? tool : null;
