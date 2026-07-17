@@ -98,10 +98,15 @@ export async function runToolLoop(opts: {
   streamOptions: GeminiStreamOptions;
   toolCtx: ToolContext;
   parentContactId?: string;
+  /** false on the widget surface: write/propose calls are answered with an
+   * error functionResponse instead of becoming action proposals — the widget
+   * has no confirm-card machinery and must stay a no-actions surface. */
+  allowActions?: boolean;
   acc: TurnAccumulator;
   send: (payload: unknown) => void;
 }): Promise<void> {
   const { contents, streamOptions, toolCtx, parentContactId, acc, send } = opts;
+  const allowActions = opts.allowActions !== false;
   let activeStream = opts.opened.stream;
   const chosenModel = opts.opened.model;
 
@@ -121,10 +126,12 @@ export async function runToolLoop(opts: {
     if (calls.length === 0) break; // model finished with prose
 
     // Write proposals (registry) and legacy propose_* calls (parent portal,
-    // old-model retries) end the turn for client-side confirmation.
-    const actionable = calls.find(
-      (c) => getWriteTool(c.name ?? '', toolCtx.mode) || isActionCall(c.name)
-    );
+    // old-model retries) end the turn for client-side confirmation. On a
+    // no-actions surface they instead fall through to the read loop below,
+    // where the unknown-tool branch tells the model they're unavailable.
+    const actionable = allowActions
+      ? calls.find((c) => getWriteTool(c.name ?? '', toolCtx.mode) || isActionCall(c.name))
+      : undefined;
     if (actionable) {
       // Reads co-emitted with a write can't reach the model (the action ends
       // the turn), but ones with a widget card should still render instead of

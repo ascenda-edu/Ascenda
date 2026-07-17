@@ -18,6 +18,12 @@ jest.mock('@/lib/supabase/server', () => ({
   createRouteHandlerSupabaseClient: jest.fn(),
 }));
 
+// Parent mode reads the active-child cookie; next/headers' cookies() throws
+// outside a real Next request context.
+jest.mock('next/headers', () => ({
+  cookies: jest.fn(() => ({ get: jest.fn(() => undefined) })),
+}));
+
 jest.mock('@/lib/api/rate-limit', () => ({
   checkRateLimit: jest.fn(() => true),
 }));
@@ -205,10 +211,46 @@ describe('POST /api/chat', () => {
 
   // ── Surface gating ─────────────────────────────────────────────────────
 
-  it('gives the widget surface (default) no tools — read-only informational', async () => {
+  it('gives the widget surface (default) READ tools only — no write tools', async () => {
     mockGenerate.mockResolvedValueOnce(streamOf([{ text: 'hi' }]));
     await (await POST(chatRequest(validBody))).text();
+    const tools = mockGenerate.mock.calls[0][0].config.tools;
+    expect(tools).toBeDefined();
+    const names = tools[0].functionDeclarations.map((d: { name: string }) => d.name);
+    expect(names).toEqual([
+      'search_programs',
+      'get_university_info',
+      'get_my_applications',
+      'get_my_matches',
+      'get_my_shortlist',
+    ]);
+  });
+
+  it('gives the parent widget no tools at all', async () => {
+    mockGenerate.mockResolvedValueOnce(streamOf([{ text: 'hi' }]));
+    await (await POST(chatRequest({ ...validBody, mode: 'parent' }))).text();
     expect(mockGenerate.mock.calls[0][0].config.tools).toBeUndefined();
+  });
+
+  it('refuses write-tool calls on the widget surface — no action event, model told unavailable', async () => {
+    mockGenerate
+      .mockResolvedValueOnce(
+        streamOf([
+          { functionCalls: [{ name: 'create_task', args: { application_id: 'a', task_name: 't' } }] },
+        ])
+      )
+      .mockResolvedValueOnce(streamOf([{ text: 'That needs the Assistant.' }]));
+
+    const res = await POST(chatRequest(validBody)); // widget surface
+    const body = await res.text();
+
+    expect(body).not.toContain('"action"');
+    // The write call was answered with an error functionResponse and the loop
+    // continued to a prose round.
+    const secondContents = mockGenerate.mock.calls[1][0].contents;
+    const last = secondContents[secondContents.length - 1];
+    expect(JSON.stringify(last.parts[0].functionResponse.response)).toContain('not available');
+    expect(body).toContain('That needs the Assistant.');
   });
 
   it('gives the assistant surface the full registry toolset for the mode', async () => {
