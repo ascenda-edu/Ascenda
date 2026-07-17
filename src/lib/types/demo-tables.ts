@@ -273,7 +273,7 @@ export type ChatFeedbackUpsert = Pick<
 // ── chat_conversations / chat_messages (migration 20260718120000) ────────────
 // DB-backed history for the full-page Assistant. `action` is the ChatAction
 // union from lib/chat/actions (plus an optional sentHelpRequestId stamped on
-// successful send); `tool_results` is ProgramHit[] from lib/chat/tools.
+// successful send); `tool_results` is ChatWidget[] from lib/chat/widgets (legacy rows: bare ProgramHit[]).
 
 export interface ChatConversationRow {
   id: string;

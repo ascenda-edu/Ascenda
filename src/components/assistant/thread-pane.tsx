@@ -19,8 +19,8 @@ import {
 } from '@/components/chat/shared';
 import type { ChatAction } from '@/lib/chat/actions';
 import type { ChatMode } from '@/lib/chat/prompts';
-import type { ProgramHit } from '@/lib/chat/tools';
-import { ProgramResultCard } from './program-result-card';
+import type { ChatWidget } from '@/lib/chat/widgets';
+import { WidgetRenderer } from './widgets';
 
 // ─── Message shape ──────────────────────────────────────────────────────────
 // UI-side message, mapped from ChatMessageRow (or created optimistically during
@@ -39,7 +39,8 @@ export interface AssistantMessage {
   action?: ChatAction;
   actionState?: ActionState;
   rating?: 1 | -1;
-  hits?: ProgramHit[];
+  /** Rich widget groups (merged, deduped, capped — see lib/chat/widgets). */
+  widgets?: ChatWidget[];
   persisted?: boolean;
 }
 
@@ -185,11 +186,12 @@ export function ThreadPane({
                     )}
                   </div>
 
-                  {/* Programme results */}
-                  {msg.hits && msg.hits.length > 0 && (
-                    <div className="mt-2 grid w-full max-w-[85%] gap-1.5 sm:grid-cols-2">
-                      {msg.hits.map((hit) => (
-                        <ProgramResultCard key={hit.id} hit={hit} mode={mode} />
+                  {/* Rich tool widgets (programme cards, deadlines, matches…) */}
+                  {msg.widgets && msg.widgets.length > 0 && (
+                    <div className="mt-2 flex w-full max-w-[85%] flex-col gap-1.5">
+                      {msg.widgets.map((widget) => (
+                        // kind is unique per message post-merge — a valid key.
+                        <WidgetRenderer key={widget.kind} widget={widget} mode={mode} />
                       ))}
                     </div>
                   )}

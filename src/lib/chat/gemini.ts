@@ -16,7 +16,7 @@ import { MODELS } from './prompts';
 import { isActionCall, toActionPayload, type ChatAction } from './actions';
 import { getReadTool, getWriteTool, frameToolResult } from './tools/registry';
 import type { ToolContext } from './tools/types';
-import type { ProgramHit } from './tools';
+import { mergeWidgets, type ChatWidget } from './widgets';
 
 export const geminiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? '' });
 
@@ -76,10 +76,14 @@ export async function openStreamWithFallback(
 export interface TurnAccumulator {
   text: string;
   action: ChatAction | null;
-  hits: ProgramHit[];
+  widgets: ChatWidget[];
 }
 
-export const newTurnAccumulator = (): TurnAccumulator => ({ text: '', action: null, hits: [] });
+export const newTurnAccumulator = (): TurnAccumulator => ({
+  text: '',
+  action: null,
+  widgets: [],
+});
 
 /**
  * The tool loop. Read tools execute inline (framed results fed back to the
@@ -123,21 +127,21 @@ export async function runToolLoop(opts: {
     );
     if (actionable) {
       // Reads co-emitted with a write can't reach the model (the action ends
-      // the turn), but ones with a client card (search results) should still
-      // render instead of being silently dropped. Model-fuel-only reads are
-      // skipped — executing them would be invisible DB work.
+      // the turn), but ones with a widget card should still render instead of
+      // being silently dropped. Model-fuel-only reads are skipped — executing
+      // them would be invisible DB work.
       for (const fc of calls) {
         if (fc === actionable) continue;
         const readTool = getReadTool(fc.name ?? '', toolCtx.mode);
-        if (!readTool?.toClientResults) continue;
+        if (!readTool?.toWidgets) continue;
         if (readTool.statusLabel) {
           send({ status: { tool: readTool.name, label: readTool.statusLabel } });
         }
         const result = await readTool.execute(toolCtx, fc.args ?? {});
-        const clientResults = readTool.toClientResults(result);
-        if (clientResults) {
-          acc.hits.push(...(clientResults.hits as ProgramHit[]));
-          send({ results: clientResults });
+        const widgets = readTool.toWidgets(result);
+        if (widgets && widgets.length > 0) {
+          acc.widgets = mergeWidgets(acc.widgets, widgets);
+          send({ results: { tool: readTool.name, widgets } });
         }
       }
       const writeTool = getWriteTool(actionable.name ?? '', toolCtx.mode);
@@ -166,10 +170,10 @@ export async function runToolLoop(opts: {
           send({ status: { tool: readTool.name, label: readTool.statusLabel } });
         }
         const result = await readTool.execute(toolCtx, fc.args ?? {});
-        const clientResults = readTool.toClientResults?.(result);
-        if (clientResults) {
-          acc.hits.push(...(clientResults.hits as ProgramHit[]));
-          send({ results: clientResults });
+        const widgets = readTool.toWidgets?.(result);
+        if (widgets && widgets.length > 0) {
+          acc.widgets = mergeWidgets(acc.widgets, widgets);
+          send({ results: { tool: readTool.name, widgets } });
         }
         responseParts.push({
           functionResponse: {

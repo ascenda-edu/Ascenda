@@ -15,9 +15,10 @@
 //   {"text": "..."}     — streamed prose chunk
 //   {"action": {...}}   — ≤1 per turn: a ChatAction the user must confirm
 //                         client-side; the server never executes actions.
-//   {"results": {"tool": "search_programs", "hits": [...]}}
-//                       — structured tool results for rich cards (assistant
-//                         surface only, by construction — widget has no tools)
+//   {"results": {"tool": "<name>", "widgets": [{"kind": "...", "items": [...]}]}}
+//                       — typed widget groups for rich in-thread cards (see
+//                         lib/chat/widgets.ts; assistant surface only, by
+//                         construction — the floating widget has no tools)
 //   {"saved": {"id": "..."}}
 //                       — the persisted assistant message's row id (assistant
 //                         surface with conversationId only), so the client can
@@ -236,7 +237,7 @@ export async function POST(req: NextRequest) {
 
         const persistAssistantMessage = async (): Promise<string | null> => {
           if (!persist || assistantPersisted) return null;
-          if (!acc.text && !acc.action && acc.hits.length === 0) return null;
+          if (!acc.text && !acc.action && acc.widgets.length === 0) return null;
           assistantPersisted = true;
           try {
             const { id } = await appendMessage(supabase, {
@@ -249,8 +250,8 @@ export async function POST(req: NextRequest) {
                     action_state: 'pending',
                   }
                 : {}),
-              ...(acc.hits.length > 0
-                ? { tool_results: acc.hits as unknown as Record<string, unknown>[] }
+              ...(acc.widgets.length > 0
+                ? { tool_results: acc.widgets as unknown as Record<string, unknown>[] }
                 : {}),
             });
             return id;

@@ -162,6 +162,7 @@ const STUDENT_TOOL_ADDENDUM = `TOOLS — you can look things up AND take actions
 
 READ TOOLS (execute instantly — use them freely whenever fresh or complete data would improve the answer; your LIVE ACCOUNT DATA block is only a cached summary and read results include the row ids you need to act):
 - search_programs — searches Ascenda's real catalogue of university programmes. Use it whenever the user asks about specific courses, universities, or countries, or wants recommendations grounded in real programmes. Present each result as a markdown link: [Course Name — University](/course/{id}) using the id from the result. Never invent programmes or ids.
+- get_university_info — one university in depth (rankings, acceptance, tuition, size) with a few of its programmes. Use for "tell me about <university>" questions.
 - get_my_applications — the user's tracked applications with statuses, deadlines, and checklist tasks (with ids).
 - get_my_matches — the user's current AI matches (with programme ids).
 - get_my_shortlist — the user's shortlisted programmes.
@@ -172,6 +173,8 @@ ACTION TOOLS (each call DRAFTS a confirmation card — the user reviews, may edi
 - update_task_status — mark a task todo/doing/done (needs the task id).
 - add_to_shortlist — save a programme to the user's shortlist (needs a programme id).
 - send_help_request — message the user's counsellor. Call ONLY when the user explicitly wants to contact them; write a specific subject and body from the conversation.
+
+RICH CARDS: search_programs, get_university_info, get_my_applications, get_my_matches, and get_my_shortlist results are shown to the user as interactive cards automatically — do NOT restate the rows in prose; give a one-line takeaway or recommendation instead.
 
 ACTION RULES:
 - Propose ONE action at a time. After the user confirms, you'll receive the execution result — confirm it briefly, then propose the next step if one was planned (e.g. track the application, then add its first tasks).
@@ -184,6 +187,7 @@ const COUNSELLOR_TOOL_ADDENDUM = `TOOLS — you can look things up AND take acti
 
 READ TOOLS (execute instantly — use them freely; your LIVE ACCOUNT DATA block is only a cached summary and read results include the ids you need to act):
 - search_programs — searches Ascenda's real catalogue of university programmes. Present results by name in plain text (course name, university, country) — do NOT link them, since programme detail pages live in the student section.
+- get_university_info — one university in depth (rankings, acceptance, tuition, size) with a few of its programmes. Use for "tell me about <university>" questions.
 - get_cohort_overview — cohort stats, at-risk students, and a compact roster (with student ids).
 - get_student_overview — one student in depth, by id or name. If the name is ambiguous you'll get candidates to choose from.
 - get_cohort_deadlines — upcoming deadlines across the cohort (within_days, up to 90).
@@ -191,6 +195,8 @@ READ TOOLS (execute instantly — use them freely; your LIVE ACCOUNT DATA block 
 ACTION TOOLS (each call DRAFTS a confirmation card — the counsellor reviews, may edit, and confirms before anything happens; the result is reported back to you afterwards):
 - add_student_note — add a session/flag/update note to a student's record (needs the student id).
 - message_student — open a message thread with a student (needs the student id); the student is notified automatically.
+
+RICH CARDS: search_programs, get_university_info, get_cohort_overview, and get_cohort_deadlines results are shown to the counsellor as cards automatically — do NOT restate the rows in prose; give a one-line takeaway instead.
 
 ACTION RULES:
 - Propose ONE action at a time. After confirmation you'll receive the execution result — confirm it briefly, then propose the next step if one was planned.

@@ -17,6 +17,18 @@ jest.mock('@/lib/counsellor/data', () => ({
   nameMap: jest.fn(async () => new Map()),
 }));
 
+import { deriveCohortStats, deriveAtRiskAlerts } from '@/lib/counsellor/data';
+
+const cohortStats = () => ({
+  total: 12,
+  avgCompletion: 68,
+  flagged: 3,
+  deadlinesThisWeek: 4,
+  matchTiers: { reach: 5, match: 6, safe: 2 },
+  appFunnel: { planning: 4, inProgress: 5, submitted: 2, decision: 1 },
+  programmeBreakdown: { ib: 7, aLevel: 5 },
+});
+
 jest.mock('@/lib/demo/help-request-client', () => ({
   insertHelpRequest: jest.fn(async () => ({ id: 'help-1' })),
 }));
@@ -152,5 +164,102 @@ describe('get_cohort_deadlines clamping', () => {
 
     await tool.execute(ctx, {});
     expect((deriveUpcomingDeadlines as jest.Mock).mock.calls[2][1]).toBe(30);
+  });
+});
+
+describe('get_cohort_deadlines toWidgets', () => {
+  const tool = readTool('get_cohort_deadlines');
+
+  it('passes studentFlag + name through to a deadlines widget', async () => {
+    (loadCohort as jest.Mock).mockResolvedValue([student('a', 'Ada', 'Lovelace')]);
+    (deriveUpcomingDeadlines as jest.Mock).mockReturnValue([
+      {
+        studentId: 'a',
+        studentName: 'Ada Lovelace',
+        studentFlag: '🇬🇧',
+        university: 'Oxford',
+        program: 'Computer Science',
+        date: '2026-09-01',
+        type: 'application',
+        daysUntil: 12,
+      },
+    ]);
+
+    const res = await tool.execute(ctx, {});
+    expect((res.deadlines as Array<{ studentFlag: string }>)[0].studentFlag).toBe('🇬🇧');
+
+    const widgets = tool.toWidgets!(res)!;
+    expect(widgets).toHaveLength(1);
+    expect(widgets[0].kind).toBe('deadlines');
+    expect((widgets[0] as { items: unknown[] }).items[0]).toEqual({
+      label: 'Computer Science',
+      university: 'Oxford',
+      studentName: 'Ada Lovelace',
+      studentFlag: '🇬🇧',
+      date: '2026-09-01',
+      daysUntil: 12,
+      type: 'application',
+    });
+  });
+
+  it('returns null when there are no deadlines', () => {
+    expect(tool.toWidgets!({ withinDays: 30, deadlines: [] })).toBeNull();
+  });
+});
+
+describe('get_cohort_overview toWidgets', () => {
+  const tool = readTool('get_cohort_overview');
+
+  it('emits cohort_stats (flagged→warning) + at_risk with flags', async () => {
+    (loadCohort as jest.Mock).mockResolvedValue([student('a', 'Ada', 'Lovelace')]);
+    (deriveCohortStats as jest.Mock).mockReturnValue(cohortStats());
+    (deriveAtRiskAlerts as jest.Mock).mockReturnValue([
+      {
+        studentId: 'a',
+        studentName: 'Ada Lovelace',
+        flagEmoji: '🇬🇧',
+        riskType: 'deadline_approaching',
+        urgency: 'critical',
+        description: 'Deadline in 2 days',
+        suggestedAction: 'Nudge',
+      },
+    ]);
+
+    const res = await tool.execute(ctx, {});
+    expect((res.atRisk as Array<{ flag: string }>)[0].flag).toBe('🇬🇧');
+
+    const widgets = tool.toWidgets!(res)!;
+    expect(widgets.map((w) => w.kind)).toEqual(['cohort_stats', 'at_risk']);
+
+    const stats = (widgets[0] as { items: Array<{ label: string; value: string; tone?: string }> }).items;
+    expect(stats).toHaveLength(8);
+    expect(stats).toContainEqual({ label: 'Students', value: '12' });
+    expect(stats).toContainEqual({ label: 'Avg completion', value: '68%' });
+    expect(stats).toContainEqual({ label: 'Flagged', value: '3', tone: 'warning' });
+
+    const atRisk = (widgets[1] as unknown as { items: Array<Record<string, unknown>> }).items;
+    expect(atRisk[0]).toEqual({
+      id: 'a',
+      name: 'Ada Lovelace',
+      flag: '🇬🇧',
+      urgency: 'critical',
+      reason: 'Deadline in 2 days',
+    });
+  });
+
+  it('flagged tile is neutral when zero, and at_risk group is omitted when empty', async () => {
+    (loadCohort as jest.Mock).mockResolvedValue([student('a', 'Ada', 'Lovelace')]);
+    (deriveCohortStats as jest.Mock).mockReturnValue({ ...cohortStats(), flagged: 0 });
+    (deriveAtRiskAlerts as jest.Mock).mockReturnValue([]);
+
+    const res = await tool.execute(ctx, {});
+    const widgets = tool.toWidgets!(res)!;
+    expect(widgets.map((w) => w.kind)).toEqual(['cohort_stats']);
+    const stats = (widgets[0] as { items: Array<{ label: string; tone?: string }> }).items;
+    expect(stats.find((s) => s.label === 'Flagged')).toEqual({ label: 'Flagged', value: '0', tone: 'neutral' });
+  });
+
+  it('returns null on an error payload', () => {
+    expect(tool.toWidgets!({ error: 'boom' })).toBeNull();
   });
 });

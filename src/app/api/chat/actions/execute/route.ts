@@ -230,7 +230,7 @@ export async function POST(req: NextRequest) {
         let assistantPersisted = false;
         const persistFollowUp = async (): Promise<string | null> => {
           if (assistantPersisted) return null;
-          if (!acc.text && !acc.action && acc.hits.length === 0) return null;
+          if (!acc.text && !acc.action && acc.widgets.length === 0) return null;
           assistantPersisted = true;
           try {
             const { id } = await appendMessage(supabase, {
@@ -243,8 +243,8 @@ export async function POST(req: NextRequest) {
                     action_state: 'pending',
                   }
                 : {}),
-              ...(acc.hits.length > 0
-                ? { tool_results: acc.hits as unknown as Record<string, unknown>[] }
+              ...(acc.widgets.length > 0
+                ? { tool_results: acc.widgets as unknown as Record<string, unknown>[] }
                 : {}),
             });
             return id;

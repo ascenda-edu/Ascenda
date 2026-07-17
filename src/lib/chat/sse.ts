@@ -4,10 +4,12 @@
 // is reassembled instead of silently dropped — naive per-chunk splitting loses
 // the fragment on both sides of the boundary.
 
+import { isChatWidget, type ChatWidget } from './widgets';
+
 export type SseEvent =
   | { type: 'text'; text: string }
   | { type: 'action'; action: unknown }
-  | { type: 'results'; hits: unknown }
+  | { type: 'widgets'; tool: string; widgets: ChatWidget[] }
   | { type: 'status'; tool: string; label: string }
   | { type: 'executed'; ok: boolean; message: string; result?: unknown }
   | { type: 'saved'; id: string }
@@ -38,8 +40,23 @@ export function createSseParser() {
           const parsed = JSON.parse(data) as Record<string, unknown>;
           if (typeof parsed.text === 'string') events.push({ type: 'text', text: parsed.text });
           if (parsed.action !== undefined) events.push({ type: 'action', action: parsed.action });
-          if (parsed.results !== undefined)
-            events.push({ type: 'results', hits: (parsed.results as { hits?: unknown })?.hits });
+          if (parsed.results !== undefined) {
+            const results = parsed.results as {
+              tool?: unknown;
+              widgets?: unknown;
+              hits?: unknown;
+            };
+            const tool = typeof results?.tool === 'string' ? results.tool : '';
+            if (Array.isArray(results?.widgets)) {
+              const widgets = results.widgets.filter(isChatWidget);
+              if (widgets.length > 0) events.push({ type: 'widgets', tool, widgets });
+            } else if (Array.isArray(results?.hits) && results.hits.length > 0) {
+              // Legacy shape from a pre-widget server (deploy-skew window):
+              // bare programme hits — wrap as a programs group.
+              const legacy = { kind: 'programs', items: results.hits };
+              if (isChatWidget(legacy)) events.push({ type: 'widgets', tool, widgets: [legacy] });
+            }
+          }
           {
             const status = parsed.status as { tool?: unknown; label?: unknown } | undefined;
             if (typeof status?.tool === 'string' && typeof status?.label === 'string')
