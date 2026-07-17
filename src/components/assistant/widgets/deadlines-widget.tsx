@@ -11,7 +11,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { cardFade } from '@/lib/motion';
 import { DEADLINE_VISUAL, classifyDeadlineUrgency } from '@/lib/theme/categories';
-import { parseLocalDate } from '@/lib/utils/dates';
+import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import { flagEmoji } from '@/lib/utils/flag';
 import type { ChatMode } from '@/lib/chat/prompts';
 import type { DeadlineHit } from '@/lib/chat/widgets';
@@ -28,7 +28,11 @@ const formatDate = (date: string): string =>
 function DeadlineRow({ item }: { item: DeadlineHit }) {
   const visual = DEADLINE_VISUAL[classifyDeadlineUrgency(item.date)];
   const Icon = visual.icon;
-  const overdue = item.daysUntil < 0;
+  // Recompute locally from the same date the chip classifies — the persisted
+  // item.daysUntil is tool-run-time and would disagree with the chip once a
+  // day boundary passes.
+  const days = daysUntil(item.date);
+  const overdue = days < 0;
 
   return (
     <div className="flex items-center gap-2 py-1.5">
@@ -57,7 +61,7 @@ function DeadlineRow({ item }: { item: DeadlineHit }) {
             : 'shrink-0 text-[10px] text-muted-foreground'
         }
       >
-        {relative(item.daysUntil)}
+        {relative(days)}
       </span>
     </div>
   );
@@ -73,7 +77,12 @@ export function DeadlinesWidget({ items, mode }: { items: DeadlineHit[]; mode: C
     >
       <div className="divide-y divide-border">
         {items.map((item) => (
-          <DeadlineRow key={`${item.label}|${item.date}|${item.studentName ?? ''}`} item={item} />
+          // Two programmes share canonical dates (UCAS 15 Oct) — university
+          // disambiguates; must match widgetItemKey's identity.
+          <DeadlineRow
+            key={`${item.label}|${item.date}|${item.university ?? ''}|${item.studentName ?? ''}`}
+            item={item}
+          />
         ))}
       </div>
       {mode === 'student' ? (

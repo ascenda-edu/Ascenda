@@ -53,6 +53,41 @@ describe('isChatWidget', () => {
     expect(isChatWidget({ kind: 'programs', items: [{ notAProgram: true }] })).toBe(false);
     expect(isChatWidget({ kind: 'deadlines', items: [{ label: 'x' }] })).toBe(false); // missing date/daysUntil
   });
+
+  it('validates EVERY item — junk at index ≥1 rejects the group', () => {
+    expect(
+      isChatWidget({ kind: 'programs', items: [program('p1'), { junk: true }] })
+    ).toBe(false);
+  });
+
+  it('rejects renderer-crashing field values (crafted rows)', () => {
+    const base = {
+      id: 'p1',
+      course: 'CS',
+      university: 'Oxford',
+      score: 80,
+      factors: { eligibility: 1, academicFit: 1, preferenceFit: 0, outcomes: 1 },
+    };
+    // tier must be Reach/Match/Safe or null — a truthy non-string would throw
+    // in tier.toLowerCase().
+    expect(isChatWidget({ kind: 'matches', items: [{ ...base, tier: 5 }] })).toBe(false);
+    expect(isChatWidget({ kind: 'matches', items: [{ ...base, tier: null }] })).toBe(true);
+    // factors must carry all four numbers.
+    expect(
+      isChatWidget({ kind: 'matches', items: [{ ...base, tier: 'Match', factors: {} }] })
+    ).toBe(false);
+    // urgency indexes a visual map.
+    expect(
+      isChatWidget({ kind: 'at_risk', items: [{ id: 's1', name: 'A', urgency: 'nope', reason: 'r' }] })
+    ).toBe(false);
+    // task status is an enum.
+    expect(
+      isChatWidget({
+        kind: 'tasks',
+        items: [{ id: 't1', name: 'x', status: 'weird', application: 'CS', applicationId: 'a1' }],
+      })
+    ).toBe(false);
+  });
 });
 
 describe('wrapLegacyToolResults', () => {
@@ -74,6 +109,16 @@ describe('wrapLegacyToolResults', () => {
   it('filters junk legacy rows and returns [] when nothing survives', () => {
     expect(wrapLegacyToolResults([{ foo: 'bar' }])).toEqual([]);
     expect(wrapLegacyToolResults([])).toEqual([]);
+  });
+
+  it('collapses crafted duplicate same-kind groups on restore (kind stays a unique key)', () => {
+    const rows = [
+      { kind: 'programs', items: [program('p1')] },
+      { kind: 'programs', items: [program('p1'), program('p2')] },
+    ] as unknown as Record<string, unknown>[];
+    expect(wrapLegacyToolResults(rows)).toEqual([
+      { kind: 'programs', items: [program('p1'), program('p2')] },
+    ]);
   });
 });
 
@@ -102,6 +147,32 @@ describe('mergeWidgets', () => {
         {
           kind: 'deadlines',
           items: [d, { ...d, studentName: 'Ada' }],
+        },
+      ]
+    );
+    expect(merged[0].items).toHaveLength(2);
+  });
+
+  it('keeps same-date deadlines at different universities (UCAS 15 Oct case)', () => {
+    const ucas = { label: 'UCAS deadline', date: '2026-10-15', daysUntil: 90 };
+    const merged = mergeWidgets(
+      [{ kind: 'deadlines', items: [{ ...ucas, university: 'Oxford' }] }],
+      [{ kind: 'deadlines', items: [{ ...ucas, university: 'Cambridge' }] }]
+    );
+    expect(merged[0].items).toHaveLength(2);
+  });
+
+  it('keeps multiple at-risk alerts for the same student (identity is id+reason)', () => {
+    const base = { id: 's1', name: 'Ada', urgency: 'high' as const };
+    const merged = mergeWidgets(
+      [{ kind: 'at_risk', items: [{ ...base, reason: 'Profile 45% complete' }] }],
+      [
+        {
+          kind: 'at_risk',
+          items: [
+            { ...base, reason: 'Profile 45% complete' }, // duplicate — dropped
+            { ...base, reason: 'No activity for 20 days' }, // second alert — kept
+          ],
         },
       ]
     );

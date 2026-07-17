@@ -14,6 +14,7 @@
 // Dispatch is an exhaustive switch on widget.kind; the `never`-typed default
 // makes an unhandled kind a compile error (and returns null at runtime).
 
+import { Component, type ReactNode } from 'react';
 import type { ChatMode } from '@/lib/chat/prompts';
 import type { ChatWidget } from '@/lib/chat/widgets';
 import { ProgramsWidget } from './programs-widget';
@@ -24,7 +25,32 @@ import { TasksWidget } from './tasks-widget';
 import { CohortStatsWidget } from './cohort-stats-widget';
 import { AtRiskWidget } from './at-risk-widget';
 
+// isChatWidget validates every item before data reaches these components, but
+// tool_results jsonb is ultimately user-writable (own-only RLS) and future
+// field drift is possible — a widget that throws must degrade to "not
+// rendered", never unmount the whole workspace.
+class WidgetErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: unknown) {
+    console.warn('[assistant] widget render failed:', error);
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
 export function WidgetRenderer({ widget, mode }: { widget: ChatWidget; mode: ChatMode }) {
+  return (
+    <WidgetErrorBoundary>
+      <WidgetSwitch widget={widget} mode={mode} />
+    </WidgetErrorBoundary>
+  );
+}
+
+function WidgetSwitch({ widget, mode }: { widget: ChatWidget; mode: ChatMode }) {
   switch (widget.kind) {
     case 'programs':
       return <ProgramsWidget items={widget.items} mode={mode} />;

@@ -58,7 +58,7 @@ function AtRiskRow({ item, mode }: { item: AtRiskHit; mode: ChatMode }) {
   if (mode === 'counsellor') {
     return (
       <Link
-        href={`/counsellor/students/${item.id}`}
+        href={`/counsellor/students/${encodeURIComponent(item.id)}`}
         className={cn(
           shared,
           'transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-sm'
@@ -76,7 +76,8 @@ export function AtRiskWidget({ items, mode }: { items: AtRiskHit[]; mode: ChatMo
   return (
     <motion.div variants={cardFade} initial="hidden" animate="show" className="grid gap-1.5">
       {items.map((item) => (
-        <AtRiskRow key={item.id} item={item} mode={mode} />
+        // One student can carry several alerts — key per row, not per entity.
+        <AtRiskRow key={`${item.id}|${item.reason}`} item={item} mode={mode} />
       ))}
     </motion.div>
   );

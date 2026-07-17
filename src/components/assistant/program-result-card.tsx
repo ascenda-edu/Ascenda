@@ -43,7 +43,7 @@ export function ProgramResultCard({ hit, mode }: ProgramResultCardProps) {
   if (mode === 'student') {
     return (
       <Link
-        href={`/course/${hit.id}`}
+        href={`/course/${encodeURIComponent(hit.id)}`}
         className={cn(
           shared,
           'transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-sm'

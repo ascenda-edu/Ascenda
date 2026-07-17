@@ -185,4 +185,49 @@ describe('WidgetRenderer', () => {
     const m2 = screen.getAllByRole('link').find((a) => a.getAttribute('href') === '/course/m2')!;
     expect(within(m2).queryByText(/Reach|Match|Safe/)).toBeNull();
   });
+
+  it('matches/deadlines/tasks: render no links in counsellor mode', () => {
+    for (const kind of ['matches', 'deadlines', 'tasks'] as const) {
+      const { unmount } = renderWidget(FIXTURES[kind], 'counsellor');
+      expect(screen.queryByRole('link')).toBeNull();
+      unmount();
+    }
+  });
+
+  it('parent mode: every widget kind renders fully static (no links, no buttons)', () => {
+    // Parent has no read tools, but a crafted DB row could attach widgets to a
+    // parent conversation — they must be inert.
+    for (const widget of Object.values(FIXTURES)) {
+      const { unmount } = renderWidget(widget, 'parent');
+      expect(screen.queryByRole('link')).toBeNull();
+      expect(screen.queryByRole('button')).toBeNull();
+      unmount();
+    }
+  });
+
+  it('a widget that throws is contained by the error boundary (no workspace crash)', () => {
+    // Simulate a crafted row that slipped past validation: tier is a number,
+    // so tierKeyOf would call .toLowerCase() on it and throw.
+    const poisoned = {
+      kind: 'matches',
+      items: [
+        {
+          id: 'x',
+          course: 'CS',
+          university: 'U',
+          score: 50,
+          tier: 5,
+          factors: { eligibility: 1, academicFit: 1, preferenceFit: 0, outcomes: 1 },
+        },
+      ],
+    } as unknown as ChatWidget;
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      expect(() => renderWidget(poisoned, 'student')).not.toThrow();
+    } finally {
+      warn.mockRestore();
+      error.mockRestore();
+    }
+  });
 });

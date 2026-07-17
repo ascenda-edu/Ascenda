@@ -114,24 +114,43 @@ export const WIDGET_ITEM_CAPS: Record<ChatWidgetKind, number> = {
   at_risk: 10,
 };
 
-// Minimal per-kind field checks for the first item — enough to reject junk
-// from the wire or old/corrupt rows without exhaustively validating every field.
+const FACTOR_KEYS = ['eligibility', 'academicFit', 'preferenceFit', 'outcomes'] as const;
+const TASK_STATUSES = ['todo', 'doing', 'done'] as const;
+const URGENCIES = ['critical', 'high', 'medium'] as const;
+const TIERS = ['Reach', 'Match', 'Safe'] as const;
+
+// Field checks per kind — cover every field a renderer dereferences without
+// its own guard (tier.toLowerCase(), URGENCY_VISUAL[urgency], factors.*), so a
+// crafted row degrades to "widget not rendered", never a component throw.
 const ITEM_CHECKS: Record<ChatWidgetKind, (item: Record<string, unknown>) => boolean> = {
   programs: (i) => typeof i.id === 'string' && typeof i.course === 'string',
   universities: (i) => typeof i.id === 'string' && typeof i.name === 'string' && Array.isArray(i.programs),
   deadlines: (i) => typeof i.label === 'string' && typeof i.date === 'string' && typeof i.daysUntil === 'number',
-  matches: (i) =>
+  matches: (i) => {
+    if (typeof i.id !== 'string' || typeof i.score !== 'number') return false;
+    if (i.tier !== null && i.tier !== undefined && !(TIERS as readonly unknown[]).includes(i.tier)) {
+      return false;
+    }
+    const factors = i.factors as Record<string, unknown> | null | undefined;
+    if (!factors || typeof factors !== 'object') return false;
+    return FACTOR_KEYS.every((k) => typeof factors[k] === 'number');
+  },
+  tasks: (i) =>
     typeof i.id === 'string' &&
-    typeof i.score === 'number' &&
-    !!i.factors &&
-    typeof i.factors === 'object',
-  tasks: (i) => typeof i.id === 'string' && typeof i.name === 'string' && typeof i.status === 'string',
+    typeof i.name === 'string' &&
+    (TASK_STATUSES as readonly unknown[]).includes(i.status),
   cohort_stats: (i) => typeof i.label === 'string' && typeof i.value === 'string',
-  at_risk: (i) => typeof i.id === 'string' && typeof i.name === 'string' && typeof i.urgency === 'string',
+  at_risk: (i) =>
+    typeof i.id === 'string' &&
+    typeof i.name === 'string' &&
+    (URGENCIES as readonly unknown[]).includes(i.urgency),
 };
 
 /** Runtime guard for widget groups arriving over the wire or restored from
- * chat_messages.tool_results — never trust the shape (like isChatAction). */
+ * chat_messages.tool_results — never trust the shape (like isChatAction).
+ * EVERY item is checked: one junk item at index ≥1 would otherwise throw
+ * inside a renderer, and with no error boundary above the thread that used to
+ * mean a white-screened workspace on every reload of the poisoned row. */
 export function isChatWidget(value: unknown): value is ChatWidget {
   if (!value || typeof value !== 'object') return false;
   const w = value as Record<string, unknown>;
@@ -139,18 +158,20 @@ export function isChatWidget(value: unknown): value is ChatWidget {
     return false;
   }
   if (!Array.isArray(w.items)) return false;
-  if (w.items.length === 0) return true;
-  const first = w.items[0];
-  if (!first || typeof first !== 'object') return false;
-  return ITEM_CHECKS[w.kind as ChatWidgetKind](first as Record<string, unknown>);
+  const check = ITEM_CHECKS[w.kind as ChatWidgetKind];
+  return w.items.every(
+    (item) => !!item && typeof item === 'object' && check(item as Record<string, unknown>)
+  );
 }
 
 /** chat_messages.tool_results rows persisted before the widget envelope are a
- * bare ProgramHit[] — detect (no `kind` on the first element) and wrap. */
+ * bare ProgramHit[] — detect (no `kind` on the first element) and wrap.
+ * Restored groups are re-merged so a crafted row with two groups of the same
+ * kind collapses to one — the renderer keys on kind, which must stay unique. */
 export function wrapLegacyToolResults(rows: Record<string, unknown>[]): ChatWidget[] {
   if (!Array.isArray(rows) || rows.length === 0) return [];
   if (typeof rows[0]?.kind === 'string') {
-    return rows.filter(isChatWidget) as unknown as ChatWidget[];
+    return mergeWidgets([], rows.filter(isChatWidget) as unknown as ChatWidget[]);
   }
   const items = rows.filter(
     (r) => r && typeof r.id === 'string' && typeof r.course === 'string'
@@ -160,13 +181,20 @@ export function wrapLegacyToolResults(rows: Record<string, unknown>[]): ChatWidg
     : [];
 }
 
-// Identity key per kind — what makes two items "the same row" when a tool runs
-// twice in one turn (also prevents duplicate React keys downstream).
-const identityKey = (kind: ChatWidgetKind, item: Record<string, unknown>): string => {
+// Identity key per kind — what makes two items "the same ROW" when a tool runs
+// twice in one turn (also the React key downstream, so it must be unique per
+// rendered row, not per entity): two programmes can share the canonical UCAS
+// date (disambiguate by university), and one at-risk student carries several
+// alerts (disambiguate by reason).
+export const widgetItemKey = (
+  kind: ChatWidgetKind,
+  item: Record<string, unknown>
+): string => {
   if (kind === 'deadlines') {
-    return `${item.label}|${item.date}|${item.studentName ?? ''}`;
+    return `${item.label}|${item.date}|${item.university ?? ''}|${item.studentName ?? ''}`;
   }
   if (kind === 'cohort_stats') return String(item.label);
+  if (kind === 'at_risk') return `${item.id}|${item.reason ?? ''}`;
   return String(item.id);
 };
 
@@ -186,10 +214,10 @@ export function mergeWidgets(existing: ChatWidget[], incoming: ChatWidget[]): Ch
       continue;
     }
     const targetItems = target.items as unknown as Record<string, unknown>[];
-    const seen = new Set(targetItems.map((i) => identityKey(target.kind, i)));
+    const seen = new Set(targetItems.map((i) => widgetItemKey(target.kind, i)));
     for (const item of widget.items as unknown as Record<string, unknown>[]) {
       if (targetItems.length >= WIDGET_ITEM_CAPS[target.kind]) break;
-      const key = identityKey(target.kind, item);
+      const key = widgetItemKey(target.kind, item);
       if (seen.has(key)) continue;
       seen.add(key);
       targetItems.push(item);

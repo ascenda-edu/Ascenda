@@ -84,7 +84,7 @@ function UniversityCard({ item, mode }: { item: UniversityHit; mode: ChatMode })
               return (
                 <Link
                   key={p.id}
-                  href={`/university-search/university/${p.id}`}
+                  href={`/university-search/university/${encodeURIComponent(p.id)}`}
                   className={cn(
                     rowShared,
                     'transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-sm'

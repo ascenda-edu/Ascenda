@@ -104,7 +104,7 @@ function MatchCard({ item, mode }: { item: MatchHit; mode: ChatMode }) {
   if (mode === 'student') {
     return (
       <Link
-        href={`/course/${item.id}`}
+        href={`/course/${encodeURIComponent(item.id)}`}
         className={cn(
           shared,
           'transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-sm'
