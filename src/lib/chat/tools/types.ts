@@ -11,6 +11,7 @@ import type { FunctionDeclaration } from '@google/genai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ChatMode } from '../prompts';
 import type { ToolActionEditableField } from '../actions';
+import type { ChatWidget } from '../widgets';
 
 export interface ToolContext {
   /** The route handler's user-scoped client — RLS is the enforcement layer. */
@@ -49,8 +50,10 @@ export interface ReadTool extends ToolBase {
   /** MUST never throw — return an `{ error }`/`{ note }` payload instead, so a
    * failed lookup degrades to a model-visible message, not a broken stream. */
   execute(ctx: ToolContext, args: Record<string, unknown>): Promise<Record<string, unknown>>;
-  /** Optional rich-card payload for the client (only search_programs in v1). */
-  toClientResults?(result: Record<string, unknown>): { tool: string; hits: unknown[] } | null;
+  /** Optional rich-widget groups for the thread (see ../widgets.ts). One tool
+   * may emit several groups (e.g. cohort overview → stats + at-risk). Return
+   * null/empty when the payload has nothing card-worthy (errors, empty sets). */
+  toWidgets?(result: Record<string, unknown>): ChatWidget[] | null;
   /** Transient "agent is working" label streamed while this tool runs. */
   statusLabel?: string;
 }

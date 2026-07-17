@@ -6,7 +6,12 @@
 import { Type, type FunctionDeclaration } from '@google/genai';
 import { resolvePrograms } from '@/lib/counsellor/data';
 import { isMissingShortlistTable } from '@/lib/shortlist/server';
+import { daysUntil } from '@/lib/utils/dates';
+import type { ProgramHit } from '../tools';
+import type { ChatWidget } from '../widgets';
 import type { ReadTool, ToolContext } from './types';
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 const MAX_APPS = 20;
 
@@ -89,6 +94,57 @@ const getMyApplications: ReadTool = {
       return { error: 'Could not load your applications right now.' };
     }
   },
+  toWidgets: (result): ChatWidget[] | null => {
+    if (result.error) return null;
+    const apps = (result as { applications?: AppWidgetRow[] }).applications ?? [];
+
+    const deadlines = apps
+      .flatMap((app) =>
+        (app.deadlines ?? [])
+          .filter((d) => typeof d.date === 'string' && DATE_ONLY.test(d.date))
+          .map((d) => ({
+            label: d.name,
+            university: app.university,
+            date: d.date,
+            daysUntil: daysUntil(d.date),
+          }))
+      )
+      .filter((d) => d.daysUntil >= -30)
+      .sort((a, b) => a.daysUntil - b.daysUntil);
+
+    const tasks = apps
+      .flatMap((app) =>
+        (app.tasks ?? []).map((t) => ({
+          id: t.id,
+          name: t.task_name,
+          status: t.status,
+          dueDate: t.due_date ?? null,
+          application: app.course,
+          applicationId: app.id,
+        }))
+      )
+      .sort((a, b) => {
+        const doneDelta = (a.status === 'done' ? 1 : 0) - (b.status === 'done' ? 1 : 0);
+        if (doneDelta !== 0) return doneDelta;
+        if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+        if (a.dueDate) return -1;
+        if (b.dueDate) return 1;
+        return 0;
+      });
+
+    const widgets: ChatWidget[] = [];
+    if (deadlines.length > 0) widgets.push({ kind: 'deadlines', items: deadlines });
+    if (tasks.length > 0) widgets.push({ kind: 'tasks', items: tasks });
+    return widgets.length > 0 ? widgets : null;
+  },
+};
+
+type AppWidgetRow = {
+  id: string;
+  course: string;
+  university: string;
+  deadlines?: Array<{ name: string; date: string }>;
+  tasks?: Array<{ id: string; task_name: string; status: 'todo' | 'doing' | 'done'; due_date: string | null }>;
 };
 
 // ─── get_my_matches ──────────────────────────────────────────────────────────
@@ -150,6 +206,7 @@ const getMyMatches: ReadTool = {
           const info = programInfo.get(r.program_id);
           const tier = r.breakdown?.tier;
           const tierText = tier === 'Reach' || tier === 'Match' || tier === 'Safe' ? tier : 'Unrated';
+          const b = r.breakdown ?? {};
           return {
             id: r.program_id,
             course: info?.courseName ?? 'Programme',
@@ -157,6 +214,12 @@ const getMyMatches: ReadTool = {
             country: info?.country ?? null,
             score: Math.round(r.score),
             tier: tierText,
+            factors: {
+              eligibility: clampFactor(b.eligibility),
+              academicFit: clampFactor(b.academicFit),
+              preferenceFit: clampFactor(b.preferenceFit),
+              outcomes: clampFactor(b.outcomes),
+            },
           };
         }),
       };
@@ -164,6 +227,40 @@ const getMyMatches: ReadTool = {
       return { error: 'Could not load your matches right now.' };
     }
   },
+  toWidgets: (result): ChatWidget[] | null => {
+    if (result.error) return null;
+    const rows = (result as { results?: MatchWidgetRow[] }).results ?? [];
+    if (rows.length === 0) return null;
+    return [
+      {
+        kind: 'matches',
+        items: rows.map((r) => ({
+          id: r.id,
+          course: r.course,
+          university: r.university,
+          score: r.score,
+          tier: r.tier === 'Reach' || r.tier === 'Match' || r.tier === 'Safe' ? r.tier : null,
+          factors: r.factors,
+        })),
+      },
+    ];
+  },
+};
+
+// breakdown jsonb carries these four (service.ts) but is untyped on the wire —
+// keep only finite numbers in 0-100, default 0.
+const clampFactor = (value: unknown): number => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
+  return Math.min(100, Math.max(0, value));
+};
+
+type MatchWidgetRow = {
+  id: string;
+  course: string;
+  university: string;
+  score: number;
+  tier: string;
+  factors: { eligibility: number; academicFit: number; preferenceFit: number; outcomes: number };
 };
 
 // ─── get_my_shortlist ────────────────────────────────────────────────────────
@@ -222,6 +319,28 @@ const getMyShortlist: ReadTool = {
       return { error: 'Could not load your shortlist right now.' };
     }
   },
+  toWidgets: (result): ChatWidget[] | null => {
+    // {note} = localStorage posture (server can't see it) or {error} — neither
+    // is card-worthy. Only the shortlist array renders.
+    const rows = (result as { shortlist?: ShortlistWidgetRow[] }).shortlist;
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    const items: ProgramHit[] = rows.map((r) => ({
+      id: r.id,
+      course: r.course,
+      university: r.university,
+      country: r.location ?? '—',
+      city: null,
+      level: null,
+    }));
+    return [{ kind: 'programs', items }];
+  },
+};
+
+type ShortlistWidgetRow = {
+  id: string;
+  course: string;
+  university: string;
+  location: string | null;
 };
 
 export const STUDENT_READ_TOOLS: ReadTool[] = [getMyApplications, getMyMatches, getMyShortlist];

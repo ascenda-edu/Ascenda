@@ -6,11 +6,13 @@
 import type { Tool } from '@google/genai';
 import type { ChatMode } from '../prompts';
 import { searchProgramsDeclaration, executeSearchPrograms, type ProgramHit } from '../tools';
+import type { ChatWidget } from '../widgets';
 import type { ChatTool, ReadTool, WriteTool } from './types';
 import { STUDENT_READ_TOOLS } from './student-read';
 import { STUDENT_WRITE_TOOLS } from './student-write';
 import { COUNSELLOR_READ_TOOLS } from './counsellor-read';
 import { COUNSELLOR_WRITE_TOOLS } from './counsellor-write';
+import { UNIVERSITY_READ_TOOLS } from './university-read';
 
 const searchProgramsTool: ReadTool = {
   kind: 'read',
@@ -23,14 +25,15 @@ const searchProgramsTool: ReadTool = {
       string,
       unknown
     >,
-  toClientResults: (result) => {
-    const hits = (result as { results?: ProgramHit[] }).results ?? [];
-    return hits.length > 0 ? { tool: 'search_programs', hits } : null;
+  toWidgets: (result): ChatWidget[] | null => {
+    const items = (result as { results?: ProgramHit[] }).results ?? [];
+    return items.length > 0 ? [{ kind: 'programs', items }] : null;
   },
 };
 
 const ALL_TOOLS: ChatTool[] = [
   searchProgramsTool,
+  ...UNIVERSITY_READ_TOOLS,
   ...STUDENT_READ_TOOLS,
   ...STUDENT_WRITE_TOOLS,
   ...COUNSELLOR_READ_TOOLS,

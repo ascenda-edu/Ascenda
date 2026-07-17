@@ -42,15 +42,41 @@ describe('createSseParser', () => {
     expect(parser.push('xt":"b"}\n\n')).toEqual([{ type: 'text', text: 'b' }]);
   });
 
-  it('parses results events', () => {
+  it('parses widget results events', () => {
+    const events = collect([
+      'data: {"results":{"tool":"search_programs","widgets":[{"kind":"programs","items":[{"id":"p1","course":"CS"}]}]}}\n\n',
+    ]);
+    expect(events).toEqual([
+      {
+        type: 'widgets',
+        tool: 'search_programs',
+        widgets: [{ kind: 'programs', items: [{ id: 'p1', course: 'CS' }] }],
+      },
+    ]);
+  });
+
+  it('wraps the legacy bare-hits results shape as a programs widget (deploy skew)', () => {
     const events = collect([
       'data: {"results":{"tool":"search_programs","hits":[{"id":"p1","course":"CS"}]}}\n\n',
     ]);
-    expect(events).toEqual([{ type: 'results', hits: [{ id: 'p1', course: 'CS' }] }]);
+    expect(events).toEqual([
+      {
+        type: 'widgets',
+        tool: 'search_programs',
+        widgets: [{ kind: 'programs', items: [{ id: 'p1', course: 'CS' }] }],
+      },
+    ]);
   });
 
-  it('reassembles a results payload split across reads', () => {
-    const hits = Array.from({ length: 8 }, (_, i) => ({
+  it('drops malformed widget groups instead of emitting junk', () => {
+    const events = collect([
+      'data: {"results":{"tool":"x","widgets":[{"kind":"nonsense","items":[{}]},{"kind":"programs","items":"nope"}]}}\n\n',
+    ]);
+    expect(events).toEqual([]);
+  });
+
+  it('reassembles a widgets payload split across reads', () => {
+    const items = Array.from({ length: 8 }, (_, i) => ({
       id: `prog-${i}`,
       course: 'Computer Science BSc',
       university: 'University of Oxford',
@@ -58,10 +84,11 @@ describe('createSseParser', () => {
       city: 'Oxford',
       level: 'Undergraduate',
     }));
-    const wire = `data: ${JSON.stringify({ results: { tool: 'search_programs', hits } })}\n\n`;
+    const widgets = [{ kind: 'programs', items }];
+    const wire = `data: ${JSON.stringify({ results: { tool: 'search_programs', widgets } })}\n\n`;
     const third = Math.floor(wire.length / 3);
     const events = collect([wire.slice(0, third), wire.slice(third, 2 * third), wire.slice(2 * third)]);
-    expect(events).toEqual([{ type: 'results', hits }]);
+    expect(events).toEqual([{ type: 'widgets', tool: 'search_programs', widgets }]);
   });
 
   it('emits error events (so the widget can show a retryable bubble)', () => {

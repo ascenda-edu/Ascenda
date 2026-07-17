@@ -15,7 +15,12 @@ const config: Config = {
     '<rootDir>/__tests__/scoring_validation/batch_runner.ts'
   ],
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.json' }]
+    // jsx override: tsconfig.json uses `jsx: "preserve"` (Next.js needs the
+    // untransformed JSX), but ts-jest must emit real React.createElement calls
+    // for .tsx component tests (e.g. the assistant widget renderer). The object
+    // form merges over the discovered tsconfig.json, so paths/esModuleInterop
+    // etc. are preserved; harmless for the existing .ts-only test suites.
+    '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: { jsx: 'react-jsx' } }]
   }
 };
 

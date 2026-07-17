@@ -30,8 +30,8 @@ import {
 } from '@/lib/chat/history';
 import { insertHelpRequest } from '@/lib/demo/help-request-client';
 import { isChatAction, type ChatAction } from '@/lib/chat/actions';
+import { mergeWidgets, wrapLegacyToolResults } from '@/lib/chat/widgets';
 import type { ChatMode } from '@/lib/chat/prompts';
-import type { ProgramHit } from '@/lib/chat/tools';
 import type { ChatConversationRow, ChatMessageRow } from '@/lib/types/demo-tables';
 import { ConversationRail } from './conversation-rail';
 import { ThreadPane, type AssistantMessage } from './thread-pane';
@@ -75,10 +75,12 @@ const nextClientId = (prefix: string) => `${prefix}-${Date.now()}-${++clientIdSe
 
 function mapRow(row: ChatMessageRow): AssistantMessage {
   const action = isChatAction(row.action) ? row.action : undefined;
-  const hits =
+  // tool_results is ChatWidget[]; rows persisted before the widget envelope
+  // are bare ProgramHit[] — wrapLegacyToolResults handles both.
+  const restored =
     row.tool_results && row.tool_results.length > 0
-      ? (row.tool_results as unknown as ProgramHit[])
-      : undefined;
+      ? wrapLegacyToolResults(row.tool_results)
+      : [];
   return {
     id: row.id,
     role: row.role,
@@ -86,7 +88,7 @@ function mapRow(row: ChatMessageRow): AssistantMessage {
     action,
     actionState: row.action_state ?? undefined,
     rating: row.rating ?? undefined,
-    hits,
+    widgets: restored.length > 0 ? restored : undefined,
     persisted: true,
   };
 }
@@ -283,11 +285,13 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
               )
             );
           },
-          onResults: (batch) => {
+          onWidgets: (batch) => {
             if (!active()) return;
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === assistantId ? { ...m, hits: [...(m.hits ?? []), ...batch] } : m
+                m.id === assistantId
+                  ? { ...m, widgets: mergeWidgets(m.widgets ?? [], batch) }
+                  : m
               )
             );
           },
@@ -484,12 +488,14 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
               )
             );
           },
-          onResults: (batch) => {
+          onWidgets: (batch) => {
             if (!active()) return;
             ensureBubble();
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === followId ? { ...m, hits: [...(m.hits ?? []), ...batch] } : m
+                m.id === followId
+                  ? { ...m, widgets: mergeWidgets(m.widgets ?? [], batch) }
+                  : m
               )
             );
           },

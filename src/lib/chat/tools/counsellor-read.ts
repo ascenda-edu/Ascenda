@@ -5,6 +5,7 @@
 // calls (always carrying ids), never the full nested cohort shape.
 
 import { Type } from '@google/genai';
+import type { ChatWidget, StatHit } from '../widgets';
 import type { ReadTool, ToolContext } from './types';
 import {
   loadCohort,
@@ -12,6 +13,7 @@ import {
   deriveCohortStats,
   deriveAtRiskAlerts,
   deriveUpcomingDeadlines,
+  type CohortStats,
 } from '@/lib/counsellor/data';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
 
@@ -80,6 +82,7 @@ const getCohortOverview: ReadTool = {
         .map((a) => ({
           id: a.studentId,
           name: a.studentName,
+          flag: a.flagEmoji,
           urgency: a.urgency,
           reason: a.description,
         }));
@@ -101,6 +104,48 @@ const getCohortOverview: ReadTool = {
       return { error: 'Could not load the cohort right now.' };
     }
   },
+  toWidgets: (result): ChatWidget[] | null => {
+    const stats = (result as { stats?: CohortStats }).stats;
+    if (!stats) return null;
+
+    // ≤8 tiles: the four headline health numbers, then match-tier spread and the
+    // submitted-application count — a readable snapshot without dumping the funnel.
+    const statTiles: StatHit[] = [
+      { label: 'Students', value: String(stats.total) },
+      { label: 'Avg completion', value: `${stats.avgCompletion}%` },
+      { label: 'Flagged', value: String(stats.flagged), tone: stats.flagged > 0 ? 'warning' : 'neutral' },
+      { label: 'Due this week', value: String(stats.deadlinesThisWeek) },
+      { label: 'Reach', value: String(stats.matchTiers.reach) },
+      { label: 'Match', value: String(stats.matchTiers.match) },
+      { label: 'Safe', value: String(stats.matchTiers.safe) },
+      { label: 'Submitted', value: String(stats.appFunnel.submitted) },
+    ];
+
+    const widgets: ChatWidget[] = [{ kind: 'cohort_stats', items: statTiles }];
+
+    const atRisk = (result as { atRisk?: AtRiskWidgetRow[] }).atRisk ?? [];
+    if (atRisk.length > 0) {
+      widgets.push({
+        kind: 'at_risk',
+        items: atRisk.map((a) => ({
+          id: a.id,
+          name: a.name,
+          flag: a.flag,
+          urgency: a.urgency,
+          reason: a.reason,
+        })),
+      });
+    }
+    return widgets;
+  },
+};
+
+type AtRiskWidgetRow = {
+  id: string;
+  name: string;
+  flag?: string;
+  urgency: 'critical' | 'high' | 'medium';
+  reason: string;
 };
 
 const getStudentOverview: ReadTool = {
@@ -202,6 +247,7 @@ const getCohortDeadlines: ReadTool = {
       const deadlines = deriveUpcomingDeadlines(students, withinDays).map((d) => ({
         studentId: d.studentId,
         studentName: d.studentName,
+        studentFlag: d.studentFlag,
         university: d.university,
         program: d.program,
         date: d.date,
@@ -213,6 +259,34 @@ const getCohortDeadlines: ReadTool = {
       return { error: 'Could not load deadlines right now.' };
     }
   },
+  toWidgets: (result): ChatWidget[] | null => {
+    const rows = (result as { deadlines?: DeadlineWidgetRow[] }).deadlines ?? [];
+    if (rows.length === 0) return null;
+    return [
+      {
+        kind: 'deadlines',
+        items: rows.map((d) => ({
+          label: d.program,
+          university: d.university,
+          studentName: d.studentName,
+          studentFlag: d.studentFlag,
+          date: d.date,
+          daysUntil: d.daysUntil,
+          type: d.type,
+        })),
+      },
+    ];
+  },
+};
+
+type DeadlineWidgetRow = {
+  studentName: string;
+  studentFlag: string;
+  university: string;
+  program: string;
+  date: string;
+  type: string;
+  daysUntil: number;
 };
 
 export const COUNSELLOR_READ_TOOLS: ReadTool[] = [

@@ -118,8 +118,9 @@ type UniRow = { id: string; recognition_score: number | null };
 /** Resolve a university-name phrase to ids, preferring well-known unis
  * (recognition_score ≥ 5, same threshold as search suggestions), falling back
  * to any name match. Words are chained as AND ilike filters — never .or()
- * strings, which crash PostgREST when values contain spaces. */
-async function resolveUniversityIds(supabase: Client, university: string): Promise<string[]> {
+ * strings, which crash PostgREST when values contain spaces. Exported for the
+ * get_university_info read tool. */
+export async function resolveUniversityIds(supabase: Client, university: string): Promise<string[]> {
   const words = meaningfulWords(university);
   if (words.length === 0) return [];
 

@@ -65,7 +65,7 @@ describe('useChatStream', () => {
     const args = baseArgs();
     const { result } = await runHook(args);
 
-    expect(result).toEqual({ kind: 'completed', text: 'Hello world', action: undefined, hits: undefined });
+    expect(result).toEqual({ kind: 'completed', text: 'Hello world', action: undefined, widgets: undefined });
     expect(args.handlers.onTextDelta).toHaveBeenNthCalledWith(1, 'Hello ');
     expect(args.handlers.onTextDelta).toHaveBeenNthCalledWith(2, 'Hello world');
   });
@@ -109,18 +109,35 @@ describe('useChatStream', () => {
     expect(result.kind).toBe('empty');
   });
 
-  it('fires onResults for results events and accumulates hits', async () => {
+  it('fires onWidgets for widget events and accumulates merged widgets', async () => {
     (global.fetch as jest.Mock).mockResolvedValue(
       streamResponse([
-        'data: {"results":{"tool":"search_programs","hits":[{"id":"p1"}]}}\n\n',
+        'data: {"results":{"tool":"search_programs","widgets":[{"kind":"programs","items":[{"id":"p1","course":"CS"}]}]}}\n\n',
+        'data: {"results":{"tool":"search_programs","widgets":[{"kind":"programs","items":[{"id":"p1","course":"CS"},{"id":"p2","course":"Maths"}]}]}}\n\n',
         'data: {"text":"Found!"}\n\ndata: [DONE]\n\n',
       ])
     );
-    const onResults = jest.fn();
-    const { result } = await runHook(baseArgs({ onResults }));
+    const onWidgets = jest.fn();
+    const { result } = await runHook(baseArgs({ onWidgets }));
 
-    expect(onResults).toHaveBeenCalledWith([{ id: 'p1' }]);
-    expect(result).toMatchObject({ kind: 'completed', text: 'Found!', hits: [{ id: 'p1' }] });
+    expect(onWidgets).toHaveBeenCalledTimes(2);
+    expect(onWidgets).toHaveBeenNthCalledWith(1, [
+      { kind: 'programs', items: [{ id: 'p1', course: 'CS' }] },
+    ]);
+    // Accumulated result merges batches and dedupes by id.
+    expect(result).toMatchObject({
+      kind: 'completed',
+      text: 'Found!',
+      widgets: [
+        {
+          kind: 'programs',
+          items: [
+            { id: 'p1', course: 'CS' },
+            { id: 'p2', course: 'Maths' },
+          ],
+        },
+      ],
+    });
   });
 
   it('captures the saved row id from the saved frame', async () => {

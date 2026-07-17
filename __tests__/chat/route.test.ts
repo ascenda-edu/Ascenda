@@ -219,6 +219,7 @@ describe('POST /api/chat', () => {
     const names = tools[0].functionDeclarations.map((d: { name: string }) => d.name);
     expect(names).toEqual([
       'search_programs',
+      'get_university_info',
       'get_my_applications',
       'get_my_matches',
       'get_my_shortlist',
@@ -246,6 +247,7 @@ describe('POST /api/chat', () => {
     );
     expect(names).toEqual([
       'search_programs',
+      'get_university_info',
       'get_cohort_overview',
       'get_student_overview',
       'get_cohort_deadlines',
@@ -365,10 +367,17 @@ describe('POST /api/chat', () => {
     const res = await POST(chatRequest(persistBody));
     const body = await res.text();
 
-    expect(body).toContain('data: {"results":{"tool":"search_programs","hits":[{"id":"p1"');
+    expect(body).toContain(
+      'data: {"results":{"tool":"search_programs","widgets":[{"kind":"programs","items":[{"id":"p1"'
+    );
     const assistantCall = (appendMessage as jest.Mock).mock.calls[1][1];
     expect(assistantCall.tool_results).toEqual([
-      { id: 'p1', course: 'CS', university: 'Oxford', country: 'UK', city: null, level: null },
+      {
+        kind: 'programs',
+        items: [
+          { id: 'p1', course: 'CS', university: 'Oxford', country: 'UK', city: null, level: null },
+        ],
+      },
     ]);
   });
 

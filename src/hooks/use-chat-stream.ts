@@ -18,7 +18,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createSseParser } from '@/lib/chat/sse';
 import { isChatAction, type ChatAction } from '@/lib/chat/actions';
 import type { ChatMode } from '@/lib/chat/prompts';
-import type { ProgramHit } from '@/lib/chat/tools';
+import { mergeWidgets, type ChatWidget } from '@/lib/chat/widgets';
 
 // Only the most recent turns ride along on each request — the server holds the
 // system prompt + live account context, so old turns add cost, not quality.
@@ -37,7 +37,8 @@ export interface ChatStreamHandlers {
   /** Called with the FULL accumulated text after every delta. */
   onTextDelta: (fullText: string) => void;
   onAction?: (action: ChatAction) => void;
-  onResults?: (hits: ProgramHit[]) => void;
+  /** Each batch of rich widget groups as it streams (see lib/chat/widgets). */
+  onWidgets?: (widgets: ChatWidget[]) => void;
   /** Transient "agent is working" line — cleared by the caller on first text. */
   onStatus?: (tool: string, label: string) => void;
   /** Fires once with the execute endpoint's result, ahead of the follow-up
@@ -66,7 +67,7 @@ export type ChatRunResult =
       kind: 'completed';
       text: string;
       action?: ChatAction;
-      hits?: ProgramHit[];
+      widgets?: ChatWidget[];
       /** DB row id of the persisted assistant message (assistant surface with
        * a conversationId) — adopt it so action/rating writes land. */
       savedId?: string;
@@ -126,7 +127,7 @@ export function useChatStream() {
 
       let accumulated = '';
       let action: ChatAction | undefined;
-      let hits: ProgramHit[] | undefined;
+      let widgets: ChatWidget[] | undefined;
       let savedId: string | undefined;
       let executed: ExecutedInfo | undefined;
 
@@ -188,10 +189,9 @@ export function useChatStream() {
                 action = event.action;
                 handlers.onAction?.(event.action);
               }
-              if (event.type === 'results' && Array.isArray(event.hits)) {
-                const batch = event.hits as ProgramHit[];
-                hits = [...(hits ?? []), ...batch];
-                handlers.onResults?.(batch);
+              if (event.type === 'widgets') {
+                widgets = mergeWidgets(widgets ?? [], event.widgets);
+                handlers.onWidgets?.(event.widgets);
               }
               if (event.type === 'saved') {
                 savedId = event.id;
@@ -200,10 +200,10 @@ export function useChatStream() {
           }
         }
 
-        if (!accumulated && !action && !hits && !executed) {
+        if (!accumulated && !action && !widgets && !executed) {
           return { kind: 'empty' };
         }
-        return { kind: 'completed', text: accumulated, action, hits, savedId, executed };
+        return { kind: 'completed', text: accumulated, action, widgets, savedId, executed };
       } catch (err) {
         // Some environments surface fetch aborts as plain Errors, not DOMException.
         if ((err instanceof DOMException || err instanceof Error) && err.name === 'AbortError') {
