@@ -8,11 +8,11 @@ import {
   useState,
   type KeyboardEvent as ReactKeyboardEvent
 } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Award,
+  BarChart2,
   BookOpen,
   Bot,
   CalendarClock,
@@ -21,13 +21,18 @@ import {
   Compass,
   FileText,
   Home,
+  Inbox,
+  Layers,
   ListChecks,
+  MessageSquare,
   Search,
   Sparkles,
   Star,
   Target,
+  TrendingUp,
   UserCircle,
   Users,
+  Wallet,
   type LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -42,7 +47,17 @@ interface CommandItem {
   keywords?: string[];
 }
 
-const COMMANDS: CommandItem[] = [
+// The palette is portal-scoped, mirroring filterNavByRole in navigation.ts:
+// destinations belong to the section the user is currently in, so a
+// counsellor/parent can't jump into student pages (and vice versa). Portal
+// switching stays with the dedicated side switcher.
+type Portal = 'student' | 'counsellor' | 'parent';
+
+const HELP_COMMANDS: CommandItem[] = [
+  { id: 'help-shortcuts', label: 'Keyboard shortcuts', hint: 'Cmd+K · Cmd+B', href: '#shortcuts', icon: Sparkles, group: 'Help' }
+];
+
+const STUDENT_COMMANDS: CommandItem[] = [
   // Go to ─────────────────────────────────────────────────────────────────
   { id: 'goto-dashboard', label: 'Dashboard', hint: 'Today\'s focus', href: '/dashboard', icon: Home, group: 'Go to' },
   { id: 'goto-explore', label: 'Explore universities', hint: 'Search the catalog', href: '/university-search/search', icon: Search, group: 'Go to', keywords: ['search', 'discover'] },
@@ -51,6 +66,7 @@ const COMMANDS: CommandItem[] = [
   { id: 'goto-applications', label: 'Applications', hint: 'Plan & track', href: '/applications', icon: ClipboardCheck, group: 'Go to' },
   { id: 'goto-tasks', label: 'Tasks', hint: 'Open task board', href: '/applications/tasks', icon: ListChecks, group: 'Go to' },
   { id: 'goto-documents', label: 'Documents', hint: 'Uploads & references', href: '/applications/documents', icon: FileText, group: 'Go to' },
+  { id: 'goto-inbox', label: 'Inbox', hint: 'Messages & help threads', href: '/inbox', icon: Inbox, group: 'Go to', keywords: ['messages', 'help'] },
   { id: 'goto-scholarships', label: 'Scholarships', hint: 'Browse awards', href: '/scholarships', icon: Award, group: 'Go to' },
   { id: 'goto-toolbox', label: 'Toolbox', hint: 'Essay, chances, deadlines', href: '/toolbox', icon: Sparkles, group: 'Go to' },
   { id: 'goto-essay', label: 'Essay workshop', href: '/toolbox/essay-workshop', icon: BookOpen, group: 'Go to' },
@@ -58,16 +74,50 @@ const COMMANDS: CommandItem[] = [
   { id: 'goto-requirements', label: 'Requirements checker', href: '/toolbox/requirements', icon: ClipboardCheck, group: 'Go to' },
   { id: 'goto-timeline', label: 'Deadline timeline', href: '/toolbox/timeline', icon: CalendarClock, group: 'Go to' },
   { id: 'goto-profile', label: 'Profile', hint: 'Your information', href: '/profile', icon: UserCircle, group: 'Go to' },
-  { id: 'goto-counsellor', label: 'Counsellor view', hint: 'Faculty surface', href: '/counsellor', icon: Users, group: 'Go to', keywords: ['faculty'] },
   { id: 'goto-assistant', label: 'Assistant', hint: 'AI workspace', href: '/assistant', icon: Bot, group: 'Go to', keywords: ['ai', 'chat', 'ascendi'] },
 
   // Actions ───────────────────────────────────────────────────────────────
   { id: 'action-wizard', label: 'Open profile wizard', href: '/profile/wizard', icon: Compass, group: 'Actions', keywords: ['edit profile'] },
   { id: 'action-appointment', label: 'Request an appointment', href: '/appointment', icon: CalendarPlus, group: 'Actions', keywords: ['counsellor', 'meeting'] },
 
-  // Help ──────────────────────────────────────────────────────────────────
-  { id: 'help-shortcuts', label: 'Keyboard shortcuts', hint: 'Cmd+K · Cmd+B', href: '#shortcuts', icon: Sparkles, group: 'Help' }
+  ...HELP_COMMANDS
 ];
+
+const COUNSELLOR_COMMANDS: CommandItem[] = [
+  { id: 'goto-c-overview', label: 'Overview', hint: 'Caseload at a glance', href: '/counsellor', icon: Home, group: 'Go to', keywords: ['dashboard', 'home'] },
+  { id: 'goto-c-inbox', label: 'Inbox', hint: 'Help requests & threads', href: '/counsellor/inbox', icon: Inbox, group: 'Go to', keywords: ['messages', 'help'] },
+  { id: 'goto-c-students', label: 'Students', hint: 'Roster & profiles', href: '/counsellor/students', icon: Users, group: 'Go to', keywords: ['roster', 'caseload'] },
+  { id: 'goto-c-universities', label: 'Universities', hint: 'Institution explorer', href: '/counsellor/universities', icon: Layers, group: 'Go to' },
+  { id: 'goto-c-analytics', label: 'Analytics', hint: 'Cohort insights', href: '/counsellor/analytics', icon: BarChart2, group: 'Go to', keywords: ['insights', 'stats'] },
+  { id: 'goto-c-deadlines', label: 'Deadlines', hint: 'Upcoming dates', href: '/counsellor/deadlines', icon: CalendarClock, group: 'Go to' },
+  { id: 'goto-c-documents', label: 'Documents', hint: 'Student uploads', href: '/counsellor/documents', icon: FileText, group: 'Go to' },
+  { id: 'goto-c-outcomes', label: 'Outcomes', hint: 'Offers & decisions', href: '/counsellor/outcomes', icon: Target, group: 'Go to', keywords: ['offers', 'decisions'] },
+  { id: 'goto-c-applications', label: 'Applications', hint: 'Cohort pipeline', href: '/counsellor/applications', icon: ClipboardCheck, group: 'Go to' },
+  { id: 'goto-c-assistant', label: 'Assistant', hint: 'AI workspace', href: '/counsellor/assistant', icon: Bot, group: 'Go to', keywords: ['ai', 'chat', 'ascendi'] },
+  ...HELP_COMMANDS
+];
+
+const PARENT_COMMANDS: CommandItem[] = [
+  { id: 'goto-p-overview', label: 'Overview', hint: 'Your child\'s journey', href: '/parent', icon: Home, group: 'Go to', keywords: ['dashboard', 'home'] },
+  { id: 'goto-p-progress', label: 'Progress', hint: 'Milestones & momentum', href: '/parent/progress', icon: TrendingUp, group: 'Go to' },
+  { id: 'goto-p-deadlines', label: 'Deadlines', hint: 'Upcoming dates', href: '/parent/deadlines', icon: CalendarClock, group: 'Go to' },
+  { id: 'goto-p-finances', label: 'Finances', hint: 'Costs & scholarships', href: '/parent/finances', icon: Wallet, group: 'Go to', keywords: ['costs', 'money'] },
+  { id: 'goto-p-messages', label: 'Messages', hint: 'Counsellor updates', href: '/parent/messages', icon: MessageSquare, group: 'Go to', keywords: ['inbox', 'chat'] },
+  { id: 'goto-p-assistant', label: 'Assistant', hint: 'AI workspace', href: '/parent/assistant', icon: Bot, group: 'Go to', keywords: ['ai', 'chat', 'ascendi'] },
+  ...HELP_COMMANDS
+];
+
+const COMMANDS_BY_PORTAL: Record<Portal, CommandItem[]> = {
+  student: STUDENT_COMMANDS,
+  counsellor: COUNSELLOR_COMMANDS,
+  parent: PARENT_COMMANDS
+};
+
+const portalFromPathname = (pathname: string | null): Portal => {
+  if (pathname?.startsWith('/counsellor')) return 'counsellor';
+  if (pathname?.startsWith('/parent')) return 'parent';
+  return 'student';
+};
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -93,6 +143,8 @@ const fuzzyScore = (haystack: string, needle: string): number => {
 
 export function CommandPalette() {
   const router = useRouter();
+  const pathname = usePathname();
+  const commands = COMMANDS_BY_PORTAL[portalFromPathname(pathname)];
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -160,8 +212,8 @@ export function CommandPalette() {
   };
 
   const ranked = useMemo(() => {
-    if (!query.trim()) return COMMANDS;
-    return COMMANDS
+    if (!query.trim()) return commands;
+    return commands
       .map((cmd) => {
         const labelScore = fuzzyScore(cmd.label, query) * 2;
         const hintScore = cmd.hint ? fuzzyScore(cmd.hint, query) : 0;
@@ -172,7 +224,7 @@ export function CommandPalette() {
       .filter((entry) => entry.score > 0)
       .sort((a, b) => b.score - a.score)
       .map((entry) => entry.cmd);
-  }, [query]);
+  }, [commands, query]);
 
   const grouped = useMemo(() => {
     const groups: Record<CommandItem['group'], CommandItem[]> = { 'Go to': [], Actions: [], Help: [] };
