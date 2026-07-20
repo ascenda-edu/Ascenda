@@ -81,7 +81,7 @@ export function CostExplorer({
       {/* Home-currency selector */}
       <div className="surface-toolbar flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
             Home currency
           </p>
           <p className="text-xs text-muted-foreground">
@@ -109,7 +109,7 @@ export function CostExplorer({
       {cheapest !== null && priciest !== null ? (
         <div className="surface-card surface-card--static">
           <div className="relative z-10">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
               Yearly cost of attendance
             </p>
             <p className="mb-1 text-lg font-semibold text-foreground">
@@ -147,7 +147,7 @@ export function CostExplorer({
                     </p>
                   </div>
                   {line.tier ? (
-                    <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', TIER_STYLES[line.tier])}>
+                    <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-semibold', TIER_STYLES[line.tier])}>
                       {line.tier}
                     </span>
                   ) : null}

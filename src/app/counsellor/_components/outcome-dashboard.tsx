@@ -163,10 +163,10 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
                     <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold', cfg.bg, cfg.color)}>
                       <Icon className="h-3 w-3" /> {cfg.label}
                     </span>
-                    {o.conditions && <p className="text-[10px] text-muted-foreground mt-0.5">{o.conditions}</p>}
+                    {o.conditions && <p className="text-[0.625rem] text-muted-foreground mt-0.5">{o.conditions}</p>}
                   </td>
                   <td className="py-2.5 px-3 text-center">
-                    <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', TIER_COLORS[o.tier])}>{o.tier}</span>
+                    <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-semibold', TIER_COLORS[o.tier])}>{o.tier}</span>
                   </td>
                   <td className="py-2.5 pl-3 text-xs text-muted-foreground">
                     {o.responseDate ? dateFormatter.format(new Date(o.responseDate)) : '—'}

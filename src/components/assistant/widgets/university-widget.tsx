@@ -16,7 +16,7 @@ import type { ChatMode } from '@/lib/chat/prompts';
 import type { UniversityHit } from '@/lib/chat/widgets';
 
 const StatChip = ({ children }: { children: React.ReactNode }) => (
-  <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+  <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[0.625rem] font-medium text-muted-foreground">
     {children}
   </span>
 );
@@ -61,7 +61,7 @@ function UniversityCard({ item, mode }: { item: UniversityHit; mode: ChatMode })
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold text-foreground">{item.name}</p>
-          {meta ? <p className="truncate text-[11px] text-muted-foreground">{meta}</p> : null}
+          {meta ? <p className="truncate text-[0.6875rem] text-muted-foreground">{meta}</p> : null}
         </div>
       </div>
 
@@ -72,11 +72,11 @@ function UniversityCard({ item, mode }: { item: UniversityHit; mode: ChatMode })
           {programs.map((p) => {
             const inner = (
               <>
-                <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-foreground">
+                <span className="min-w-0 flex-1 truncate text-[0.6875rem] font-medium text-foreground">
                   {p.course}
                 </span>
                 {p.level ? (
-                  <span className="shrink-0 text-[10px] text-muted-foreground">{p.level}</span>
+                  <span className="shrink-0 text-[0.625rem] text-muted-foreground">{p.level}</span>
                 ) : null}
               </>
             );

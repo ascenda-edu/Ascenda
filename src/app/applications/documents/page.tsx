@@ -124,7 +124,7 @@ export default async function DocumentsPage() {
       <AnimatedSection className="mt-8">
         <div className="surface-card surface-card--static">
           <div className="relative z-10">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Recommendation letters</p>
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Recommendation letters</p>
             <p className="text-lg font-semibold text-foreground mb-1">Letter tracker</p>
             <p className="text-xs text-muted-foreground mb-6">
               Track the status of each recommendation letter from request to upload. Sample data — shown as a preview of the workflow.
@@ -137,7 +137,7 @@ export default async function DocumentsPage() {
       <AnimatedSection className="mt-8" delay={0.1}>
         <div className="surface-card surface-card--static">
           <div className="relative z-10">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Uploaded documents</p>
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Uploaded documents</p>
             <p className="text-lg font-semibold text-foreground mb-1">Your files</p>
             <p className="text-xs text-muted-foreground mb-6">
               Transcripts, certificates, and other supporting documents — stored securely against each application.

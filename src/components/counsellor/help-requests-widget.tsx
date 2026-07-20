@@ -60,7 +60,7 @@ export function HelpRequestsWidget() {
               <Inbox className="h-5 w-5" aria-hidden />
             </div>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-widest text-muted-foreground">
                 Live · from your students
               </p>
               <h2 className="text-lg font-semibold text-foreground">Help requests</h2>
@@ -120,7 +120,7 @@ export function HelpRequestsWidget() {
                           <p className="truncate text-sm font-semibold text-foreground">
                             {names.get(req.student_profile_id) ?? 'Student'}
                           </p>
-                          <span className="shrink-0 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                          <span className="shrink-0 text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">
                             {formatRelativeTime(req.created_at)}
                           </span>
                         </div>
@@ -136,7 +136,7 @@ export function HelpRequestsWidget() {
                         </p>
                       </div>
                       {isAccepted ? (
-                        <span className="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-emerald-700 dark:text-emerald-300">
+                        <span className="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.15em] text-emerald-700 dark:text-emerald-300">
                           Accepted
                         </span>
                       ) : null}

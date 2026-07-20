@@ -34,7 +34,7 @@ export function HubCard({ eyebrow, title, icon: Icon, iconClassName, action, chi
               <Icon className="h-4 w-4" aria-hidden />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{eyebrow}</p>
+              <p className="truncate text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{eyebrow}</p>
               <h2 className="text-base font-semibold leading-snug text-foreground">{title}</h2>
             </div>
           </div>

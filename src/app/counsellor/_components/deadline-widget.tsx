@@ -88,7 +88,7 @@ export const DeadlineWidget = ({ deadlines }: DeadlineWidgetProps) => {
         <button
           onClick={() => setManageOpen((o) => !o)}
           className={cn(
-            'flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium transition hover:-translate-y-0.5',
+            'flex items-center gap-1.5 rounded-full border px-3 py-1 text-[0.6875rem] font-medium transition hover:-translate-y-0.5',
             manageOpen
               ? 'border-primary/40 bg-primary/10 text-primary'
               : 'border-border/60 bg-background/60 text-muted-foreground hover:text-foreground'
@@ -111,7 +111,7 @@ export const DeadlineWidget = ({ deadlines }: DeadlineWidgetProps) => {
             className="overflow-hidden"
           >
             <div className="rounded-2xl border border-border/60 bg-muted/30 p-3 space-y-1.5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground px-1 pb-0.5">
+              <p className="text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground px-1 pb-0.5">
                 Students
               </p>
               {students.map(({ id, name, flag }) => {
@@ -157,7 +157,7 @@ export const DeadlineWidget = ({ deadlines }: DeadlineWidgetProps) => {
               {(pinnedIds.size > 0 || hiddenIds.size > 0) && (
                 <button
                   onClick={() => { setPinnedIds(new Set()); setHiddenIds(new Set()); }}
-                  className="mt-1 w-full text-center text-[11px] text-muted-foreground hover:text-foreground transition"
+                  className="mt-1 w-full text-center text-[0.6875rem] text-muted-foreground hover:text-foreground transition"
                 >
                   Reset all
                 </button>

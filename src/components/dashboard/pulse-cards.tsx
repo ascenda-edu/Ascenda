@@ -62,7 +62,7 @@ export function PulseCards({ cards }: PulseCardsProps) {
               >
                 {card.value}
               </motion.p>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">{card.label}</p>
+              <p className="text-[0.6875rem] uppercase tracking-[0.2em] text-muted-foreground font-semibold">{card.label}</p>
               <p className="text-xs text-muted-foreground truncate">{card.detail}</p>
             </div>
           </motion.div>

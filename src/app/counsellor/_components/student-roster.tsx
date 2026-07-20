@@ -155,7 +155,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                 <X className="h-3 w-3" />
               </button>
             </div>
-            <p className="text-[11px] text-muted-foreground italic">
+            <p className="text-[0.6875rem] text-muted-foreground italic">
               Click the chart again to reset
             </p>
           </motion.div>
@@ -199,7 +199,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
             onChange={(e) => setQuery(e.target.value)}
             className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
-          <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground sm:inline-block">
+          <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-border bg-muted px-1.5 py-0.5 text-[0.625rem] font-mono text-muted-foreground sm:inline-block">
             /
           </kbd>
         </div>

@@ -78,14 +78,14 @@ export function CompareBar({ selectedItems, onClear, onRemove, onCompare, maxIte
                     <div className="flex items-center gap-2">
                         <button
                             onClick={onClear}
-                            className="whitespace-nowrap rounded-full border border-border/60 bg-background/10 px-3 py-1 text-[11px] font-semibold text-muted-foreground transition hover:border-foreground/60"
+                            className="whitespace-nowrap rounded-full border border-border/60 bg-background/10 px-3 py-1 text-[0.6875rem] font-semibold text-muted-foreground transition hover:border-foreground/60"
                         >
                             Clear all
                         </button>
                         <Button
                             onClick={onCompare}
                             size="sm"
-                            className="gap-2 rounded-xl bg-foreground px-3 py-1 text-[11px] font-semibold text-background transition hover:bg-foreground/90"
+                            className="gap-2 rounded-xl bg-foreground px-3 py-1 text-[0.6875rem] font-semibold text-background transition hover:bg-foreground/90"
                         >
                             Compare <ArrowRight className="h-4 w-4" />
                         </Button>
@@ -94,7 +94,7 @@ export function CompareBar({ selectedItems, onClear, onRemove, onCompare, maxIte
 
                 <div className="overflow-x-auto">
                     <div
-                        className="grid w-full min-w-[260px] gap-2 rounded-2xl border border-border/50 bg-muted/20 px-3 py-1.5 text-[12px] font-semibold shadow-inner"
+                        className="grid w-full min-w-[260px] gap-2 rounded-2xl border border-border/50 bg-muted/20 px-3 py-1.5 text-[0.75rem] font-semibold shadow-inner"
                         style={{
                             gridTemplateColumns: `repeat(${selectedItems.length}, minmax(180px, 1fr))`
                         }}
@@ -123,7 +123,7 @@ export function CompareBar({ selectedItems, onClear, onRemove, onCompare, maxIte
                                     <span className="truncate" title={item.universityName}>
                                         {item.universityName}
                                     </span>
-                                    <span className="truncate text-[10px] text-muted-foreground/70" title={item.programName}>
+                                    <span className="truncate text-[0.625rem] text-muted-foreground/70" title={item.programName}>
                                         {item.programName}
                                     </span>
                                 </div>

@@ -164,14 +164,14 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
                             </span>
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className={cn('rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]', fit.badge)}>
+                            <span className={cn('rounded-full border px-2.5 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.18em]', fit.badge)}>
                               {fit.label}
                             </span>
-                            <span className={cn('rounded-full border px-2.5 py-0.5 text-[10px] font-semibold', rarity.badge)}>
+                            <span className={cn('rounded-full border px-2.5 py-0.5 text-[0.625rem] font-semibold', rarity.badge)}>
                               {rarity.label}
                             </span>
                             {isStarted && (
-                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-300">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-0.5 text-[0.625rem] font-semibold text-emerald-600 dark:text-emerald-300">
                                 <CheckCircle2 className="h-3 w-3" aria-hidden /> Cleared
                               </span>
                             )}

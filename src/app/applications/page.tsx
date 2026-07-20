@@ -261,7 +261,7 @@ export default async function ApplicationsPage() {
         <section className="space-y-3">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 What&apos;s next
               </p>
               <h2 className="text-xl font-semibold text-foreground">Your top three this week</h2>
@@ -276,7 +276,7 @@ export default async function ApplicationsPage() {
         {/* ── All applications ──────────────────────────────────── */}
         <section className="space-y-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
               All applications
             </p>
             <h2 className="text-xl font-semibold text-foreground">

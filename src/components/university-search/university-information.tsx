@@ -208,7 +208,7 @@ export const UniversityInformation = ({
             </div>
             <div className="space-y-5">
               <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.35em] text-muted-foreground">
+                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.35em] text-muted-foreground">
                   <span>University</span>
                   <span className="text-foreground">Overview</span>
                 </div>
@@ -325,7 +325,7 @@ export const UniversityInformation = ({
 const Section = ({ title, description, children }: { title: string; description: string; children: React.ReactNode }) => (
   <section className="space-y-4">
     <div className="space-y-1">
-      <h2 className="text-3xl font-semibold text-foreground md:text-[34px]">{title}</h2>
+      <h2 className="text-3xl font-semibold text-foreground md:text-[2.125rem]">{title}</h2>
       <p className="text-base text-muted-foreground md:text-lg">{description}</p>
     </div>
     <Card className="overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-[0_24px_60px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_30px_80px_rgba(15,23,42,0.1)]">

@@ -98,7 +98,7 @@ export function CustomWidgetBuilder({ open, onOpenChange, students, onCreate }: 
 
         {/* Header */}
         <div className="border-b border-border px-7 py-5">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-primary">
+          <div className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-primary">
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
             Custom widget
           </div>
@@ -175,7 +175,7 @@ export function CustomWidgetBuilder({ open, onOpenChange, students, onCreate }: 
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold">{option.label}</p>
-                      <p className="truncate text-[11px] opacity-70">{option.description}</p>
+                      <p className="truncate text-[0.6875rem] opacity-70">{option.description}</p>
                     </div>
                   </button>
                 );

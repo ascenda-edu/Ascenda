@@ -107,7 +107,7 @@ export function ApplicationList({ rows }: Props) {
                     {row.tier ? (
                       <span
                         className={cn(
-                          'shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.15em]',
+                          'shrink-0 rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.15em]',
                           TIER_TONE[row.tier]
                         )}
                       >
@@ -120,13 +120,13 @@ export function ApplicationList({ rows }: Props) {
 
                 <div className="hidden shrink-0 text-right sm:block">
                   <p className="text-xs font-semibold text-foreground">{statusLabel}</p>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-[0.6875rem] text-muted-foreground">
                     {isClosed ? 'Awaiting decision' : formatDeadline(row.daysUntilDeadline)}
                   </p>
                 </div>
 
                 {isClosed ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[0.6875rem] font-semibold text-emerald-700 dark:text-emerald-300">
                     <CheckCircle2 className="h-3 w-3" aria-hidden />
                     {statusLabel}
                   </span>
@@ -162,7 +162,7 @@ export function ApplicationList({ rows }: Props) {
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <p className="shrink-0 text-[11px] font-medium text-muted-foreground tabular-nums">
+                  <p className="shrink-0 text-[0.6875rem] font-medium text-muted-foreground tabular-nums">
                     {row.tasksOpen} of {row.tasksTotal} tasks open
                   </p>
                 </div>

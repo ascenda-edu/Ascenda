@@ -176,7 +176,7 @@ function PageCard({ snippet, onClick }: { snippet: PageSnippet; onClick: () => v
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-foreground">{snippet.name}</p>
-        <p className="truncate text-[11px] text-muted-foreground">{snippet.description}</p>
+        <p className="truncate text-[0.6875rem] text-muted-foreground">{snippet.description}</p>
       </div>
       <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
     </button>
@@ -462,7 +462,7 @@ export function ChatbotWidget() {
                 </div>
                 <div>
                   <p className="font-heading text-sm font-semibold text-foreground">Ascendi</p>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-[0.6875rem] text-muted-foreground">
                     {mode === 'counsellor'
                       ? 'Counsellor assistant'
                       : mode === 'parent'
@@ -475,7 +475,7 @@ export function ChatbotWidget() {
                 <button
                   onClick={handoffToAssistant}
                   disabled={handoffBusy}
-                  className="flex h-8 items-center gap-1 rounded-full px-2.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
+                  className="flex h-8 items-center gap-1 rounded-full px-2.5 text-[0.6875rem] font-semibold text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
                   aria-label="Continue in Assistant"
                   title="Continue this conversation in the Assistant"
                 >
@@ -492,7 +492,7 @@ export function ChatbotWidget() {
                     className={cn(
                       'flex h-8 items-center justify-center gap-1 rounded-full transition-colors',
                       confirmClear
-                        ? 'w-auto px-2.5 text-[11px] font-semibold text-rose-600 dark:text-rose-400'
+                        ? 'w-auto px-2.5 text-[0.6875rem] font-semibold text-rose-600 dark:text-rose-400'
                         : 'w-8 text-muted-foreground hover:bg-muted hover:text-foreground'
                     )}
                     aria-label={confirmClear ? 'Confirm clear chat' : 'Clear chat'}
@@ -544,7 +544,7 @@ export function ChatbotWidget() {
                       <button
                         key={s}
                         onClick={() => sendMessage(s)}
-                        className="rounded-full border border-border bg-background px-3 py-1.5 text-[11px] text-muted-foreground transition-[transform,border-color,color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:text-foreground hover:shadow-sm"
+                        className="rounded-full border border-border bg-background px-3 py-1.5 text-[0.6875rem] text-muted-foreground transition-[transform,border-color,color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:text-foreground hover:shadow-sm"
                       >
                         {s}
                       </button>
@@ -574,7 +574,7 @@ export function ChatbotWidget() {
                     >
                       <div
                         className={cn(
-                          'max-w-[85%] break-words rounded-[16px] px-3.5 py-2.5 text-[13px] leading-relaxed',
+                          'max-w-[85%] break-words rounded-[16px] px-3.5 py-2.5 text-[0.8125rem] leading-relaxed',
                           msg.error
                             ? 'border border-rose-300/60 bg-rose-500/10 text-rose-700 dark:border-rose-500/30 dark:text-rose-300'
                             : msg.role === 'user'
@@ -588,7 +588,7 @@ export function ChatbotWidget() {
                             <button
                               onClick={retryLast}
                               disabled={isStreaming}
-                              className="inline-flex items-center gap-1 rounded-full border border-rose-300/60 px-2.5 py-1 text-[11px] font-semibold text-rose-700 transition hover:bg-rose-500/10 disabled:opacity-50 dark:border-rose-500/40 dark:text-rose-300"
+                              className="inline-flex items-center gap-1 rounded-full border border-rose-300/60 px-2.5 py-1 text-[0.6875rem] font-semibold text-rose-700 transition hover:bg-rose-500/10 disabled:opacity-50 dark:border-rose-500/40 dark:text-rose-300"
                             >
                               <RotateCcw className="h-3 w-3" />
                               Retry
@@ -690,7 +690,7 @@ export function ChatbotWidget() {
               className="border-t border-border bg-card px-3 py-2.5"
             >
               {coolingDown && (
-                <p className="mb-1.5 text-center text-[11px] text-muted-foreground" role="status">
+                <p className="mb-1.5 text-center text-[0.6875rem] text-muted-foreground" role="status">
                   Message limit reached — you can send again in {cooldownRemaining}s
                 </p>
               )}

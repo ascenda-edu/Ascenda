@@ -181,7 +181,7 @@ export default function RoleSelectPage() {
               </div>
 
               <div className="flex-1 space-y-1">
-                <span className={cn('inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest', role.badgeColor)}>
+                <span className={cn('inline-block rounded-full px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-widest', role.badgeColor)}>
                   {role.badge}
                 </span>
                 <p className="text-lg font-semibold leading-tight text-foreground">{role.label}</p>

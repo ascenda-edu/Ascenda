@@ -164,13 +164,13 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
       {/* Header */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] w-full"
+        className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.15em] w-full"
       >
         <div className="flex h-5 w-5 items-center justify-center rounded-md bg-primary/10">
           <Sparkles className="h-3 w-3 text-primary" />
         </div>
         <span className="text-primary">AI Essay Assistant</span>
-        <span className="text-[9px] font-bold text-primary/60 bg-primary/5 px-1.5 py-0.5 rounded-full">LIVE</span>
+        <span className="text-[0.5625rem] font-bold text-primary/60 bg-primary/5 px-1.5 py-0.5 rounded-full">LIVE</span>
         <ChevronDown className={cn('h-3 w-3 text-primary/60 ml-auto transition-transform', isOpen && 'rotate-180')} />
       </button>
 
@@ -184,7 +184,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
           >
             <div className="space-y-3">
               {/* Status indicator */}
-              <div className="rounded-lg bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground space-y-0.5">
+              <div className="rounded-lg bg-muted/30 px-3 py-2 text-[0.6875rem] text-muted-foreground space-y-0.5">
                 <p>
                   <span className="font-semibold text-foreground">{essayWordCount}</span> words in editor
                   {essayWordCount < 5 && ' — start writing to enable feedback'}
@@ -221,8 +221,8 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
                         <Icon className="h-3.5 w-3.5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-foreground">{label}</p>
-                        <p className="text-[11px] text-muted-foreground leading-snug">{description}</p>
+                        <p className="text-[0.8125rem] font-semibold text-foreground">{label}</p>
+                        <p className="text-[0.6875rem] text-muted-foreground leading-snug">{description}</p>
                       </div>
                     </div>
                   </button>
@@ -250,7 +250,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
                   {activeAction && (
                     <button
                       onClick={() => runAction(activeAction)}
-                      className="flex items-center gap-1 text-[11px] font-medium text-rose-600 hover:text-rose-700 transition-colors"
+                      className="flex items-center gap-1 text-[0.6875rem] font-medium text-rose-600 hover:text-rose-700 transition-colors"
                     >
                       <RefreshCw className="h-3 w-3" /> Retry
                     </button>
@@ -270,7 +270,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
                       {done && !loading && (
                         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                       )}
-                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      <p className="text-[0.6875rem] font-semibold text-muted-foreground uppercase tracking-wider">
                         {activeAction === 'feedback' ? 'Feedback' : 'Outline'}
                       </p>
                     </div>
@@ -278,7 +278,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
                       {done && !loading && activeAction && (
                         <button
                           onClick={() => runAction(activeAction)}
-                          className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+                          className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-[0.625rem] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
                           title="Run again"
                         >
                           <RefreshCw className="h-3 w-3" />
@@ -287,7 +287,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
                       )}
                       <button
                         onClick={handleCopy}
-                        className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+                        className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-[0.625rem] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
                       >
                         {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
                         {copied ? 'Copied' : 'Copy'}
@@ -295,7 +295,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
                       {activeAction === 'outline' && onInsertText && (
                         <button
                           onClick={handleInsert}
-                          className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/20 transition-colors"
+                          className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-0.5 text-[0.625rem] font-medium text-primary hover:bg-primary/20 transition-colors"
                         >
                           <Wand2 className="h-3 w-3" />
                           Insert
@@ -309,7 +309,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
                   >
                     {/* react-markdown escapes raw HTML — model output built from
                         student-controlled essay text must never hit innerHTML. */}
-                    <div className="prose prose-sm dark:prose-invert max-w-none text-[13px] leading-relaxed [&_h1]:text-base [&_h1]:font-semibold [&_h2]:text-[13px] [&_h2]:font-semibold [&_h3]:text-[13px] [&_h3]:font-semibold [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1">
+                    <div className="prose prose-sm dark:prose-invert max-w-none text-[0.8125rem] leading-relaxed [&_h1]:text-base [&_h1]:font-semibold [&_h2]:text-[0.8125rem] [&_h2]:font-semibold [&_h3]:text-[0.8125rem] [&_h3]:font-semibold [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1">
                       <ReactMarkdown>{result}</ReactMarkdown>
                     </div>
                   </div>

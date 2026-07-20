@@ -107,7 +107,7 @@ export function DocumentsManager({ applications, documents }: DocumentsManagerPr
                     href={doc.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground transition hover:text-foreground"
+                    className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground transition hover:text-foreground"
                   >
                     View
                   </a>

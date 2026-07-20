@@ -69,7 +69,7 @@ export function ProfileProgressCard({
             </p>
           </div>
         </div>
-        <div className={cn('inline-flex items-center gap-2 rounded-full px-4 py-2 text-[11px] uppercase tracking-[0.35em]', visual.chip)}>
+        <div className={cn('inline-flex items-center gap-2 rounded-full px-4 py-2 text-[0.6875rem] uppercase tracking-[0.35em]', visual.chip)}>
           <Sparkles className="h-4 w-4" />
           Progress
         </div>
@@ -103,7 +103,7 @@ export function ProfileProgressCard({
                 <p className="text-sm font-semibold text-foreground">{step.title}</p>
                 <span
                   className={cn(
-                    'inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em]',
+                    'inline-flex items-center rounded-full px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.2em]',
                     complete
                       ? 'bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-400/40 dark:text-emerald-200'
                       : 'bg-muted/70 text-muted-foreground ring-1 ring-border'
@@ -113,7 +113,7 @@ export function ProfileProgressCard({
                 </span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{step.description}</p>
-              <span className="mt-3 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary opacity-80 transition group-hover:opacity-100">
+              <span className="mt-3 inline-flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-primary opacity-80 transition group-hover:opacity-100">
                 Open
               </span>
             </Link>

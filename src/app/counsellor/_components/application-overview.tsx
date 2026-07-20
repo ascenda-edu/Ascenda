@@ -128,7 +128,7 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
               <div key={status} className="space-y-3">
                 <div className="flex items-center gap-2">
                   <h3 className={cn('text-sm font-semibold', cfg.text)}>{cfg.label}</h3>
-                  <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold', cfg.bg, cfg.text)}>
+                  <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-bold', cfg.bg, cfg.text)}>
                     {studentGroups.length} student{studentGroups.length !== 1 ? 's' : ''}
                   </span>
                 </div>
@@ -147,9 +147,9 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
                             </div>
                             <div className="mt-1.5 space-y-0.5">
                               {apps.map((app) => (
-                                <div key={`${app.university}-${app.program}`} className="flex items-center gap-1.5 text-[11px]">
+                                <div key={`${app.university}-${app.program}`} className="flex items-center gap-1.5 text-[0.6875rem]">
                                   <span className="truncate text-muted-foreground">{app.university}</span>
-                                  <span className={cn('shrink-0 rounded-full px-1.5 py-0 text-[9px] font-semibold', PLATFORM_COLORS[app.platform] ?? 'bg-muted/50 text-muted-foreground')}>{app.platform}</span>
+                                  <span className={cn('shrink-0 rounded-full px-1.5 py-0 text-[0.5625rem] font-semibold', PLATFORM_COLORS[app.platform] ?? 'bg-muted/50 text-muted-foreground')}>{app.platform}</span>
                                 </div>
                               ))}
                             </div>
@@ -157,7 +157,7 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
                           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground shrink-0 mt-1 ml-2" />
                         </div>
                         {apps.length > 1 && (
-                          <p className="mt-1.5 text-[10px] text-muted-foreground">{apps.length} applications</p>
+                          <p className="mt-1.5 text-[0.625rem] text-muted-foreground">{apps.length} applications</p>
                         )}
                       </Link>
                     </motion.div>
@@ -199,7 +199,7 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
                     <td className="py-2.5 px-3 text-muted-foreground">{app.university}</td>
                     <td className="py-2.5 px-3 text-xs text-muted-foreground">{app.program}</td>
                     <td className="py-2.5 px-3 text-center">
-                      <span className={cn('rounded-full px-2.5 py-0.5 text-[10px] font-semibold', PLATFORM_COLORS[app.platform] ?? 'bg-muted/50 text-muted-foreground')}>{app.platform}</span>
+                      <span className={cn('rounded-full px-2.5 py-0.5 text-[0.625rem] font-semibold', PLATFORM_COLORS[app.platform] ?? 'bg-muted/50 text-muted-foreground')}>{app.platform}</span>
                     </td>
                     <td className="py-2.5 px-3 text-center">
                       <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold', cfg.bg, cfg.text)}>{cfg.label}</span>

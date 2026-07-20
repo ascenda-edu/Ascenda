@@ -57,7 +57,7 @@ export function DemoSection() {
                                     <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${item.color} transition-transform group-hover:scale-110`}>
                                         <Icon className="h-4 w-4" />
                                     </span>
-                                    <span className="text-[15px]">{item.text}</span>
+                                    <span className="text-[0.9375rem]">{item.text}</span>
                                 </li>
                             );
                         })}
@@ -94,7 +94,7 @@ export function DemoSection() {
                         </div>
                         <div className="flex-1 mx-8">
                             <div className="h-5 rounded-full bg-muted/50 max-w-xs mx-auto flex items-center justify-center">
-                                <span className="text-[10px] text-muted-foreground/50 font-mono">app.ascenda.com</span>
+                                <span className="text-[0.625rem] text-muted-foreground/50 font-mono">app.ascenda.com</span>
                             </div>
                         </div>
                     </div>

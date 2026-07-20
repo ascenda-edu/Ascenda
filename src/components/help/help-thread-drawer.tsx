@@ -309,7 +309,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
           >
             <header className="flex items-start justify-between gap-3 border-b border-border/60 px-5 py-4">
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                   {isCounsellor
                     ? 'Inbox · conversation'
                     : request?.initiated_by === 'counsellor'
@@ -466,14 +466,14 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="mt-1.5 px-1 text-[10px] text-muted-foreground">
+                <p className="mt-1.5 px-1 text-[0.625rem] text-muted-foreground">
                   <kbd className="rounded border border-border/60 bg-muted/60 px-1 font-sans">Enter</kbd> to send ·{' '}
                   <kbd className="rounded border border-border/60 bg-muted/60 px-1 font-sans">Shift</kbd>+
                   <kbd className="rounded border border-border/60 bg-muted/60 px-1 font-sans">Enter</kbd> for a new line
                 </p>
 
                 {isCounsellor ? (
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-[0.6875rem]">
                     {request.status === 'open' ? (
                       <Button
                         size="xs"
@@ -498,7 +498,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
                         Mark resolved
                       </Button>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
                         <Check className="h-3 w-3" />
                         Resolved
                       </span>
@@ -615,7 +615,7 @@ function ThreadView({
             {showDay ? (
               <div className="flex items-center gap-3 py-2" role="separator" aria-label={dayLabel(entry.at)}>
                 <span className="h-px flex-1 bg-border/50" />
-                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                <span className="text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                   {dayLabel(entry.at)}
                 </span>
                 <span className="h-px flex-1 bg-border/50" />
@@ -629,7 +629,7 @@ function ThreadView({
                 ) : (
                   <span
                     className={cn(
-                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold',
+                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[0.625rem] font-semibold',
                       entry.role === 'counsellor'
                         ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                         : 'bg-violet-500/15 text-violet-700 dark:text-violet-300'
@@ -642,7 +642,7 @@ function ThreadView({
               ) : null}
               <div className={cn('flex max-w-[78%] flex-col', isOwn ? 'items-end' : 'items-start')}>
                 {!isOwn && !groupedWithPrev ? (
-                  <span className="mb-0.5 px-1 text-[11px] font-semibold text-muted-foreground">{name}</span>
+                  <span className="mb-0.5 px-1 text-[0.6875rem] font-semibold text-muted-foreground">{name}</span>
                 ) : null}
                 <div
                   className={cn(
@@ -657,7 +657,7 @@ function ThreadView({
                   {entry.isOpening && entry.role === 'student' ? (
                     <p
                       className={cn(
-                        'mt-1.5 inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.15em]',
+                        'mt-1.5 inline-flex items-center gap-1 text-[0.625rem] uppercase tracking-[0.15em]',
                         isOwn ? 'text-primary-foreground/70' : 'text-violet-600 dark:text-violet-400'
                       )}
                     >
@@ -667,7 +667,7 @@ function ThreadView({
                   ) : null}
                 </div>
                 {showMeta ? (
-                  <span className="mt-0.5 flex items-center gap-1 px-1 text-[10px] tabular-nums text-muted-foreground">
+                  <span className="mt-0.5 flex items-center gap-1 px-1 text-[0.625rem] tabular-nums text-muted-foreground">
                     {isPending ? 'Sending…' : timeLabel(entry.at)}
                     {seenEntryId === entry.id ? (
                       <span className="inline-flex items-center gap-0.5">
@@ -751,10 +751,10 @@ function NotesView({
                 className="rounded-2xl border border-border/60 bg-card/40 p-3 text-sm text-foreground/90"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                  <span className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">
                     Counsellor note
                   </span>
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                  <span className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">
                     {formatRelativeTime(n.created_at)}
                   </span>
                 </div>
@@ -892,7 +892,7 @@ function MeetingView({
                     {formatMeetingTime(m.scheduled_for)} · {m.duration_minutes} min
                     {m.location ? ` · ${m.location}` : null}
                   </p>
-                  <p className="mt-0.5 text-[10px] uppercase tracking-[0.2em]">{m.status}</p>
+                  <p className="mt-0.5 text-[0.625rem] uppercase tracking-[0.2em]">{m.status}</p>
                   {actions.length ? (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {actions.map((action) => (

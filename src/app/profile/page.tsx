@@ -194,7 +194,7 @@ export default async function ProfilePage() {
         >
           <div className="relative z-10 flex items-start justify-between gap-4">
             <div className="space-y-1">
-              <p className={cn('text-[11px] font-semibold uppercase tracking-[0.3em]', PROFILE_SECTION_VISUAL.personal.text)}>Personal</p>
+              <p className={cn('text-[0.6875rem] font-semibold uppercase tracking-[0.3em]', PROFILE_SECTION_VISUAL.personal.text)}>Personal</p>
               <p className="text-xl font-semibold text-foreground">{profileFullName || 'Add your full name'}</p>
               <p className="text-sm text-muted-foreground">{profileEmail || 'Add an email'}</p>
             </div>
@@ -204,22 +204,22 @@ export default async function ProfilePage() {
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div className="surface-subcard p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Country</p>
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Country</p>
               <p className="text-sm font-semibold text-foreground">{personal?.resident_country || 'Add home country'}</p>
             </div>
             <div className="surface-subcard p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Time zone</p>
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Time zone</p>
               <p className="text-sm font-semibold text-foreground">{personal?.time_zone || profile?.time_zone || 'Set time zone'}</p>
             </div>
             <div className="surface-subcard p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Score</p>
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Score</p>
               <p className="text-sm font-semibold text-foreground">
                 {typeof scores?.total_score === 'number' ? `${scores.total_score} • ${scores.student_band ?? 'Unbanded'}` : 'Not scored'}
               </p>
             </div>
           </div>
           <div className="mt-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Pathway status
             </p>
             <div className="mt-2">
@@ -228,7 +228,7 @@ export default async function ProfilePage() {
           </div>
 
           <div className="mt-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Intended subjects</p>
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Intended subjects</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {primaryClusters.length ? (
                 primaryClusters.map((cluster) => (
@@ -248,7 +248,7 @@ export default async function ProfilePage() {
             </div>
           </div>
           <div className="mt-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Secondary interests</p>
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Secondary interests</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {secondaryClusters.slice(0, 2).map((cluster) => (
                 <span
@@ -282,7 +282,7 @@ export default async function ProfilePage() {
           >
             <div className="relative z-10 flex items-start justify-between gap-4">
               <div>
-                <p className={cn('text-[11px] font-semibold uppercase tracking-[0.3em]', PROFILE_SECTION_VISUAL.lifestyle.text)}>Lifestyle</p>
+                <p className={cn('text-[0.6875rem] font-semibold uppercase tracking-[0.3em]', PROFILE_SECTION_VISUAL.lifestyle.text)}>Lifestyle</p>
                 <p className="text-lg font-semibold text-foreground">Study setup</p>
                 <p className="text-sm text-muted-foreground">Teaching style and campus feel</p>
               </div>
@@ -292,13 +292,13 @@ export default async function ProfilePage() {
             </div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div className="surface-subcard p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Teaching style</p>
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Teaching style</p>
                 <p className="text-sm font-semibold text-foreground">
                   {lifestyle?.teaching_style ? formatClusterLabel(lifestyle.teaching_style) : 'Add preference'}
                 </p>
               </div>
               <div className="surface-subcard p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Location type</p>
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Location type</p>
                 <p className="text-sm font-semibold text-foreground">
                   {lifestyle?.desired_location_type ? formatClusterLabel(lifestyle.desired_location_type) : 'Add preference'}
                 </p>
@@ -329,7 +329,7 @@ export default async function ProfilePage() {
           >
             <div className="relative z-10 flex items-start justify-between gap-4">
               <div>
-                <p className={cn('text-[11px] font-semibold uppercase tracking-[0.3em]', PROFILE_SECTION_VISUAL.academics.text)}>Academics</p>
+                <p className={cn('text-[0.6875rem] font-semibold uppercase tracking-[0.3em]', PROFILE_SECTION_VISUAL.academics.text)}>Academics</p>
                 <p className="text-lg font-semibold text-foreground">Snapshot</p>
                 <p className="text-sm text-muted-foreground">
                   {academicInput?.programme_type ? formatProgramme(academicInput.programme_type) : 'Add qualification and grades'}
@@ -357,7 +357,7 @@ export default async function ProfilePage() {
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div className="surface-subcard p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">School</p>
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">School</p>
                 <p className="text-sm font-semibold text-foreground">
                   {academicInput?.school_name ? academicInput.school_name : 'Add school name'}
                 </p>
@@ -366,18 +366,18 @@ export default async function ProfilePage() {
                 </p>
               </div>
               <div className="surface-subcard p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Graduation</p>
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Graduation</p>
                 <p className="text-sm font-semibold text-foreground">
                   {academicInput?.graduation_year ? academicInput.graduation_year : 'Set graduation year'}
                 </p>
                 <p className="text-xs text-muted-foreground">{academicInput?.desired_start_date ?? 'Start date not set'}</p>
               </div>
               <div className="surface-subcard p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Top subjects</p>
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Top subjects</p>
                 <p className="text-sm font-semibold text-foreground">{subjectHighlights.join(' • ') || 'Add subjects'}</p>
               </div>
               <div className="surface-subcard p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Admissions tests</p>
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Admissions tests</p>
                 <p className="text-sm font-semibold text-foreground">{admissionsLabel}</p>
               </div>
             </div>
@@ -403,7 +403,7 @@ export default async function ProfilePage() {
                 <Compass className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <p className={cn('text-[11px] font-semibold uppercase tracking-[0.3em]', PROFILE_SECTION_VISUAL.aspirations.text)}>
+                <p className={cn('text-[0.6875rem] font-semibold uppercase tracking-[0.3em]', PROFILE_SECTION_VISUAL.aspirations.text)}>
                   Top gains available
                 </p>
                 <p className="text-sm font-semibold text-foreground">{outcomeHints[0].title}</p>

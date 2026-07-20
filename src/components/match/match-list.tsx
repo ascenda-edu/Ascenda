@@ -102,7 +102,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
     <div className="space-y-8 pb-24">
       <div className="surface-toolbar flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="relative z-10 flex flex-col gap-1">
-          <p className="text-[11px] uppercase tracking-[0.35em] text-muted-foreground">
+          <p className="text-[0.6875rem] uppercase tracking-[0.35em] text-muted-foreground">
             {MATCHES_TEXT.list.headerEyebrow}
           </p>
           <p className="text-xs sm:text-sm text-muted-foreground">
@@ -110,7 +110,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
           </p>
           <div className="hidden sm:flex items-center gap-1.5 mt-1">
             <Info className="h-3 w-3 text-muted-foreground/60 shrink-0" />
-            <p className="text-[11px] text-muted-foreground/80">
+            <p className="text-[0.6875rem] text-muted-foreground/80">
               <span className={cn('font-semibold', TIER_VISUAL.reach.text)}>Reach</span>
               {' \u00B7 '}
               <span className={cn('font-semibold', TIER_VISUAL.match.text)}>Match</span>

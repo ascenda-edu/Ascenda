@@ -62,7 +62,7 @@ export function EvolutionTimeline({ entries, studentName }: EvolutionTimelinePro
       {studentName && (
         <div className="flex items-center gap-2 mb-2">
           <Sparkles className="h-4 w-4 text-primary" />
-          <span className="text-[11px] uppercase tracking-[0.15em] font-semibold text-muted-foreground">
+          <span className="text-[0.6875rem] uppercase tracking-[0.15em] font-semibold text-muted-foreground">
             {studentName}&apos;s journey
           </span>
         </div>
@@ -95,14 +95,14 @@ export function EvolutionTimeline({ entries, studentName }: EvolutionTimelinePro
                 <div className={`flex-1 surface-subcard border-l-[3px] ${cfg.border} p-4 rounded-2xl`}>
                   <div className="flex items-start justify-between gap-3 mb-1">
                     <h4 className="text-sm font-semibold leading-snug">{entry.title}</h4>
-                    <time className="shrink-0 text-[11px] uppercase tracking-[0.1em] text-muted-foreground font-medium">
+                    <time className="shrink-0 text-[0.6875rem] uppercase tracking-[0.1em] text-muted-foreground font-medium">
                       {formatDate(entry.date)}
                     </time>
                   </div>
-                  <p className="text-[13px] text-muted-foreground/90 leading-relaxed mb-2">
+                  <p className="text-[0.8125rem] text-muted-foreground/90 leading-relaxed mb-2">
                     {entry.description}
                   </p>
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${src.className}`}>
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold ${src.className}`}>
                     {src.label}
                   </span>
                 </div>

@@ -78,7 +78,7 @@ export function ProgressBoard({
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="truncate text-sm font-semibold text-foreground">{app.university}</p>
                   {app.tier ? (
-                    <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', TIER_STYLES[app.tier])}>
+                    <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-semibold', TIER_STYLES[app.tier])}>
                       {app.tier}
                     </span>
                   ) : null}
@@ -106,7 +106,7 @@ export function ProgressBoard({
                         : `${app.daysUntilDeadline}d to deadline`}
                   </span>
                 ) : null}
-                <span className={cn('rounded-full px-2.5 py-1 text-[11px] font-semibold', STATUS_STYLES[app.status])}>
+                <span className={cn('rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold', STATUS_STYLES[app.status])}>
                   {STATUS_LABELS[app.status]}
                 </span>
               </div>
@@ -123,7 +123,7 @@ export function ProgressBoard({
                     style={{ width: `${progress}%` }}
                   />
                 </div>
-                <span className="shrink-0 text-[11px] text-muted-foreground">
+                <span className="shrink-0 text-[0.6875rem] text-muted-foreground">
                   {app.tasksTotal - app.tasksOpen}/{app.tasksTotal} tasks done
                 </span>
               </div>

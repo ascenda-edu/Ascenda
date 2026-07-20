@@ -20,7 +20,7 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Programme Type</p>
         <div className="flex h-6 overflow-hidden rounded-xl border border-border/50">
           <button
-            className="flex h-full items-center justify-center bg-violet-500/70 text-[11px] font-bold text-white transition-all duration-700 hover:bg-violet-500/90 hover:brightness-110"
+            className="flex h-full items-center justify-center bg-violet-500/70 text-[0.6875rem] font-bold text-white transition-all duration-700 hover:bg-violet-500/90 hover:brightness-110"
             style={{ width: `${ibPct}%` }}
             onClick={() => onNavigateProgramme?.('IB')}
             title={`View IB students (${programmeBreakdown.ib})`}
@@ -28,7 +28,7 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
             {ibPct > 10 ? `IB ${ibPct}%` : ''}
           </button>
           <button
-            className="flex h-full items-center justify-center bg-sky-500/70 text-[11px] font-bold text-white transition-all duration-700 hover:bg-sky-500/90 hover:brightness-110"
+            className="flex h-full items-center justify-center bg-sky-500/70 text-[0.6875rem] font-bold text-white transition-all duration-700 hover:bg-sky-500/90 hover:brightness-110"
             style={{ width: `${aLevelPct}%` }}
             onClick={() => onNavigateProgramme?.('A_LEVEL')}
             title={`View A-Level students (${programmeBreakdown.aLevel})`}
@@ -75,7 +75,7 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
                 <span className="text-xs text-muted-foreground group-hover:text-foreground group-focus-within:text-foreground transition">{label}</span>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-semibold text-foreground">{count}</span>
-                  <span className="text-[10px] text-primary opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition font-medium">View →</span>
+                  <span className="text-[0.625rem] text-primary opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition font-medium">View →</span>
                 </div>
               </div>
             </button>

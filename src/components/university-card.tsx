@@ -67,7 +67,7 @@ export function UniversityCard({
                     </span>
                 </div>
                 <div className="text-right">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">{location}</p>
+                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">{location}</p>
                     {tier ? (
                         <p className="mt-1 text-xs font-semibold text-foreground/80">{tier} tier</p>
                     ) : null}
@@ -107,13 +107,13 @@ export function UniversityCard({
                         {highlights.slice(0, 3).map((highlight) => (
                             <span
                                 key={highlight}
-                                className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-2.5 py-1 text-[11px] font-medium text-foreground/80 shadow-sm"
+                                className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-2.5 py-1 text-[0.6875rem] font-medium text-foreground/80 shadow-sm"
                             >
                                 {highlight}
                             </span>
                         ))}
                         {highlights.length > 3 && (
-                            <span className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm">
+                            <span className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-2.5 py-1 text-[0.6875rem] font-medium text-muted-foreground shadow-sm">
                                 +{highlights.length - 3}
                             </span>
                         )}
@@ -123,13 +123,13 @@ export function UniversityCard({
                 {/* Eligibility Reasons */}
                 {reasons.length > 0 && (
                     <div className="mt-3 flex flex-col gap-1.5">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold px-1">Eligibility Details</p>
+                        <p className="text-[0.625rem] uppercase tracking-wider text-muted-foreground/70 font-semibold px-1">Eligibility Details</p>
                         <div className="flex flex-col gap-1">
                             {reasons.map((reason, idx) => (
                                 <div
                                     key={idx}
                                     className={cn(
-                                        "text-[11px] px-2 py-1 rounded-lg border",
+                                        "text-[0.6875rem] px-2 py-1 rounded-lg border",
                                         reason.includes("below requirement") || reason.includes("missing")
                                             ? "bg-red-500/5 border-red-500/20 text-red-600 dark:text-red-400"
                                             : "bg-emerald-500/5 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"

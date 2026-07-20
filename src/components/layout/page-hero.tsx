@@ -122,7 +122,7 @@ export const PageHero = ({
           <motion.div className="space-y-1" variants={containerVariants}>
             {showEyebrowRow ? (
               <motion.div
-                className="flex flex-wrap items-baseline gap-1.5 text-[10px] text-muted-foreground"
+                className="flex flex-wrap items-baseline gap-1.5 text-[0.625rem] text-muted-foreground"
                 variants={fadeUp}
               >
                 {eyebrow ? <span className="font-medium">{eyebrow}</span> : null}
@@ -138,12 +138,12 @@ export const PageHero = ({
               <h1
                 className={cn(
                   'font-semibold text-foreground leading-snug',
-                  isStudent ? 'text-[17px] md:text-[19px]' : 'text-[15px] md:text-[17px]'
+                  isStudent ? 'text-[1.0625rem] md:text-[1.1875rem]' : 'text-[0.9375rem] md:text-[1.0625rem]'
                 )}
               >
                 {title}
               </h1>
-              <p className="mt-0.5 max-w-xl text-[11px] text-muted-foreground leading-snug">
+              <p className="mt-0.5 max-w-xl text-[0.6875rem] text-muted-foreground leading-snug">
                 {description}
               </p>
             </motion.div>
@@ -181,11 +181,11 @@ export const PageHero = ({
                     >
                       <AnimatedNumber value={stat.value} />
                     </p>
-                    <p className="text-[10px] text-muted-foreground font-medium truncate" title={stat.label}>
+                    <p className="text-[0.625rem] text-muted-foreground font-medium truncate" title={stat.label}>
                       {stat.label}
                     </p>
                     {stat.detail ? (
-                      <p className="text-[10px] text-muted-foreground truncate" title={stat.detail}>
+                      <p className="text-[0.625rem] text-muted-foreground truncate" title={stat.detail}>
                         {stat.detail}
                       </p>
                     ) : null}

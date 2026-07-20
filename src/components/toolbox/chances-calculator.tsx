@@ -75,7 +75,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
       <div className="surface-subcard p-5 space-y-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{grades.system} Predicted Score</p>
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{grades.system} Predicted Score</p>
             <div className="flex items-baseline gap-2 mt-1">
               <motion.span
                 key={sliderScore}
@@ -89,7 +89,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
             </div>
           </div>
           <div className="text-right">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Base prediction</p>
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Base prediction</p>
             <p className="text-sm text-muted-foreground">{grades.predicted} points</p>
             {sliderScore !== grades.predicted && (
               <button
@@ -104,7 +104,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
 
         {/* Slider */}
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold text-muted-foreground">What if I score...</p>
+          <p className="text-[0.6875rem] font-semibold text-muted-foreground">What if I score...</p>
           <div className="relative">
             <input
               type="range"
@@ -124,11 +124,11 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
                 [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110"
             />
             <div className="flex justify-between mt-1 px-0.5">
-              <span className="text-[10px] text-muted-foreground/50">24</span>
-              <span className="text-[10px] text-muted-foreground/50">30</span>
-              <span className="text-[10px] text-muted-foreground/50">35</span>
-              <span className="text-[10px] text-muted-foreground/50">40</span>
-              <span className="text-[10px] text-muted-foreground/50">45</span>
+              <span className="text-[0.625rem] text-muted-foreground/50">24</span>
+              <span className="text-[0.625rem] text-muted-foreground/50">30</span>
+              <span className="text-[0.625rem] text-muted-foreground/50">35</span>
+              <span className="text-[0.625rem] text-muted-foreground/50">40</span>
+              <span className="text-[0.625rem] text-muted-foreground/50">45</span>
             </div>
           </div>
         </div>
@@ -172,7 +172,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
 
       {/* Sort controls */}
       <div className="flex items-center gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Sort by</span>
+        <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Sort by</span>
         {([
           { key: 'classification', label: 'Tier' },
           { key: 'chance', label: 'Chance %' },
@@ -194,7 +194,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
       </div>
 
       {/* Disclaimer */}
-      <p className="text-[11px] text-muted-foreground/60 italic">
+      <p className="text-[0.6875rem] text-muted-foreground/60 italic">
         Chance percentages are illustrative estimates based on score thresholds, not real admissions probabilities. Actual outcomes depend on many factors beyond grades.
       </p>
 
@@ -241,7 +241,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">{uni.flagEmoji}</span>
-                      <span className="text-[15px] font-semibold text-foreground truncate">{uni.university}</span>
+                      <span className="text-[0.9375rem] font-semibold text-foreground truncate">{uni.university}</span>
                     </div>
                     <p className="text-sm text-muted-foreground truncate">{uni.programme}</p>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -258,7 +258,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
                       <Link
                         href={`/course/${uni.id}`}
                         onClick={(event) => event.stopPropagation()}
-                        className="relative z-10 inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-[11px] font-semibold text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
+                        className="relative z-10 inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-[0.6875rem] font-semibold text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
                         aria-label={`View ${uni.university} course details`}
                       >
                         View course
@@ -271,7 +271,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
 
                 {/* Score comparison bar */}
                 <div className="mt-3 flex items-center gap-3">
-                  <span className="text-[10px] text-muted-foreground w-12 shrink-0">Min {uni.minimumScore}</span>
+                  <span className="text-[0.625rem] text-muted-foreground w-12 shrink-0">Min {uni.minimumScore}</span>
                   <div className="flex-1 h-2 rounded-full bg-muted/30 overflow-hidden relative">
                     {/* Minimum score marker */}
                     <div
@@ -285,7 +285,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
                       transition={{ duration: 0.6, ease: 'easeOut' }}
                     />
                   </div>
-                  <span className="text-[10px] font-semibold text-foreground w-12 text-right shrink-0">You: {sliderScore}</span>
+                  <span className="text-[0.625rem] font-semibold text-foreground w-12 text-right shrink-0">You: {sliderScore}</span>
                 </div>
 
                 <AnimatePresence>

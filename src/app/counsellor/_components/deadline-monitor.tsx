@@ -191,7 +191,7 @@ export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
 
                         {/* Type + date */}
                         <div className="flex flex-col items-end gap-1">
-                          <span className={cn('rounded-full border px-2.5 py-0.5 text-[11px] font-semibold', typeCfg)}>
+                          <span className={cn('rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold', typeCfg)}>
                             {TYPE_LABELS[d.type] ?? d.type}
                           </span>
                           <span className="text-xs text-muted-foreground">{formatDate(d.date)}</span>

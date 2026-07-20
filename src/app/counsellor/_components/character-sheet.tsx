@@ -90,7 +90,7 @@ export function CharacterSheet({ student, questDecks }: Props) {
               style={{ width: `${xpPct}%` }}
             />
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[0.6875rem] text-muted-foreground">
             XP grows with profile completion, matches, tests, and applications.
           </p>
         </div>
@@ -100,9 +100,9 @@ export function CharacterSheet({ student, questDecks }: Props) {
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {stats.map(({ stat, label, value }) => (
           <div key={stat} className="rounded-2xl border border-border/60 bg-background/60 px-4 py-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-violet-600 dark:text-violet-300">{stat}</p>
+            <p className="text-[0.625rem] font-bold uppercase tracking-widest text-violet-600 dark:text-violet-300">{stat}</p>
             <p className="truncate text-sm font-bold tabular-nums text-foreground" title={value}>{value}</p>
-            <p className="text-[11px] text-muted-foreground">{label}</p>
+            <p className="text-[0.6875rem] text-muted-foreground">{label}</p>
           </div>
         ))}
       </div>
@@ -159,7 +159,7 @@ export function CharacterSheet({ student, questDecks }: Props) {
                             <Star key={i} className="h-2.5 w-2.5 fill-current" />
                           ))}
                         </span>
-                        <span className={cn('shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold', DECK_FIT[quest.fit].badge)}>
+                        <span className={cn('shrink-0 rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold', DECK_FIT[quest.fit].badge)}>
                           {DECK_FIT[quest.fit].label}
                         </span>
                       </li>

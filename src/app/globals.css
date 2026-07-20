@@ -96,10 +96,17 @@
 
   html {
     scroll-behavior: smooth;
+    /* Fluid root scaling: rem base holds at 16px up to 1440px-wide viewports, then
+       grows linearly to 18px at 2560px, so large monitors get a proportionally
+       larger UI instead of a 16px strip. Terms are rem (not px) so a user's browser
+       font-size preference still multiplies through; CSS pixels already normalise
+       devicePixelRatio, so no JS screen detection is needed. All type below must be
+       rem-based to participate. */
+    font-size: clamp(1rem, 0.8393rem + 0.1786vw, 1.125rem);
   }
 
   body {
-    @apply bg-background text-foreground antialiased leading-relaxed text-[15px];
+    @apply bg-background text-foreground antialiased leading-relaxed text-[0.9375rem];
   }
 
   ::selection {
@@ -147,11 +154,11 @@
      caption: 12px (text-xs)
      Marketing landing pages may opt out via inline overrides. */
   h1 {
-    @apply text-[28px] leading-tight font-semibold md:text-[32px];
+    @apply text-[1.75rem] leading-tight font-semibold md:text-[2rem];
   }
 
   h2 {
-    @apply text-[22px] leading-snug font-semibold md:text-2xl;
+    @apply text-[1.375rem] leading-snug font-semibold md:text-2xl;
   }
 
   h3 {

@@ -26,7 +26,7 @@ function TaskMeta({ item }: { item: TaskHit }) {
   // Shared relative-due copy so the widget matches the /applications/tasks board.
   const due = dueLabel(item.dueDate);
   return (
-    <p className="truncate text-[10px] text-muted-foreground">
+    <p className="truncate text-[0.625rem] text-muted-foreground">
       {item.application}
       {due ? (
         <>
@@ -112,7 +112,7 @@ export function TasksWidget({ items, mode }: { items: TaskHit[]; mode: ChatMode 
               <div className="min-w-0 flex-1">
                 <p
                   className={cn(
-                    'truncate text-[11px] font-medium text-foreground',
+                    'truncate text-[0.6875rem] font-medium text-foreground',
                     done && 'text-muted-foreground line-through'
                   )}
                 >

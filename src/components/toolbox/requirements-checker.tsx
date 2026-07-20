@@ -115,7 +115,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
             >
               {avgProgress}%
             </motion.span>
-            <span className="text-[10px] text-muted-foreground">Overall</span>
+            <span className="text-[0.625rem] text-muted-foreground">Overall</span>
           </div>
         </div>
 
@@ -140,8 +140,8 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
             {categoryRates.map(({ category, rate }) => (
               <div key={category} className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-medium text-muted-foreground">{CATEGORY_LABELS[category]}</span>
-                  <span className="text-[10px] font-semibold text-foreground">{rate}%</span>
+                  <span className="text-[0.625rem] font-medium text-muted-foreground">{CATEGORY_LABELS[category]}</span>
+                  <span className="text-[0.625rem] font-semibold text-foreground">{rate}%</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
                   <motion.div
@@ -158,18 +158,18 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
       </div>
 
       {/* Interactive note */}
-      <p className="text-[11px] text-muted-foreground/70 italic">Click any status icon to cycle through: Missing → In Progress → Complete → N/A. Your changes are saved automatically.</p>
+      <p className="text-[0.6875rem] text-muted-foreground/70 italic">Click any status icon to cycle through: Missing → In Progress → Complete → N/A. Your changes are saved automatically.</p>
 
       {/* Desktop: interactive table */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left py-3 pr-4 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">University</th>
+              <th className="text-left py-3 pr-4 text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">University</th>
               {categories.map((cat) => (
-                <th key={cat} className="text-center px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{CATEGORY_LABELS[cat]}</th>
+                <th key={cat} className="text-center px-3 py-3 text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{CATEGORY_LABELS[cat]}</th>
               ))}
-              <th className="text-center px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Progress</th>
+              <th className="text-center px-3 py-3 text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Progress</th>
             </tr>
           </thead>
           <tbody>
@@ -217,7 +217,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                         />
                       </svg>
                       <span className={cn(
-                        'absolute inset-0 flex items-center justify-center text-[9px] font-bold',
+                        'absolute inset-0 flex items-center justify-center text-[0.5625rem] font-bold',
                         row.progress >= 80 ? 'text-emerald-600' : row.progress >= 50 ? 'text-amber-600' : 'text-rose-600'
                       )}>
                         {row.progress}
@@ -263,7 +263,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                           />
                         </svg>
                         <span className={cn(
-                          'absolute inset-0 flex items-center justify-center text-[10px] font-bold',
+                          'absolute inset-0 flex items-center justify-center text-[0.625rem] font-bold',
                           row.progress >= 80 ? 'text-emerald-600' : row.progress >= 50 ? 'text-amber-600' : 'text-rose-600'
                         )}>
                           {row.progress}%

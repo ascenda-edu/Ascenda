@@ -130,7 +130,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
       {/* Focus cards: next 14 days */}
       {focusDeadlines.length > 0 && (
         <div className="space-y-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Next 14 days</p>
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Next 14 days</p>
           <motion.div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" variants={stagger} initial="hidden" animate="show">
             {focusDeadlines.map((d) => {
               const cfg = TYPE_CONFIG[d.type];
@@ -145,8 +145,8 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                   onClick={() => setSelectedDeadline(selectedDeadline === d.id ? null : d.id)}
                 >
                   <div className="flex items-center justify-between">
-                    <span className={cn('rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase', cfg.bg, cfg.color)}>{cfg.label}</span>
-                    <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold', urgencyColor(days))}>
+                    <span className={cn('rounded-full px-2.5 py-0.5 text-[0.625rem] font-semibold uppercase', cfg.bg, cfg.color)}>{cfg.label}</span>
+                    <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-bold', urgencyColor(days))}>
                       {days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`}
                     </span>
                   </div>
@@ -245,7 +245,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
           {/* Day headers */}
           <div className="grid grid-cols-7 gap-1">
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
-              <div key={d} className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground py-1">
+              <div key={d} className="text-center text-[0.625rem] font-semibold uppercase tracking-wider text-muted-foreground py-1">
                 {d}
               </div>
             ))}
@@ -275,7 +275,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                   )}
                 >
                   <p className={cn(
-                    'text-[11px] font-medium',
+                    'text-[0.6875rem] font-medium',
                     isToday ? 'text-primary font-bold' : 'text-muted-foreground'
                   )}>
                     {date.getDate()}
@@ -286,7 +286,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                       return (
                         <div
                           key={d.id}
-                          className={cn('rounded px-1 py-0.5 text-[9px] font-medium truncate', cfg.bg, cfg.color)}
+                          className={cn('rounded px-1 py-0.5 text-[0.5625rem] font-medium truncate', cfg.bg, cfg.color)}
                           title={`${d.title} — ${d.university}`}
                         >
                           {d.title}
@@ -294,7 +294,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                       );
                     })}
                     {dayDeadlines.length > 2 && (
-                      <p className="text-[9px] text-muted-foreground pl-1">+{dayDeadlines.length - 2} more</p>
+                      <p className="text-[0.5625rem] text-muted-foreground pl-1">+{dayDeadlines.length - 2} more</p>
                     )}
                   </div>
                 </button>
@@ -325,7 +325,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                     return (
                       <div key={d.id} className={cn('rounded-xl border p-3 space-y-1', cfg.bg)}>
                         <div className="flex items-center gap-2">
-                          <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', cfg.bg, cfg.color)}>{cfg.label}</span>
+                          <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-semibold', cfg.bg, cfg.color)}>{cfg.label}</span>
                           <span className="text-sm font-semibold text-foreground">{d.title}</span>
                         </div>
                         <p className="text-xs text-muted-foreground">{d.university}</p>
@@ -347,7 +347,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
             <div key={month}>
               <div className="flex items-center gap-3 mb-4">
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{month}</p>
-                <span className="rounded-full bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{items.length} items</span>
+                <span className="rounded-full bg-muted/50 px-2 py-0.5 text-[0.625rem] font-medium text-muted-foreground">{items.length} items</span>
                 <div className="flex-1 h-px bg-border/50" />
               </div>
               <div className="relative border-l-2 border-border pl-6 space-y-4">
@@ -367,9 +367,9 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                       <div className="space-y-1.5 surface-subcard p-3 rounded-xl hover:shadow-md transition-shadow">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-semibold text-foreground">{d.title}</span>
-                          <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', cfg.bg, cfg.color)}>{cfg.label}</span>
+                          <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-semibold', cfg.bg, cfg.color)}>{cfg.label}</span>
                           {days >= 0 && days <= 7 && (
-                            <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold', urgencyColor(days))}>
+                            <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-bold', urgencyColor(days))}>
                               {days === 0 ? 'Today!' : days === 1 ? 'Tomorrow' : `${days} days left`}
                             </span>
                           )}

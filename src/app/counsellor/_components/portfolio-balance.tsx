@@ -152,12 +152,12 @@ export const PortfolioBalance = ({ student }: PortfolioBalanceProps) => {
             const value = composition[key] as number;
             if (value === 0) return null;
             return (
-              <span key={key} className={cn('rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tabular-nums', pill)}>
+              <span key={key} className={cn('rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold tabular-nums', pill)}>
                 {value} {label}
               </span>
             );
           })}
-          <span className="ml-auto text-[11px] text-muted-foreground">
+          <span className="ml-auto text-[0.6875rem] text-muted-foreground">
             {composition.total} application{composition.total !== 1 ? 's' : ''}
           </span>
         </div>

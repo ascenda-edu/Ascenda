@@ -85,7 +85,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                             {value !== null ? `${value}%` : 'N/A'}
                         </span>
                         {uni.tier ? (
-                            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{uni.tier}</span>
+                            <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{uni.tier}</span>
                         ) : null}
                     </div>
                 );
@@ -308,12 +308,12 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                                         identical && 'opacity-50'
                                                     )}
                                                 >
-                                                    <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                                                    <div className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                                                         <Icon className="h-3.5 w-3.5" />
                                                         {row.label}
                                                     </div>
                                                     {row.hint && (
-                                                        <span className="pl-5 text-[11px] font-normal text-muted-foreground/70">
+                                                        <span className="pl-5 text-[0.6875rem] font-normal text-muted-foreground/70">
                                                             {row.hint}
                                                         </span>
                                                     )}
@@ -333,7 +333,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                                         >
                                                             <div className="min-w-0 flex-1">{row.render(uni)}</div>
                                                             {isBest && (
-                                                                <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                                                                <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
                                                                     Best
                                                                 </span>
                                                             )}
@@ -345,7 +345,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                     })}
 
                                     {/* Highlights row — full-width chip cluster per column */}
-                                    <div className="flex items-start gap-2 px-2 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                                    <div className="flex items-start gap-2 px-2 py-3 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                                         <Sparkles className="mt-0.5 h-3.5 w-3.5" />
                                         Highlights
                                     </div>
@@ -359,7 +359,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                                     {uni.highlights.slice(0, 4).map((h) => (
                                                         <span
                                                             key={h}
-                                                            className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-2.5 py-0.5 text-[11px] font-medium text-foreground/80"
+                                                            className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground/80"
                                                         >
                                                             {h}
                                                         </span>
@@ -418,7 +418,7 @@ function ProgramHeaderCard({ uni, onRemove }: { uni: ProgramSearchResult; onRemo
                     <span className="text-sm font-bold">{scoreValue !== null ? `${scoreValue}%` : 'N/A'}</span>
                 </div>
                 <div className="text-right">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">{uni.location}</p>
+                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">{uni.location}</p>
                     {uni.tier ? (
                         <p className="mt-1 text-xs font-semibold text-foreground/80">{uni.tier} tier</p>
                     ) : null}

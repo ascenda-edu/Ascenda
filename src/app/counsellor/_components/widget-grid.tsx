@@ -261,7 +261,7 @@ export const WidgetGrid = ({ children }: WidgetGridProps) => {
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-xs font-semibold">{cfg.label}</p>
-                      <p className="truncate text-[11px] opacity-70">{cfg.description}</p>
+                      <p className="truncate text-[0.6875rem] opacity-70">{cfg.description}</p>
                     </div>
                     <div className={cn(
                       'ml-auto h-4 w-4 shrink-0 rounded-full border-2 transition',

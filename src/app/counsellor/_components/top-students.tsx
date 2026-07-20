@@ -68,7 +68,7 @@ export const TopStudents = ({ students }: TopStudentsProps) => {
         <button
           onClick={() => setManageOpen((o) => !o)}
           className={cn(
-            'flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium transition hover:-translate-y-0.5',
+            'flex items-center gap-1.5 rounded-full border px-3 py-1 text-[0.6875rem] font-medium transition hover:-translate-y-0.5',
             manageOpen
               ? 'border-primary/40 bg-primary/10 text-primary'
               : 'border-border/60 bg-background/60 text-muted-foreground hover:text-foreground'
@@ -91,7 +91,7 @@ export const TopStudents = ({ students }: TopStudentsProps) => {
             className="overflow-hidden"
           >
             <div className="rounded-2xl border border-border/60 bg-muted/30 p-3 space-y-1.5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground px-1 pb-0.5">
+              <p className="text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground px-1 pb-0.5">
                 Students
               </p>
               {allRanked.map((student) => {
@@ -105,13 +105,13 @@ export const TopStudents = ({ students }: TopStudentsProps) => {
                       isHidden ? 'opacity-40' : 'bg-background/60'
                     )}
                   >
-                    <div className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold', AVATAR_COLORS[allRanked.indexOf(student) % AVATAR_COLORS.length])}>
+                    <div className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.625rem] font-bold', AVATAR_COLORS[allRanked.indexOf(student) % AVATAR_COLORS.length])}>
                       {getInitials(student.personal.firstName, student.personal.lastName)}
                     </div>
                     <span className="flex-1 truncate text-xs font-medium text-foreground">
                       {student.personal.firstName} {student.personal.lastName}
                     </span>
-                    <span className="text-[11px] font-bold text-primary">{getAvgMatchScore(student)}</span>
+                    <span className="text-[0.6875rem] font-bold text-primary">{getAvgMatchScore(student)}</span>
                     <button
                       onClick={() => togglePin(student.id)}
                       title={isPinned ? 'Unpin' : 'Pin to top'}
@@ -142,7 +142,7 @@ export const TopStudents = ({ students }: TopStudentsProps) => {
               {(pinnedIds.size > 0 || hiddenIds.size > 0) && (
                 <button
                   onClick={() => { setPinnedIds(new Set()); setHiddenIds(new Set()); }}
-                  className="mt-1 w-full text-center text-[11px] text-muted-foreground hover:text-foreground transition"
+                  className="mt-1 w-full text-center text-[0.6875rem] text-muted-foreground hover:text-foreground transition"
                 >
                   Reset all
                 </button>
@@ -196,7 +196,7 @@ export const TopStudents = ({ students }: TopStudentsProps) => {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold text-primary">{score}</p>
-                    <p className="text-[11px] text-muted-foreground">avg score</p>
+                    <p className="text-[0.6875rem] text-muted-foreground">avg score</p>
                   </div>
                   {idx < 3 && !isPinned && <Trophy className={`h-4 w-4 shrink-0 ${RANK_STYLES[idx]}`} />}
                 </Link>

@@ -66,7 +66,7 @@ export async function CounsellorQuests({ profileId }: { profileId: string }) {
                           <Star key={i} className="h-2.5 w-2.5 fill-current" />
                         ))}
                       </span>
-                      <span className={cn('shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold', fit.badge)}>
+                      <span className={cn('shrink-0 rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold', fit.badge)}>
                         {fit.label}
                       </span>
                     </li>

@@ -27,10 +27,10 @@ export function ProgramResultCard({ hit, mode }: ProgramResultCardProps) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-foreground">{hit.course}</p>
-        <p className="truncate text-[11px] text-muted-foreground">{meta}</p>
+        <p className="truncate text-[0.6875rem] text-muted-foreground">{meta}</p>
       </div>
       {hit.level ? (
-        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[0.625rem] font-medium text-muted-foreground">
           {hit.level}
         </span>
       ) : null}

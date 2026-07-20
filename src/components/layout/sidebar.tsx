@@ -44,7 +44,7 @@ export const Sidebar = () => {
     >
       <div className={cn('flex items-center', collapsed ? 'justify-center' : 'justify-between px-1 pb-2')}>
         {!collapsed ? (
-          <span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Menu</span>
+          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Menu</span>
         ) : null}
         <button
           type="button"
@@ -107,7 +107,7 @@ export const Sidebar = () => {
           <div className="flex items-center gap-2.5">
             <div className="relative shrink-0">
               <div
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-primary text-[11px] font-bold text-white shadow-sm"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-primary text-[0.6875rem] font-bold text-white shadow-sm"
                 aria-hidden
               >
                 {counsellorInitials}
@@ -120,7 +120,7 @@ export const Sidebar = () => {
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold leading-tight text-foreground">{DEMO_COUNSELLOR.fullName}</p>
-              <p className="text-[11px] text-muted-foreground">Your counsellor · usually replies same-day</p>
+              <p className="text-[0.6875rem] text-muted-foreground">Your counsellor · usually replies same-day</p>
             </div>
           </div>
           <p className="text-xs text-muted-foreground">

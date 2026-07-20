@@ -80,12 +80,12 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
           >
             {tab.label}
             {tab.id === 'notes' && student.notes.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[11px] font-bold text-primary">
+              <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[0.6875rem] font-bold text-primary">
                 {student.notes.length}
               </span>
             )}
             {tab.id === 'matches' && matches.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[11px] font-bold text-primary">
+              <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[0.6875rem] font-bold text-primary">
                 {matches.length}
               </span>
             )}
@@ -337,7 +337,7 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
                                 style={{ width: `${m.score}%` }}
                               />
                             </div>
-                            <p className="mt-0.5 text-[11px] text-muted-foreground">fit score</p>
+                            <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">fit score</p>
                           </div>
                           <span className={cn('rounded-full border px-3 py-1 text-xs font-semibold', tc.pill)}>{tier}</span>
                         </div>

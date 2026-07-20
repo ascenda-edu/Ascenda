@@ -195,7 +195,7 @@ export default function AppointmentPage() {
       <form onSubmit={handleSubmit} className="mt-6 space-y-6">
         <section className="surface-card surface-card--static space-y-4">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Topic</p>
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Topic</p>
             <p className="text-sm text-muted-foreground">What would you like to discuss?</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -228,7 +228,7 @@ export default function AppointmentPage() {
 
         <section className="surface-card surface-card--static space-y-4">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">When works for you?</p>
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">When works for you?</p>
             <p className="text-sm text-muted-foreground">Pick a preferred date, time, and meeting length.</p>
           </div>
 
@@ -289,7 +289,7 @@ export default function AppointmentPage() {
           <div>
             <label
               htmlFor="appointment-notes"
-              className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground"
+              className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground"
             >
               Notes for your counsellor
             </label>

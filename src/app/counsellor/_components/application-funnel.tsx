@@ -57,7 +57,7 @@ export const ApplicationFunnel = ({ funnel, totalStudents, activeStage, onSelect
                     type="button"
                     onClick={() => onNavigateStage(key)}
                     aria-label={`View ${label} stage students`}
-                    className="relative z-10 text-[10px] text-primary hover:underline underline-offset-2 font-medium"
+                    className="relative z-10 text-[0.625rem] text-primary hover:underline underline-offset-2 font-medium"
                   >
                     View →
                   </button>

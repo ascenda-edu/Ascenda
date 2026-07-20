@@ -338,7 +338,7 @@ function SectionTitle({ label, hint, why }: { label: string; hint?: string; why?
           aria-expanded={open}
           aria-haspopup="true"
           onClick={() => setOpen((v) => !v)}
-          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-0.5"
+          className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-0.5"
         >
           <Info className="w-3.5 h-3.5" />
           Why we ask
@@ -492,7 +492,7 @@ function Chip({
         </span>
         {selected && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
       </span>
-      {description ? <span className="text-[11px] text-muted-foreground font-normal leading-snug">{description}</span> : null}
+      {description ? <span className="text-[0.6875rem] text-muted-foreground font-normal leading-snug">{description}</span> : null}
     </button>
   );
 }
@@ -1371,8 +1371,8 @@ export const StudentIntakeForm = ({
             {/* Progress bar */}
             <div className="mb-4 px-1">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Progress</span>
-                <span className="text-[10px] font-bold text-primary">{progressPct}%</span>
+                <span className="text-[0.625rem] font-semibold uppercase tracking-widest text-muted-foreground">Progress</span>
+                <span className="text-[0.625rem] font-bold text-primary">{progressPct}%</span>
               </div>
               <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                 <motion.div
@@ -1403,7 +1403,7 @@ export const StudentIntakeForm = ({
                   )}
                 >
                   <span className={cn(
-                    'flex h-6 w-6 items-center justify-center rounded-lg text-[11px] font-bold shrink-0',
+                    'flex h-6 w-6 items-center justify-center rounded-lg text-[0.6875rem] font-bold shrink-0',
                     isCurrent ? 'bg-primary text-primary-foreground'
                       : isDone ? 'bg-emerald-500/15 text-emerald-600'
                         : 'bg-muted text-muted-foreground'
@@ -1427,7 +1427,7 @@ export const StudentIntakeForm = ({
               )}
             >
               <span className={cn(
-                'flex h-6 w-6 items-center justify-center rounded-lg text-[11px] font-bold shrink-0',
+                'flex h-6 w-6 items-center justify-center rounded-lg text-[0.6875rem] font-bold shrink-0',
                 currentStep === TOTAL_STEPS ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
               )}>
                 <Check className="w-3 h-3" />
@@ -1792,9 +1792,9 @@ export const StudentIntakeForm = ({
 
                     {/* Column headers */}
                     <div className="hidden md:grid md:grid-cols-12 gap-3 px-1 pb-1">
-                      <div className="md:col-span-5 text-[10px] uppercase tracking-widest font-semibold text-muted-foreground">Subject</div>
-                      <div className="md:col-span-3 text-[10px] uppercase tracking-widest font-semibold text-muted-foreground">Level</div>
-                      <div className="md:col-span-3 text-[10px] uppercase tracking-widest font-semibold text-muted-foreground">Grade</div>
+                      <div className="md:col-span-5 text-[0.625rem] uppercase tracking-widest font-semibold text-muted-foreground">Subject</div>
+                      <div className="md:col-span-3 text-[0.625rem] uppercase tracking-widest font-semibold text-muted-foreground">Level</div>
+                      <div className="md:col-span-3 text-[0.625rem] uppercase tracking-widest font-semibold text-muted-foreground">Grade</div>
                     </div>
 
                     <div className="space-y-3" data-field="academic_input.subject_list">

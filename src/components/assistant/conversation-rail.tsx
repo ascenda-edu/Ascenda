@@ -199,7 +199,7 @@ export function ConversationRail({
                           >
                             {conv.title?.trim() || 'New conversation'}
                           </span>
-                          <span className="block text-[10px] text-muted-foreground">
+                          <span className="block text-[0.625rem] text-muted-foreground">
                             {formatRelativeTime(conv.last_message_at)}
                           </span>
                         </span>
@@ -240,7 +240,7 @@ export function ConversationRail({
                           className={cn(
                             'flex h-6 items-center justify-center gap-1 rounded-full transition-colors',
                             isConfirmingDelete
-                              ? 'w-auto px-2 text-[10px] font-semibold text-rose-600 dark:text-rose-400'
+                              ? 'w-auto px-2 text-[0.625rem] font-semibold text-rose-600 dark:text-rose-400'
                               : 'w-6 text-muted-foreground hover:bg-muted hover:text-foreground'
                           )}
                         >
@@ -264,7 +264,7 @@ export function ConversationRail({
             type="button"
             onClick={() => setHistoryOpen((v) => !v)}
             aria-expanded={historyOpen}
-            className="flex w-full items-center justify-between px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+            className="flex w-full items-center justify-between px-3 py-2.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
           >
             Sent actions
             <ChevronDown
@@ -328,8 +328,8 @@ function ActionHistoryItem({ row }: { row: ChatMessageRow }) {
     <>
       <ArrowUpRight className="mt-0.5 h-3 w-3 shrink-0 text-primary" aria-hidden />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[11px] font-medium text-foreground">{label}</span>
-        <span className="block truncate text-[10px] text-muted-foreground">{secondary}</span>
+        <span className="block truncate text-[0.6875rem] font-medium text-foreground">{label}</span>
+        <span className="block truncate text-[0.625rem] text-muted-foreground">{secondary}</span>
       </span>
     </>
   );

@@ -184,21 +184,21 @@ export function InboxList({ profileId }: InboxListProps) {
                   {req.subject}
                 </p>
                 {isUnread ? (
-                  <span className="rounded-full bg-primary px-1.5 text-[10px] font-bold leading-4 text-primary-foreground">
+                  <span className="rounded-full bg-primary px-1.5 text-[0.625rem] font-bold leading-4 text-primary-foreground">
                     {unread}
                   </span>
                 ) : null}
               </div>
               <p className="line-clamp-2 text-xs text-muted-foreground">{req.body}</p>
               <div className="flex items-center gap-2 pt-0.5">
-                <span className="text-[11px] text-muted-foreground">{initiatorLabel(req)}</span>
-                <span className="text-[11px] text-muted-foreground/60">·</span>
-                <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-semibold', status.tone)}>
+                <span className="text-[0.6875rem] text-muted-foreground">{initiatorLabel(req)}</span>
+                <span className="text-[0.6875rem] text-muted-foreground/60">·</span>
+                <span className={cn('rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold', status.tone)}>
                   {status.label}
                 </span>
               </div>
             </div>
-            <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+            <span className="shrink-0 text-[0.6875rem] text-muted-foreground tabular-nums">
               {formatRelativeTime(req.created_at)}
             </span>
           </button>

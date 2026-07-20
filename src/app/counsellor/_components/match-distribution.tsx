@@ -79,13 +79,13 @@ export const MatchDistribution = ({ tiers, activeTier, onSelectTier, onNavigateT
               <div className="px-4 py-3 text-center">
                 <p className={`text-xl font-bold tabular-nums ${text}`}>{tiers[key]}</p>
                 <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-                <p className="text-[11px] text-muted-foreground">{pct}%</p>
+                <p className="text-[0.6875rem] text-muted-foreground">{pct}%</p>
                 {onNavigateTier && tiers[key] > 0 && (
                   <button
                     type="button"
                     onClick={() => onNavigateTier(key)}
                     aria-label={`View ${label} tier students`}
-                    className="relative z-10 mt-1 text-[10px] text-primary hover:underline underline-offset-2 font-medium"
+                    className="relative z-10 mt-1 text-[0.625rem] text-primary hover:underline underline-offset-2 font-medium"
                   >
                     View →
                   </button>

@@ -47,7 +47,7 @@ export function ToolboxCountdown({ days }: { days: number }) {
       )}>
         {days}
       </span>
-      <span className="text-[9px] font-semibold text-muted-foreground mt-0.5">
+      <span className="text-[0.5625rem] font-semibold text-muted-foreground mt-0.5">
         {days === 1 ? 'day' : 'days'}
       </span>
     </motion.div>

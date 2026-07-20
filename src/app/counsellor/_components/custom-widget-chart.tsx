@@ -45,7 +45,7 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
   const pctOf = (count: number) => Math.round((count / rowTotal) * 100);
 
   const tooltip = (bucket: CustomWidgetBucket) => (
-    <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+    <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
       {bucket.count} {unitFor(bucket.count)} · {pctOf(bucket.count)}%{interactive ? ' · Click to explore' : ''}
     </span>
   );
@@ -108,7 +108,7 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
                 style={{ width: `${pct}%` }}
               >
                 {pct > 12 && <span className="truncate px-1">{bucket.label}</span>}
-                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                   {bucket.count} {unitFor(bucket.count)} · {pctOf(bucket.count)}%{interactive ? ' · Click to explore' : ''}
                 </span>
               </button>
@@ -131,7 +131,7 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
               >
                 <p className={cn('text-xl font-bold tabular-nums', colors.text)}>{bucket.count}</p>
                 <p className="truncate text-xs text-muted-foreground">{bucket.label}</p>
-                <p className="text-[11px] text-muted-foreground">{pctOf(bucket.count)}%</p>
+                <p className="text-[0.6875rem] text-muted-foreground">{pctOf(bucket.count)}%</p>
               </button>
             );
           })}

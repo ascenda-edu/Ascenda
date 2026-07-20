@@ -36,7 +36,7 @@ function FactorBar({ label, value, muted }: { label: string; value: number; mute
     <div className="flex items-center gap-2">
       <span
         className={cn(
-          'w-[72px] shrink-0 text-[10px]',
+          'w-[72px] shrink-0 text-[0.625rem]',
           muted ? 'text-muted-foreground/60' : 'text-muted-foreground'
         )}
       >
@@ -50,7 +50,7 @@ function FactorBar({ label, value, muted }: { label: string; value: number; mute
       </div>
       <span
         className={cn(
-          'w-7 shrink-0 text-right text-[10px] tabular-nums',
+          'w-7 shrink-0 text-right text-[0.625rem] tabular-nums',
           muted ? 'text-muted-foreground/60' : 'text-muted-foreground'
         )}
       >
@@ -70,7 +70,7 @@ function MatchCard({ item, mode }: { item: MatchHit; mode: ChatMode }) {
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold text-foreground">{item.course}</p>
-          <p className="truncate text-[11px] text-muted-foreground">{item.university}</p>
+          <p className="truncate text-[0.6875rem] text-muted-foreground">{item.university}</p>
         </div>
         <span className="shrink-0 text-xs font-semibold tabular-nums text-foreground">
           {clamp(item.score)}%

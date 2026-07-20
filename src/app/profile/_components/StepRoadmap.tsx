@@ -39,7 +39,7 @@ export const StepRoadmap = ({ steps, stepCompletion, initialStep }: StepRoadmapP
               )}
             >
               <span className={cn(
-                'flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold',
+                'flex h-5 w-5 items-center justify-center rounded-full text-[0.625rem] font-bold',
                 isCurrent
                   ? 'bg-primary-foreground/20 text-primary-foreground'
                   : isComplete

@@ -105,11 +105,11 @@ export function ComparisonSection() {
                                             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-500/10">
                                                 <X className="h-3 w-3 text-rose-500" />
                                             </span>
-                                            <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-rose-500">
+                                            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.3em] text-rose-500">
                                                 {comparisons[0].title}
                                             </p>
                                         </div>
-                                        <h3 className="text-[15px] font-semibold text-foreground">{pair.without.headline}</h3>
+                                        <h3 className="text-[0.9375rem] font-semibold text-foreground">{pair.without.headline}</h3>
                                         {pair.without.detail && <p className="mt-1 text-sm text-muted-foreground">{pair.without.detail}</p>}
                                     </div>
 
@@ -118,7 +118,7 @@ export function ComparisonSection() {
                                         {index !== 0 && (
                                             <span className="hidden h-4 w-px md:block bg-border/60" />
                                         )}
-                                        <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground shadow-sm">
+                                        <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-[0.625rem] font-bold uppercase tracking-[0.2em] text-muted-foreground shadow-sm">
                                             vs
                                         </span>
                                         {index !== comparisonPairs.length - 1 && (
@@ -132,11 +132,11 @@ export function ComparisonSection() {
                                             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/10">
                                                 <Check className="h-3 w-3 text-emerald-500" />
                                             </span>
-                                            <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">
+                                            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">
                                                 {comparisons[1].title}
                                             </p>
                                         </div>
-                                        <h3 className="text-[15px] font-semibold text-foreground">{pair.with.headline}</h3>
+                                        <h3 className="text-[0.9375rem] font-semibold text-foreground">{pair.with.headline}</h3>
                                         {pair.with.detail && <p className="mt-1 text-sm text-muted-foreground">{pair.with.detail}</p>}
                                     </div>
                                 </motion.div>

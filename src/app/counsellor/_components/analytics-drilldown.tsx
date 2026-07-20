@@ -211,7 +211,7 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
 
             {/* ── Count indicator ─────────────────────────────────────────────── */}
             <div className="mx-6 mb-2 flex items-center justify-between">
-              <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+              <p className="text-[0.6875rem] font-medium uppercase tracking-widest text-muted-foreground">
                 {filtered.length === data.items.length
                   ? `${data.items.length} student${data.items.length !== 1 ? 's' : ''}`
                   : `${filtered.length} of ${data.items.length} students`
@@ -265,7 +265,7 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
                               </span>
                               {badge && (
                                 <span className={cn(
-                                  'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold',
+                                  'shrink-0 rounded-full px-2 py-0.5 text-[0.625rem] font-bold',
                                   badge.color
                                 )}>
                                   {badge.label}

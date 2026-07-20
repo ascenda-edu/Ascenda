@@ -142,7 +142,7 @@ export function ThreadPane({
                 >
                   <div
                     className={cn(
-                      'max-w-[85%] break-words rounded-[16px] px-3.5 py-2.5 text-[13px] leading-relaxed',
+                      'max-w-[85%] break-words rounded-[16px] px-3.5 py-2.5 text-[0.8125rem] leading-relaxed',
                       msg.error
                         ? 'border border-rose-300/60 bg-rose-500/10 text-rose-700 dark:border-rose-500/30 dark:text-rose-300'
                         : msg.role === 'user'
@@ -156,7 +156,7 @@ export function ThreadPane({
                         <button
                           onClick={onRetry}
                           disabled={isStreaming}
-                          className="inline-flex items-center gap-1 rounded-full border border-rose-300/60 px-2.5 py-1 text-[11px] font-semibold text-rose-700 transition hover:bg-rose-500/10 disabled:opacity-50 dark:border-rose-500/40 dark:text-rose-300"
+                          className="inline-flex items-center gap-1 rounded-full border border-rose-300/60 px-2.5 py-1 text-[0.6875rem] font-semibold text-rose-700 transition hover:bg-rose-500/10 disabled:opacity-50 dark:border-rose-500/40 dark:text-rose-300"
                         >
                           <RotateCcw className="h-3 w-3" />
                           Retry
@@ -168,7 +168,7 @@ export function ThreadPane({
                           {isStreamingThis && statusLabel && (
                             <div className="mb-1.5 flex items-center gap-1.5">
                               <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                              <span className="text-[11px] text-muted-foreground">{statusLabel}</span>
+                              <span className="text-[0.6875rem] text-muted-foreground">{statusLabel}</span>
                             </div>
                           )}
                           <MessageContent content={msg.content} mode={mode} onLinkClick={() => {}} />
@@ -253,7 +253,7 @@ export function ThreadPane({
               <div className="flex justify-end">
                 <button
                   onClick={onResend}
-                  className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[0.6875rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   <RotateCcw className="h-3 w-3" />
                   No reply recorded — resend
@@ -268,7 +268,7 @@ export function ThreadPane({
       {/* Composer */}
       <form onSubmit={handleFormSubmit} className="border-t border-border bg-card px-3 py-2.5">
         {coolingDown && (
-          <p className="mb-1.5 text-center text-[11px] text-muted-foreground" role="status">
+          <p className="mb-1.5 text-center text-[0.6875rem] text-muted-foreground" role="status">
             Message limit reached — you can send again in {cooldownRemaining}s
           </p>
         )}

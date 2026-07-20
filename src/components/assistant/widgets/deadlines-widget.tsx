@@ -41,7 +41,7 @@ function DeadlineRow({ item }: { item: DeadlineHit }) {
         {formatDate(item.date)}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[11px] font-medium text-foreground">
+        <p className="truncate text-[0.6875rem] font-medium text-foreground">
           {item.studentName ? (
             <>
               <span aria-hidden>{item.studentFlag ?? flagEmoji(null, undefined)}</span>{' '}
@@ -51,14 +51,14 @@ function DeadlineRow({ item }: { item: DeadlineHit }) {
           {item.label}
         </p>
         {item.university ? (
-          <p className="truncate text-[10px] text-muted-foreground">{item.university}</p>
+          <p className="truncate text-[0.625rem] text-muted-foreground">{item.university}</p>
         ) : null}
       </div>
       <span
         className={
           overdue
-            ? 'shrink-0 text-[10px] font-semibold text-rose-600 dark:text-rose-400'
-            : 'shrink-0 text-[10px] text-muted-foreground'
+            ? 'shrink-0 text-[0.625rem] font-semibold text-rose-600 dark:text-rose-400'
+            : 'shrink-0 text-[0.625rem] text-muted-foreground'
         }
       >
         {relative(days)}
@@ -88,7 +88,7 @@ export function DeadlinesWidget({ items, mode }: { items: DeadlineHit[]; mode: C
       {mode === 'student' ? (
         <Link
           href="/applications/tasks"
-          className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-primary transition-colors hover:text-primary/80"
+          className="mt-1.5 inline-flex items-center gap-1 text-[0.6875rem] font-semibold text-primary transition-colors hover:text-primary/80"
         >
           View all tasks
           <ArrowRight className="h-3 w-3" />

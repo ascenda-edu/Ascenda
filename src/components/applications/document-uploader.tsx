@@ -224,7 +224,7 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }
                   href={item.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground hover:text-foreground"
+                  className="text-[0.6875rem] uppercase tracking-[0.3em] text-muted-foreground hover:text-foreground"
                 >
                   View
                 </a>

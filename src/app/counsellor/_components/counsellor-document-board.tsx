@@ -224,7 +224,7 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
                 {studentName}
                 <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground transition group-hover:text-primary" aria-hidden />
               </Link>
-              <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+              <span className="text-[0.6875rem] uppercase tracking-[0.2em] text-muted-foreground">
                 {docs.length} doc{docs.length === 1 ? '' : 's'}
               </span>
             </div>
@@ -267,12 +267,12 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
                           </span>
                         )}
                         {nudge ? (
-                          <span className="flex items-center gap-1 rounded-full border border-sky-200/60 bg-sky-500/10 px-2.5 py-1 text-[11px] font-semibold text-sky-700 dark:text-sky-300">
+                          <span className="flex items-center gap-1 rounded-full border border-sky-200/60 bg-sky-500/10 px-2.5 py-1 text-[0.6875rem] font-semibold text-sky-700 dark:text-sky-300">
                             <Send className="h-3 w-3" />
                             Nudge sent · {formatNudgeAge(nudge.at)}
                           </span>
                         ) : (
-                          <span className={cn('flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold', cfg.bg, cfg.color)}>
+                          <span className={cn('flex items-center gap-1 rounded-full border px-2.5 py-1 text-[0.6875rem] font-semibold', cfg.bg, cfg.color)}>
                             <Icon className="h-3 w-3" />
                             {cfg.label}
                           </span>
@@ -280,13 +280,13 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
                       </div>
                     </div>
                     {doc.notes && (
-                      <p className="mt-2 text-[11px] italic text-muted-foreground/70" title={doc.notes}>
+                      <p className="mt-2 text-[0.6875rem] italic text-muted-foreground/70" title={doc.notes}>
                         {doc.notes}
                       </p>
                     )}
                     {canNudge ? (
                       <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border/40 pt-2">
-                        <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                        <span className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">
                           Chase
                         </span>
                         {(['student', 'teacher', 'registrar'] as const).map((target) => {
@@ -300,7 +300,7 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
                               onClick={() => handleNudge(doc, target)}
                               disabled={busy === doc.id}
                               className={cn(
-                                'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition disabled:cursor-wait disabled:opacity-60',
+                                'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.6875rem] font-medium transition disabled:cursor-wait disabled:opacity-60',
                                 isActive
                                   ? 'border-sky-300/70 bg-sky-500/15 text-sky-700 dark:text-sky-300'
                                   : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:bg-muted/60 hover:text-foreground'

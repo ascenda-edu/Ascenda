@@ -123,7 +123,7 @@ export default async function ToolboxPage() {
               <div className="relative z-10 flex items-center gap-4">
                 <ToolboxCountdown days={daysUntilNext ?? 0} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary flex items-center gap-1.5">
+                  <p className="text-[0.625rem] font-bold uppercase tracking-[0.3em] text-primary flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary motion-safe:animate-pulse" />
                     Your next action
                   </p>
@@ -174,7 +174,7 @@ export default async function ToolboxPage() {
                       <div className={cn(visual.swatch, 'h-12 w-12 shadow-sm')}>
                         <Icon className="h-5 w-5" />
                       </div>
-                      <span className="absolute -top-1.5 -left-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-[10px] font-bold text-background shadow-sm">
+                      <span className="absolute -top-1.5 -left-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-[0.625rem] font-bold text-background shadow-sm">
                         {tool.step}
                       </span>
                     </div>
@@ -191,7 +191,7 @@ export default async function ToolboxPage() {
                     {tool.stats.map((stat) => (
                       <div key={stat.label} className="surface-subcard rounded-xl px-2.5 py-2.5 text-center">
                         <p className="text-sm font-bold text-foreground tabular-nums">{stat.value}</p>
-                        <p className="mt-0.5 text-[10px] text-muted-foreground">{stat.label}</p>
+                        <p className="mt-0.5 text-[0.625rem] text-muted-foreground">{stat.label}</p>
                       </div>
                     ))}
                   </div>

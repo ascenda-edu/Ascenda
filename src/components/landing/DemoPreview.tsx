@@ -84,7 +84,7 @@ export function DemoPreview() {
     <div className="flex flex-col h-full">
       {/* Predicted grades input bar */}
       <div className="px-4 pt-4 pb-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/60 mb-2">
+        <p className="text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground/60 mb-2">
           Predicted IB Grades
         </p>
         <div className="flex gap-1.5">
@@ -96,7 +96,7 @@ export function DemoPreview() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.15, duration: 0.3 }}
             >
-              <p className="text-[9px] text-muted-foreground/50 font-medium">{SUBJECTS[i]}</p>
+              <p className="text-[0.5625rem] text-muted-foreground/50 font-medium">{SUBJECTS[i]}</p>
               <AnimatePresence mode="wait">
                 {phase >= 0 && (
                   <motion.p
@@ -118,7 +118,7 @@ export function DemoPreview() {
             animate={{ opacity: 1 }}
             transition={{ delay: 1.2 }}
           >
-            <div className="rounded-lg bg-primary px-3 py-2.5 text-[11px] font-semibold text-primary-foreground shadow-sm">
+            <div className="rounded-lg bg-primary px-3 py-2.5 text-[0.6875rem] font-semibold text-primary-foreground shadow-sm">
               37
             </div>
           </motion.div>
@@ -135,7 +135,7 @@ export function DemoPreview() {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.5 }}
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/60 mb-2">
+            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground/60 mb-2">
               Fit Scores
             </p>
             <div className="space-y-2">
@@ -149,7 +149,7 @@ export function DemoPreview() {
                 >
                   <span className="text-sm shrink-0">{uni.flag}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-semibold text-foreground truncate">{uni.name}</p>
+                    <p className="text-[0.6875rem] font-semibold text-foreground truncate">{uni.name}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <div className="h-1.5 flex-1 rounded-full bg-muted/60 overflow-hidden">
                         <motion.div
@@ -159,12 +159,12 @@ export function DemoPreview() {
                           transition={{ delay: i * 0.12 + 0.3, duration: 0.8, ease: 'easeOut' }}
                         />
                       </div>
-                      <span className="text-[11px] font-bold text-foreground w-8 text-right">
+                      <span className="text-[0.6875rem] font-bold text-foreground w-8 text-right">
                         <AnimatedScore target={uni.score} delay={(i * 120) + 300} />
                       </span>
                     </div>
                   </div>
-                  <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${statusColor(uni.status)}`}>
+                  <span className={`text-[0.5625rem] font-semibold px-2 py-0.5 rounded-full shrink-0 ${statusColor(uni.status)}`}>
                     {uni.status}
                   </span>
                 </motion.div>
@@ -184,14 +184,14 @@ export function DemoPreview() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4 }}
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/60 mb-2">
+            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground/60 mb-2">
               Next Actions
             </p>
             <div className="space-y-1.5">
               {DEADLINES.map((d, i) => (
                 <motion.div
                   key={d.uni}
-                  className="flex items-center gap-2 text-[11px]"
+                  className="flex items-center gap-2 text-[0.6875rem]"
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.1, duration: 0.3 }}

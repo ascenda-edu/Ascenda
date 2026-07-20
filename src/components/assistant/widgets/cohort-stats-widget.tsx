@@ -36,7 +36,7 @@ export function CohortStatsWidget({ items }: { items: StatHit[] }) {
           <p className={cn('text-sm font-semibold tabular-nums', toneClass(item.tone))}>
             {item.value}
           </p>
-          <p className="text-[11px] text-muted-foreground">{item.label}</p>
+          <p className="text-[0.6875rem] text-muted-foreground">{item.label}</p>
         </div>
       ))}
     </motion.div>

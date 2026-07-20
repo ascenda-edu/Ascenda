@@ -131,7 +131,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
           </p>
           <p className="text-xs text-muted-foreground">{student.personal.schoolCity}, {student.personal.schoolCountry}</p>
           <p className={cn(
-            'mt-1 text-[11px] font-medium',
+            'mt-1 text-[0.6875rem] font-medium',
             isActiveSoon(student.lastActive) ? 'text-emerald-600' : 'text-muted-foreground'
           )}>
             Active {formatRelative(student.lastActive)}

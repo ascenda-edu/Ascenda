@@ -26,7 +26,7 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
           style={{ width: `${ibPct}%` }}
         >
           IB {ibPct}%
-          <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             {breakdown.ib} students · Click to explore
           </span>
         </button>
@@ -36,7 +36,7 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
           style={{ width: `${aLevelPct}%` }}
         >
           A-Level {aLevelPct}%
-          <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             {breakdown.aLevel} students · Click to explore
           </span>
         </button>
@@ -95,7 +95,7 @@ export const IbDistribution = ({ buckets, onSelect }: IbDistributionProps) => {
               >
                 {count > 0 ? count : ''}
                 {count > 0 && (
-                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                     {count} student{count !== 1 ? 's' : ''} · {Math.round((count / total) * 100)}% · Click to explore
                   </span>
                 )}
@@ -146,7 +146,7 @@ export const FieldChart = ({ fields, onSelect }: FieldChartProps) => {
               >
                 {count > 0 ? count : ''}
                 {count > 0 && (
-                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                     {count} student{count !== 1 ? 's' : ''} · {Math.round((count / total) * 100)}% · Click to explore
                   </span>
                 )}
@@ -208,7 +208,7 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
           type="button"
           onClick={() => setCompareYoY((prev) => !prev)}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition',
+            'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.6875rem] font-semibold transition',
             compareYoY
               ? 'border-violet-300/70 bg-violet-500/10 text-violet-700 dark:text-violet-300'
               : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:bg-muted/60 hover:text-foreground'
@@ -240,7 +240,7 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
                 <span className={cn('font-bold tabular-nums', textColor)}>
                   {count} <span className="font-normal text-muted-foreground">({pct}%)</span>
                   {compareYoY ? (
-                    <span className={cn('ml-2 text-[10px] font-semibold', delta.tone)}>{delta.label}</span>
+                    <span className={cn('ml-2 text-[0.625rem] font-semibold', delta.tone)}>{delta.label}</span>
                   ) : null}
                 </span>
               </div>
@@ -250,14 +250,14 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
                   style={{ width: `${width}%` }}
                 >
                   {count}
-                  <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                  <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                     {count} student{count !== 1 ? 's' : ''} · {pct}%
                     {compareYoY ? ` · ${delta.label} vs last year` : ''} · Click to explore
                   </span>
                 </div>
               </div>
               {compareYoY ? (
-                <div className="ml-auto flex w-fit items-center gap-1 pr-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                <div className="ml-auto flex w-fit items-center gap-1 pr-2 text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">
                   Last year · {prior}
                 </div>
               ) : null}
@@ -299,7 +299,7 @@ export const MatchTierSummary = ({ tiers, onSelect }: MatchTierSummaryProps) => 
               style={{ width: `${pct}%` }}
             >
               {pct > 8 ? label : ''}
-              <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                 {count} {label} · {Math.round(pct)}% · Click to explore
               </span>
             </button>
@@ -316,7 +316,7 @@ export const MatchTierSummary = ({ tiers, onSelect }: MatchTierSummaryProps) => 
           >
             <p className={cn('text-2xl font-bold tabular-nums', text)}>{count}</p>
             <p className="text-xs text-muted-foreground">{label}</p>
-            <p className="text-[11px] text-muted-foreground">{Math.round((count / total) * 100)}%</p>
+            <p className="text-[0.6875rem] text-muted-foreground">{Math.round((count / total) * 100)}%</p>
           </button>
         ))}
       </div>
@@ -368,7 +368,7 @@ export const CompletionBreakdown = ({ students, onSelect }: CompletionBreakdownP
               >
                 {count > 0 ? count : ''}
                 {count > 0 && (
-                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[11px] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                     {count} student{count !== 1 ? 's' : ''} · {tooltip} · Click to explore
                   </span>
                 )}

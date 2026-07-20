@@ -55,7 +55,7 @@ export function CounsellorCard({ counsellor, openThreads, unreadTotal, latestSub
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-foreground">{counsellor.fullName}</p>
-            <p className="text-[11px] text-muted-foreground">Your counsellor · usually replies same-day</p>
+            <p className="text-[0.6875rem] text-muted-foreground">Your counsellor · usually replies same-day</p>
           </div>
         </div>
 
@@ -83,7 +83,7 @@ export function CounsellorCard({ counsellor, openThreads, unreadTotal, latestSub
             </p>
           </div>
           {unreadTotal > 0 ? (
-            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-violet-500 px-1.5 text-[10px] font-bold text-white">
+            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-violet-500 px-1.5 text-[0.625rem] font-bold text-white">
               {unreadTotal}
             </span>
           ) : null}
@@ -92,10 +92,10 @@ export function CounsellorCard({ counsellor, openThreads, unreadTotal, latestSub
         {nextMeeting ? (
           <div className="rounded-xl border border-border/70 bg-background/60 p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">Next meeting</p>
+              <p className="text-[0.625rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">Next meeting</p>
               <span
                 className={cn(
-                  'rounded-full px-2 py-px text-[10px] font-semibold',
+                  'rounded-full px-2 py-px text-[0.625rem] font-semibold',
                   nextMeeting.status === 'confirmed'
                     ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                     : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'

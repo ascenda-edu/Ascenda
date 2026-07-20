@@ -44,7 +44,7 @@ export function MessageContent({
         strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
         ul: ({ children }) => <ul className="mb-1.5 ml-3 list-disc space-y-0.5 last:mb-0">{children}</ul>,
         ol: ({ children }) => <ol className="mb-1.5 ml-3 list-decimal space-y-0.5 last:mb-0">{children}</ol>,
-        li: ({ children }) => <li className="text-[13px]">{children}</li>,
+        li: ({ children }) => <li className="text-[0.8125rem]">{children}</li>,
         a: ({ href, children }) => {
           // Internal route → real navigation link (correct semantics: href,
           // middle-click/open-in-new-tab work). Closing the panel stays on the
@@ -72,7 +72,7 @@ export function MessageContent({
           );
         },
         code: ({ children }) => (
-          <code className="rounded bg-muted px-1 py-0.5 text-[12px]">{children}</code>
+          <code className="rounded bg-muted px-1 py-0.5 text-[0.75rem]">{children}</code>
         ),
       }}
     >
@@ -195,7 +195,7 @@ function LegacyActionCard({
         className="w-full resize-none rounded-[10px] border border-border bg-background px-2.5 py-1.5 text-xs leading-relaxed text-foreground focus:border-primary/40 focus:outline-none disabled:opacity-50"
       />
       {failed && (
-        <p className="text-[11px] text-rose-600 dark:text-rose-400">
+        <p className="text-[0.6875rem] text-rose-600 dark:text-rose-400">
           Couldn&apos;t send — try again in a moment.
         </p>
       )}
@@ -203,7 +203,7 @@ function LegacyActionCard({
         <button
           onClick={handleSend}
           disabled={sending || !body.trim() || (action.kind === 'help_request' && !subject.trim())}
-          className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground transition-[transform,opacity] hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0"
+          className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[0.6875rem] font-semibold text-primary-foreground transition-[transform,opacity] hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0"
         >
           {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
           Send
@@ -211,7 +211,7 @@ function LegacyActionCard({
         <button
           onClick={onCancel}
           disabled={sending}
-          className="rounded-full border border-border px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+          className="rounded-full border border-border px-3 py-1.5 text-[0.6875rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
         >
           Cancel
         </button>
@@ -298,7 +298,7 @@ function ToolActionCard({
       <div>
         <p className="text-xs font-semibold text-foreground">{action.title}</p>
         {action.summary && (
-          <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{action.summary}</p>
+          <p className="mt-0.5 text-[0.6875rem] leading-relaxed text-muted-foreground">{action.summary}</p>
         )}
       </div>
 
@@ -306,7 +306,7 @@ function ToolActionCard({
         const id = `${uid}-${field.key}`;
         return (
           <div key={field.key} className="space-y-1">
-            <label htmlFor={id} className="block text-[11px] font-medium text-muted-foreground">
+            <label htmlFor={id} className="block text-[0.6875rem] font-medium text-muted-foreground">
               {field.label}
             </label>
             {field.kind === 'textarea' ? (
@@ -350,7 +350,7 @@ function ToolActionCard({
       })}
 
       {failed && (
-        <p className="text-[11px] text-rose-600 dark:text-rose-400">
+        <p className="text-[0.6875rem] text-rose-600 dark:text-rose-400">
           Couldn&apos;t run that — check the details and try again.
         </p>
       )}
@@ -360,7 +360,7 @@ function ToolActionCard({
           onClick={handleSend}
           disabled={sending || sendDisabled}
           aria-describedby={sendDisabled && !sending ? `${hintId}` : undefined}
-          className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground transition-[transform,opacity] hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0"
+          className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[0.6875rem] font-semibold text-primary-foreground transition-[transform,opacity] hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0"
         >
           {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
           Confirm
@@ -368,12 +368,12 @@ function ToolActionCard({
         <button
           onClick={onCancel}
           disabled={sending}
-          className="rounded-full border border-border px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+          className="rounded-full border border-border px-3 py-1.5 text-[0.6875rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
         >
           Cancel
         </button>
         {sendDisabled && !sending && (
-          <span id={hintId} className="text-[10px] text-muted-foreground">
+          <span id={hintId} className="text-[0.625rem] text-muted-foreground">
             Hold on a moment…
           </span>
         )}

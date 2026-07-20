@@ -179,7 +179,7 @@ export const MobileNav = () => {
                 )}
               >
                 <Icon className="h-5 w-5 shrink-0" aria-hidden />
-                <span className="max-w-full truncate text-[10px] font-medium leading-none">
+                <span className="max-w-full truncate text-[0.625rem] font-medium leading-none">
                   {label}
                 </span>
               </Link>
@@ -203,7 +203,7 @@ export const MobileNav = () => {
             )}
           >
             <MoreHorizontal className="h-5 w-5 shrink-0" aria-hidden />
-            <span className="max-w-full truncate text-[10px] font-medium leading-none">More</span>
+            <span className="max-w-full truncate text-[0.625rem] font-medium leading-none">More</span>
           </button>
         </div>
       </div>

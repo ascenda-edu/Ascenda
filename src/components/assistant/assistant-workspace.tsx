@@ -692,7 +692,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
             type="button"
             onClick={() => void sendMessage(chip)}
             disabled={coolingDown}
-            className="rounded-full border border-border bg-background px-3 py-1.5 text-[11px] text-muted-foreground transition-[transform,border-color,color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:text-foreground hover:shadow-sm disabled:opacity-50"
+            className="rounded-full border border-border bg-background px-3 py-1.5 text-[0.6875rem] text-muted-foreground transition-[transform,border-color,color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:text-foreground hover:shadow-sm disabled:opacity-50"
           >
             {chip}
           </button>
@@ -730,7 +730,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
             <PanelLeft className="h-4 w-4" />
           </button>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Ascendi</p>
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-primary">Ascendi</p>
             <h1 className="font-heading text-2xl font-semibold text-foreground">Assistant</h1>
             <p className="mt-0.5 max-w-xl text-sm text-muted-foreground">{SUBTITLES[mode]}</p>
           </div>

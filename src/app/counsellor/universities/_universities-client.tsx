@@ -761,7 +761,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                             type="button"
                             onClick={() => cycleRarity(selectedDeck.id, card)}
                             title="Change rarity"
-                            className={cn('flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition hover:-translate-y-0.5', rarity.badge)}
+                            className={cn('flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold transition hover:-translate-y-0.5', rarity.badge)}
                           >
                             {Array.from({ length: rarity.stars }).map((_, i) => (
                               <Star key={i} className="h-2.5 w-2.5 fill-current" />
@@ -772,7 +772,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                             type="button"
                             onClick={() => cycleFit(selectedDeck.id, card)}
                             title="Change fit"
-                            className={cn('rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition hover:-translate-y-0.5', fit.badge)}
+                            className={cn('rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold transition hover:-translate-y-0.5', fit.badge)}
                           >
                             {fit.label}
                           </button>

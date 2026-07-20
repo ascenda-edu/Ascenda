@@ -116,7 +116,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
       >
         <Bell className="h-4 w-4" aria-hidden />
         {unreadCount > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white shadow-sm">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[0.625rem] font-semibold text-white shadow-sm">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         ) : null}
@@ -137,7 +137,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
             <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
               <div>
                 <p className="text-sm font-semibold">Notifications</p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[0.6875rem] text-muted-foreground">
                   {unreadCount === 0 ? 'All caught up' : `${unreadCount} unread`}
                 </p>
               </div>
@@ -145,7 +145,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
                 <button
                   type="button"
                   onClick={markAllRead}
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[0.6875rem] font-medium text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
                 >
                   <CheckCheck className="h-3 w-3" />
                   Mark all read
@@ -187,7 +187,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
                             </p>
                             <span
                               className={cn(
-                                'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.15em]',
+                                'shrink-0 rounded-full px-2 py-0.5 text-[0.625rem] font-medium uppercase tracking-[0.15em]',
                                 tone
                               )}
                             >
@@ -197,7 +197,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
                           {notif.body ? (
                             <p className="mt-0.5 truncate text-xs text-muted-foreground">{notif.body}</p>
                           ) : null}
-                          <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/70">
+                          <p className="mt-1 text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground/70">
                             {formatRelative(notif.created_at)}
                           </p>
                         </div>

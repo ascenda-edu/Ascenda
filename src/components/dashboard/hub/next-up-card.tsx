@@ -79,7 +79,7 @@ export function NextUpCard({ items }: { items: HubFocusItem[] }) {
             <div className="min-w-0 flex-1">
               <span
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+                  'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold',
                   TONE[hero.tone].chip
                 )}
               >
@@ -106,12 +106,12 @@ export function NextUpCard({ items }: { items: HubFocusItem[] }) {
                   href={item.href}
                   className="group flex items-center gap-3 rounded-xl border border-border/70 bg-background/60 p-3 transition-all hover:-translate-y-px hover:border-primary/20 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-[11px] font-bold text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-[0.6875rem] font-bold text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
                     {index + 2}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-x-2">
-                      <span className={cn('rounded-full px-2 py-px text-[10px] font-semibold', TONE[item.tone].chip)}>
+                      <span className={cn('rounded-full px-2 py-px text-[0.625rem] font-semibold', TONE[item.tone].chip)}>
                         {item.label}
                       </span>
                       <p className="truncate text-sm font-semibold text-foreground">{item.title}</p>

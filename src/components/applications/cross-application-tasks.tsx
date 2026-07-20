@@ -369,14 +369,14 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
                             {task.name}
                           </p>
                           {task.status === 'doing' ? (
-                            <span className="shrink-0 rounded-full border border-sky-200/60 bg-sky-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-sky-600 dark:border-sky-500/20 dark:text-sky-400">
+                            <span className="shrink-0 rounded-full border border-sky-200/60 bg-sky-500/10 px-2.5 py-0.5 text-[0.6875rem] font-semibold text-sky-600 dark:border-sky-500/20 dark:text-sky-400">
                               In progress
                             </span>
                           ) : null}
                           {due ? (
                             <span
                               className={cn(
-                                'shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold',
+                                'shrink-0 rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold',
                                 due.urgent
                                   ? 'border-rose-200/60 bg-rose-500/10 text-rose-600 dark:border-rose-500/20 dark:text-rose-400'
                                   : 'border-border bg-muted/50 text-foreground'

@@ -84,7 +84,7 @@ export function NextActionsList({ items }: Props) {
               </div>
               <div className="hidden shrink-0 text-right sm:block">
                 <p className={cn('text-xs font-semibold', tone.labelTone)}>{tone.label}</p>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                <p className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">
                   {item.tasksRemaining} task{item.tasksRemaining === 1 ? '' : 's'} open
                 </p>
               </div>

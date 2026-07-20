@@ -106,7 +106,7 @@ export function DeadlineGroups({
           <div className="relative z-10">
             <div className="mb-4 flex items-baseline justify-between gap-3">
               <div>
-                <p className={cn('text-[11px] font-semibold uppercase tracking-[0.3em]', group.tone)}>
+                <p className={cn('text-[0.6875rem] font-semibold uppercase tracking-[0.3em]', group.tone)}>
                   {group.title}
                 </p>
                 <p className="text-xs text-muted-foreground">{group.detail}</p>

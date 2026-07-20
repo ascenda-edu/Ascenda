@@ -121,14 +121,14 @@ export function DeadlineNudges({ nudges }: DeadlineNudgesProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="text-sm font-semibold text-foreground">{nudge.title}</p>
-                      <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums', cfg.color, cfg.bg)}>
+                      <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-bold tabular-nums', cfg.color, cfg.bg)}>
                         {days <= 0 ? 'Overdue' : `${days}d`}
                       </span>
                     </div>
                     {nudge.university && (
-                      <p className="text-[11px] font-semibold text-muted-foreground mb-1">{nudge.university}</p>
+                      <p className="text-[0.6875rem] font-semibold text-muted-foreground mb-1">{nudge.university}</p>
                     )}
-                    <p className="text-[13px] text-muted-foreground/90 leading-relaxed">{nudge.description}</p>
+                    <p className="text-[0.8125rem] text-muted-foreground/90 leading-relaxed">{nudge.description}</p>
                     <Link
                       href={nudge.actionHref}
                       className={cn(

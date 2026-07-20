@@ -178,7 +178,7 @@ export default async function StudentDetailPage({ params }: Props) {
                 <div key={label} className="flex flex-col items-center gap-1 rounded-2xl border border-border/60 bg-background/60 px-4 py-3 text-center">
                   <Icon className={cn('h-4 w-4', color)} />
                   <p className={cn('text-lg font-bold tabular-nums', color)}>{value}</p>
-                  <p className="text-[11px] text-muted-foreground">{label}</p>
+                  <p className="text-[0.6875rem] text-muted-foreground">{label}</p>
                 </div>
               ))}
             </div>

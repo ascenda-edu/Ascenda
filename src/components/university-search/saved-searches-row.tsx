@@ -46,7 +46,7 @@ export function SavedSearchesRow() {
               >
                 {item.name}
                 {item.filters.length > 0 && (
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] tabular-nums text-muted-foreground">
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[0.6875rem] tabular-nums text-muted-foreground">
                     {item.filters.length} filter{item.filters.length === 1 ? '' : 's'}
                   </span>
                 )}

@@ -49,7 +49,7 @@ function AtRiskRow({ item, mode }: { item: AtRiskHit; mode: ChatMode }) {
           {URGENCY_LABEL[item.urgency]}
         </span>
       </div>
-      <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{item.reason}</p>
+      <p className="mt-1 line-clamp-2 text-[0.6875rem] text-muted-foreground">{item.reason}</p>
     </>
   );
 

@@ -138,7 +138,7 @@ export const NotesPanel = ({ notes: seedNotes, studentId }: NotesPanelProps) => 
               </div>
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className={cn('rounded-full border px-2 py-0.5 text-[11px] font-semibold', cfg.bg, cfg.color)}>
+                  <span className={cn('rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold', cfg.bg, cfg.color)}>
                     {cfg.label}
                   </span>
                   <span className="text-xs text-muted-foreground">{formatDate(note.date)}</span>

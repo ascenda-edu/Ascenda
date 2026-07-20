@@ -287,7 +287,7 @@ export function HeroSection() {
                                             <p className="text-sm font-semibold text-foreground">Good morning, Maya</p>
                                         </div>
                                     </div>
-                                    <span className="flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary/80">
+                                    <span className="flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[0.6875rem] font-medium text-primary/80">
                                         Today
                                     </span>
                                 </motion.div>
@@ -297,21 +297,21 @@ export function HeroSection() {
                                     {/* Fit score — hero stat with extra weight */}
                                     <div className="relative min-w-0 overflow-hidden rounded-2xl border border-emerald-500/20 bg-background px-2 py-4 text-center shadow-sm sm:px-4">
                                         <div className="pointer-events-none absolute -top-8 -right-8 h-28 w-28 rounded-full bg-emerald-400 blur-2xl opacity-30" aria-hidden />
-                                        <p className="text-[11px] font-medium text-muted-foreground">Fit score</p>
+                                        <p className="text-[0.6875rem] font-medium text-muted-foreground">Fit score</p>
                                         <p className="mt-1 text-xl sm:text-4xl font-bold text-foreground leading-none tracking-tight">{fitScore}<span className="text-base sm:text-xl text-emerald-500">%</span></p>
-                                        <p className="mt-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Top match</p>
+                                        <p className="mt-1 text-[0.625rem] text-emerald-600 dark:text-emerald-400 font-medium">Top match</p>
                                     </div>
                                     {/* Due soon */}
                                     <div className="relative min-w-0 overflow-hidden rounded-2xl border border-border bg-background px-2 py-4 text-center shadow-sm sm:px-4">
                                         <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-amber-400 blur-2xl opacity-40" aria-hidden />
-                                        <p className="text-[11px] font-medium text-muted-foreground">Due soon</p>
+                                        <p className="text-[0.6875rem] font-medium text-muted-foreground">Due soon</p>
                                         <p className="mt-1 text-xl sm:text-2xl font-semibold text-foreground leading-tight tracking-tight">3</p>
-                                        <p className="mt-0.5 text-[10px] text-muted-foreground">This week</p>
+                                        <p className="mt-0.5 text-[0.625rem] text-muted-foreground">This week</p>
                                     </div>
                                     {/* Profile — with animated circular progress */}
                                     <div className="relative min-w-0 overflow-hidden rounded-2xl border border-border bg-background px-2 py-4 text-center shadow-sm sm:px-4">
                                         <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-primary blur-2xl opacity-40" aria-hidden />
-                                        <p className="text-[11px] font-medium text-muted-foreground">Profile</p>
+                                        <p className="text-[0.6875rem] font-medium text-muted-foreground">Profile</p>
                                         <div className="mt-1 flex min-w-0 items-center justify-center gap-2">
                                             {/* Mini circular progress ring */}
                                             <svg width="28" height="28" viewBox="0 0 28 28" className="shrink-0 -rotate-90">
@@ -339,7 +339,7 @@ export function HeroSection() {
                                             </svg>
                                             <p className="shrink text-xl sm:text-2xl font-semibold text-foreground leading-tight tracking-tight">4/5</p>
                                         </div>
-                                        <p className="mt-0.5 text-[10px] text-muted-foreground">80% complete</p>
+                                        <p className="mt-0.5 text-[0.625rem] text-muted-foreground">80% complete</p>
                                     </div>
                                 </motion.div>
 
@@ -349,9 +349,9 @@ export function HeroSection() {
                                     variants={dashboardItemVariants}
                                 >
                                     <div className="flex items-center justify-between mb-2">
-                                        <p className="text-[11px] font-medium text-muted-foreground">Profile progress</p>
+                                        <p className="text-[0.6875rem] font-medium text-muted-foreground">Profile progress</p>
                                         <motion.p
-                                            className="text-[11px] font-medium text-primary/80"
+                                            className="text-[0.6875rem] font-medium text-primary/80"
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
                                             transition={{ delay: shouldReduceMotion ? 0 : 1.6, duration: 0.4 }}
@@ -403,17 +403,17 @@ export function HeroSection() {
                                             className={cn('flex items-start gap-3 rounded-xl border border-border bg-background/80 backdrop-blur-sm px-4 py-3 border-l-[3px]', item.border)}
                                             variants={radarItemVariants}
                                         >
-                                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/10 text-[11px] font-bold text-primary">
+                                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/10 text-[0.6875rem] font-bold text-primary">
                                                 {item.num}
                                             </span>
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-center gap-2">
-                                                    <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', item.badge)}>
+                                                    <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-semibold', item.badge)}>
                                                         {item.label}
                                                     </span>
                                                 </div>
                                                 <p className="mt-1 text-sm font-medium text-foreground leading-snug">{item.title}</p>
-                                                <p className="text-[11px] text-muted-foreground">{item.detail}</p>
+                                                <p className="text-[0.6875rem] text-muted-foreground">{item.detail}</p>
                                             </div>
                                         </motion.div>
                                     ))}

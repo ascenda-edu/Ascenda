@@ -31,7 +31,7 @@ export function StatsCard({ label, value, detail, icon, trend, className }: Stat
 
             <div className="relative z-10 flex items-start justify-between">
                 <div className="space-y-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
                         {label}
                     </p>
                     <motion.h3

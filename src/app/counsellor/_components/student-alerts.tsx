@@ -65,7 +65,7 @@ export const StudentAlerts = ({ students }: StudentAlertsProps) => {
         <button
           onClick={() => setManageOpen((o) => !o)}
           className={cn(
-            'flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium transition hover:-translate-y-0.5',
+            'flex items-center gap-1.5 rounded-full border px-3 py-1 text-[0.6875rem] font-medium transition hover:-translate-y-0.5',
             manageOpen
               ? 'border-primary/40 bg-primary/10 text-primary'
               : 'border-border/60 bg-background/60 text-muted-foreground hover:text-foreground'
@@ -88,7 +88,7 @@ export const StudentAlerts = ({ students }: StudentAlertsProps) => {
             className="overflow-hidden"
           >
             <div className="rounded-2xl border border-border/60 bg-muted/30 p-3 space-y-1.5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground px-1 pb-0.5">
+              <p className="text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground px-1 pb-0.5">
                 Flagged students
               </p>
               {flagged.map((student) => {
@@ -106,7 +106,7 @@ export const StudentAlerts = ({ students }: StudentAlertsProps) => {
                     <span className="flex-1 truncate text-xs font-medium text-foreground">
                       {student.personal.firstName} {student.personal.lastName}
                     </span>
-                    <span className="text-[10px] text-muted-foreground">{student.flags.length} flag{student.flags.length !== 1 ? 's' : ''}</span>
+                    <span className="text-[0.625rem] text-muted-foreground">{student.flags.length} flag{student.flags.length !== 1 ? 's' : ''}</span>
                     <button
                       onClick={() => togglePin(student.id)}
                       title={isPinned ? 'Unpin' : 'Pin to top'}
@@ -137,7 +137,7 @@ export const StudentAlerts = ({ students }: StudentAlertsProps) => {
               {(pinnedIds.size > 0 || hiddenIds.size > 0) && (
                 <button
                   onClick={() => { setPinnedIds(new Set()); setHiddenIds(new Set()); }}
-                  className="mt-1 w-full text-center text-[11px] text-muted-foreground hover:text-foreground transition"
+                  className="mt-1 w-full text-center text-[0.6875rem] text-muted-foreground hover:text-foreground transition"
                 >
                   Reset all
                 </button>

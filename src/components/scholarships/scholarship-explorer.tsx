@@ -154,7 +154,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
             <Filter className="h-4 w-4" />
             {showFilters ? 'Hide filters' : 'Filters'}
             {activeFilterCount > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[0.625rem] font-bold text-primary-foreground">
                 {activeFilterCount}
               </span>
             )}
@@ -172,7 +172,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
             >
               <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3 pt-2 border-t border-border/50">
                 <div className="space-y-1.5">
-                  <label htmlFor="scholarship-filter-country" className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1.5">
+                  <label htmlFor="scholarship-filter-country" className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1.5">
                     <Globe className="h-3 w-3" /> Country
                   </label>
                   <select
@@ -186,7 +186,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="scholarship-filter-level" className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1.5">
+                  <label htmlFor="scholarship-filter-level" className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1.5">
                     <GraduationCap className="h-3 w-3" /> Level
                   </label>
                   <select
@@ -200,7 +200,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="scholarship-filter-max-award" className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1.5">
+                  <label htmlFor="scholarship-filter-max-award" className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1.5">
                     <DollarSign className="h-3 w-3" /> Max award (USD)
                   </label>
                   <input
@@ -219,12 +219,12 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
 
         {/* Status row */}
         <div className="flex items-center justify-between">
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[0.6875rem] text-muted-foreground">
             <span className="font-semibold text-foreground">{filtered.length}</span> of {scholarships.length} scholarships
             {saved.size > 0 && <span className="ml-2 text-emerald-600">· {saved.size} saved</span>}
           </p>
           {hasFilters && (
-            <button onClick={resetFilters} className="text-[11px] font-medium text-muted-foreground hover:text-rose-500 transition-colors flex items-center gap-1">
+            <button onClick={resetFilters} className="text-[0.6875rem] font-medium text-muted-foreground hover:text-rose-500 transition-colors flex items-center gap-1">
               <X className="h-3 w-3" /> Clear filters
             </button>
           )}
@@ -281,7 +281,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                         <div className="flex flex-wrap items-center gap-2">
                           <span className={cn(visual.chip, 'uppercase tracking-[0.15em]')}>{category}</span>
                           {urgent && (
-                            <span className="rounded-full bg-rose-500/10 border border-rose-200/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.15em] text-rose-600 motion-safe:animate-pulse dark:text-rose-400 dark:border-rose-500/20">
+                            <span className="rounded-full bg-rose-500/10 border border-rose-200/50 px-2.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-rose-600 motion-safe:animate-pulse dark:text-rose-400 dark:border-rose-500/20">
                               Closing soon
                             </span>
                           )}
@@ -310,7 +310,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                         <p className="text-xl font-bold text-foreground tabular-nums">
                           {scholarship.amount ? `${scholarship.currency ?? 'USD'} ${scholarship.amount.toLocaleString()}` : '—'}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">per award</p>
+                        <p className="text-[0.625rem] text-muted-foreground">per award</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button

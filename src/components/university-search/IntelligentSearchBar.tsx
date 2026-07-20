@@ -436,7 +436,7 @@ export function IntelligentSearchBar({
                             <div className="max-h-72 divide-y divide-border overflow-y-auto">
                                 {suggestions.programs.length > 0 && (
                                     <div role="group" aria-label="Programs">
-                                        <p className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Programs</p>
+                                        <p className="px-3 pt-2 text-[0.625rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Programs</p>
                                         <ul className="p-1" role="presentation">
                                             {suggestions.programs.map((item, index) => (
                                                 <li key={`program-${item.id}`} role="presentation">
@@ -466,7 +466,7 @@ export function IntelligentSearchBar({
                                 )}
                                 {suggestions.universities.length > 0 && (
                                     <div role="group" aria-label="Universities">
-                                        <p className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Universities</p>
+                                        <p className="px-3 pt-2 text-[0.625rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Universities</p>
                                         <ul className="p-1" role="presentation">
                                             {suggestions.universities.map((item, index) => {
                                                 const flatIndex = suggestions.programs.length + index;
@@ -504,7 +504,7 @@ export function IntelligentSearchBar({
                                 <div className="space-y-3">
                                     {recentSearches.length > 0 && (
                                         <div role="group" aria-label="Recent searches">
-                                            <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Recent searches</p>
+                                            <p className="px-1 text-[0.625rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Recent searches</p>
                                             <ul className="mt-1 grid gap-1 md:grid-cols-2" role="presentation">
                                                 {recentSearches.map((item, index) => (
                                                     <li key={`recent-${item.id}`} role="presentation">
@@ -528,7 +528,7 @@ export function IntelligentSearchBar({
                                                                 )}
                                                                 {item.location && <span className="text-xs text-muted-foreground">{item.location}</span>}
                                                             </div>
-                                                            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">Recent</span>
+                                                            <span className="rounded-full bg-muted px-2 py-0.5 text-[0.625rem] text-muted-foreground">Recent</span>
                                                         </button>
                                                     </li>
                                                 ))}
@@ -537,7 +537,7 @@ export function IntelligentSearchBar({
                                     )}
                                     {(trendingSuggestions.programs.length > 0 || trendingSuggestions.universities.length > 0) && (
                                         <div role="group" aria-label="Trending">
-                                            <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Trending</p>
+                                            <p className="px-1 text-[0.625rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Trending</p>
                                             <div className="grid gap-2 md:grid-cols-2" role="presentation">
                                                 {trendingSuggestions.programs.map((item, index) => {
                                                     const flatIndex = recentSearches.length + index;
@@ -560,8 +560,8 @@ export function IntelligentSearchBar({
                                                             {item.university && (
                                                                 <span className="text-xs text-muted-foreground">{item.university}</span>
                                                             )}
-                                                            {item.location && <span className="text-[11px] text-muted-foreground">{item.location}</span>}
-                                                            <span className="mt-1 inline-flex w-fit rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">Program</span>
+                                                            {item.location && <span className="text-[0.6875rem] text-muted-foreground">{item.location}</span>}
+                                                            <span className="mt-1 inline-flex w-fit rounded-full bg-background px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">Program</span>
                                                         </button>
                                                     );
                                                 })}
@@ -583,8 +583,8 @@ export function IntelligentSearchBar({
                                                             )}
                                                         >
                                                             <span className="font-semibold text-foreground">{item.name}</span>
-                                                            {item.location && <span className="text-[11px] text-muted-foreground">{item.location}</span>}
-                                                            <span className="mt-1 inline-flex w-fit rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">University</span>
+                                                            {item.location && <span className="text-[0.6875rem] text-muted-foreground">{item.location}</span>}
+                                                            <span className="mt-1 inline-flex w-fit rounded-full bg-background px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">University</span>
                                                         </button>
                                                     );
                                                 })}

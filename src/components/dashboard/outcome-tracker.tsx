@@ -47,7 +47,7 @@ export function OutcomeTracker({ outcomes }: OutcomeTrackerProps) {
         ].map(({ label, count, color }) => (
           <div key={label} className={cn('rounded-2xl border px-4 py-2 text-center', color)}>
             <p className="text-lg font-bold tabular-nums">{count}</p>
-            <p className="text-[11px] font-semibold">{label}</p>
+            <p className="text-[0.6875rem] font-semibold">{label}</p>
           </div>
         ))}
       </div>
@@ -85,7 +85,7 @@ export function OutcomeTracker({ outcomes }: OutcomeTrackerProps) {
                   {cfg.label}
                 </span>
                 {outcome.responseDate && (
-                  <span className="text-[11px] text-muted-foreground">{formatDate(outcome.responseDate)}</span>
+                  <span className="text-[0.6875rem] text-muted-foreground">{formatDate(outcome.responseDate)}</span>
                 )}
               </div>
             </motion.div>

@@ -105,10 +105,10 @@ export function AtRiskPanel({ alerts }: AtRiskPanelProps) {
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm">{alert.flagEmoji}</span>
                       <span className="text-sm font-semibold text-foreground">{alert.studentName}</span>
-                      <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', risk.bg, risk.color)}>{risk.label}</span>
+                      <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-semibold', risk.bg, risk.color)}>{risk.label}</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">{alert.description}</p>
-                    <p className="text-[10px] text-muted-foreground/70 mt-0.5">{alert.suggestedAction}</p>
+                    <p className="text-[0.625rem] text-muted-foreground/70 mt-0.5">{alert.suggestedAction}</p>
                   </div>
 
                   <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0" />

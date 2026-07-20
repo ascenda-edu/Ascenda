@@ -146,7 +146,7 @@ export function DashboardClient({
           <div className="surface-card surface-card--static">
             <div className="relative z-10 space-y-4">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Proactive</p>
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-widest text-muted-foreground">Proactive</p>
                 <h2 className="text-lg font-semibold text-foreground">At-risk students</h2>
                 <p className="text-xs text-muted-foreground">Students who may need your attention based on activity and deadline patterns.</p>
               </div>
@@ -175,7 +175,7 @@ export function DashboardClient({
             <div className="pt-4">
               <div className="mb-6 flex items-center justify-between pb-4">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Cohort</p>
+                  <p className="text-[0.6875rem] font-semibold uppercase tracking-widest text-muted-foreground">Cohort</p>
                   <h2 className="text-lg font-semibold text-foreground">Student Roster</h2>
                   <p className="text-xs text-muted-foreground">Manage your cohort and track progress</p>
                 </div>

@@ -115,7 +115,7 @@ export default async function ParentOverviewPage() {
         <AnimatedSection>
           <div className="surface-card surface-card--static h-full">
             <div className="relative z-10">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Pipeline</p>
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Pipeline</p>
               <p className="mb-4 text-lg font-semibold text-foreground">Where the applications stand</p>
               <ul className="space-y-3">
                 {overview.pipeline.map((stage) => (
@@ -153,7 +153,7 @@ export default async function ParentOverviewPage() {
         <AnimatedSection delay={0.05}>
           <div className="surface-card surface-card--static h-full">
             <div className="relative z-10">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Timeline</p>
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Timeline</p>
               <p className="mb-4 text-lg font-semibold text-foreground">Upcoming deadlines</p>
               {overview.upcomingDeadlines.length > 0 ? (
                 <ul className="space-y-3">
@@ -197,7 +197,7 @@ export default async function ParentOverviewPage() {
         <AnimatedSection className="md:col-span-2 lg:col-span-1" delay={0.08}>
           <div className="surface-card surface-card--static h-full">
             <div className="relative z-10">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Counsellor</p>
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Counsellor</p>
               <p className="mb-4 text-lg font-semibold text-foreground">Latest update</p>
               {overview.latestCounsellorNote ? (
                 <blockquote className="rounded-xl border border-violet-400/20 bg-violet-500/5 p-3 text-sm text-foreground">
@@ -227,7 +227,7 @@ export default async function ParentOverviewPage() {
         <AnimatedSection className="lg:col-span-7" delay={0.05}>
           <div className="surface-card surface-card--static h-full">
             <div className="relative z-10">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Profile</p>
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Profile</p>
               <p className="mb-1 text-lg font-semibold text-foreground">
                 {child.firstName}&apos;s profile is {overview.completionPercent}% complete
               </p>
@@ -262,7 +262,7 @@ export default async function ParentOverviewPage() {
         <AnimatedSection className="lg:col-span-5" delay={0.08}>
           <div className="surface-card surface-card--static h-full">
             <div className="relative z-10">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Tasks</p>
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Tasks</p>
               <p className="mb-4 text-lg font-semibold text-foreground">Workload at a glance</p>
               <div className="grid grid-cols-3 gap-3">
                 {[
@@ -293,7 +293,7 @@ export default async function ParentOverviewPage() {
                       <Icon className="h-4 w-4" aria-hidden />
                     </div>
                     <p className="text-xl font-semibold text-foreground">{value}</p>
-                    <p className="text-[11px] text-muted-foreground">{label}</p>
+                    <p className="text-[0.6875rem] text-muted-foreground">{label}</p>
                   </div>
                 ))}
               </div>

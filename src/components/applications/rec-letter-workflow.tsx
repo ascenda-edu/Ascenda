@@ -254,12 +254,12 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
               {/* Universities + dates */}
               <div className="flex flex-wrap items-center gap-2">
                 {letter.universities.map((uni) => (
-                  <span key={uni} className="surface-chip text-[11px]">
+                  <span key={uni} className="surface-chip text-[0.6875rem]">
                     {uni}
                   </span>
                 ))}
                 {letter.requestedDate && (
-                  <span className="ml-auto text-[11px] text-muted-foreground">
+                  <span className="ml-auto text-[0.6875rem] text-muted-foreground">
                     Requested {formatDate(letter.requestedDate)}
                   </span>
                 )}
@@ -269,7 +269,7 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
               {(letter.status === 'requested' || letter.status === 'writing') ? (
                 <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
                   {reminders[letter.id] ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200/60 bg-sky-500/10 px-3 py-1 text-[11px] font-semibold text-sky-700 dark:text-sky-300">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200/60 bg-sky-500/10 px-3 py-1 text-[0.6875rem] font-semibold text-sky-700 dark:text-sky-300">
                       <Send className="h-3 w-3" aria-hidden />
                       Counsellor notified · {formatReminderAge(reminders[letter.id])}
                     </span>
@@ -278,13 +278,13 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
                       type="button"
                       onClick={() => handleRemind(letter)}
                       disabled={busy === letter.id}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1 text-[11px] font-semibold text-muted-foreground transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted/60 hover:text-foreground disabled:cursor-wait disabled:opacity-60"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1 text-[0.6875rem] font-semibold text-muted-foreground transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted/60 hover:text-foreground disabled:cursor-wait disabled:opacity-60"
                     >
                       <Send className="h-3 w-3" aria-hidden />
                       {busy === letter.id ? 'Sending…' : `Ask your counsellor to chase ${letter.teacherName.split(' ')[0]}`}
                     </button>
                   )}
-                  <span className="ml-auto text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                  <span className="ml-auto text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">
                     Through the platform
                   </span>
                 </div>

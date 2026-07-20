@@ -95,7 +95,7 @@ export function FAQSection() {
                                     aria-expanded={isOpen}
                                     aria-controls={`faq-panel-${index}`}
                                 >
-                                    <span className="text-[15px] font-semibold text-foreground pr-4 leading-snug">{faq.question}</span>
+                                    <span className="text-[0.9375rem] font-semibold text-foreground pr-4 leading-snug">{faq.question}</span>
                                     <span className={cn(
                                         'flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-300',
                                         isOpen
@@ -118,7 +118,7 @@ export function FAQSection() {
                                             className="overflow-hidden"
                                         >
                                             <div className="px-5 pb-5 pt-0">
-                                                <p className="text-[15px] text-muted-foreground leading-relaxed">{faq.answer}</p>
+                                                <p className="text-[0.9375rem] text-muted-foreground leading-relaxed">{faq.answer}</p>
                                             </div>
                                         </motion.div>
                                     )}

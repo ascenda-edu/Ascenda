@@ -195,11 +195,11 @@ export function CounsellorInbox() {
                           {item.studentName}
                         </p>
                         {isUnread ? (
-                          <span className="shrink-0 rounded-full bg-primary px-1.5 text-[10px] font-bold leading-4 text-primary-foreground tabular-nums">
+                          <span className="shrink-0 rounded-full bg-primary px-1.5 text-[0.625rem] font-bold leading-4 text-primary-foreground tabular-nums">
                             {item.unreadCount}
                           </span>
                         ) : null}
-                        <span className="ml-auto shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                        <span className="ml-auto shrink-0 text-[0.6875rem] text-muted-foreground tabular-nums">
                           {formatRelativeTime(item.lastMessageAt)}
                         </span>
                       </div>
@@ -215,11 +215,11 @@ export function CounsellorInbox() {
                         )}
                       </p>
                       <div className="flex items-center gap-2 pt-0.5">
-                        <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-semibold', pill.tone)}>
+                        <span className={cn('rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold', pill.tone)}>
                           {pill.label}
                         </span>
                         {request.university ? (
-                          <span className="truncate text-[11px] text-muted-foreground">
+                          <span className="truncate text-[0.6875rem] text-muted-foreground">
                             {request.university}
                             {request.program ? ` · ${request.program}` : ''}
                           </span>
