@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
+import { checkRateLimit, clientIp } from '@/lib/api/rate-limit';
 
 const MIN_QUERY_LENGTH = 2;
 const LIMIT = 6;
+
+// Anonymous route — no user id to key on, so throttle per client IP (see
+// clientIp) to stop a scripted loop from hammering the catalogue.
+
+// Suggestions are per-query-string public catalogue data — safe to cache per URL
+// at the CDN. Mirrors the sibling search/filters + search/filter-options routes.
+const CACHE_HEADERS = { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' };
 
 // Words that are almost certainly subject/course terms, not university-identifying words.
 const SUBJECT_WORDS = new Set([
@@ -39,6 +47,16 @@ const ABBREVIATIONS: Record<string, string> = {
 };
 
 export async function GET(request: Request) {
+  // Typeahead is chatty: a debounced query fires ~1 request per keystroke pause
+  // plus a burst validating recent searches on mount. 120/min/IP absorbs a fast
+  // typist and a shared-NAT lab (schools are a core demographic) while still
+  // capping abuse. It's a soft limit — the client degrades a 429 to empty.
+  if (!checkRateLimit(`suggestions:${clientIp(request)}`, { limit: 120, windowMs: 60_000 })) {
+    return NextResponse.json({ programs: [], universities: [] }, {
+      status: 429, headers: { 'Cache-Control': 'no-store' }
+    });
+  }
+
   const url = new URL(request.url);
   const query = url.searchParams.get('q')?.trim() ?? '';
   const trending = url.searchParams.get('trending') === 'true';
@@ -61,7 +79,7 @@ export async function GET(request: Request) {
     ]);
     return NextResponse.json(
       { programs: programsRes.data ?? [], universities: universitiesRes.data ?? [] },
-      { headers: { 'Cache-Control': 'no-store' } }
+      { headers: CACHE_HEADERS }
     );
   }
 
@@ -144,6 +162,6 @@ export async function GET(request: Request) {
 
   return NextResponse.json(
     { programs: programsRes.data ?? [], universities: universitiesRes.data ?? [] },
-    { headers: { 'Cache-Control': 'no-store' } }
+    { headers: CACHE_HEADERS }
   );
 }

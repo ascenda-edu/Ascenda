@@ -7,17 +7,15 @@ import { cookies } from 'next/headers';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/api/rate-limit';
 import { ACTIVE_CHILD_COOKIE } from '@/lib/parent/active-child';
-import type { ChatMode } from '@/lib/chat/prompts';
 import { buildContextForMode, buildStarterSuggestions } from '@/lib/chat/context';
 import { contextCacheKey, getCachedContext, setCachedContext } from '@/lib/chat/cache';
+import { resolveChatMode } from '@/lib/chat/mode';
 
 export const runtime = 'nodejs';
 // The catch-all below would swallow Next's DynamicServerError during build
 // prerendering (auth reads cookies), baking a static empty response — force
 // the route dynamic explicitly.
 export const dynamic = 'force-dynamic';
-
-const VALID_MODES: ChatMode[] = ['student', 'counsellor', 'parent'];
 
 export async function GET(req: NextRequest) {
   try {
@@ -33,9 +31,11 @@ export async function GET(req: NextRequest) {
     }
 
     const rawMode = new URL(req.url).searchParams.get('mode');
-    const mode: ChatMode = VALID_MODES.includes(rawMode as ChatMode)
-      ? (rawMode as ChatMode)
-      : 'student';
+    const resolved = await resolveChatMode(supabase, user, rawMode);
+    if (!resolved.ok) {
+      return NextResponse.json({ suggestions: [] }, { status: 403 });
+    }
+    const mode = resolved.mode;
 
     const activeChildId =
       mode === 'parent' ? cookies().get(ACTIVE_CHILD_COOKIE)?.value : undefined;

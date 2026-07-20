@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 
 import { CALENDAR_FEED_CONFIG, type CalendarFeedEvent, type CalendarFeedResponse } from '@/lib/calendar-feed';
+import { checkRateLimit, clientIp } from '@/lib/api/rate-limit';
+
+// Anonymous route that fans out to external ICS feeds — throttle per client IP
+// (see clientIp) so it can't be turned into an outbound-fetch amplifier.
 
 const unfoldIcs = (ics: string) => ics.replace(/\r?\n[ \t]/g, '\n');
 
@@ -162,29 +166,50 @@ const parseIcsEvents = (data: string, source: (typeof CALENDAR_FEED_CONFIG)[numb
     .filter((event): event is CalendarFeedEvent => Boolean(event));
 };
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!checkRateLimit(`calendar-feed:${clientIp(request)}`, { limit: 10, windowMs: 60_000 })) {
+    return NextResponse.json({ events: [], connectedSources: [] }, {
+      status: 429, headers: { 'Cache-Control': 'no-store' }
+    });
+  }
+
+  // Fetch every configured feed concurrently so total latency is the slowest
+  // single feed, not the sum. Each feed catches its own errors (missing env
+  // var, non-200, network/parse failure) and resolves to null, so one bad feed
+  // can never abort the others. Results stay in CALENDAR_FEED_CONFIG order.
+  const feedResults = await Promise.all(
+    CALENDAR_FEED_CONFIG.map(async (source) => {
+      const url = process.env[source.envKey];
+      if (!url) {
+        return null;
+      }
+
+      try {
+        // Revalidate the outbound ICS every 5 min instead of no-store, so a burst
+        // of requests collapses onto one upstream fetch per feed.
+        const response = await fetch(url, { next: { revalidate: 300 } });
+        if (!response.ok) {
+          return null;
+        }
+
+        const text = await response.text();
+        return { source, events: parseIcsEvents(text, source) };
+      } catch {
+        // A failing/absent feed should not block the other feeds.
+        return null;
+      }
+    })
+  );
+
   const aggregatedEvents: CalendarFeedEvent[] = [];
   const connectedSources: Set<(typeof CALENDAR_FEED_CONFIG)[number]['id']> = new Set();
 
-  for (const source of CALENDAR_FEED_CONFIG) {
-    const url = process.env[source.envKey];
-    if (!url) {
+  for (const result of feedResults) {
+    if (!result) {
       continue;
     }
-
-    try {
-      const response = await fetch(url, { cache: 'no-store' });
-      if (!response.ok) {
-        continue;
-      }
-
-      const text = await response.text();
-      const events = parseIcsEvents(text, source);
-      aggregatedEvents.push(...events);
-      connectedSources.add(source.id);
-    } catch {
-      // Failures should not block the other feeds.
-    }
+    aggregatedEvents.push(...result.events);
+    connectedSources.add(result.source.id);
   }
 
   const sortedEvents = aggregatedEvents.sort(
@@ -196,5 +221,8 @@ export async function GET() {
     connectedSources: Array.from(connectedSources)
   };
 
-  return NextResponse.json(body, { status: 200 });
+  return NextResponse.json(body, {
+    status: 200,
+    headers: { 'Cache-Control': 'public, s-maxage=300' }
+  });
 }

@@ -1525,16 +1525,20 @@ create policy notifications_insert on notifications
   for insert to authenticated
   -- Users may notify themselves. The counsellor-capable branch (open to all
   -- signed-in users under the demo posture) is restricted to the one
-  -- client-authored cross-user kind and root-relative hrefs (20260715120000),
-  -- so it cannot inject arbitrary titles/links into other feeds. All other
-  -- cross-user notifications flow through SECURITY DEFINER triggers, which
-  -- this policy does not constrain.
+  -- client-authored cross-user kind ('doc_nudge'), root-relative hrefs, the
+  -- app's actual title template, and bounded lengths (20260715120000 +
+  -- 20260718130000), so it cannot carry arbitrary text into other feeds. All
+  -- other cross-user notifications flow through SECURITY DEFINER triggers,
+  -- which this policy does not constrain.
   with check (
     profile_id = auth.uid()
     or (
       public.can_act_as_counsellor()
       and kind = 'doc_nudge'
       and (href is null or (href like '/%' and href not like '//%'))
+      and title like 'Your counsellor is %'
+      and char_length(title) <= 160
+      and (body is null or char_length(body) <= 300)
     )
   );
 
@@ -2396,6 +2400,21 @@ create policy chat_conversations_all_own on chat_conversations
   for all to authenticated
   using (owner_id = auth.uid())
   with check (owner_id = auth.uid());
+
+-- Realtime: the assistant workspace subscribes to chat_conversations; without
+-- publication membership its channel never SUBSCRIBEs and the client is stuck
+-- on poll fallback (20260718130000).
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+    and not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public' and tablename = 'chat_conversations'
+    ) then
+    alter publication supabase_realtime add table public.chat_conversations;
+  end if;
+end $$;
 
 -- Messages are authorised via ownership of the parent conversation. In the
 -- WITH CHECK context the chat_messages reference resolves to the NEW row.

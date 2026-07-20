@@ -11,29 +11,28 @@
 // Interactive in STUDENT mode only; counsellor renders static rows (no toggles,
 // no writes out of that portal). All fields are plain JSX text.
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cardFade } from '@/lib/motion';
-import { parseLocalDate, daysUntil } from '@/lib/utils/dates';
+import { dueLabel } from '@/lib/applications/due-label';
+import { type ChecklistStatus, toggleDoneStatus } from '@/lib/applications/checklist-status-queue';
+import { useChecklistStatusQueue } from '@/lib/applications/use-checklist-status-queue';
 import type { ChatMode } from '@/lib/chat/prompts';
 import type { TaskHit } from '@/lib/chat/widgets';
 
-const formatDue = (date: string): string =>
-  parseLocalDate(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-
 function TaskMeta({ item }: { item: TaskHit }) {
-  const overdue = item.dueDate ? daysUntil(item.dueDate) < 0 : false;
+  // Shared relative-due copy so the widget matches the /applications/tasks board.
+  const due = dueLabel(item.dueDate);
   return (
     <p className="truncate text-[10px] text-muted-foreground">
       {item.application}
-      {item.dueDate ? (
+      {due ? (
         <>
           {' · '}
-          <span className={overdue ? 'font-semibold text-rose-600 dark:text-rose-400' : undefined}>
-            {overdue ? 'overdue ' : 'due '}
-            {formatDue(item.dueDate)}
+          <span className={due.urgent ? 'font-semibold text-rose-600 dark:text-rose-400' : undefined}>
+            {due.label}
           </span>
         </>
       ) : null}
@@ -46,21 +45,28 @@ export function TasksWidget({ items, mode }: { items: TaskHit[]; mode: ChatMode 
   const [statuses, setStatuses] = useState<Record<string, TaskHit['status']>>(() =>
     Object.fromEntries(items.map((t) => [t.id, t.status]))
   );
+  // Restore a 'doing' task's status on un-check (session-local); see toggleDoneStatus.
+  const statusBeforeDone = useRef(new Map<string, ChecklistStatus>());
 
-  const toggle = async (id: string) => {
-    const current = statuses[id];
-    const next: TaskHit['status'] = current === 'done' ? 'todo' : 'done';
-    setStatuses((prev) => ({ ...prev, [id]: next }));
-    try {
-      const res = await fetch('/api/checklist', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: next }),
-      });
-      if (!res.ok) throw new Error('request failed');
-    } catch {
-      setStatuses((prev) => ({ ...prev, [id]: current }));
+  // Serialises PATCHes per task; onError reverts to server truth. The hook
+  // rebuilds the mirror when fresh `items` props arrive and re-overlays in-flight
+  // toggles so an items re-sync mid-PATCH doesn't flicker the row to stale status.
+  // Tool-run-time staleness stays accepted (see header) — fresh props still win.
+  const queue = useChecklistStatusQueue({
+    seed: items,
+    reconcile: (id, status) =>
+      setStatuses((prev) => (prev[id] === status ? prev : { ...prev, [id]: status })),
+    onResync: (seed) => {
+      setStatuses(Object.fromEntries(seed.map((t) => [t.id, t.status])));
+      statusBeforeDone.current.clear();
     }
+  });
+
+  const toggle = (id: string) => {
+    const current = statuses[id] ?? 'todo';
+    const next = toggleDoneStatus(current, id, statusBeforeDone.current);
+    setStatuses((prev) => ({ ...prev, [id]: next }));
+    queue.set(id, next);
   };
 
   return (
@@ -79,8 +85,10 @@ export function TasksWidget({ items, mode }: { items: TaskHit[]; mode: ChatMode 
               {mode === 'student' ? (
                 <button
                   type="button"
+                  role="checkbox"
+                  aria-checked={done}
+                  aria-label={item.name}
                   onClick={() => toggle(item.id)}
-                  aria-label={done ? 'Mark as not done' : 'Mark as done'}
                   className={cn(
                     'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition',
                     done

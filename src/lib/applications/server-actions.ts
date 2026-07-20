@@ -10,8 +10,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 type Client = SupabaseClient<any, any, any>;
 
-/** Expected-failure codes the callers translate (route → HTTP status). */
-export type ActionErrorCode = '23503' | 'not_found' | 'unauthorized';
+/** Expected-failure codes the callers translate (route → HTTP status).
+ * Row-missing and exists-but-not-owned deliberately share the single opaque
+ * 'not_found' so no caller can turn the distinction into a UUID existence
+ * oracle (counsellor read policies make non-owned rows SELECTable). */
+export type ActionErrorCode = '23503' | 'not_found';
 
 export type ActionResult<T> =
   | ({ ok: true } & T)
@@ -72,11 +75,11 @@ export async function createChecklistTask(
     .eq('id', args.applicationId)
     .single();
 
-  if (appError || !application) {
+  // Collapse missing-row and exists-but-not-owned into one opaque 'not_found':
+  // a distinct code would let an authenticated user probe which application
+  // UUIDs exist. RLS still blocks the write regardless.
+  if (appError || !application || application.profile_id !== userId) {
     return { ok: false, error: 'Application not found', code: 'not_found' };
-  }
-  if (application.profile_id !== userId) {
-    return { ok: false, error: 'Unauthorized', code: 'unauthorized' };
   }
 
   const { data, error: insertError } = await supabase
@@ -115,11 +118,11 @@ export async function updateChecklistTaskStatus(
     .eq('id', args.taskId)
     .single();
 
-  if (checklistError || !checklistRow) {
+  // Collapse missing-row and exists-but-not-owned into one opaque 'not_found':
+  // a distinct code would let an authenticated user probe which task UUIDs
+  // exist. RLS still blocks the write regardless.
+  if (checklistError || !checklistRow || (checklistRow as any).applications?.profile_id !== userId) {
     return { ok: false, error: 'Checklist item not found', code: 'not_found' };
-  }
-  if ((checklistRow as any).applications?.profile_id !== userId) {
-    return { ok: false, error: 'Unauthorized', code: 'unauthorized' };
   }
 
   const { data, error: updateError } = await supabase
