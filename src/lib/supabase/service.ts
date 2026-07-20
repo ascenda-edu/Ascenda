@@ -7,6 +7,11 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/types/database';
 
+// Defense in depth: the service-role key must never ship in a client bundle.
+if (typeof window !== 'undefined') {
+  throw new Error('service-role client must never be imported in the browser');
+}
+
 export const createServiceRoleSupabaseClient = (): SupabaseClient<Database> => {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;

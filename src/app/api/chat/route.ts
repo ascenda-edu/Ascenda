@@ -40,6 +40,7 @@ import {
   getWidgetToolAddendum,
   type ChatMode,
 } from '@/lib/chat/prompts';
+import { resolveChatMode } from '@/lib/chat/mode';
 import { buildContextForMode } from '@/lib/chat/context';
 import { contextCacheKey, getCachedContext, setCachedContext } from '@/lib/chat/cache';
 import { buildToolsForMode } from '@/lib/chat/tools';
@@ -64,8 +65,6 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
 }
-
-const VALID_MODES: ChatMode[] = ['student', 'counsellor', 'parent'];
 
 export async function POST(req: NextRequest) {
   try {
@@ -92,18 +91,15 @@ export async function POST(req: NextRequest) {
       surface?: 'widget' | 'assistant';
       conversationId?: string;
     };
-    // DEMO POSTURE: `mode` is client-supplied and only enum-validated, NOT bound
-    // to profiles.role — so any signed-in user can request counsellor/parent
-    // context here, exactly as they can open /counsellor and /parent today. This
-    // is safe only because can_act_as_counsellor() is open to all authenticated
-    // users under the demo posture; the route uses the user-scoped client (no
-    // service-role), so tightening that RLS at real onboarding closes this
-    // automatically. When restoring the profiles.role check (see the matching
-    // markers in counsellor/layout.tsx and parent/layout.tsx), bind `mode` to
-    // the user's role here too.
-    const mode: ChatMode = VALID_MODES.includes(rawMode as ChatMode)
-      ? (rawMode as ChatMode)
-      : 'student';
+    // Resolve + authorize the mode (bound to the counsellor seam under the demo
+    // posture — see resolveChatMode). The route uses the user-scoped client (no
+    // service-role), so tightening canActAsCounsellor() at real onboarding
+    // closes this privilege-escalation path automatically.
+    const resolved = await resolveChatMode(supabase, user, rawMode);
+    if (!resolved.ok) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
+    }
+    const mode: ChatMode = resolved.mode;
     const surface = rawSurface === 'assistant' ? 'assistant' : 'widget';
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {

@@ -7,6 +7,7 @@ import { ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { inferTaskType, TASK_VISUAL } from '@/lib/theme/categories';
+import { parseLocalDate } from '@/lib/utils/dates';
 
 interface TaskItem {
   id: string;
@@ -19,7 +20,6 @@ interface TaskListProps {
   title: string;
   tasks: TaskItem[];
   onToggle?: (id: string) => void;
-  disabled?: boolean;
 }
 
 const listStagger = {
@@ -52,7 +52,7 @@ function AnimatedProgress({ value }: { value: number }) {
   );
 }
 
-export const TaskList = ({ title, tasks, onToggle, disabled }: TaskListProps) => {
+export const TaskList = ({ title, tasks, onToggle }: TaskListProps) => {
   const completed = tasks.filter((task) => task.status === 'done').length;
   const total = tasks.length;
   const progress = total ? Math.round((completed / total) * 100) : 0;
@@ -69,7 +69,7 @@ export const TaskList = ({ title, tasks, onToggle, disabled }: TaskListProps) =>
             {progress}% ready
           </div>
           <Button asChild size="sm" variant="ghost" className="rounded-full px-3 text-xs uppercase tracking-[0.3em] text-muted-foreground">
-            <Link href="/applications/tasks">+ Add task</Link>
+            <Link href="/applications/tasks">Add task</Link>
           </Button>
         </div>
       </div>
@@ -122,7 +122,9 @@ export const TaskList = ({ title, tasks, onToggle, disabled }: TaskListProps) =>
                       {task.name}
                     </p>
                     {task.dueDate ? (
-                      <p className="mt-0.5 text-xs text-muted-foreground">Due · {task.dueDate}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Due · {parseLocalDate(task.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                      </p>
                     ) : null}
                   </div>
                   {onToggle ? (
@@ -131,7 +133,6 @@ export const TaskList = ({ title, tasks, onToggle, disabled }: TaskListProps) =>
                       size="sm"
                       variant={isDone ? 'secondary' : 'outline'}
                       onClick={() => onToggle(task.id)}
-                      disabled={disabled}
                       className="shrink-0"
                     >
                       {isDone ? 'Undo' : 'Mark done'}

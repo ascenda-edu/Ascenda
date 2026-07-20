@@ -16,6 +16,25 @@ export const parseLocalDate = (value: string): Date => {
   return new Date(value);
 };
 
+/** Date-only string shape: YYYY-MM-DD. */
+export const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** Pure VALIDITY check for a date-only string. Round-trip check: `new
+ * Date('2026-02-30')` ROLLS OVER to Mar 2 rather than failing, so
+ * parse-and-compare is the only way to reject impossible days. This uses an
+ * explicit UTC round-trip on purpose — it's checking calendar validity, NOT
+ * display/comparison (use parseLocalDate for those), so it must stay UTC-based. */
+export const isValidDate = (value: string): boolean => {
+  const m = DATE_RE.exec(value);
+  if (!m) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return (
+    date.getUTCFullYear() === Number(m[1]) &&
+    date.getUTCMonth() + 1 === Number(m[2]) &&
+    date.getUTCDate() === Number(m[3])
+  );
+};
+
 /** Local midnight today. */
 export const startOfToday = (): Date => {
   const now = new Date();
@@ -45,3 +64,8 @@ export const formatRelativeTime = (iso: string): string => {
   if (days < 7) return `${days}d ago`;
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 };
+
+/** Trim a free-text value and cap it at `max` characters. Type-guards the
+ * input so non-strings yield '' rather than throwing. */
+export const clampText = (value: unknown, max: number): string =>
+  typeof value === 'string' ? value.trim().slice(0, max) : '';

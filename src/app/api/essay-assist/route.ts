@@ -40,11 +40,14 @@ function buildUserPrompt(action: Action, data: {
   blocks?: { label: string; detail?: string }[];
   studentContext?: string;
 }): string {
-  const limit = PLATFORM_LIMITS[data.platform ?? 'Custom'] ?? PLATFORM_LIMITS['Custom'];
+  // Normalize once — an omitted platform reads "Custom" everywhere in the
+  // prompt instead of interpolating the literal "undefined".
+  const platform = data.platform ?? 'Custom';
+  const limit = PLATFORM_LIMITS[platform] ?? PLATFORM_LIMITS['Custom'];
 
   switch (action) {
     case 'feedback': {
-      return `Review this ${data.platform} essay. Platform: ${limit}
+      return `Review this ${platform} essay. Platform: ${limit}
 
 Student: ${data.studentContext ?? 'IB student, Engineering applicant.'}
 
@@ -62,13 +65,13 @@ Give feedback in this EXACT format (be brief — under 200 words total):
 - "quote another" → why → replacement
 - (max 3 fixes, most important first)
 
-**Missing for ${data.platform}:** 1-2 sentences on what this platform specifically needs that's absent.
+**Missing for ${platform}:** 1-2 sentences on what this platform specifically needs that's absent.
 
 Start with **Verdict:** now.`;
     }
 
     case 'expand': {
-      return `Write ONE paragraph (3-4 sentences) for a ${data.platform} essay using this block:
+      return `Write ONE paragraph (3-4 sentences) for a ${platform} essay using this block:
 
 Block: "${data.block?.label}"
 Detail: "${data.block?.detail ?? 'none'}"
@@ -76,14 +79,14 @@ Detail: "${data.block?.detail ?? 'none'}"
 Student: ${data.studentContext ?? 'IB student, Engineering applicant.'}
 ${data.essay && data.essay.trim().length > 20 ? `\nExisting essay voice to match:\n${data.essay.slice(0, 300)}` : ''}
 
-Rules: Start with a specific moment or action. Use details from the block. Sound like a 17-year-old, not a brochure. ${data.platform === 'UCAS' ? 'Academic tone.' : data.platform === 'Common App' ? 'Personal tone.' : 'Direct tone.'}
+Rules: Start with a specific moment or action. Use details from the block. Sound like a 17-year-old, not a brochure. ${platform === 'UCAS' ? 'Academic tone.' : platform === 'Common App' ? 'Personal tone.' : 'Direct tone.'}
 
 Output the paragraph only. No labels.`;
     }
 
     case 'outline': {
       const blockList = (data.blocks ?? []).map((b) => `"${b.label}"`).join(', ');
-      return `Create a SHORT essay outline for a ${data.platform} statement. Platform: ${limit}
+      return `Create a SHORT essay outline for a ${platform} statement. Platform: ${limit}
 
 The student's building blocks: ${blockList}
 
@@ -143,6 +146,14 @@ export async function POST(req: NextRequest) {
 
     if (!action || !['feedback', 'expand', 'outline'].includes(action)) {
       return new Response(JSON.stringify({ error: 'Invalid action' }), { status: 400 });
+    }
+
+    // `platform` is interpolated straight into the LLM prompt — reject anything
+    // that isn't a known platform (defaulting to 'Custom' when omitted).
+    // Object.hasOwn, not `in`: `in` walks the prototype chain, so 'constructor'
+    // / '__proto__' / 'toString' would pass and land builtin names in the prompt.
+    if (platform !== undefined && !Object.hasOwn(PLATFORM_LIMITS, platform)) {
+      return new Response(JSON.stringify({ error: 'Invalid platform' }), { status: 400 });
     }
 
     if (!process.env.GEMINI_API_KEY) {

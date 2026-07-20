@@ -53,7 +53,10 @@ export default async function TasksPage() {
       program:programs(name:course_name, universities(name)),
       application_checklist(id, task_name, status, due_date)
     `)
-    .eq('profile_id', user.id);
+    .eq('profile_id', user.id)
+    // Stable row order or the "(1)"/"(2)" label-collision suffixes below can
+    // swap which application they denote between refreshes.
+    .order('id', { ascending: true });
 
   // A failed query must hit the error boundary — rendering the "No tasks yet"
   // empty state to a user who has tasks is worse than an error page.
@@ -62,7 +65,39 @@ export default async function TasksPage() {
   }
 
   const apps = ((applicationRows ?? []) as unknown as ApplicationJoin[]) ?? [];
-  const appLabel = (app: ApplicationJoin) => app.program?.universities?.name ?? app.program?.name ?? 'Application';
+  // Two applications at the same university would otherwise share a label —
+  // merging their task groups and rendering identical <select> options. Prefer
+  // "University — Programme" for collisions; number anything that still
+  // collides (same programme twice, or no programme name to disambiguate with).
+  const uniCounts = new Map<string, number>();
+  for (const app of apps) {
+    const uni = app.program?.universities?.name;
+    if (uni) uniCounts.set(uni, (uniCounts.get(uni) ?? 0) + 1);
+  }
+  const baseLabel = (app: ApplicationJoin) => {
+    const uni = app.program?.universities?.name;
+    const programme = app.program?.name;
+    if (uni && programme && (uniCounts.get(uni) ?? 0) > 1) return `${uni} — ${programme}`;
+    return uni ?? programme ?? 'Application';
+  };
+  const labelCounts = new Map<string, number>();
+  for (const app of apps) {
+    const base = baseLabel(app);
+    labelCounts.set(base, (labelCounts.get(base) ?? 0) + 1);
+  }
+  const labelsUsed = new Map<string, number>();
+  const labelById = new Map<string, string>();
+  for (const app of apps) {
+    const base = baseLabel(app);
+    if ((labelCounts.get(base) ?? 0) > 1) {
+      const n = (labelsUsed.get(base) ?? 0) + 1;
+      labelsUsed.set(base, n);
+      labelById.set(app.id, `${base} (${n})`);
+    } else {
+      labelById.set(app.id, base);
+    }
+  }
+  const appLabel = (app: ApplicationJoin) => labelById.get(app.id) ?? 'Application';
 
   const applicationOptions: TaskApplicationOption[] = apps.map((app) => ({
     id: app.id,
@@ -76,7 +111,7 @@ export default async function TasksPage() {
       seed.push({
         id: item.id,
         name: item.task_name,
-        done: item.status === 'done',
+        status: item.status,
         dueDate: item.due_date ?? undefined,
         group: label,
         applicationId: app.id

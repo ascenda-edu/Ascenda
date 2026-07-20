@@ -110,12 +110,17 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
         return;
       }
 
+      // Clamp the (unbounded) document name so the composed title/body stay
+      // inside the notifications_insert doc_nudge caps (title ≤160, body ≤300);
+      // an over-length name would otherwise make the insert fail RLS silently.
+      const docName =
+        doc.documentName.length > 100 ? `${doc.documentName.slice(0, 99)}…` : doc.documentName;
       const targetLabel =
         target === 'student' ? doc.studentName : target === 'teacher' ? 'the recommender' : 'the registrar';
       const askAsStudent =
         target === 'student'
-          ? `Could you upload ${doc.documentName} when you have a sec?`
-          : `Could you check in with ${targetLabel} about ${doc.documentName}? It's outstanding.`;
+          ? `Could you upload ${docName} when you have a sec?`
+          : `Could you check in with ${targetLabel} about ${docName}? It's outstanding.`;
 
       // Notify the STUDENT's profile — a nudge on the counsellor's own row
       // would be visible only to the counsellor under notifications RLS.
@@ -124,8 +129,8 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
         kind: 'doc_nudge',
         title:
           target === 'student'
-            ? `Your counsellor is asking about ${doc.documentName}`
-            : `Your counsellor is following up on ${doc.documentName}`,
+            ? `Your counsellor is asking about ${docName}`
+            : `Your counsellor is following up on ${docName}`,
         body: askAsStudent,
         // Land the student on their document manager so tapping the notification
         // takes them somewhere actionable (a null href renders a dead click).

@@ -13,6 +13,7 @@ import {
 import { addToShortlist } from '@/lib/shortlist/server';
 import { insertHelpRequest } from '@/lib/demo/help-request-client';
 import { MAX_SUBJECT_LENGTH, MAX_BODY_LENGTH } from '@/lib/chat/actions';
+import { isValidDate, clampText } from '@/lib/utils/dates';
 import type { WriteTool, ToolContext, ToolActionResult } from './types';
 
 // Every write declaration ends with this so the model always knows the action
@@ -21,20 +22,25 @@ const DRAFT_NOTICE =
   'This drafts an action card — the user reviews and confirms before anything happens. Never claim the action is done until you see an execution result.';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const isUuidish = (value: unknown): value is string =>
   typeof value === 'string' && UUID_RE.test(value.trim());
-const isValidDate = (value: string): boolean =>
-  DATE_RE.test(value) && !Number.isNaN(new Date(value).getTime());
-const clampText = (value: unknown, max: number): string =>
-  typeof value === 'string' ? value.trim().slice(0, max) : '';
 
 const failure = (error: string): ToolActionResult => ({
   ok: false,
   message: "Couldn't complete that action.",
   error,
 });
+
+// The server actions collapse exists-but-not-yours into 'not_found' at the
+// source, so the error body can't become an existence oracle for row UUIDs
+// (counsellor read policies make non-owned rows SELECTable). Surface the
+// generic not-found text for that code and pass anything else through.
+const actionFailure = (
+  result: { error: string; code?: string },
+  notFoundMessage: string
+): ToolActionResult =>
+  failure(result.code === 'not_found' ? notFoundMessage : result.error);
 
 // Resolve a programme's course + university name for confirm-card summaries.
 async function lookupProgram(
@@ -180,7 +186,7 @@ const createTask: WriteTool = {
         taskName: params.task_name as string,
         dueDate: (params.due_date as string | null) ?? null,
       });
-      if (!result.ok) return failure(result.error);
+      if (!result.ok) return actionFailure(result, 'Application not found');
       return {
         ok: true,
         result: { taskId: (result.task as any).id },
@@ -251,7 +257,7 @@ const updateTaskStatus: WriteTool = {
         taskId: params.task_id as string,
         status: params.status as 'todo' | 'doing' | 'done',
       });
-      if (!result.ok) return failure(result.error);
+      if (!result.ok) return actionFailure(result, 'Checklist item not found');
       return {
         ok: true,
         result: { taskId: (result.item as any).id },

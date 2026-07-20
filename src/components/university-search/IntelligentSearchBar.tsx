@@ -133,6 +133,14 @@ export function IntelligentSearchBar({
                 const response = await fetch(`/api/search/suggestions?q=${encodeURIComponent(trimmed)}`, {
                     signal: controller.signal
                 });
+                if (response.status === 429) {
+                    // Rate-limited (bursty typing): degrade quietly to no suggestions
+                    // rather than surfacing an error in the search dropdown.
+                    if (latestRequestRef.current === requestId) {
+                        setSuggestions({ programs: [], universities: [] });
+                    }
+                    return;
+                }
                 if (!response.ok) {
                     throw new Error(`Search failed: ${response.status}`);
                 }

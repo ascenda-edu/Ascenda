@@ -145,36 +145,43 @@ describe('WidgetRenderer', () => {
     global.fetch = fetchMock as unknown as typeof fetch;
 
     renderWidget(FIXTURES.tasks, 'student');
-    // t1 starts 'todo' → labelled "Mark as done".
-    fireEvent.click(screen.getByRole('button', { name: 'Mark as done' }));
+    // Toggles are checkboxes named after the task; t1 starts unchecked ('todo').
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Draft personal statement' }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const [url, opts] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/checklist');
     expect(opts.method).toBe('PATCH');
     expect(JSON.parse(opts.body)).toEqual({ id: 't1', status: 'done' });
-    // Optimistic flip: t1 is now "Mark as not done" too (t2 already was) → two.
+    // Optimistic flip: t1 is now checked too (t2 already was).
     await waitFor(() =>
-      expect(screen.getAllByRole('button', { name: 'Mark as not done' })).toHaveLength(2)
+      expect(screen.getByRole('checkbox', { name: 'Draft personal statement' })).toBeChecked()
     );
-    expect(screen.queryByRole('button', { name: 'Mark as done' })).toBeNull();
+    expect(screen.getByRole('checkbox', { name: 'Request reference' })).toBeChecked();
   });
 
   it('tasks: reverts the optimistic flip when the PATCH fails', async () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: false }) as unknown as typeof fetch;
 
     renderWidget(FIXTURES.tasks, 'student');
-    fireEvent.click(screen.getByRole('button', { name: 'Mark as done' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Draft personal statement' }));
 
-    // After the failed request the status reverts, so the label returns to "Mark as done".
+    // The optimistic flip lands synchronously (the failed response hasn't
+    // resolved yet) — without this, an unchecked end state could just mean
+    // the flip never happened at all.
+    expect(screen.getByRole('checkbox', { name: 'Draft personal statement' })).toBeChecked();
+
+    // After the failed request the status reverts, so the checkbox unchecks.
     await waitFor(() =>
-      expect(screen.getAllByRole('button', { name: 'Mark as done' }).length).toBeGreaterThan(0)
+      expect(screen.getByRole('checkbox', { name: 'Draft personal statement' })).not.toBeChecked()
     );
   });
 
-  it('tasks: renders no toggle buttons in counsellor mode', () => {
+  it('tasks: renders no interactive toggles in counsellor mode', () => {
     renderWidget(FIXTURES.tasks, 'counsellor');
     expect(screen.queryByRole('button')).toBeNull();
+    // The student toggle is a role="checkbox"; counsellor rows are static spans.
+    expect(screen.queryByRole('checkbox')).toBeNull();
   });
 
   it('matches: renders the stored tier chip and no chip when tier is null', () => {
@@ -201,6 +208,7 @@ describe('WidgetRenderer', () => {
       const { unmount } = renderWidget(widget, 'parent');
       expect(screen.queryByRole('link')).toBeNull();
       expect(screen.queryByRole('button')).toBeNull();
+      expect(screen.queryByRole('checkbox')).toBeNull();
       unmount();
     }
   });

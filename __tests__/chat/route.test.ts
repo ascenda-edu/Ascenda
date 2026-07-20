@@ -28,6 +28,10 @@ jest.mock('@/lib/api/rate-limit', () => ({
   checkRateLimit: jest.fn(() => true),
 }));
 
+jest.mock('@/lib/api/guards', () => ({
+  canActAsCounsellor: jest.fn(async () => true),
+}));
+
 jest.mock('@/lib/chat/context', () => ({
   buildContextForMode: jest.fn(),
   buildStarterSuggestions: jest.fn(() => []),
@@ -50,6 +54,7 @@ jest.mock('@/lib/chat/history', () => ({
 import { POST } from '@/app/api/chat/route';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/api/rate-limit';
+import { canActAsCounsellor } from '@/lib/api/guards';
 import { buildContextForMode } from '@/lib/chat/context';
 import { executeSearchPrograms } from '@/lib/chat/tools';
 import { __resetContextCache } from '@/lib/chat/cache';
@@ -93,6 +98,7 @@ describe('POST /api/chat', () => {
       auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'user-123' } } }) },
     });
     (checkRateLimit as jest.Mock).mockReturnValue(true);
+    (canActAsCounsellor as jest.Mock).mockResolvedValue(true);
     (buildContextForMode as jest.Mock).mockResolvedValue({
       context: 'LIVE-CONTEXT-BLOCK',
       signals: {},
@@ -296,6 +302,13 @@ describe('POST /api/chat', () => {
       'add_student_note',
       'message_student',
     ]);
+  });
+
+  it('returns 403 for counsellor mode when the counsellor seam denies (future-tightened guard)', async () => {
+    (canActAsCounsellor as jest.Mock).mockResolvedValue(false);
+    const res = await POST(chatRequest({ ...validBody, mode: 'counsellor' }));
+    expect(res.status).toBe(403);
+    expect(mockGenerate).not.toHaveBeenCalled();
   });
 
   // ── Persistence (assistant surface + conversationId) ───────────────────

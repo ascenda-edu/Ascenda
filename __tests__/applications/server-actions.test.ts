@@ -55,7 +55,9 @@ describe('trackProgram', () => {
 });
 
 describe('createChecklistTask', () => {
-  it("rejects when the application isn't owned by the user", async () => {
+  it("rejects when the application isn't owned — indistinguishable from missing", async () => {
+    // Exists-but-not-owned collapses to the SAME 'not_found' as a genuinely
+    // missing row, so an authed user can't probe which application UUIDs exist.
     const supabase = makeSupabase([
       { data: { id: 'app-1', profile_id: 'someone-else' }, error: null },
     ]);
@@ -63,7 +65,7 @@ describe('createChecklistTask', () => {
       applicationId: 'app-1',
       taskName: 'Draft essay',
     });
-    expect(result).toEqual({ ok: false, error: 'Unauthorized', code: 'unauthorized' });
+    expect(result).toEqual({ ok: false, error: 'Application not found', code: 'not_found' });
   });
 
   it('returns not_found when the application does not exist', async () => {
@@ -92,7 +94,8 @@ describe('createChecklistTask', () => {
 });
 
 describe('updateChecklistTaskStatus', () => {
-  it('rejects a task owned by another user', async () => {
+  it('rejects a task owned by another user — indistinguishable from missing', async () => {
+    // Same opaque 'not_found' as a missing task: no existence oracle.
     const supabase = makeSupabase([
       { data: { id: 't-1', applications: { profile_id: 'other' } }, error: null },
     ]);
@@ -100,7 +103,7 @@ describe('updateChecklistTaskStatus', () => {
       taskId: 't-1',
       status: 'done',
     });
-    expect(result).toEqual({ ok: false, error: 'Unauthorized', code: 'unauthorized' });
+    expect(result).toEqual({ ok: false, error: 'Checklist item not found', code: 'not_found' });
   });
 
   it('updates the status when the user owns the task', async () => {
