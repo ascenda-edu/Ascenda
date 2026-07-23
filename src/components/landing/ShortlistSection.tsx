@@ -15,7 +15,7 @@ const steps = [
     {
         lab: 'Set up once',
         title: 'Tell us where you stand',
-        copy: 'Predicted grades, subjects and what you actually want from a place. Five minutes, once.',
+        copy: 'Predicted grades, subjects and what you want from a place. Five minutes, once.',
         widget: (
             <AppFrame title="Profile · 5/5">
                 <div className="flex flex-col gap-2.5">
@@ -31,7 +31,7 @@ const steps = [
     {
         lab: 'Explore',
         title: 'See your ranked matches',
-        copy: 'Fit Scores and admission odds, ordered by what actually suits you — not a league table.',
+        copy: 'Fit Scores and admission odds, ordered by what suits you — not a league table.',
         widget: (
             <AppFrame title="Top matches">
                 <div className="space-y-2.5">
@@ -66,9 +66,6 @@ export function ShortlistSection() {
                     <h2 className="text-4xl md:text-5xl font-heading font-bold text-foreground tracking-tight">
                         Three steps from sign-up to a plan you can share.
                     </h2>
-                    <p className="text-lg text-muted-foreground leading-relaxed max-w-xl">
-                        See what&apos;s next, why it matters, and what to do — then share the plan.
-                    </p>
                 </AnimatedSection>
 
                 <div className="grid gap-y-12 gap-x-6 md:grid-cols-3">

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
 import { fadeIn } from '@/lib/motion';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useSupabase } from '@/hooks/useSupabase';
 import { RETURNING_USER_STORAGE_KEY } from '@/lib/constants';
 
@@ -67,23 +67,12 @@ export function CTASection() {
                     viewport={{ once: true, amount: 0.3 }}
                     variants={fadeIn}
                 >
-                    <motion.div
-                        className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-1.5 text-sm font-medium text-slate-200 backdrop-blur-sm"
-                        initial={{ opacity: 0, y: -10 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        viewport={{ once: true }}
-                    >
-                        <Sparkles className="h-3.5 w-3.5" aria-hidden />
-                        Five minutes to set up
-                    </motion.div>
-
                     <div className="space-y-5">
                         <h2 className="text-4xl md:text-6xl font-heading font-bold tracking-tight leading-[1.1] [text-wrap:balance]">
                             Your shortlist is waiting.
                         </h2>
                         <p className="text-xl max-w-2xl mx-auto leading-relaxed text-slate-300">
-                            Tell us where you stand, and every programme, essay, scholarship and deadline lives in one plan — nothing slips through the cracks.
+                            Five minutes to set up — then every programme, essay and deadline lives in one plan.
                         </p>
                     </div>
 
