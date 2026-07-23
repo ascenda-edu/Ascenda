@@ -92,10 +92,10 @@ export function SortMenu({ value, onChange }: SortMenuProps) {
         aria-haspopup="listbox"
         aria-expanded={open}
         className={cn(
-          'inline-flex h-11 min-h-[44px] items-center gap-2 rounded-full border px-4 text-sm font-medium transition-[transform,box-shadow,border-color,background-color,color] duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          'inline-flex h-11 min-h-[44px] items-center gap-2 rounded-full border px-4 text-sm font-medium transition-[border-color,background-color,color] duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
           open
-            ? 'border-primary bg-primary/10 text-primary'
-            : 'border-border bg-background text-foreground hover:border-border/80'
+            ? 'border-border bg-muted text-foreground'
+            : 'border-transparent text-foreground hover:border-border'
         )}
       >
         <ArrowUpDown className="h-4 w-4 text-muted-foreground" aria-hidden />
