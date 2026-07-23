@@ -798,6 +798,15 @@ create index if not exists idx_programs_student_staff_override on programs(stude
 create index if not exists idx_programs_tuition on programs(yearly_international_tuition_fee_gbp);
 create index if not exists idx_programs_average_salary_override on programs(average_starting_salary_gbp_override);
 create index if not exists idx_programs_university_life_override on programs(university_life_override);
+-- Search-facet indexes from 20260723120000_search_facet_indexes.sql: study_level/
+-- mode make search_filter_options()'s SELECT DISTINCT index-backed (it was timing
+-- out in prod); country/rank_overall/recognition_score back the unified search
+-- page's university-side facet lookups.
+create index if not exists idx_programs_study_level on programs (study_level);
+create index if not exists idx_programs_mode on programs (mode);
+create index if not exists idx_universities_country on universities (country);
+create index if not exists idx_universities_rank_overall on universities (rank_overall);
+create index if not exists idx_universities_recognition_score on universities (recognition_score);
 create index if not exists idx_deadlines_date on deadlines(deadline_date);
 create index if not exists idx_student_matches_profile_score on student_matches(profile_id, score desc);
 create index if not exists idx_applications_profile on applications(profile_id);
@@ -2066,9 +2075,14 @@ create trigger trg_help_meeting_status_notify
   execute function public.notify_on_help_meeting_status();
 
 -- ── Search filter options ─────────────────────────────────────────────────────
--- From 20260702130000_search_filter_options_fn.sql: distinct filter options for
--- the university-search hub, computed in the DB instead of shipping a full
+-- From 20260702130000_search_filter_options_fn.sql, rewritten in
+-- 20260723130000_search_filter_options_loose_scan.sql: distinct filter options
+-- for the university-search page, computed in the DB instead of shipping a full
 -- 119k-row scan to the browser. /api/search/filter-options caches it for an hour.
+-- Uses recursive-CTE loose index scans (Postgres has no native skip scan) —
+-- plain SELECT DISTINCT walked all ~119k index entries and hit the statement
+-- timeout. `where col > ''` skips NULLs and empty strings in one indexable
+-- predicate.
 create or replace function public.search_filter_options()
 returns jsonb
 language sql
@@ -2076,31 +2090,57 @@ stable
 security definer
 set search_path = public
 as $$
+  with recursive
+  country_vals as (
+    select min(country) as v from universities where country > ''
+    union all
+    select (select min(country) from universities where country > country_vals.v)
+    from country_vals where country_vals.v is not null
+  ),
+  field_vals as (
+    select min(field) as v from programs where field > ''
+    union all
+    select (select min(field) from programs where field > field_vals.v)
+    from field_vals where field_vals.v is not null
+  ),
+  study_level_vals as (
+    select min(study_level) as v from programs where study_level > ''
+    union all
+    select (select min(study_level) from programs where study_level > study_level_vals.v)
+    from study_level_vals where study_level_vals.v is not null
+  ),
+  level_vals as (
+    select min(level) as v from programs where level > ''
+    union all
+    select (select min(level) from programs where level > level_vals.v)
+    from level_vals where level_vals.v is not null
+  ),
+  mode_vals as (
+    select min(mode) as v from programs where mode > ''
+    union all
+    select (select min(mode) from programs where mode > mode_vals.v)
+    from mode_vals where mode_vals.v is not null
+  )
   select jsonb_build_object(
     'countries', (
       select coalesce(jsonb_agg(v order by v), '[]'::jsonb)
-      from (select distinct country as v from universities
-            where country is not null and country <> '' limit 60) t
+      from (select v from country_vals where v is not null limit 60) t
     ),
     'fields', (
       select coalesce(jsonb_agg(v order by v), '[]'::jsonb)
-      from (select distinct field as v from programs
-            where field is not null and field <> '' limit 60) t
+      from (select v from field_vals where v is not null limit 60) t
     ),
     'studyLevels', (
       select coalesce(jsonb_agg(v order by v), '[]'::jsonb)
-      from (select distinct study_level as v from programs
-            where study_level is not null and study_level <> '' limit 30) t
+      from (select v from study_level_vals where v is not null limit 30) t
     ),
     'levels', (
       select coalesce(jsonb_agg(v order by v), '[]'::jsonb)
-      from (select distinct level as v from programs
-            where level is not null and level <> '' limit 30) t
+      from (select v from level_vals where v is not null limit 30) t
     ),
     'modes', (
       select coalesce(jsonb_agg(v order by v), '[]'::jsonb)
-      from (select distinct mode as v from programs
-            where mode is not null and mode <> '' limit 16) t
+      from (select v from mode_vals where v is not null limit 16) t
     )
   );
 $$;

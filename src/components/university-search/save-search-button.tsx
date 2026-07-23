@@ -8,15 +8,22 @@ import { useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bookmark, Check } from 'lucide-react';
-import { readFiltersFromParams } from '@/lib/university-search/search-params';
+import { readFiltersFromParams, type FilterChip } from '@/lib/university-search/search-params';
 import { useToast } from '@/components/ui/toast';
 import { useSavedSearches } from './saved-search-store';
 
 interface Props {
   query: string;
+  /**
+   * Live filter chips from the page's in-memory state. When provided these win
+   * over reading the (300ms-debounced) URL — the URL can lag the current facet
+   * selection, so deriving chips from it captured stale facets. Falls back to
+   * the URL only when the caller doesn't pass chips.
+   */
+  chips?: FilterChip[];
 }
 
-export function SaveSearchButton({ query }: Props) {
+export function SaveSearchButton({ query, chips: chipsProp }: Props) {
   const searchParams = useSearchParams();
   const { items, saveSearch } = useSavedSearches();
   const { showToast } = useToast();
@@ -25,7 +32,10 @@ export function SaveSearchButton({ query }: Props) {
   const [justSaved, setJustSaved] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const chips = useMemo(() => readFiltersFromParams(searchParams), [searchParams]);
+  const chips = useMemo(
+    () => chipsProp ?? readFiltersFromParams(searchParams),
+    [chipsProp, searchParams]
+  );
   const hasAnything = Boolean(query.trim()) || chips.length > 0;
 
   const defaultName =
@@ -49,7 +59,7 @@ export function SaveSearchButton({ query }: Props) {
       setTimeout(() => setJustSaved(false), 2500);
       showToast({
         title: `Search "${saved.name}" saved`,
-        description: 'Find it on the search hub.',
+        description: 'Find it in Saved searches on this page.',
         variant: 'success',
       });
     }

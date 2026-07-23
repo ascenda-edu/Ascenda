@@ -1,433 +1,716 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from 'react';
+// The unified live university-search page. A single surface owns the query,
+// the facet rail, the sort/view toolbar, and the results grid — URL is the
+// source of truth so every state is deep-linkable and back/forward restores
+// it. The old two-step hub + /results flow is gone; /results now redirects
+// here.
+
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import {
-  BookOpen,
-  Check,
-  ChevronDown,
-  Compass,
-  Globe,
-  Heart,
-  Search as SearchIcon,
-  X,
-  type LucideIcon
-} from 'lucide-react';
-import { AnimatedBlobBanner } from '@/components/animated-blob-banner';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { Award, BookOpen, Coins, Globe, GraduationCap, Layers3, SearchX } from 'lucide-react';
+
+import { PageHero } from '@/components/layout/page-hero';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { IntelligentSearchBar, Suggestion } from '@/components/university-search/IntelligentSearchBar';
+import { EmptyState } from '@/components/ui/empty-state';
+import { UniversityCard } from '@/components/university-card';
+import { UniversityCardSkeleton } from '@/components/university-card-skeleton';
+import { SaveSearchButton } from '@/components/university-search/save-search-button';
 import { SavedSearchesRow } from '@/components/university-search/saved-searches-row';
+import type { Suggestion } from '@/components/university-search/IntelligentSearchBar';
 import {
-  buildSearchResultsUrl,
-  buildSuggestionResultsUrl,
-  readFiltersFromParams,
-  type FilterChip,
-  type FilterGroupKey
+  ActiveFilterBar,
+  CheckboxFacetList,
+  FacetGroup,
+  FilterRail,
+  MobileFilterSheet,
+  RangeSlider,
+  SearchToolbar,
+  SegmentedControl,
+  TierPills,
+  ToggleSwitch,
+  SORT_LABELS,
+} from '@/components/university-search/filters';
+import { useSearchResults } from '@/hooks/use-search-results';
+import {
+  ALL_TIERS,
+  DEFAULT_FILTERS,
+  TUITION_BOUNDS,
+  buildSearchUrl,
+  filtersToChips,
+  parseSearchParams,
+  serializeFilters,
+  type RankingBand,
+  type SearchFilters,
+  type SortOption,
 } from '@/lib/university-search/search-params';
+import type { MatchTier } from '@/lib/matching/match-tier';
+import { childFade, stagger } from '@/lib/motion';
+import { cn } from '@/lib/utils';
 
-type FilterGroup = {
-  key: FilterGroupKey;
-  title: string;
-  description: string;
-  options: string[];
-};
+const SEARCH_PATH = '/university-search/search';
 
-const FILTER_VISUAL: Record<FilterGroupKey, { icon: LucideIcon; chip: string; swatch: string; text: string }> = {
-  country: {
-    icon: Globe,
-    chip: 'bg-sky-500/10 text-sky-600 border border-sky-200/60 dark:text-sky-400 dark:border-sky-500/20',
-    swatch:
-      'flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-600 ring-1 ring-sky-500/20 dark:text-sky-400',
-    text: 'text-sky-600 dark:text-sky-400'
-  },
-  subject: {
-    icon: BookOpen,
-    chip: 'bg-violet-500/10 text-violet-600 border border-violet-200/60 dark:text-violet-400 dark:border-violet-500/20',
-    swatch:
-      'flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-500/10 text-violet-600 ring-1 ring-violet-500/20 dark:text-violet-400',
-    text: 'text-violet-600 dark:text-violet-400'
-  },
-  fitFocus: {
-    icon: Compass,
-    chip:
-      'bg-emerald-500/10 text-emerald-600 border border-emerald-200/60 dark:text-emerald-400 dark:border-emerald-500/20',
-    swatch:
-      'flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20 dark:text-emerald-400',
-    text: 'text-emerald-600 dark:text-emerald-400'
-  },
-  lifestyle: {
-    icon: Heart,
-    chip: 'bg-amber-500/10 text-amber-600 border border-amber-200/60 dark:text-amber-400 dark:border-amber-500/20',
-    swatch:
-      'flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20 dark:text-amber-400',
-    text: 'text-amber-600 dark:text-amber-400'
-  }
-};
-
-const DEFAULT_FILTER_GROUPS: FilterGroup[] = [
-  {
-    key: 'country',
-    title: 'Country',
-    description: 'Where do you picture yourself living?',
-    options: ['USA', 'UK', 'Canada', 'Australia', 'Singapore']
-  },
-  {
-    key: 'subject',
-    title: 'Subject',
-    description: 'Pick the themes you want to explore.',
-    options: ['Computer Science', 'Engineering', 'Design', 'Business', 'Humanities']
-  },
-  {
-    key: 'fitFocus',
-    title: 'Fit focus',
-    description: 'Dial in what matters most for you.',
-    options: ['Career outcomes', 'Research focus', 'Campus feel', 'Internships', 'Cost']
-  },
-  {
-    key: 'lifestyle',
-    title: 'Lifestyle',
-    description: 'Choose the campus setting you want.',
-    options: ['Big city', 'College town', 'Suburban', 'Coastal', 'Rural', 'Tech hub', 'Arts scene']
-  }
+// Fallbacks used until /api/search/filter-options resolves (or if it fails).
+// These are the EXACT DB values (captured live from the fixed RPC) so the
+// fallback lists match real facet values and never yield empty result sets.
+const FALLBACK_COUNTRIES = ['Australia', 'Canada', 'United Kingdom', 'United States'];
+const FALLBACK_SUBJECTS = [
+  'Arts & Humanities',
+  'Biological Sciences',
+  'Business & Management',
+  'Computer Science & IT',
+  'Engineering',
+  'Health Sciences & Medicine',
 ];
+const FALLBACK_LEVELS = ['Bachelor', 'Bachelor (Honours)', 'Diploma', 'Associate'];
 
-interface FilterDropdownProps {
-  group: FilterGroup;
-  /** Values from this group that are currently selected. */
-  selected: Set<string>;
-  /** Toggle a value within this group. */
-  onToggle: (group: FilterGroupKey, value: string) => void;
+const RANKING_OPTIONS: { value: RankingBand; label: string }[] = [
+  { value: 'any', label: 'Any' },
+  { value: 'wellKnown', label: 'Well-known' },
+  { value: 'topTier', label: 'Top tier' },
+];
+const RANKING_LABELS: Record<RankingBand, string> = {
+  any: 'Any',
+  wellKnown: 'Well-known',
+  topTier: 'Top tier',
+};
+
+const toggleValue = <T,>(arr: T[], value: T): T[] =>
+  arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
+
+const formatGbp = (n: number): string => {
+  if (n >= 1000) {
+    const k = n / 1000;
+    return `£${Number.isInteger(k) ? k : k.toFixed(1)}k`;
+  }
+  return `£${n}`;
+};
+
+type FacetOptions = { countries: string[]; subjects: string[]; levels: string[] };
+
+interface FacetSectionsProps {
+  filters: SearchFilters;
+  facets: FacetOptions;
+  onToggleCountry: (v: string) => void;
+  onToggleSubject: (v: string) => void;
+  onToggleLevel: (v: string) => void;
+  onTuitionChange: (min: number | null, max: number | null) => void;
+  onRankingChange: (band: RankingBand) => void;
+  onToggleTier: (t: MatchTier) => void;
+  onTestOptionalChange: (checked: boolean) => void;
 }
 
-function FilterDropdown({ group, selected, onToggle }: FilterDropdownProps) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const visual = FILTER_VISUAL[group.key];
-  const Icon = visual.icon;
-
-  useEffect(() => {
-    if (!open) return;
-    const handleClickOutside = (event: MouseEvent | globalThis.MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside as EventListener);
-    document.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside as EventListener);
-      document.removeEventListener('keydown', handleKey);
-    };
-  }, [open]);
-
-  const groupSelected = useMemo(
-    () => group.options.filter((option) => selected.has(option)),
-    [group.options, selected]
-  );
-
-  const filtered = useMemo(() => {
-    const trimmed = query.trim().toLowerCase();
-    if (!trimmed) return group.options;
-    return group.options.filter((option) => option.toLowerCase().includes(trimmed));
-  }, [group.options, query]);
-
+// The single facet definition rendered into BOTH the desktop rail and the
+// mobile sheet — sharing one component keeps the two from ever drifting apart.
+function FacetSections({
+  filters,
+  facets,
+  onToggleCountry,
+  onToggleSubject,
+  onToggleLevel,
+  onTuitionChange,
+  onRankingChange,
+  onToggleTier,
+  onTestOptionalChange,
+}: FacetSectionsProps) {
   return (
-    <div className="surface-subcard space-y-3 shadow-none" ref={containerRef}>
-      <div className="flex items-start gap-3">
-        <div className={visual.swatch}>
-          <Icon className="h-4 w-4" />
-        </div>
-        <div className="space-y-0.5 min-w-0">
-          <p className={cn('text-xs font-semibold uppercase tracking-[0.3em]', visual.text)}>{group.title}</p>
-          <p className="helper-text">{group.description}</p>
-        </div>
-      </div>
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        className={cn(
-          'flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-2.5 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-          open ? 'border-primary/40 bg-primary/5' : 'border-border bg-background hover:border-border/80'
-        )}
-        aria-expanded={open}
+    <>
+      <FacetGroup title="Country" icon={Globe} activeCount={filters.countries.length}>
+        <CheckboxFacetList
+          options={facets.countries}
+          selected={filters.countries}
+          onToggle={onToggleCountry}
+          searchable
+          searchPlaceholder="Search countries…"
+        />
+      </FacetGroup>
+
+      <FacetGroup title="Subject" icon={BookOpen} activeCount={filters.subjects.length}>
+        <CheckboxFacetList
+          options={facets.subjects}
+          selected={filters.subjects}
+          onToggle={onToggleSubject}
+          searchable
+          searchPlaceholder="Search subjects…"
+        />
+      </FacetGroup>
+
+      <FacetGroup title="Degree level" icon={GraduationCap} activeCount={filters.levels.length}>
+        <CheckboxFacetList options={facets.levels} selected={filters.levels} onToggle={onToggleLevel} />
+      </FacetGroup>
+
+      <FacetGroup
+        title="Tuition (GBP/yr)"
+        icon={Coins}
+        activeCount={filters.tuitionMin !== null || filters.tuitionMax !== null ? 1 : 0}
       >
-        <span className={cn('truncate', groupSelected.length === 0 && 'text-muted-foreground')}>
-          {groupSelected.length === 0
-            ? `Select ${group.title.toLowerCase()}`
-            : groupSelected.length === 1
-              ? groupSelected[0]
-              : `${groupSelected.length} selected`}
-        </span>
-        <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', open && 'rotate-180')} />
-      </button>
+        <RangeSlider
+          min={TUITION_BOUNDS.min}
+          max={TUITION_BOUNDS.max}
+          step={TUITION_BOUNDS.step}
+          valueMin={filters.tuitionMin}
+          valueMax={filters.tuitionMax}
+          onChange={onTuitionChange}
+        />
+      </FacetGroup>
 
-      {groupSelected.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {groupSelected.map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => onToggle(group.key, option)}
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm transition hover:opacity-90',
-                visual.chip
-              )}
-            >
-              {option}
-              <X className="h-3 w-3 shrink-0" aria-hidden />
-            </button>
-          ))}
-        </div>
-      )}
+      <FacetGroup title="Ranking" icon={Award} activeCount={filters.ranking !== 'any' ? 1 : 0}>
+        <SegmentedControl
+          options={RANKING_OPTIONS}
+          value={filters.ranking}
+          onChange={(v) => onRankingChange(v as RankingBand)}
+          ariaLabel="University ranking"
+        />
+      </FacetGroup>
 
-      {open && (
-        <div className="rounded-xl border border-border bg-background shadow-lg">
-          <div className="relative border-b border-border p-2">
-            <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={`Search ${group.title.toLowerCase()}…`}
-              className="w-full rounded-lg border border-transparent bg-muted/40 py-1.5 pl-8 pr-3 text-sm focus:border-primary/30 focus:outline-none"
-            />
-          </div>
-          <ul className="max-h-60 overflow-y-auto p-1">
-            {filtered.length === 0 ? (
-              <li className="px-3 py-2 text-xs text-muted-foreground">No matches</li>
-            ) : (
-              filtered.map((option) => {
-                const isSelected = selected.has(option);
-                return (
-                  <li key={option}>
-                    <button
-                      type="button"
-                      onClick={() => onToggle(group.key, option)}
-                      className={cn(
-                        'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition',
-                        isSelected ? 'bg-primary/10 text-foreground' : 'hover:bg-muted/60 text-foreground'
-                      )}
-                    >
-                      <span>{option}</span>
-                      {isSelected && <Check className="h-4 w-4 text-primary" />}
-                    </button>
-                  </li>
-                );
-              })
-            )}
-          </ul>
-        </div>
-      )}
-    </div>
+      <FacetGroup
+        title="Fit tier"
+        icon={Layers3}
+        activeCount={filters.tiers.length < ALL_TIERS.length ? filters.tiers.length : 0}
+      >
+        <TierPills selected={filters.tiers} onToggle={onToggleTier} />
+      </FacetGroup>
+
+      <div className="py-3">
+        <ToggleSwitch
+          checked={filters.testOptional}
+          onChange={onTestOptionalChange}
+          label="Test-optional only"
+          description="Only programmes at universities that don't require admissions tests."
+        />
+      </div>
+    </>
   );
 }
 
-type SelectedByGroup = Record<FilterGroupKey, Set<string>>;
-
-const emptySelectedByGroup = (): SelectedByGroup => ({
-  country: new Set<string>(),
-  subject: new Set<string>(),
-  fitFocus: new Set<string>(),
-  lifestyle: new Set<string>()
-});
-
-const chipsToSelectedByGroup = (chips: FilterChip[]): SelectedByGroup => {
-  const next = emptySelectedByGroup();
-  chips.forEach((chip) => next[chip.group].add(chip.value));
-  return next;
-};
-
-const selectedByGroupToChips = (selected: SelectedByGroup): FilterChip[] => {
-  const chips: FilterChip[] = [];
-  (Object.keys(selected) as FilterGroupKey[]).forEach((group) => {
-    selected[group].forEach((value) => chips.push({ group, value }));
-  });
-  return chips;
-};
-
-const totalSelected = (selected: SelectedByGroup): number =>
-  (Object.keys(selected) as FilterGroupKey[]).reduce((sum, key) => sum + selected[key].size, 0);
-
-function UniversitySearchPageInner() {
+function UnifiedSearchInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialQuery = searchParams?.get('q') ?? '';
-  const initialChips = readFiltersFromParams(searchParams);
-  const [filterGroups, setFilterGroups] = useState<FilterGroup[]>(DEFAULT_FILTER_GROUPS);
-  const [selectedByGroup, setSelectedByGroup] = useState<SelectedByGroup>(() =>
-    chipsToSelectedByGroup(initialChips)
+
+  // URL is the source of truth. Seed state once from the incoming params, then
+  // state drives the URL (below) rather than the other way around.
+  const [filters, setFilters] = useState<SearchFilters>(() => parseSearchParams(searchParams));
+  const [searchQuery, setSearchQuery] = useState<string>(() => parseSearchParams(searchParams).q);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() =>
+    searchParams.get('view') === 'list' ? 'list' : 'grid'
   );
-  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [facets, setFacets] = useState<FacetOptions>({
+    countries: FALLBACK_COUNTRIES,
+    subjects: FALLBACK_SUBJECTS,
+    levels: FALLBACK_LEVELS,
+  });
 
-  const selectedTotal = totalSelected(selectedByGroup);
+  // Canonical query string for a filter + view state. `view` is not part of
+  // SearchFilters, so it's appended here (and omitted when it's the default).
+  const buildQueryString = useCallback((f: SearchFilters, v: 'grid' | 'list') => {
+    const params = serializeFilters(f);
+    if (v === 'list') params.set('view', v);
+    return params.toString();
+  }, []);
 
+  // Last query string we ourselves wrote. Lets the reconcile effect below tell
+  // our own writes apart from external navigation (saved-search clicks,
+  // back/forward) without a feedback loop.
+  const lastUrlRef = useRef<string>(searchParams.toString());
+
+  // The `q` value at the moment a suggestion drill-down was selected. If the
+  // user later edits the text away from this, the pinned programId/universityId
+  // no longer matches what they're typing and must be dropped (see below).
+  const suggestionQRef = useRef<string | null>(null);
+
+  // Raw input → debounced server query. The instant `searchQuery` still filters
+  // the loaded page client-side; the debounced copy feeds the hook so we don't
+  // fire a catalogue query (with a count over 119k rows) per keystroke.
   useEffect(() => {
-    const uniqueSorted = (values: (string | null | undefined)[], limit = 60) =>
-      Array.from(new Set(values.filter((value): value is string => Boolean(value && value.trim()))))
+    const handle = window.setTimeout(() => {
+      setFilters((prev) => {
+        if (prev.q === searchQuery) return prev;
+        const next = { ...prev, q: searchQuery };
+        // Typing after a suggestion drill-down: once the text diverges from the
+        // q captured at select time, unpin the drill-down ids so the free-text
+        // search isn't silently constrained to the old entity.
+        if ((prev.programId || prev.universityId) && searchQuery !== suggestionQRef.current) {
+          next.programId = null;
+          next.universityId = null;
+        }
+        return next;
+      });
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [searchQuery]);
+
+  // State → URL. Debounced so slider drags and rapid toggles don't spam
+  // history. The first run is skipped so we don't rewrite the URL we just read.
+  const skipInitialWrite = useRef(true);
+  useEffect(() => {
+    if (skipInitialWrite.current) {
+      skipInitialWrite.current = false;
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      const next = buildQueryString(filters, viewMode);
+      if (next === lastUrlRef.current) return;
+      lastUrlRef.current = next;
+      router.replace(next ? `${SEARCH_PATH}?${next}` : SEARCH_PATH, { scroll: false });
+    }, 300);
+    return () => window.clearTimeout(handle);
+  }, [filters, viewMode, buildQueryString, router]);
+
+  // URL → state, but only when the change came from outside our own writes
+  // (saved-search navigation, browser back/forward). Adopting a non-canonical
+  // URL here triggers the write effect above to canonicalise it, which then
+  // matches lastUrlRef and stops — no loop.
+  useEffect(() => {
+    const current = searchParams.toString();
+    if (current === lastUrlRef.current) return;
+    lastUrlRef.current = current;
+    const parsed = parseSearchParams(searchParams);
+    setFilters(parsed);
+    setSearchQuery(parsed.q);
+    setViewMode(searchParams.get('view') === 'list' ? 'list' : 'grid');
+  }, [searchParams]);
+
+  // Legacy-URL canonicalisation. Old shared /results links carry the
+  // `filters=group:value|…` token; rewrite once on mount to the canonical
+  // discrete-param URL so the address bar (and any re-share) is clean.
+  const didCanonicalizeLegacy = useRef(false);
+  useEffect(() => {
+    if (didCanonicalizeLegacy.current) return;
+    didCanonicalizeLegacy.current = true;
+    if (searchParams.get('filters')) {
+      router.replace(buildSearchUrl(parseSearchParams(searchParams)), { scroll: false });
+    }
+    // Mount-only: seed params are captured above; later param changes flow
+    // through the reconcile effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Facet option lists — fetched once; distinct values come from a cached RPC.
+  useEffect(() => {
+    let active = true;
+    const uniqueSorted = (values: (string | null | undefined)[], limit = 200) =>
+      Array.from(new Set(values.filter((v): v is string => Boolean(v && v.trim()))))
         .sort((a, b) => a.localeCompare(b))
         .slice(0, limit);
 
-    const loadFilters = async () => {
+    const load = async () => {
       try {
-        // Distinct values come from a cached API route backed by a
-        // SELECT DISTINCT SQL function — never scan the 119k-row programs
-        // table from the browser to derive ≤60 option strings.
         const res = await fetch('/api/search/filter-options');
-        if (!res.ok) {
-          console.warn('Using fallback filters — filter-options route failed', res.status);
-          return;
-        }
+        if (!res.ok) return;
         const options = (await res.json()) as {
           countries?: string[];
           fields?: string[];
           studyLevels?: string[];
-          levels?: string[];
-          modes?: string[];
         };
-
+        if (!active) return;
         const countries = uniqueSorted(options.countries ?? []);
-        const subjects = uniqueSorted([
-          ...(options.fields ?? []),
-          ...(options.studyLevels ?? []),
-          ...(options.levels ?? [])
-        ]);
-        const fitFocus = uniqueSorted(options.modes ?? [], 16);
-
-        setFilterGroups((prev) =>
-          prev.map((group) => {
-            if (group.key === 'country' && countries.length) return { ...group, options: countries };
-            if (group.key === 'subject' && subjects.length) return { ...group, options: subjects };
-            if (group.key === 'fitFocus' && fitFocus.length) return { ...group, options: fitFocus };
-            // Lifestyle stays curated — DB region/city values aren't student-friendly.
-            return group;
-          })
-        );
-      } catch (err) {
-        console.warn('Using fallback filters due to unexpected error', err);
+        const subjects = uniqueSorted(options.fields ?? []);
+        const levels = uniqueSorted(options.studyLevels ?? []);
+        setFacets((prev) => ({
+          countries: countries.length ? countries : prev.countries,
+          subjects: subjects.length ? subjects : prev.subjects,
+          levels: levels.length ? levels : prev.levels,
+        }));
+      } catch {
+        // Keep the fallbacks.
       }
     };
 
-    void loadFilters();
+    void load();
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const toggleFilter = (group: FilterGroupKey, value: string) => {
-    setSelectedByGroup((prev) => {
-      const nextSet = new Set(prev[group]);
-      if (nextSet.has(value)) nextSet.delete(value);
-      else nextSet.add(value);
-      return { ...prev, [group]: nextSet };
+  const {
+    results,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    error,
+    totalCount,
+    loadMore,
+    programLabel,
+    universityLabel,
+  } = useSearchResults(filters);
+
+  // Client-side tier + instant-q filter over the loaded page. `tiers` is
+  // client-only (the hook ignores it); the instant q uses the raw input so
+  // typing narrows the visible cards without waiting for the debounced refetch.
+  const filteredResults = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const hasExplicitIdFilter = Boolean(filters.programId || filters.universityId);
+    return results.filter((result) => {
+      const matchesSearch =
+        hasExplicitIdFilter ||
+        !normalizedQuery ||
+        `${result.universityName} ${result.programName} ${result.location}`
+          .toLowerCase()
+          .includes(normalizedQuery);
+      const matchesTier = result.tier ? filters.tiers.includes(result.tier) : true;
+      return matchesSearch && matchesTier;
     });
-  };
+  }, [results, searchQuery, filters.tiers, filters.programId, filters.universityId]);
 
-  const resetFilters = () => {
-    setSelectedByGroup(emptySelectedByGroup());
-  };
+  const handleToggleCountry = useCallback(
+    (v: string) => setFilters((f) => ({ ...f, countries: toggleValue(f.countries, v) })),
+    []
+  );
+  const handleToggleSubject = useCallback(
+    (v: string) => setFilters((f) => ({ ...f, subjects: toggleValue(f.subjects, v) })),
+    []
+  );
+  const handleToggleLevel = useCallback(
+    (v: string) => setFilters((f) => ({ ...f, levels: toggleValue(f.levels, v) })),
+    []
+  );
+  const handleTuitionChange = useCallback(
+    (min: number | null, max: number | null) =>
+      setFilters((f) => ({ ...f, tuitionMin: min, tuitionMax: max })),
+    []
+  );
+  const handleRankingChange = useCallback(
+    (band: RankingBand) => setFilters((f) => ({ ...f, ranking: band })),
+    []
+  );
+  const handleToggleTier = useCallback(
+    (t: MatchTier) => setFilters((f) => ({ ...f, tiers: toggleValue(f.tiers, t) })),
+    []
+  );
+  const handleTestOptionalChange = useCallback(
+    (checked: boolean) => setFilters((f) => ({ ...f, testOptional: checked })),
+    []
+  );
+  const handleSortChange = useCallback(
+    (sort: SortOption) => setFilters((f) => ({ ...f, sort })),
+    []
+  );
 
-  const handleSubmit = (event?: FormEvent<HTMLFormElement> | MouseEvent<HTMLButtonElement>) => {
-    event?.preventDefault();
-    router.push(buildSearchResultsUrl(searchQuery, selectedByGroupToChips(selectedByGroup)));
-  };
+  // A free-text submit is a fresh keyword search — drop any drill-down.
+  const handleSubmitQuery = useCallback(() => {
+    setFilters((f) => ({ ...f, q: searchQuery, programId: null, universityId: null }));
+  }, [searchQuery]);
 
-  const handleSelectSuggestion = (item: Suggestion) => {
+  const handleSelectSuggestion = useCallback((item: Suggestion) => {
+    // Remember the q we're pinning to so the debounce commit can tell "typed
+    // more after the drill-down" from "hasn't touched it yet".
+    suggestionQRef.current = item.name;
     setSearchQuery(item.name);
-    router.push(buildSuggestionResultsUrl(item));
-  };
+    setFilters((f) =>
+      item.type === 'university'
+        ? { ...f, q: item.name, universityId: item.id, programId: null }
+        : { ...f, q: item.name, programId: item.id, universityId: null }
+    );
+  }, []);
+
+  const handleClearAll = useCallback(() => {
+    setSearchQuery('');
+    setFilters(DEFAULT_FILTERS);
+  }, []);
+
+  const handleRemoveProgram = useCallback(() => setFilters((f) => ({ ...f, programId: null })), []);
+  const handleRemoveUniversity = useCallback(
+    () => setFilters((f) => ({ ...f, universityId: null })),
+    []
+  );
+  const handleResetTiers = useCallback(() => setFilters((f) => ({ ...f, tiers: ALL_TIERS })), []);
+
+  // Restore the client-side "view" refinements (fit tiers + instant search
+  // text) that can hide already-loaded results, without touching the server
+  // facets. Used by the "loaded results are all hidden" empty state.
+  const handleResetView = useCallback(() => {
+    setSearchQuery('');
+    setFilters((f) => ({ ...f, tiers: ALL_TIERS }));
+  }, []);
+
+  const activeChips = useMemo(() => {
+    const chips: { key: string; label: string; onRemove: () => void }[] = [];
+    filters.countries.forEach((c) =>
+      chips.push({ key: `country:${c}`, label: c, onRemove: () => handleToggleCountry(c) })
+    );
+    filters.subjects.forEach((s) =>
+      chips.push({ key: `subject:${s}`, label: s, onRemove: () => handleToggleSubject(s) })
+    );
+    filters.levels.forEach((l) =>
+      chips.push({ key: `level:${l}`, label: l, onRemove: () => handleToggleLevel(l) })
+    );
+    if (filters.tuitionMin !== null || filters.tuitionMax !== null) {
+      const lo = filters.tuitionMin;
+      const hi = filters.tuitionMax;
+      const label =
+        lo !== null && hi !== null
+          ? `${formatGbp(lo)}–${formatGbp(hi)}`
+          : lo !== null
+            ? `From ${formatGbp(lo)}`
+            : `Up to ${formatGbp(hi as number)}`;
+      chips.push({ key: 'tuition', label, onRemove: () => handleTuitionChange(null, null) });
+    }
+    if (filters.ranking !== 'any') {
+      chips.push({
+        key: 'ranking',
+        label: RANKING_LABELS[filters.ranking],
+        onRemove: () => handleRankingChange('any'),
+      });
+    }
+    if (filters.testOptional) {
+      chips.push({ key: 'testopt', label: 'Test-optional', onRemove: () => handleTestOptionalChange(false) });
+    }
+    if (filters.tiers.length !== ALL_TIERS.length) {
+      chips.push({
+        key: 'tiers',
+        label: `Fit: ${filters.tiers.join(' + ')}`,
+        onRemove: handleResetTiers,
+      });
+    }
+    if (filters.sort !== 'fit') {
+      chips.push({ key: 'sort', label: SORT_LABELS[filters.sort], onRemove: () => handleSortChange('fit') });
+    }
+    if (filters.programId) {
+      chips.push({
+        key: 'programId',
+        label: `Programme: ${(programLabel ?? searchQuery) || 'selected'}`,
+        onRemove: handleRemoveProgram,
+      });
+    }
+    if (filters.universityId) {
+      chips.push({
+        key: 'universityId',
+        label: `University: ${(universityLabel ?? searchQuery) || 'selected'}`,
+        onRemove: handleRemoveUniversity,
+      });
+    }
+    return chips;
+  }, [
+    filters,
+    programLabel,
+    universityLabel,
+    searchQuery,
+    handleToggleCountry,
+    handleToggleSubject,
+    handleToggleLevel,
+    handleTuitionChange,
+    handleRankingChange,
+    handleTestOptionalChange,
+    handleSortChange,
+    handleRemoveProgram,
+    handleRemoveUniversity,
+    handleResetTiers,
+  ]);
+
+  // ONE rule for the active-filter count so the mobile badge, the rail's
+  // Clear-all visibility, and the chip row can never disagree: it's exactly the
+  // number of chips shown.
+  const activeFilterCount = activeChips.length;
+
+  // The loaded page is being narrowed client-side when the tier filter is
+  // active or the instant-q text hasn't yet been committed to filters.q — in
+  // that case the server totalCount no longer matches the visible grid.
+  const isClientFiltered =
+    filters.tiers.length !== ALL_TIERS.length || searchQuery.trim() !== filters.q.trim();
+
+  // Infinite scroll — disabled only when a single PROGRAMME is pinned (it has
+  // no "more" to page through). A universityId drill-down still paginates: a
+  // university can have hundreds of programmes and the hook pages it correctly.
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (filters.programId) return;
+    const target = loadMoreRef.current;
+    if (!target || !hasMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !isLoading && !isLoadingMore) loadMore();
+      },
+      { rootMargin: '320px' }
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMore, isLoading, isLoadingMore, filters.programId, loadMore]);
+
+  const facetSections = (
+    <FacetSections
+      filters={filters}
+      facets={facets}
+      onToggleCountry={handleToggleCountry}
+      onToggleSubject={handleToggleSubject}
+      onToggleLevel={handleToggleLevel}
+      onTuitionChange={handleTuitionChange}
+      onRankingChange={handleRankingChange}
+      onToggleTier={handleToggleTier}
+      onTestOptionalChange={handleTestOptionalChange}
+    />
+  );
+
+  const gridClass = cn(
+    'grid gap-6',
+    viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'
+  );
 
   return (
-    <div className="space-y-8">
-      <section className="surface-stage relative z-20 rounded-[28px] p-8 !overflow-visible">
-        <div className="absolute inset-0 overflow-hidden rounded-[28px] pointer-events-none">
-          <AnimatedBlobBanner className="opacity-80" />
-        </div>
-        <div className="relative z-20 space-y-8">
-          <div className="space-y-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">Search hub</p>
-            <div className="space-y-4">
-              <h1 className="text-[1.5rem] font-semibold leading-tight text-foreground md:text-[2rem]">Cue up your next university discover session.</h1>
-              <p className="text-base text-muted-foreground">
-                Drop a keyword, layer filters, and preview how well each program syncs with your profile before you meet a counselor.
-              </p>
-            </div>
-            <form
-              onSubmit={handleSubmit}
-              className="surface-stat space-y-3 rounded-[28px] p-4 !overflow-visible"
-            >
-              <label htmlFor="search-keyword" className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
-                universities or courses
-              </label>
-              <div className="space-y-3">
-                <IntelligentSearchBar
-                  value={searchQuery}
-                  onChange={setSearchQuery}
-                  onSelectSuggestion={handleSelectSuggestion}
-                  inputId="search-keyword"
-                  inputName="q"
-                  placeholder="Search universities or courses by name, subject, or vibe"
-                />
-                <Button size="lg" className="w-full" type="submit" variant="soft">
-                  Search
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </section>
+    <div className="space-y-6">
+      <PageHero
+        tone="student"
+        eyebrow="Explore"
+        title="Find your programme"
+        description="Search the full catalogue, layer filters, and preview how each programme fits your profile."
+        highlight={totalCount !== null ? `${totalCount.toLocaleString()} programmes` : undefined}
+        breadcrumbs={<Breadcrumbs />}
+        actions={<SaveSearchButton query={searchQuery} chips={filtersToChips(filters)} />}
+      />
 
       <SavedSearchesRow />
 
-      <section className="surface-card surface-card--static">
-        <div className="flex flex-col gap-2 pb-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">Filter universities</p>
-          <h2 className="text-2xl font-semibold text-foreground">Tune the signals to surface better matches.</h2>
+      {activeChips.length > 0 ? <ActiveFilterBar chips={activeChips} onClearAll={handleClearAll} /> : null}
+
+      <div className="grid items-start gap-6 lg:grid-cols-[280px,1fr]">
+        <div className="hidden lg:block">
+          <FilterRail onClearAll={handleClearAll} activeFilterCount={activeFilterCount}>
+            {facetSections}
+          </FilterRail>
         </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          {filterGroups.map((group) => (
-            <FilterDropdown
-              key={group.key}
-              group={group}
-              selected={selectedByGroup[group.key]}
-              onToggle={toggleFilter}
+
+        <section className="min-w-0 space-y-6">
+          <SearchToolbar
+            query={searchQuery}
+            onQueryChange={setSearchQuery}
+            onSubmitQuery={handleSubmitQuery}
+            onSelectSuggestion={handleSelectSuggestion}
+            resultCount={filteredResults.length}
+            totalCount={totalCount}
+            isClientFiltered={isClientFiltered}
+            isLoading={isLoading}
+            sort={filters.sort}
+            onSortChange={handleSortChange}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            activeFilterCount={activeFilterCount}
+            onOpenMobileFilters={() => setMobileFiltersOpen(true)}
+          />
+
+          {isLoading ? (
+            <div className={gridClass}>
+              {Array.from({ length: viewMode === 'grid' ? 6 : 4 }).map((_, index) => (
+                <UniversityCardSkeleton key={index} variant={viewMode === 'list' ? 'compact' : 'default'} />
+              ))}
+            </div>
+          ) : error ? (
+            <div
+              role="alert"
+              className="rounded-[28px] border border-dashed border-rose-200/60 bg-rose-500/10 p-6 text-sm text-rose-600 dark:border-rose-500/20 dark:text-rose-400"
+            >
+              {error}
+            </div>
+          ) : filteredResults.length === 0 && results.length > 0 ? (
+            // The server returned rows, but the client-side view filters
+            // (fit-tier selection and/or the instant search text) hid them all.
+            // Offer a view reset — not the profile-wizard CTAs, which only make
+            // sense when the catalogue itself returned nothing.
+            <EmptyState
+              icon={SearchX}
+              title="Nothing matches your view filters"
+              description="Your fit-tier selection or the search text you're typing is hiding every loaded programme. Reset your view to bring them back."
+              action={
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-full px-4"
+                  onClick={handleResetView}
+                >
+                  Reset tiers &amp; search
+                </Button>
+              }
             />
-          ))}
-        </div>
-        {selectedByGroup.lifestyle.size > 0 ? (
-          <p className="mt-3 text-xs text-muted-foreground">
-            Lifestyle picks help us prioritise — they don&apos;t hard-filter results.
-          </p>
-        ) : null}
-        <div className="mt-6 flex flex-col gap-4 border-t border-border pt-6 md:flex-row md:items-center md:justify-between">
-          <p className="helper-text">
-            {selectedTotal > 0
-              ? `${selectedTotal} filter${selectedTotal === 1 ? '' : 's'} selected — click Apply to search`
-              : 'Select filters above to narrow your search'}
-          </p>
-          <div className="flex gap-3">
-            {selectedTotal > 0 && (
+          ) : filteredResults.length === 0 ? (
+            <EmptyState
+              icon={SearchX}
+              title="No matches found"
+              description="Try adjusting your filters or add one more detail to your profile to unlock matches."
+              action={
+                <div className="flex flex-col items-center gap-4">
+                  <div className="flex flex-wrap justify-center gap-2 text-sm font-semibold">
+                    <Button asChild size="sm" variant="outline" className="rounded-full px-4">
+                      <Link href="/profile/wizard?step=academic_details">Add your grades</Link>
+                    </Button>
+                    <Button asChild size="sm" variant="outline" className="rounded-full px-4">
+                      <Link href="/profile/wizard?step=lifestyle_preferences">Set your preferences</Link>
+                    </Button>
+                    <Button asChild size="sm" variant="outline" className="rounded-full px-4">
+                      <Link href="/profile/wizard?step=academic_input">Clarify goals & interests</Link>
+                    </Button>
+                  </div>
+                  <button
+                    onClick={handleClearAll}
+                    className="text-sm font-medium text-primary hover:underline"
+                  >
+                    Clear all filters
+                  </button>
+                </div>
+              }
+            />
+          ) : (
+            <motion.div variants={stagger} initial="hidden" animate="show" className={gridClass}>
+              {filteredResults.map((result) => (
+                <motion.div
+                  key={result.id}
+                  variants={childFade}
+                  className={cn(
+                    '[content-visibility:auto]',
+                    viewMode === 'grid'
+                      ? '[contain-intrinsic-size:auto_360px]'
+                      : '[contain-intrinsic-size:auto_200px]'
+                  )}
+                >
+                  <UniversityCard
+                    id={result.id}
+                    name={result.universityName}
+                    program={result.programName}
+                    location={result.location}
+                    logoUrl={result.logoUrl ?? undefined}
+                    fitScore={result.fitScore}
+                    tier={result.tier ?? undefined}
+                    highlights={result.highlights}
+                    variant={viewMode === 'list' ? 'compact' : 'default'}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+
+          {hasMore && !isLoading && filteredResults.length > 0 && !filters.programId ? (
+            <div className="mt-2 flex flex-col items-center gap-2">
               <button
                 type="button"
-                onClick={resetFilters}
-                className="text-sm font-semibold uppercase tracking-[0.25em] text-muted-foreground hover:text-foreground transition-colors"
+                onClick={loadMore}
+                disabled={isLoadingMore}
+                className="rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold text-primary transition hover:-translate-y-0.5 hover:border-primary disabled:cursor-not-allowed disabled:text-muted-foreground"
               >
-                Reset filters
+                {isLoadingMore ? 'Loading more results…' : 'Load more results'}
               </button>
-            )}
-            <Button size="sm" type="button" onClick={handleSubmit}>Apply filters</Button>
-          </div>
-        </div>
-      </section>
+              <div ref={loadMoreRef} className="h-6 w-full" />
+            </div>
+          ) : null}
+        </section>
+      </div>
+
+      <MobileFilterSheet
+        open={mobileFiltersOpen}
+        onClose={() => setMobileFiltersOpen(false)}
+        activeFilterCount={activeFilterCount}
+        onClearAll={handleClearAll}
+      >
+        {facetSections}
+      </MobileFilterSheet>
     </div>
   );
 }
 
-export default function UniversitySearchPage() {
+export default function UnifiedUniversitySearchPage() {
   return (
-    <Suspense fallback={<div className="surface-stage h-72 animate-pulse rounded-[28px]" aria-hidden />}>
-      <UniversitySearchPageInner />
+    <Suspense fallback={<div className="surface-card surface-card--static h-72 animate-pulse" aria-hidden />}>
+      <UnifiedSearchInner />
     </Suspense>
   );
 }

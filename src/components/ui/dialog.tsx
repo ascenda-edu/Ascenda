@@ -9,9 +9,12 @@ import { cn } from '@/lib/utils';
 const FOCUSABLE =
     'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+type DialogAlign = 'center' | 'left';
+
 interface DialogContextValue {
     onOpenChange?: (open: boolean) => void;
     titleId: string;
+    align: DialogAlign;
     registerTitle: () => void;
     unregisterTitle: () => void;
 }
@@ -21,10 +24,17 @@ const DialogContext = React.createContext<DialogContextValue | null>(null);
 interface DialogProps {
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
+    /**
+     * Placement of the dialog surface. `'center'` (default) is the classic
+     * modal; `'left'` turns it into a full-height slide-over anchored to the
+     * left edge. Purely presentational — focus-trap, scroll-lock, Escape and
+     * scrim behaviour are identical for both.
+     */
+    align?: DialogAlign;
     children: React.ReactNode;
 }
 
-export function Dialog({ open, onOpenChange, children }: DialogProps) {
+export function Dialog({ open, onOpenChange, align = 'center', children }: DialogProps) {
     const [mounted, setMounted] = React.useState(false);
     const [hasTitle, setHasTitle] = React.useState(false);
     const titleId = React.useId();
@@ -34,8 +44,8 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
     const registerTitle = React.useCallback(() => setHasTitle(true), []);
     const unregisterTitle = React.useCallback(() => setHasTitle(false), []);
     const contextValue = React.useMemo<DialogContextValue>(
-        () => ({ onOpenChange, titleId, registerTitle, unregisterTitle }),
-        [onOpenChange, titleId, registerTitle, unregisterTitle]
+        () => ({ onOpenChange, titleId, align, registerTitle, unregisterTitle }),
+        [onOpenChange, titleId, align, registerTitle, unregisterTitle]
     );
 
     React.useEffect(() => {
@@ -104,7 +114,12 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
         <AnimatePresence>
             {open && (
                 <DialogContext.Provider value={contextValue}>
-                    <div className="fixed inset-0 z-[200] flex items-center justify-center">
+                    <div
+                        className={cn(
+                            'fixed inset-0 z-[200] flex',
+                            align === 'left' ? 'items-stretch justify-start' : 'items-center justify-center'
+                        )}
+                    >
                         {/* Backdrop */}
                         <motion.div
                             initial={{ opacity: 0 }}
@@ -121,7 +136,12 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
                             aria-labelledby={hasTitle ? titleId : undefined}
                             tabIndex={-1}
                             onKeyDown={onTrapKeyDown}
-                            className="relative z-[205] flex w-full items-center justify-center p-4 outline-none [overscroll-behavior:contain] sm:p-6"
+                            className={cn(
+                                'relative z-[205] flex outline-none [overscroll-behavior:contain]',
+                                align === 'left'
+                                    ? 'h-full items-stretch justify-start'
+                                    : 'w-full items-center justify-center p-4 sm:p-6'
+                            )}
                         >
                             {children}
                         </div>
@@ -140,15 +160,32 @@ interface DialogContentProps extends Omit<HTMLMotionProps<'div'>, 'ref'> {
 
 export const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
     ({ children, className, ...props }, ref) => {
+        const ctx = React.useContext(DialogContext);
+        const isLeft = ctx?.align === 'left';
+        const motionProps = isLeft
+            ? {
+                initial: { opacity: 0, x: '-100%' },
+                animate: { opacity: 1, x: 0 },
+                exit: { opacity: 0, x: '-100%' },
+            }
+            : {
+                initial: { opacity: 0, scale: 0.95, y: 20 },
+                animate: { opacity: 1, scale: 1, y: 0 },
+                exit: { opacity: 0, scale: 0.95, y: 20 },
+            };
         return (
             <motion.div
                 ref={ref}
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                transition={{ duration: 0.2 }}
+                {...motionProps}
+                // Slide-over keeps its own eased timing; the center modal restores
+                // the original `{ duration: 0.2 }` so pre-existing dialogs are
+                // timing-identical to before the slide-over variant landed.
+                transition={isLeft ? { duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] } : { duration: 0.2 }}
                 className={cn(
-                    'relative w-full max-w-lg overflow-hidden rounded-xl border bg-background text-foreground shadow-lg sm:rounded-2xl',
+                    'relative overflow-hidden border bg-background text-foreground shadow-lg',
+                    isLeft
+                        ? 'h-full w-[min(88vw,360px)] max-w-full border-y-0 border-l-0'
+                        : 'w-full max-w-lg rounded-xl sm:rounded-2xl',
                     className
                 )}
                 {...props}

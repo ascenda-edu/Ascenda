@@ -91,7 +91,7 @@ export default function UniversitySearchShortlistPage() {
                 </Button>
               )}
               <Button asChild size="sm" variant="secondary">
-                <Link href="/university-search/results">Add more courses</Link>
+                <Link href="/university-search/search">Add more courses</Link>
               </Button>
             </>
           }
@@ -168,7 +168,7 @@ export default function UniversitySearchShortlistPage() {
               Shortlist directly from results to track actions and compare programs.
             </p>
             <Button asChild size="sm" className="mt-4">
-              <Link href="/university-search/results">Browse results</Link>
+              <Link href="/university-search/search">Browse results</Link>
             </Button>
           </div>
         ) : (

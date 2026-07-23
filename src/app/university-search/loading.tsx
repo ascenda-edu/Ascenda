@@ -1,51 +1,57 @@
 import { Skeleton } from '@/components/ui/skeleton';
+import { UniversityCardSkeleton } from '@/components/university-card-skeleton';
 
+// Mirrors the unified search layout: PageHero block, sort/view toolbar, the
+// desktop facet rail (lg+), and a grid of card skeletons.
 export default function SearchLoading() {
   return (
-    <div className="space-y-8">
-      <div className="surface-stage space-y-8 rounded-[28px] p-8">
-        <div className="space-y-5">
-          <Skeleton className="h-3 w-28" />
-          <div className="space-y-4">
-            <Skeleton className="h-8 w-3/4 max-w-xl" />
-            <Skeleton className="h-4 w-full max-w-2xl" />
-          </div>
-          <div className="surface-stat space-y-3 rounded-[28px] p-4">
-            <Skeleton className="h-3 w-40" />
-            <Skeleton className="h-12 w-full rounded-full" />
-            <Skeleton className="h-11 w-full rounded-full" />
+    <div className="space-y-6">
+      {/* PageHero-shaped block */}
+      <div className="surface-card surface-card--static !px-4 !py-3 sm:!px-5 sm:!py-3.5">
+        <div className="flex flex-col gap-1.5">
+          <Skeleton className="h-3 w-40" />
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-64 max-w-full" />
+            <Skeleton className="h-3 w-80 max-w-full" />
+            <Skeleton className="h-8 w-32 rounded-full" />
           </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {[1, 2, 3].map((value) => (
-          <Skeleton key={value} className="h-9 w-32 rounded-full" />
-        ))}
-      </div>
-
-      <div className="surface-card surface-card--static">
-        <div className="flex flex-col gap-2 pb-6">
-          <Skeleton className="h-3 w-36" />
-          <Skeleton className="h-7 w-80 max-w-full" />
-        </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="surface-subcard space-y-3 shadow-none">
-              <div className="flex items-start gap-3">
-                <Skeleton className="h-10 w-10 rounded-2xl" />
-                <div className="space-y-1.5">
-                  <Skeleton className="h-3 w-24" />
-                  <Skeleton className="h-3 w-40" />
-                </div>
-              </div>
-              <Skeleton className="h-11 w-full rounded-xl" />
+      <div className="grid items-start gap-6 lg:grid-cols-[280px,1fr]">
+        {/* Facet rail (lg+) */}
+        <div className="hidden lg:block">
+          <div className="surface-card surface-card--static !p-0">
+            <div className="border-b border-border px-5 py-4">
+              <Skeleton className="h-5 w-20" />
             </div>
-          ))}
+            <div className="space-y-5 px-5 py-5">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="space-y-2">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-9 w-full rounded-xl" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="mt-6 flex items-center justify-between border-t border-border pt-6">
-          <Skeleton className="h-4 w-56" />
-          <Skeleton className="h-9 w-32 rounded-full" />
+
+        <div className="min-w-0 space-y-6">
+          {/* Toolbar bar */}
+          <div className="rounded-2xl border border-border bg-card p-3 dark:border-white/10">
+            <div className="flex flex-wrap items-center gap-3">
+              <Skeleton className="h-11 min-w-[12rem] flex-1 rounded-full" />
+              <Skeleton className="h-11 w-32 rounded-full" />
+              <Skeleton className="h-11 w-20 rounded-full" />
+            </div>
+          </div>
+
+          {/* Card skeletons */}
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <UniversityCardSkeleton key={index} />
+            ))}
+          </div>
         </div>
       </div>
     </div>

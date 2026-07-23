@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ElementType } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ElementType } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
 import { ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Dot, GraduationCap, Landmark, Layers, ListChecks, Loader2, MapPin, ShieldCheck, Wallet } from 'lucide-react';
 import { Navbar } from '@/components/layout/navbar';
@@ -486,6 +486,7 @@ const RequirementRenderer = ({ value }: { value: string }) => {
 
 export function CoursePageClient({ params, initialData }: { params: { id: string }; initialData?: CourseRawData | null }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [course, setCourse] = useState<CourseView | null>(null);
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
@@ -502,11 +503,24 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
   const { backHref, backLabel } = useMemo(() => {
     const from = searchParams.get('from');
-    if (from === 'search') return { backHref: '/university-search/results', backLabel: 'Back to results' };
+    if (from === 'search') return { backHref: '/university-search/search', backLabel: 'Back to results' };
     if (from === 'university') return { backHref: '/university-search/search', backLabel: 'Back to search' };
     if (from === 'quests') return { backHref: '/university-search/quests', backLabel: 'Back to quests' };
     return { backHref: '/dashboard', backLabel: 'Back' };
   }, [searchParams]);
+
+  // When arriving from the search results, prefer a real history back-step so
+  // the user lands on their exact filter context (scroll position, loaded
+  // pages, facets) rather than a fresh, unfiltered results page. Fall back to
+  // the results URL when there's no in-app history to return to (deep link).
+  const fromSearch = searchParams.get('from') === 'search';
+  const handleBackToResults = useCallback(() => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/university-search/search');
+    }
+  }, [router]);
 
   const moduleItems = useMemo(() => extractBulletItems(course?.modules), [course?.modules]);
   const moduleYearSections = useMemo(
@@ -796,12 +810,24 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
             <Breadcrumbs className="mb-8" />
 
             <div className="mb-8 flex items-center gap-3">
-              <Button asChild variant="ghost" size="sm" className="-ml-2 text-muted-foreground hover:text-foreground">
-                <Link href={backHref}>
+              {fromSearch ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="-ml-2 text-muted-foreground hover:text-foreground"
+                  onClick={handleBackToResults}
+                >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   {backLabel}
-                </Link>
-              </Button>
+                </Button>
+              ) : (
+                <Button asChild variant="ghost" size="sm" className="-ml-2 text-muted-foreground hover:text-foreground">
+                  <Link href={backHref}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    {backLabel}
+                  </Link>
+                </Button>
+              )}
             </div>
 
             {loading ? (
