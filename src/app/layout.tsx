@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Outfit, Inter } from 'next/font/google';
 import '@/app/globals.css';
-import '@radix-ui/themes/styles.css';
 import { Providers } from './providers';
 import messages from '@/messages/en.json';
 import { cn } from '@/lib/utils';
