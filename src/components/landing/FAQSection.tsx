@@ -8,33 +8,33 @@ import { cn } from '@/lib/utils';
 
 const faqs = [
     {
-        question: 'Why do real time admissions signals matter?',
+        question: 'What happens when a requirement changes mid-cycle?',
         answer:
-            'Requirements pivot mid cycle; Ascenda flags updates instantly so you move before a deadline slips.'
+            'Universities move deadlines and tweak entry requirements more often than you’d think. Ascenda flags the change on your plan the moment it lands — so you adjust in days, not after the deadline.'
     },
     {
-        question: 'Who uses Ascenda?',
-        answer: 'Students, families, and universities craving one modern, polished planning space.'
+        question: 'Who is Ascenda for?',
+        answer: 'International school students (IB and A-Level), and the counsellors and families supporting them.'
     },
     {
         question: 'How do I get access?',
         answer:
-            'Ascenda is currently invite-only while we work closely with design partners. Reach out to your Ascenda contact to have an account set up for you.'
+            'Ascenda is currently invite-only while we work closely with a small group of schools. Reach out to your Ascenda contact to have an account set up for you.'
     },
     {
         question: 'Is my data private?',
         answer:
-            'Yes. Ascenda stores data in region, enforces MFA, and offers permissions for every stakeholder.'
+            'Yes. Ascenda stores data in region, enforces multi-factor sign-in, and gives you control over exactly who sees what — student, counsellor, or parent.'
     },
     {
         question: 'Which destinations are covered?',
         answer:
-            'US, Canada, UK, EU, Australia, Singapore, Hong Kong, and more regional pathways with visa insights preloaded.'
+            'The US, Canada, UK, EU, Australia, Singapore and Hong Kong — with visa insights preloaded for each.'
     },
     {
         question: 'Can I talk to someone?',
         answer:
-            'Absolutely. Email hello@ascenda.com for a live walkthrough, expert intro, or onboarding help.'
+            'Absolutely. Email hello@ascendaedu.com for a live walkthrough or onboarding help.'
     }
 ];
 
@@ -42,7 +42,7 @@ export function FAQSection() {
     const [openFaq, setOpenFaq] = useState<string | null>(faqs[0].question);
 
     return (
-        <section className="w-full py-24 bg-background">
+        <section id="faq" className="section-fade w-full py-24 bg-secondary/40 sm:py-32 scroll-mt-14">
             <div className="max-w-7xl mx-auto px-6 grid gap-12 lg:grid-cols-[0.4fr_0.6fr]">
                 <motion.div
                     className="space-y-4"
@@ -54,13 +54,13 @@ export function FAQSection() {
                     <p className="text-sm font-medium uppercase tracking-widest text-primary/80">FAQ</p>
                     <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground tracking-tight">Answers before you even ask.</h2>
                     <p className="text-lg text-muted-foreground leading-relaxed">
-                        We keep the playbook simple: transparent timelines, privacy controls, and human support whenever you need it.
+                        Clear timelines, real privacy controls, and a human to talk to when you need one.
                     </p>
                     <div className="hidden lg:block pt-4">
                         <div className="rounded-2xl border border-primary/10 bg-primary/5 p-5 space-y-2">
-                            <p className="text-sm font-semibold text-foreground">Still have questions?</p>
-                            <p className="text-sm text-muted-foreground">Our team responds within 24 hours.</p>
-                            <a href="mailto:hello@ascenda.com" className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors mt-1">
+                            <p className="text-sm font-semibold text-foreground">Still deciding?</p>
+                            <p className="text-sm text-muted-foreground">Talk to a real person on the team — no bots, no sales script.</p>
+                            <a href="mailto:hello@ascendaedu.com" className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors mt-1">
                                 Get in touch
                             </a>
                         </div>

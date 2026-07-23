@@ -6,6 +6,8 @@ import { ProofPointsSection } from '@/components/landing/ProofPointsSection';
 import { DemoSection } from '@/components/landing/DemoSection';
 import { FAQSection } from '@/components/landing/FAQSection';
 import { CTASection } from '@/components/landing/CTASection';
+import { LandingFooter } from '@/components/landing/LandingFooter';
+import { StickyNav } from '@/components/landing/StickyNav';
 
 export default function HomePage() {
   return (
@@ -13,14 +15,18 @@ export default function HomePage() {
       id="main-content"
       className="bg-background text-foreground font-sans w-full"
     >
+      {/* Slim companion bar — appears only after the hero's own header scrolls away */}
+      <StickyNav />
+      {/* Narrative arc: promise → problem → solution → how it works → before/after → demo → FAQ → CTA */}
       <HeroSection />
+      <ProofPointsSection />
       <FeaturesSection />
       <ShortlistSection />
       <ComparisonSection />
-      <ProofPointsSection />
       <DemoSection />
       <FAQSection />
       <CTASection />
+      <LandingFooter />
     </main>
   );
 }

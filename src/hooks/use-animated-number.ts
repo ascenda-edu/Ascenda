@@ -22,6 +22,13 @@ export function useAnimatedNumber(
       return;
     }
 
+    // Reduced-motion path (duration 0) — snap to the target, skip the rAF loop
+    // (avoids a 0/0 → NaN edge on the first frame when now === start).
+    if (duration <= 0) {
+      setValue(target);
+      return;
+    }
+
     let frameId: number;
     const start = performance.now();
 

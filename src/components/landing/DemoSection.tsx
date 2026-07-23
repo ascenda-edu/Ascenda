@@ -28,7 +28,7 @@ export function DemoSection() {
     }, [supabase]);
 
     return (
-        <section className="section-fade w-full bg-secondary/40 py-24 sm:py-32">
+        <section className="section-fade w-full bg-background py-24 sm:py-32">
             <motion.div
                 className="max-w-7xl mx-auto px-6 grid gap-12 md:grid-cols-[0.9fr_1.1fr] items-center"
                 initial="hidden"
@@ -38,18 +38,18 @@ export function DemoSection() {
             >
                 <div className="space-y-8">
                     <div className="space-y-4">
-                        <p className="text-sm font-medium uppercase tracking-widest text-primary/80">Quick demo</p>
-                        <h2 className="text-4xl font-heading font-bold text-foreground tracking-tight">Aim higher. Land smarter.</h2>
+                        <p className="text-sm font-medium uppercase tracking-widest text-primary/80">See it work</p>
+                        <h2 className="text-4xl font-heading font-bold text-foreground tracking-tight">Type your grades. Watch the plan appear.</h2>
                         <p className="text-lg text-muted-foreground leading-relaxed">
-                            Paste predicted grades, hit enter, and Ascenda animates Fit Scores, timelines, and required actions in real time. No extra UI noise — just the next move.
+                            Enter your predicted grades and watch Fit Scores, timelines and next steps build themselves — live, as you type.
                         </p>
                     </div>
 
                     <ul className="space-y-4">
                         {[
-                            { icon: Zap, text: 'Live Fit Score recalculations', color: 'text-amber-500 bg-amber-500/10' },
+                            { icon: Zap, text: 'Fit Scores update as you type', color: 'text-amber-500 bg-amber-500/10' },
                             { icon: Globe, text: 'Scholarships + visa checks in-line', color: 'text-emerald-500 bg-emerald-500/10' },
-                            { icon: NotebookPen, text: 'Notes stay synced automatically', color: 'text-sky-500 bg-sky-500/10' },
+                            { icon: NotebookPen, text: 'Timelines auto-build for essays & tests', color: 'text-sky-500 bg-sky-500/10' },
                         ].map((item) => {
                             const Icon = item.icon;
                             return (
@@ -67,12 +67,12 @@ export function DemoSection() {
                         <Button asChild size="lg" className="rounded-full shadow-lg hover:shadow-xl transition-all group">
                             <Link href={tryHref} className="flex items-center gap-2">
                                 <Play className="h-4 w-4" />
-                                Sign in
+                                Try it with your grades
                                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                             </Link>
                         </Button>
                         <Button asChild size="lg" variant="outline" className="rounded-full border-border hover:bg-background/80">
-                            <Link href="#features">Explore features</Link>
+                            <Link href="#features">See how it works</Link>
                         </Button>
                     </div>
                 </div>
@@ -94,7 +94,7 @@ export function DemoSection() {
                         </div>
                         <div className="flex-1 mx-8">
                             <div className="h-5 rounded-full bg-muted/50 max-w-xs mx-auto flex items-center justify-center">
-                                <span className="text-[0.625rem] text-muted-foreground/50 font-mono">app.ascenda.com</span>
+                                <span className="text-[0.625rem] text-muted-foreground/50 font-mono">ascendaedu.com</span>
                             </div>
                         </div>
                     </div>

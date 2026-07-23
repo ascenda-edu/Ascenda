@@ -4,11 +4,14 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 
 /* ─── Static mock data shown in the animation ─── */
+// Canonical mock dataset — keep scores/tiers in sync with the widgets in
+// FeaturesSection/ShortlistSection (TU Delft 92 safe, Imperial 85 match,
+// ETH 71 reach) so the page never scores the same programme two ways.
 const UNIVERSITIES = [
-  { name: 'Imperial College London', flag: '🇬🇧', programme: 'MEng Mechanical Engineering', score: 92, status: 'Strong match' as const },
-  { name: 'ETH Zürich', flag: '🇨🇭', programme: 'BSc Mechanical Engineering', score: 78, status: 'Good match' as const },
-  { name: 'TU Delft', flag: '🇳🇱', programme: 'BSc Mechanical Engineering', score: 95, status: 'Safety' as const },
-  { name: 'EPFL', flag: '🇨🇭', programme: 'BSc Mechanical Engineering', score: 82, status: 'Good match' as const },
+  { name: 'TU Delft', country: 'NL', programme: 'MSc Aerospace Engineering', score: 92, status: 'Safe' as const },
+  { name: 'Imperial College London', country: 'UK', programme: 'MEng Aeronautics', score: 85, status: 'Match' as const },
+  { name: 'EPFL', country: 'CH', programme: 'BSc Mechanical Engineering', score: 82, status: 'Match' as const },
+  { name: 'ETH Zürich', country: 'CH', programme: 'MSc Mechanical Engineering', score: 71, status: 'Reach' as const },
 ];
 
 const DEADLINES = [
@@ -20,16 +23,17 @@ const DEADLINES = [
 const GRADES = ['7', '7', '6', '6', '5', '6'];
 const SUBJECTS = ['Phy', 'Mat', 'Che', 'Eng', 'Fre', 'Eco'];
 
+// Tier colors mirror product-widgets' TIER_STYLES (safe/match/reach).
 function statusColor(status: string) {
-  if (status === 'Strong match') return 'text-emerald-600 bg-emerald-500/10';
-  if (status === 'Good match') return 'text-sky-600 bg-sky-500/10';
-  return 'text-violet-600 bg-violet-500/10';
+  if (status === 'Safe') return 'text-emerald-700 bg-emerald-500/10 dark:text-emerald-400';
+  if (status === 'Match') return 'text-amber-700 bg-amber-500/10 dark:text-amber-400';
+  return 'text-rose-700 bg-rose-500/10 dark:text-rose-400';
 }
 
 function scoreBarColor(score: number) {
   if (score >= 90) return 'bg-emerald-500';
-  if (score >= 75) return 'bg-sky-500';
-  return 'bg-amber-500';
+  if (score >= 80) return 'bg-amber-500';
+  return 'bg-rose-500';
 }
 
 /* ─── Animated counter ─── */
@@ -147,7 +151,10 @@ export function DemoPreview() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.12, duration: 0.4, ease: 'easeOut' }}
                 >
-                  <span className="text-sm shrink-0">{uni.flag}</span>
+                  {/* Typeset country chip — emoji flags render as letterboxes on Windows */}
+                  <span className="grid h-6 w-7 shrink-0 place-items-center rounded-md border border-border/50 bg-background text-[0.5625rem] font-bold tracking-wide text-muted-foreground">
+                    {uni.country}
+                  </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[0.6875rem] font-semibold text-foreground truncate">{uni.name}</p>
                     <div className="flex items-center gap-2 mt-0.5">

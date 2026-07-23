@@ -2,8 +2,8 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { motion, useReducedMotion, type Variants } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform, type Variants } from 'framer-motion';
 import {
     ArrowRight,
     CalendarClock,
@@ -21,8 +21,12 @@ import { useThemeMode } from '../theme/theme-provider';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '../theme/theme-toggle';
 
-const heroHeadline = "Find universities you'll actually get into.";
+const heroHeadlinePrefix = "Find universities you'll actually ";
+// Rotating payoff word — the three things every applicant actually worries about.
+// Widest phrase (`thrive at.`) sets the reserved width so the headline never reflows.
+const ROTATING_WORDS = ['get into.', 'afford.', 'thrive at.'] as const;
 const FIT_SCORE_TARGET = 92;
+const PROGRAMMES_TARGET = 119000;
 const PROFILE_SEGMENTS = 5;
 const PROFILE_FILLED = 4;
 
@@ -63,16 +67,77 @@ const radarContainerVariants: Variants = {
 };
 
 
+/**
+ * Cycles the final headline word (`get into.` → `afford.` → `thrive at.`) with a
+ * vertical roll. An invisible sizer reserves the widest phrase's width so the line
+ * never reflows, and the whole thing snaps to the first word for reduced-motion users.
+ */
+function RotatingHeadlineWord() {
+    const shouldReduceMotion = useReducedMotion();
+    const [index, setIndex] = useState(0);
+
+    useEffect(() => {
+        if (shouldReduceMotion) return;
+        const id = setInterval(
+            () => setIndex((i) => (i + 1) % ROTATING_WORDS.length),
+            2300,
+        );
+        return () => clearInterval(id);
+    }, [shouldReduceMotion]);
+
+    return (
+        <span className="relative inline-flex overflow-hidden align-bottom pb-[0.16em] -mb-[0.16em]">
+            {/* Reserves the widest phrase's width so surrounding text never shifts. */}
+            <span className="invisible whitespace-nowrap" aria-hidden>
+                thrive at.
+            </span>
+            <span className="absolute inset-0 flex">
+                <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                        key={index}
+                        className="whitespace-nowrap bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent"
+                        initial={{ y: '110%', opacity: 0 }}
+                        animate={{ y: '0%', opacity: 1 }}
+                        exit={{ y: '-110%', opacity: 0 }}
+                        transition={{ duration: shouldReduceMotion ? 0 : 0.5, ease: [0.16, 1, 0.3, 1] }}
+                    >
+                        {ROTATING_WORDS[index]}
+                    </motion.span>
+                </AnimatePresence>
+            </span>
+        </span>
+    );
+}
+
 export function HeroSection() {
     const [launchHref, setLaunchHref] = useState('/login');
     const supabase = useSupabase();
     const { mode } = useThemeMode();
     const shouldReduceMotion = useReducedMotion();
 
+    // Scroll-linked dissolve for the hero background: as the hero scrolls out of
+    // view the banner fades and gently zooms, melting into the page rather than
+    // cutting off. Gated behind a post-mount flag so the SSR/first-paint markup
+    // is identical for reduced-motion users (no hydration mismatch).
+    const heroRef = useRef<HTMLElement>(null);
+    const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
+    const bgOpacity = useTransform(scrollYProgress, [0, 0.55, 1], [1, 1, 0]);
+    const bgScale = useTransform(scrollYProgress, [0, 1], [1, 1.06]);
+    const [bgEnhanced, setBgEnhanced] = useState(false);
+    useEffect(() => {
+        setBgEnhanced(!shouldReduceMotion);
+    }, [shouldReduceMotion]);
+
     const fitScore = useAnimatedNumber(
         FIT_SCORE_TARGET,
         true,
         shouldReduceMotion ? 0 : 1400,
+    );
+
+    const programmes = useAnimatedNumber(
+        PROGRAMMES_TARGET,
+        true,
+        shouldReduceMotion ? 0 : 1600,
     );
 
     useEffect(() => {
@@ -115,9 +180,12 @@ export function HeroSection() {
     };
 
     return (
-        <section className="relative min-h-[75vh]">
+        <section ref={heroRef} className="relative min-h-[75vh]">
             {/* overflow-hidden lives here (not on the section) so it can't neutralise position:sticky elsewhere on the page */}
-            <div className="absolute inset-0 overflow-hidden">
+            <motion.div
+                className="absolute inset-0 overflow-hidden"
+                style={bgEnhanced ? { opacity: bgOpacity, scale: bgScale } : undefined}
+            >
                 {/* Static gradient blobs — perpetual motion was visual noise. */}
                 <div className="absolute -left-24 top-[-15%] h-[55vw] w-[55vw] rounded-full bg-indigo-500/25 blur-3xl" aria-hidden />
                 <div className="absolute -right-24 bottom-[-20%] h-[45vw] w-[45vw] rounded-full bg-emerald-400/20 blur-3xl" aria-hidden />
@@ -143,9 +211,10 @@ export function HeroSection() {
                             : 'bg-gradient-to-b from-background/40 via-background/30 to-background sm:from-transparent sm:via-background/25'
                     )}
                 />
-            </div>
+            </motion.div>
             <div className="relative z-10">
                 <motion.header
+                    id="hero-topbar"
                     className="w-full mb-8 py-4 bg-transparent"
                     initial="hidden"
                     animate="visible"
@@ -199,7 +268,8 @@ export function HeroSection() {
                                         animate="visible"
                                         variants={fadeIn}
                                     >
-                                        {heroHeadline}
+                                        {heroHeadlinePrefix}
+                                        <RotatingHeadlineWord />
                                     </motion.h1>
                                     <motion.p
                                         className="mt-3 text-sm text-foreground/80 sm:mt-4 sm:text-lg lg:text-xl"
@@ -243,11 +313,11 @@ export function HeroSection() {
                                 >
                                     <li className="flex items-center gap-2">
                                         <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                                        Know which programs fit you.
+                                        See your real odds on each programme.
                                     </li>
                                     <li className="flex items-center gap-2">
                                         <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                                        Never miss a deadline.
+                                        Catch every deadline before it closes.
                                     </li>
                                     <li className="flex items-center gap-2">
                                         <span className="h-1.5 w-1.5 rounded-full bg-accent" />
@@ -255,12 +325,12 @@ export function HeroSection() {
                                     </li>
                                 </motion.ul>
                                 <motion.p
-                                    className="pt-1 text-xs text-muted-foreground"
+                                    className="pt-1 text-xs text-foreground/70 tabular-nums"
                                     variants={fadeIn}
                                     initial="hidden"
                                     animate="visible"
                                 >
-                                    Search 119,000+ real programmes.
+                                    Search {programmes.toLocaleString('en-US')}+ real programmes.
                                 </motion.p>
                             </div>
                             <motion.div

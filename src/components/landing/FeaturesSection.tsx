@@ -1,90 +1,168 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Sparkles, Search, GraduationCap, NotepadText } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { AnimatedSection } from '@/components/layout/animated-section';
 import { cn } from '@/lib/utils';
+import {
+    AppFrame,
+    MatchCard,
+    ProgressRing,
+    SearchWidget,
+    StatTile,
+    TaskRow,
+} from './product-widgets';
 
-const features = [
+type WidgetKind = 'fit' | 'search' | 'plan' | 'dashboard';
+
+interface FeatureRow {
+    label: string;
+    title: string;
+    copy: string;
+    chips: string[];
+    widget: WidgetKind;
+    reverse?: boolean;
+}
+
+const rows: FeatureRow[] = [
     {
-        title: 'Fit Score · Find your perfect match',
-        description: 'Instant, data-driven matches that feel like they were tailored for your story.',
-        icon: Sparkles,
-        gradient: 'from-violet-500/10 to-indigo-500/5',
-        iconBg: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+        label: 'Fit Score',
+        title: 'See exactly where you stand.',
+        copy: 'Every programme scored against your real grades, subjects and goals — sorted into reach, match and safe, with your estimated admission chance on each card.',
+        chips: ['Reach / match / safe tiers', 'Odds on every card'],
+        widget: 'fit',
     },
     {
-        title: 'Centralized university database',
-        description: 'All universities. One place. Compare programs without the doom scroll.',
-        icon: Search,
-        gradient: 'from-sky-500/10 to-cyan-500/5',
-        iconBg: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
+        label: 'The catalogue',
+        title: 'Every programme, one search.',
+        copy: '119,000+ courses in one place. Filter by country, subject and the kind of life you want — and preview how each one fits your profile before you ever book a call.',
+        chips: ['119,000+ programmes', 'Live fit preview'],
+        widget: 'search',
+        reverse: true,
     },
     {
-        title: 'Campus insights',
-        description: 'Real stories from real students show what life actually feels like.',
-        icon: GraduationCap,
-        gradient: 'from-emerald-500/10 to-green-500/5',
-        iconBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+        label: 'Your plan',
+        title: 'A plan that keeps you moving.',
+        copy: 'Essays, references and deadlines tracked per application — the most urgent thing surfaced first, everything else in order, with help one tap away.',
+        chips: ['Per-application tracking', 'Urgent surfaced first'],
+        widget: 'plan',
     },
     {
-        title: 'Application companion',
-        description: 'Personalized timelines, tips, and steps for every part of your application.',
-        icon: NotepadText,
-        gradient: 'from-amber-500/10 to-orange-500/5',
-        iconBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-    }
+        label: 'Command centre',
+        title: 'Your whole journey, one view.',
+        copy: 'Matches, tasks, deadlines and your counsellor in a single home that always shows the next move — so nothing slips between the cracks.',
+        chips: ['Matches, tasks & deadlines together', 'Counsellor built in'],
+        widget: 'dashboard',
+        reverse: true,
+    },
 ];
+
+function FeatureWidget({ kind }: { kind: WidgetKind }) {
+    if (kind === 'fit') {
+        return (
+            <AppFrame route="/matches">
+                <div className="space-y-2.5">
+                    <MatchCard country="Netherlands" tier="safe" name="TU Delft" sub="MSc Aerospace Engineering" score={92} colorClass="stroke-emerald-500" />
+                    <MatchCard country="United Kingdom" tier="match" name="Imperial College London" sub="MEng Aeronautics" score={85} colorClass="stroke-amber-500" />
+                    <MatchCard country="Switzerland" tier="reach" name="ETH Zürich" sub="MSc Mechanical Engineering" score={71} colorClass="stroke-rose-500" />
+                </div>
+            </AppFrame>
+        );
+    }
+    if (kind === 'search') {
+        return (
+            <AppFrame title="Search hub">
+                <SearchWidget />
+            </AppFrame>
+        );
+    }
+    if (kind === 'plan') {
+        return (
+            <AppFrame route="/applications">
+                <div className="mb-3 grid grid-cols-3 gap-2.5">
+                    <StatTile label="Tracked" value={6} detail="applications" />
+                    <StatTile label="In progress" value={4} detail="working now" />
+                    <StatTile label="Submitted" value={2} detail="awaiting" accent />
+                </div>
+                <div className="space-y-2.5">
+                    <TaskRow tone="amber" title="Tailor personal statement" sub="University of Manchester · Computer Science" due="Due in 3d" />
+                    <TaskRow tone="sky" title="Confirm reference from Ms Okonkwo" sub="Imperial College London" due="In 6d" />
+                    <TaskRow tone="emerald" title="Submit UCAS application" sub="University of Cambridge" due="Ready" />
+                </div>
+            </AppFrame>
+        );
+    }
+    return (
+        <AppFrame route="/dashboard">
+            <div className="mb-3 flex items-center gap-4 rounded-2xl border border-border bg-card p-4 dark:border-white/10">
+                <ProgressRing value={100} size={88} stroke={8} colorClass="stroke-emerald-500" label="Profile 100% complete" />
+                <div>
+                    <p className="text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-emerald-600 dark:text-emerald-400">
+                        Profile complete
+                    </p>
+                    <p className="mt-1 text-[0.9375rem] font-semibold tracking-tight text-foreground">Everything&apos;s in place</p>
+                    <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
+                        Matches &amp; requirements running on your full profile.
+                    </p>
+                </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2.5">
+                <StatTile label="Applications" value={6} />
+                <StatTile label="Due this week" value={3} />
+                <StatTile label="Profile" value={100} suffix="%" accent />
+            </div>
+        </AppFrame>
+    );
+}
 
 export function FeaturesSection() {
     return (
-        <section id="features" className="section-fade w-full py-24 bg-secondary/40 sm:py-32">
-            <div className="max-w-7xl mx-auto px-6 space-y-12">
+        <section id="features" className="section-fade w-full py-24 bg-secondary/40 sm:py-32 scroll-mt-14">
+            <div className="max-w-7xl mx-auto px-6">
                 <AnimatedSection className="max-w-3xl space-y-3">
-                    <p className="text-sm font-medium uppercase tracking-widest text-primary/80">Why Ascenda</p>
-                    <h2 className="text-4xl md:text-5xl font-heading font-bold text-foreground tracking-tight">Four ways to make your application journey easier</h2>
+                    <p className="text-sm font-medium uppercase tracking-widest text-primary/80">Inside Ascenda</p>
+                    <h2 className="text-4xl md:text-5xl font-heading font-bold text-foreground tracking-tight">
+                        From a blank shortlist to a submitted application.
+                    </h2>
                     <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl">
-                        Everything in Ascenda is tuned to blend calm clarity with clear actions — so you and your team can move through the cycle with confidence and zero guesswork.
+                        One workspace for the whole cycle — matched programmes, a plan that knows your deadlines, and the
+                        people helping you get there.
                     </p>
                 </AnimatedSection>
 
-                <div className="grid gap-6 md:grid-cols-2">
-                    {features.map((feature, index) => {
-                        const Icon = feature.icon;
-                        return (
-                            <motion.div
-                                key={feature.title}
-                                className="group relative flex flex-col gap-5 rounded-2xl border border-border bg-card p-8 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true, amount: 0.3 }}
-                                transition={{ duration: 0.5, delay: index * 0.1 }}
-                            >
-                                {/* Hover gradient */}
-                                <div className={cn(
-                                    'absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br pointer-events-none',
-                                    feature.gradient
-                                )} />
-
-                                <div className="relative z-10 flex items-center justify-between">
-                                    <div className={cn('flex h-12 w-12 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110', feature.iconBg)}>
-                                        <Icon className="h-6 w-6" />
-                                    </div>
-                                    <span className="text-4xl font-bold text-foreground/[0.04] dark:text-foreground/[0.06] font-heading select-none">
-                                        {String(index + 1).padStart(2, '0')}
-                                    </span>
+                <div className="mt-14 space-y-16 sm:space-y-24">
+                    {rows.map((row) => (
+                        <motion.div
+                            key={row.title}
+                            className="grid items-center gap-8 md:grid-cols-2 md:gap-14"
+                            initial={{ opacity: 0, y: 24 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, amount: 0.25 }}
+                            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+                        >
+                            <div className={cn(row.reverse && 'md:order-2')}>
+                                <FeatureWidget kind={row.widget} />
+                            </div>
+                            <div>
+                                <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">{row.label}</p>
+                                <h3 className="mt-3 text-2xl font-heading font-bold tracking-tight text-foreground sm:text-[1.7rem]">
+                                    {row.title}
+                                </h3>
+                                <p className="mt-3 text-base leading-relaxed text-muted-foreground">{row.copy}</p>
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    {row.chips.map((chip) => (
+                                        <span
+                                            key={chip}
+                                            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[0.8125rem] font-medium text-muted-foreground dark:border-white/10"
+                                        >
+                                            <Check className="h-3.5 w-3.5 text-emerald-500" strokeWidth={2.4} aria-hidden />
+                                            {chip}
+                                        </span>
+                                    ))}
                                 </div>
-
-                                <div className="relative z-10 space-y-2">
-                                    <h3 className="text-xl font-bold text-foreground tracking-tight">{feature.title}</h3>
-                                    <p className="text-base text-muted-foreground leading-relaxed">{feature.description}</p>
-                                </div>
-
-                                {/* Bottom accent line */}
-                                <div className="absolute bottom-0 left-0 h-0.5 w-0 group-hover:w-full bg-gradient-to-r from-primary/40 to-primary/10 transition-all duration-500" />
-                            </motion.div>
-                        );
-                    })}
+                            </div>
+                        </motion.div>
+                    ))}
                 </div>
             </div>
         </section>

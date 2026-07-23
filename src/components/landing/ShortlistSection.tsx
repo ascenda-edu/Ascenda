@@ -1,81 +1,100 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { UserPlus, Search, Rocket } from 'lucide-react';
 import { AnimatedSection } from '@/components/layout/animated-section';
 import { cn } from '@/lib/utils';
+import { AppFrame, CheckItem, MatchCard, TaskRow } from './product-widgets';
+
+const NUMBER_GRADIENTS = [
+    'from-indigo-500 to-violet-500',
+    'from-violet-500 to-sky-400',
+    'from-sky-400 to-emerald-400',
+];
 
 const steps = [
     {
-        title: 'Start Ascenda',
-        copy: 'Create your profile once: predicted grades, subjects, languages, interests, and vibe.',
-        icon: UserPlus,
-        iconBg: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+        lab: 'Set up once',
+        title: 'Tell us where you stand',
+        copy: 'Predicted grades, subjects and what you actually want from a place. Five minutes, once.',
+        widget: (
+            <AppFrame title="Profile · 5/5">
+                <div className="flex flex-col gap-2.5">
+                    <CheckItem label="Personal info" />
+                    <CheckItem label="Your studies" />
+                    <CheckItem label="Grades & tests" />
+                    <CheckItem label="Activities" />
+                    <CheckItem label="Lifestyle" />
+                </div>
+            </AppFrame>
+        ),
     },
     {
-        title: 'Explore ranked results',
-        copy: 'See Fit Scores, compare modules & requirements, and tune lifestyle filters.',
-        icon: Search,
-        iconBg: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
+        lab: 'Explore',
+        title: 'See your ranked matches',
+        copy: 'Fit Scores and admission odds, ordered by what actually suits you — not a league table.',
+        widget: (
+            <AppFrame title="Top matches">
+                <div className="space-y-2.5">
+                    <MatchCard name="TU Delft" sub="Safe · Aerospace" score={92} colorClass="stroke-emerald-500" compact />
+                    <MatchCard name="Imperial College" sub="Match · Aeronautics" score={85} colorClass="stroke-amber-500" compact />
+                </div>
+            </AppFrame>
+        ),
     },
     {
+        lab: 'Act',
         title: 'Build & share your plan',
-        copy: 'Automatic timelines for essays, tests, references, and direct apply quirks. Share with collaborators instantly.',
-        icon: Rocket,
-        iconBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-    }
+        copy: 'Auto-timelines for essays and deadlines — shared with your counsellor and family in a tap.',
+        widget: (
+            <AppFrame title="This week">
+                <div className="space-y-2.5">
+                    <TaskRow tone="amber" title="Draft scholarship essay" sub="Toolbox" due="3d" compact />
+                    <TaskRow tone="sky" title="Confirm reference" sub="Ms Okonkwo" due="6d" compact />
+                    <TaskRow tone="emerald" title="Submit UCAS" sub="Cambridge" due="Ready" compact />
+                </div>
+            </AppFrame>
+        ),
+    },
 ];
 
 export function ShortlistSection() {
     return (
-        <section className="w-full py-24 bg-background">
+        <section id="how-it-works" className="w-full py-24 bg-background sm:py-32 scroll-mt-14">
             <div className="max-w-7xl mx-auto px-6">
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
-                    <AnimatedSection className="max-w-2xl space-y-4">
-                        <h2 className="text-4xl md:text-5xl font-heading font-bold text-foreground tracking-tight">Your shortlist in 3 steps</h2>
-                        <p className="text-lg text-muted-foreground leading-relaxed max-w-xl">The easiest way to see what&apos;s next, why it matters, and how to act.</p>
-                    </AnimatedSection>
-                </div>
+                <AnimatedSection className="max-w-2xl space-y-4 mb-14">
+                    <p className="text-sm font-medium uppercase tracking-widest text-primary/80">How it works</p>
+                    <h2 className="text-4xl md:text-5xl font-heading font-bold text-foreground tracking-tight">
+                        Three steps from sign-up to a plan you can share.
+                    </h2>
+                    <p className="text-lg text-muted-foreground leading-relaxed max-w-xl">
+                        See what&apos;s next, why it matters, and what to do — then share the plan.
+                    </p>
+                </AnimatedSection>
 
-                <div className="grid gap-6 md:grid-cols-3">
-                    {steps.map((step, index) => {
-                        const Icon = step.icon;
-                        return (
-                            <motion.div
-                                key={step.title}
-                                className="group relative flex flex-col justify-between rounded-3xl border border-border/40 bg-card p-8 hover:shadow-lg transition-all duration-500 hover:-translate-y-1"
-                                initial={{ opacity: 0, y: 24 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true, amount: 0.3 }}
-                                transition={{ duration: 0.5, delay: index * 0.12 }}
-                            >
-                                <div className="space-y-6">
-                                    <div className="flex items-center gap-4">
-                                        <div className={cn('flex h-12 w-12 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110', step.iconBg)}>
-                                            <Icon className="h-5 w-5" />
-                                        </div>
-                                        <span className="text-xs font-bold uppercase tracking-widest text-primary/70">Step {index + 1}</span>
-                                    </div>
-
-                                    <div>
-                                        <h3 className="text-2xl font-bold text-foreground mb-3">{step.title}</h3>
-                                        <p className="text-muted-foreground leading-relaxed">{step.copy}</p>
-                                    </div>
-                                </div>
-
-                                {/* Connecting line between steps */}
-                                {index < steps.length - 1 && (
-                                    <div className="absolute -right-3 top-1/2 hidden md:flex items-center z-10">
-                                        <div className="h-px w-6 bg-border" />
-                                        <div className="h-2 w-2 rounded-full border-2 border-border bg-background" />
-                                    </div>
+                <div className="grid gap-y-12 gap-x-6 md:grid-cols-3">
+                    {steps.map((step, index) => (
+                        <motion.div
+                            key={step.title}
+                            className="relative"
+                            initial={{ opacity: 0, y: 24 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, amount: 0.3 }}
+                            transition={{ duration: 0.5, delay: index * 0.12 }}
+                        >
+                            <span
+                                className={cn(
+                                    'absolute -left-1.5 -top-3.5 z-10 grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br text-sm font-bold text-white shadow-lg',
+                                    NUMBER_GRADIENTS[index],
                                 )}
-
-                                {/* Bottom accent */}
-                                <div className="absolute bottom-0 left-0 h-0.5 w-0 group-hover:w-full bg-gradient-to-r from-primary/30 to-transparent transition-all duration-500" />
-                            </motion.div>
-                        );
-                    })}
+                            >
+                                {index + 1}
+                            </span>
+                            {step.widget}
+                            <p className="mt-4 text-xs font-bold uppercase tracking-[0.12em] text-primary">{step.lab}</p>
+                            <h3 className="mt-1.5 text-xl font-heading font-bold tracking-tight text-foreground">{step.title}</h3>
+                            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{step.copy}</p>
+                        </motion.div>
+                    ))}
                 </div>
             </div>
         </section>

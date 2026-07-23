@@ -1,46 +1,24 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { ArrowRight, Check, X } from 'lucide-react';
 import { fadeIn } from '@/lib/motion';
-import { cn } from '@/lib/utils';
-import { X, Check } from 'lucide-react';
+import { AppFrame, StatTile, TaskRow } from './product-widgets';
 
-const comparisons = [
-    {
-        title: 'Without Ascenda',
-        bullets: [
-            'Confusing choices → waste time on wrong universities.',
-            'Scattered info → miss deadlines.',
-            'Generic advice → one size fits all stress.',
-            'Frustration at every step.'
-        ]
-    },
-    {
-        title: 'With Ascenda',
-        bullets: [
-            'Smart matches → focus on what fits you.',
-            'Centralized workspace → track everything in one place.',
-            'Personalized guidance → roadmap built with you.',
-            'Confidence & clarity → calm, organized journey.'
-        ]
-    }
+// Positions form an overlapping diagonal "pile" on md+ (fills the box instead of
+// pinning cards to empty corners); on mobile they render as a plain stacked list.
+const chaosNotes = [
+    { h: 'Rankings', body: 'League table says one thing, the forum says another.', pos: 'md:left-[5%] md:top-[3%] md:z-10 md:-rotate-[5deg]' },
+    { h: 'Everywhere', body: '40 tabs, 3 spreadsheets, a notes app.', pos: 'md:left-[34%] md:top-[24%] md:z-30 md:rotate-[3deg]' },
+    { h: 'Too late', body: 'Found out about the deadline the day it closed.', pos: 'md:left-[8%] md:top-[47%] md:z-20 md:-rotate-[2deg]' },
+    { h: 'Vague', body: '“Just apply broadly and see what happens.”', pos: 'md:left-[33%] md:top-[68%] md:z-40 md:rotate-[4deg]' },
 ];
 
-const splitComparisonCopy = (copy: string) => {
-    const [headline, detail] = copy.split('→');
-    return {
-        headline: headline?.trim() ?? '',
-        detail: detail?.trim() ?? ''
-    };
-};
-
-const comparisonPairs = comparisons[0].bullets.map((bullet, index) => {
-    const withBullet = comparisons[1]?.bullets[index] ?? '';
-    return {
-        without: splitComparisonCopy(bullet),
-        with: splitComparisonCopy(withBullet)
-    };
-});
+const clarityPoints = [
+    'One ranked list, scored to you.',
+    'Every programme, task and deadline in one workspace.',
+    'Deadlines that find you — before they bite.',
+];
 
 export function ComparisonSection() {
     return (
@@ -52,94 +30,72 @@ export function ComparisonSection() {
                 viewport={{ once: true, amount: 0.2 }}
                 variants={fadeIn}
             >
-                <div
-                    className={cn(
-                        'relative overflow-hidden rounded-3xl text-foreground',
-                        'border border-border bg-card shadow-xl',
-                        'dark:bg-card dark:shadow-lg'
-                    )}
-                >
-                    {/* Background gradient */}
-                    <div className="pointer-events-none absolute inset-0 opacity-30">
-                        <div className="h-full w-full bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.12),_transparent_55%)] dark:bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.08),_transparent_60%)]" />
+                <div className="max-w-2xl space-y-3">
+                    <p className="text-sm font-medium uppercase tracking-widest text-primary/80">With &amp; without Ascenda</p>
+                    <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground tracking-tight">
+                        Same student. Different year.
+                    </h2>
+                    <p className="text-base text-muted-foreground max-w-lg leading-relaxed">
+                        The mess on the left. One ranked, shareable plan on the right.
+                    </p>
+                </div>
+
+                <div className="mt-12 grid items-center gap-8 md:grid-cols-[1fr_auto_1fr] md:gap-6">
+                    {/* Without — chaos */}
+                    <div>
+                        <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-rose-500/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.05em] text-rose-700 dark:text-rose-400">
+                            <X className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />
+                            Without Ascenda
+                        </span>
+                        {/* Mobile: a plain stacked list. md+: absolutely-positioned, rotated "mess". */}
+                        <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-rose-500/30 bg-rose-500/[0.04] p-4 md:relative md:block md:h-[360px] md:overflow-hidden md:p-0">
+                            {/* faint stack of browser tabs behind the pile (scatter only) */}
+                            <div className="absolute right-[6%] top-[38%] hidden -rotate-6 gap-1.5 opacity-40 md:flex">
+                                {[0, 1, 2, 3].map((i) => (
+                                    <span key={i} className="h-[30px] w-[50px] rounded-t-md border border-b-0 border-border bg-muted/60" />
+                                ))}
+                            </div>
+                            {chaosNotes.map((note) => (
+                                <div
+                                    key={note.h}
+                                    className={`rounded-xl border border-border bg-card p-3.5 text-[0.8125rem] font-medium leading-snug shadow-lg dark:border-white/10 md:absolute md:max-w-[236px] ${note.pos}`}
+                                >
+                                    <span className="mb-1 block text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-rose-700 dark:text-rose-400">
+                                        {note.h}
+                                    </span>
+                                    {note.body}
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
-                    <div className="relative p-6 sm:p-10">
-                        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-10">
-                            <div className="space-y-2">
-                                <p className="text-xs uppercase tracking-[0.4em] text-primary font-semibold">With & without Ascenda</p>
-                                <h2 className="text-3xl font-heading font-bold text-foreground">Same student. Different outcome.</h2>
-                                <p className="text-sm text-muted-foreground max-w-lg">
-                                    Feel the delta between chaos and clarity. Each row pairs the old grind with the Ascenda way.
-                                </p>
+                    {/* Arrow */}
+                    <div className="grid place-items-center">
+                        <span className="grid h-11 w-11 place-items-center rounded-full border border-border bg-card text-muted-foreground shadow-md max-md:rotate-90">
+                            <ArrowRight className="h-5 w-5" aria-hidden />
+                        </span>
+                    </div>
+
+                    {/* With — clarity */}
+                    <div>
+                        <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.05em] text-emerald-700 dark:text-emerald-400">
+                            <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />
+                            With Ascenda
+                        </span>
+                        <AppFrame title="Your dashboard">
+                            <div className="mb-3 grid grid-cols-3 gap-2.5">
+                                <StatTile label="Matches" value={18} />
+                                <StatTile label="This week" value={3} />
+                                <StatTile label="Profile" value={100} suffix="%" accent />
                             </div>
-                            <div className="flex flex-wrap gap-4 text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                                <span className="flex items-center gap-2">
-                                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-500/10">
-                                        <X className="h-3 w-3 text-rose-500" />
-                                    </span>
-                                    {comparisons[0].title}
-                                </span>
-                                <span className="flex items-center gap-2">
-                                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/10">
-                                        <Check className="h-3 w-3 text-emerald-500" />
-                                    </span>
-                                    {comparisons[1].title}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="space-y-5">
-                            {comparisonPairs.map((pair, index) => (
-                                <motion.div
-                                    key={`${pair.without.headline}-${pair.with.headline}-${index}`}
-                                    className="grid items-stretch gap-4 md:grid-cols-[1fr_auto_1fr]"
-                                    initial={{ opacity: 0, y: 12 }}
-                                    whileInView={{ opacity: 1, y: 0 }}
-                                    viewport={{ once: true, amount: 0.2 }}
-                                    transition={{ duration: 0.4, delay: index * 0.08 }}
-                                >
-                                    {/* Without card */}
-                                    <div className="group rounded-2xl p-5 border border-border/60 bg-muted/30 transition-all duration-300 hover:bg-muted/50 dark:bg-muted/10">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-500/10">
-                                                <X className="h-3 w-3 text-rose-500" />
-                                            </span>
-                                            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.3em] text-rose-500">
-                                                {comparisons[0].title}
-                                            </p>
-                                        </div>
-                                        <h3 className="text-[0.9375rem] font-semibold text-foreground">{pair.without.headline}</h3>
-                                        {pair.without.detail && <p className="mt-1 text-sm text-muted-foreground">{pair.without.detail}</p>}
-                                    </div>
-
-                                    {/* VS divider */}
-                                    <div className="relative flex flex-col items-center justify-center gap-1">
-                                        {index !== 0 && (
-                                            <span className="hidden h-4 w-px md:block bg-border/60" />
-                                        )}
-                                        <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-[0.625rem] font-bold uppercase tracking-[0.2em] text-muted-foreground shadow-sm">
-                                            vs
-                                        </span>
-                                        {index !== comparisonPairs.length - 1 && (
-                                            <span className="hidden h-4 w-px md:block bg-border/60" />
-                                        )}
-                                    </div>
-
-                                    {/* With card */}
-                                    <div className="group rounded-2xl p-5 border border-emerald-500/20 bg-emerald-50/60 transition-all duration-300 hover:bg-emerald-50/80 hover:shadow-md dark:border-emerald-500/15 dark:bg-emerald-500/[0.04] dark:hover:bg-emerald-500/[0.07]">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/10">
-                                                <Check className="h-3 w-3 text-emerald-500" />
-                                            </span>
-                                            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">
-                                                {comparisons[1].title}
-                                            </p>
-                                        </div>
-                                        <h3 className="text-[0.9375rem] font-semibold text-foreground">{pair.with.headline}</h3>
-                                        {pair.with.detail && <p className="mt-1 text-sm text-muted-foreground">{pair.with.detail}</p>}
-                                    </div>
-                                </motion.div>
+                            <TaskRow tone="emerald" title="Next move: submit Cambridge" sub="Everything ready" due="Go" />
+                        </AppFrame>
+                        <div className="mt-4 flex flex-col gap-2.5">
+                            {clarityPoints.map((pt) => (
+                                <div key={pt} className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" strokeWidth={2.4} aria-hidden />
+                                    {pt}
+                                </div>
                             ))}
                         </div>
                     </div>
