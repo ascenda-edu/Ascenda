@@ -1,7 +1,10 @@
 'use client';
 
+import { useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useReducedMotion } from 'framer-motion';
+import { Clock, Coins, GraduationCap, MapPin } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { MatchTier } from '@/lib/matching/match-tier';
@@ -24,6 +27,30 @@ export interface UniversityCardProps {
     variant?: 'default' | 'compact';
     trackingLabelVariant?: TrackLabelVariant;
     hideTrackingButton?: boolean;
+    // Pre-normalized display strings supplied by the search page (never raw
+    // duration/level/tuition). Optional so matches/shortlist callers stay valid.
+    tuitionLabel?: string | null;
+    durationLabel?: string | null;
+    levelLabel?: string | null;
+    country?: string | null;
+}
+
+// A single icon+text stat used in the card's payoff row.
+function Stat({
+    icon: Icon,
+    children,
+    numeric = false,
+}: {
+    icon: typeof Clock;
+    children: React.ReactNode;
+    numeric?: boolean;
+}) {
+    return (
+        <span className="inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-foreground/80">
+            <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+            <span className={cn('truncate', numeric && 'tabular-nums')}>{children}</span>
+        </span>
+    );
 }
 
 export function UniversityCard({
@@ -39,143 +66,236 @@ export function UniversityCard({
     actions,
     variant = 'default',
     trackingLabelVariant = 'shortlist',
-    hideTrackingButton = false
+    hideTrackingButton = false,
+    tuitionLabel,
+    durationLabel,
+    levelLabel,
+    country,
 }: UniversityCardProps) {
+    const prefersReducedMotion = useReducedMotion();
+    const cardRef = useRef<HTMLElement>(null);
     const { value: scoreValue, badgeClass: scoreColorClass } = getFitScoreVisuals(fitScore);
     const courseHref = id ? `/course/${encodeURIComponent(id)}?from=search` : null;
+    const isCompact = variant === 'compact';
+
+    // Pointer-tracked spotlight — writes CSS custom properties straight to the
+    // node (no React state per mousemove). Skipped entirely when the user
+    // prefers reduced motion; the overlay itself is hidden on touch via a
+    // hover-capable media guard.
+    const handlePointerMove = useCallback(
+        (e: React.PointerEvent<HTMLElement>) => {
+            const el = cardRef.current;
+            if (!el) return;
+            const rect = el.getBoundingClientRect();
+            el.style.setProperty('--spot-x', `${e.clientX - rect.left}px`);
+            el.style.setProperty('--spot-y', `${e.clientY - rect.top}px`);
+        },
+        []
+    );
+
+    const metaLocation = location || country || '';
+
+    const stats = [
+        tuitionLabel ? { key: 'tuition', icon: Coins, label: tuitionLabel, numeric: true } : null,
+        durationLabel ? { key: 'duration', icon: Clock, label: durationLabel, numeric: false } : null,
+        levelLabel ? { key: 'level', icon: GraduationCap, label: levelLabel, numeric: false } : null,
+    ].filter((s): s is { key: string; icon: typeof Clock; label: string; numeric: boolean } => s !== null);
+
+    const logo = logoUrl ? (
+        <div
+            className={cn(
+                'relative shrink-0 overflow-hidden rounded-xl border border-border bg-white shadow-sm dark:border-white/10',
+                isCompact ? 'h-10 w-10' : 'h-10 w-10'
+            )}
+        >
+            <Image src={logoUrl} alt={`${name} logo`} fill className="object-contain p-1" sizes="40px" />
+        </div>
+    ) : null;
+
+    const fitBadge =
+        scoreValue !== null ? (
+            <span
+                className={cn(
+                    'inline-flex shrink-0 items-center gap-1 rounded-full border border-black/5 px-2.5 py-1 text-xs font-semibold ring-1 ring-inset dark:border-white/10',
+                    scoreColorClass
+                )}
+            >
+                <span className="tabular-nums">{scoreValue}%</span>
+                <span className="font-medium opacity-80">{tier ? tier.toLowerCase() : 'fit'}</span>
+            </span>
+        ) : null;
+
+    const identity = (
+        <div className="flex min-w-0 items-start gap-3">
+            {logo}
+            <div className="min-w-0">
+                <h3
+                    className={cn('font-heading font-semibold text-foreground', isCompact ? 'line-clamp-1 text-sm' : 'line-clamp-2 text-base')}
+                    title={name}
+                >
+                    {name}
+                </h3>
+                <p
+                    className={cn('text-sm text-muted-foreground', isCompact ? 'line-clamp-1' : 'line-clamp-2')}
+                    title={program}
+                >
+                    {program}
+                </p>
+            </div>
+        </div>
+    );
+
+    const metaLine = metaLocation ? (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span className="truncate" title={metaLocation}>
+                {metaLocation}
+            </span>
+        </div>
+    ) : null;
+
+    const statsStrip =
+        stats.length > 0 ? (
+            <div
+                className={cn(
+                    'flex flex-wrap items-center gap-x-4 gap-y-1.5',
+                    !isCompact && 'border-t border-border/60 pt-3'
+                )}
+            >
+                {stats.map((s) => (
+                    <Stat key={s.key} icon={s.icon} numeric={s.numeric}>
+                        {s.label}
+                    </Stat>
+                ))}
+            </div>
+        ) : null;
+
+    const actionRow = actions ? (
+        actions
+    ) : (
+        <div className="flex items-center gap-2">
+            {courseHref ? (
+                <Link
+                    href={courseHref}
+                    className={cn(
+                        buttonVariants({ size: 'sm' }),
+                        'flex-1 whitespace-nowrap rounded-full font-semibold shadow-sm'
+                    )}
+                    prefetch={false}
+                >
+                    {ACTION_TEXT.viewCourse}
+                </Link>
+            ) : (
+                <Button size="sm" className="flex-1 whitespace-nowrap rounded-full font-semibold shadow-sm" disabled>
+                    {ACTION_TEXT.viewCourse}
+                </Button>
+            )}
+            {!hideTrackingButton && (
+                <TrackProgramButton
+                    programId={id}
+                    programName={program}
+                    universityName={name}
+                    location={location}
+                    fitScore={fitScore ?? null}
+                    labelVariant={trackingLabelVariant}
+                    iconOnly
+                />
+            )}
+        </div>
+    );
+
+    const spotlight = (
+        <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 hidden opacity-0 transition-opacity duration-300 group-hover:opacity-100 [@media(hover:hover)]:block"
+            style={{
+                background:
+                    'radial-gradient(360px circle at var(--spot-x, 50%) var(--spot-y, 0%), hsl(var(--primary) / 0.06), transparent 70%)',
+            }}
+        />
+    );
+
+    if (isCompact) {
+        return (
+            <article
+                ref={cardRef}
+                onPointerMove={prefersReducedMotion ? undefined : handlePointerMove}
+                className="group relative flex h-full items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:hover:border-primary/40"
+            >
+                {spotlight}
+                <div className="relative z-10 min-w-0 flex-1 space-y-1.5">
+                    <div className="flex items-start justify-between gap-3">
+                        {identity}
+                        {fitBadge}
+                    </div>
+                    {metaLine}
+                    {statsStrip}
+                </div>
+                <div className="relative z-10 shrink-0">{actionRow}</div>
+            </article>
+        );
+    }
 
     return (
         <article
-            className={cn(
-                'group relative flex h-full flex-col overflow-hidden rounded-[28px] border border-border bg-card/80 shadow-[0_22px_50px_-28px_rgba(15,23,42,0.38)] backdrop-blur-xl transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1.5 hover:shadow-[0_28px_70px_-30px_rgba(15,23,42,0.42)] dark:bg-muted/20 dark:border-white/10 dark:shadow-none dark:hover:border-primary/50 dark:hover:bg-muted/30',
-                variant === 'compact' ? 'p-4' : 'p-5'
-            )}
+            ref={cardRef}
+            onPointerMove={prefersReducedMotion ? undefined : handlePointerMove}
+            className="group relative flex h-full flex-col rounded-2xl border border-border bg-card p-5 shadow-sm transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-1 hover:shadow-md dark:border-white/10 dark:hover:border-primary/40"
         >
-            <span
-                className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(79,70,229,0.14),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.1),transparent_32%)] opacity-80"
-                aria-hidden
-            />
-            <span
-                className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"
-                aria-hidden
-            />
-            {/* Header: Score & Location */}
-            <div className="relative z-10 flex items-start justify-between">
-                <div className={cn('flex items-center justify-center rounded-[18px] border border-white/50 ring-4 shadow-[0_16px_30px_-20px_rgba(15,23,42,0.55)]', scoreColorClass, variant === 'compact' ? 'h-10 w-10' : 'h-12 w-12')}>
-                    <span className={cn('font-bold', variant === 'compact' ? 'text-xs' : 'text-sm')}>
-                        {scoreValue !== null ? `${scoreValue}%` : 'N/A'}
-                    </span>
-                </div>
-                <div className="text-right">
-                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">{location}</p>
-                    {tier ? (
-                        <p className="mt-1 text-xs font-semibold text-foreground/80">{tier} tier</p>
-                    ) : null}
-                </div>
-            </div>
-
-            {/* Content */}
-            <div className="relative z-10 mt-4 flex-1">
-                <div className="flex items-center gap-3">
-                    {logoUrl ? (
-                        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-border bg-black shadow-sm">
-                            <Image
-                                src={logoUrl}
-                                alt={`${name} logo`}
-                                fill
-                                className="object-contain"
-                                sizes="48px"
-                            />
-                        </div>
-                    ) : null}
-                    <div className="min-w-0">
-                        <h3
-                            className={cn('font-bold text-foreground line-clamp-1', variant === 'compact' ? 'text-lg' : 'text-xl')}
-                            title={name}
-                        >
-                            {name}
-                        </h3>
-                        <p className="text-sm font-medium text-muted-foreground line-clamp-1" title={program}>
-                            {program}
-                        </p>
-                    </div>
+            {spotlight}
+            <div className="relative z-10 flex h-full flex-col">
+                {/* Identity + fit badge */}
+                <div className="flex items-start justify-between gap-3">
+                    {identity}
+                    {fitBadge}
                 </div>
 
-                {/* Highlights */}
+                {/* Meta line */}
+                {metaLine ? <div className="mt-2.5">{metaLine}</div> : null}
+
+                {/* Highlights (matches / shortlist path) */}
                 {highlights.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-3 flex flex-wrap gap-2">
                         {highlights.slice(0, 3).map((highlight) => (
                             <span
                                 key={highlight}
-                                className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-2.5 py-1 text-[0.6875rem] font-medium text-foreground/80 shadow-sm"
+                                className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-[0.6875rem] font-medium text-foreground/80 dark:bg-muted/30"
                             >
                                 {highlight}
                             </span>
                         ))}
                         {highlights.length > 3 && (
-                            <span className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-2.5 py-1 text-[0.6875rem] font-medium text-muted-foreground shadow-sm">
+                            <span className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-[0.6875rem] font-medium text-muted-foreground dark:bg-muted/30">
                                 +{highlights.length - 3}
                             </span>
                         )}
                     </div>
                 )}
 
-                {/* Eligibility Reasons */}
+                {/* Eligibility reasons (matches path) */}
                 {reasons.length > 0 && (
-                    <div className="mt-3 flex flex-col gap-1.5">
-                        <p className="text-[0.625rem] uppercase tracking-wider text-muted-foreground/70 font-semibold px-1">Eligibility Details</p>
-                        <div className="flex flex-col gap-1">
-                            {reasons.map((reason, idx) => (
-                                <div
-                                    key={idx}
-                                    className={cn(
-                                        "text-[0.6875rem] px-2 py-1 rounded-lg border",
-                                        reason.includes("below requirement") || reason.includes("missing")
-                                            ? "bg-red-500/5 border-red-500/20 text-red-600 dark:text-red-400"
-                                            : "bg-emerald-500/5 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                                    )}
-                                >
-                                    {reason}
-                                </div>
-                            ))}
-                        </div>
+                    <div className="mt-3 flex flex-col gap-1">
+                        {reasons.map((reason, idx) => (
+                            <div
+                                key={idx}
+                                className={cn(
+                                    'rounded-lg border px-2 py-1 text-[0.6875rem]',
+                                    reason.includes('below requirement') || reason.includes('missing')
+                                        ? 'border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300'
+                                        : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                )}
+                            >
+                                {reason}
+                            </div>
+                        ))}
                     </div>
                 )}
-            </div>
 
-            {/* Actions */}
-            <div className="relative z-10 mt-6 grid grid-cols-2 gap-3">
-                {actions ? (
-                    actions
-                ) : (
-                    <>
-                        {courseHref ? (
-                            <Link
-                                href={courseHref}
-                                className={cn(
-                                    buttonVariants({ size: 'sm', className: 'w-full rounded-full font-semibold shadow-sm' })
-                                )}
-                                prefetch={false}
-                            >
-                                {ACTION_TEXT.viewCourse}
-                            </Link>
-                        ) : (
-                            <Button size="sm" className="w-full rounded-full font-semibold shadow-sm" disabled>
-                                {ACTION_TEXT.viewCourse}
-                            </Button>
-                        )}
-                        {!hideTrackingButton && (
-                            <TrackProgramButton
-                                programId={id}
-                                programName={program}
-                                universityName={name}
-                                location={location}
-                                fitScore={fitScore ?? null}
-                                labelVariant={trackingLabelVariant}
-                            />
-                        )}
-                    </>
-                )}
+                {/* Footer: stats strip (the payoff row) + actions, pinned to the bottom */}
+                <div className="mt-auto flex flex-col gap-4 pt-4">
+                    {statsStrip}
+                    {actionRow}
+                </div>
             </div>
         </article>
     );

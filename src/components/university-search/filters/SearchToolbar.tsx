@@ -78,9 +78,11 @@ export function SearchToolbar({
   // rounded radius doesn't need overflow clipping.
   return (
     <div className="surface-toolbar !overflow-visible sticky top-20 sm:top-24 z-20 rounded-2xl !px-3 !py-3 sm:!px-4">
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      {/* Stable layout: one row on lg+, an intentional two-row wrap below (search
+          on the first row, controls on the second) — never a jumpy 1↔2 reflow. */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <form
-          className="min-w-[12rem] flex-1"
+          className="w-full lg:min-w-[200px] lg:flex-1"
           onSubmit={(e) => {
             e.preventDefault();
             onSubmitQuery();
@@ -95,16 +97,16 @@ export function SearchToolbar({
           />
         </form>
 
-        <div className="order-3 flex-1 sm:order-none sm:flex-none">
-          <CountText
-            resultCount={resultCount}
-            totalCount={totalCount}
-            isClientFiltered={isClientFiltered}
-            isLoading={isLoading}
-          />
-        </div>
+        <div className="flex items-center gap-2">
+          <div className="mr-auto hidden md:block lg:mr-2">
+            <CountText
+              resultCount={resultCount}
+              totalCount={totalCount}
+              isClientFiltered={isClientFiltered}
+              isLoading={isLoading}
+            />
+          </div>
 
-        <div className="ml-auto flex items-center gap-2 sm:ml-0">
           <SortMenu value={sort} onChange={onSortChange} />
 
           <div

@@ -94,6 +94,8 @@ type FacetOptions = { countries: string[]; subjects: string[]; levels: string[] 
 interface FacetSectionsProps {
   filters: SearchFilters;
   facets: FacetOptions;
+  /** When false, the loaded results carry no fit tiers — swap the tier pills for a quiet nudge. */
+  showTierFacet: boolean;
   onToggleCountry: (v: string) => void;
   onToggleSubject: (v: string) => void;
   onToggleLevel: (v: string) => void;
@@ -108,6 +110,7 @@ interface FacetSectionsProps {
 function FacetSections({
   filters,
   facets,
+  showTierFacet,
   onToggleCountry,
   onToggleSubject,
   onToggleLevel,
@@ -169,9 +172,18 @@ function FacetSections({
       <FacetGroup
         title="Fit tier"
         icon={Layers3}
-        activeCount={filters.tiers.length < ALL_TIERS.length ? filters.tiers.length : 0}
+        activeCount={showTierFacet && filters.tiers.length < ALL_TIERS.length ? filters.tiers.length : 0}
       >
-        <TierPills selected={filters.tiers} onToggle={onToggleTier} />
+        {showTierFacet ? (
+          <TierPills selected={filters.tiers} onToggle={onToggleTier} />
+        ) : (
+          <div className="surface-subcard !p-4 text-xs leading-relaxed text-muted-foreground">
+            Fit filters unlock once your profile has match scores.{' '}
+            <Link href="/profile/wizard" className="font-semibold text-primary hover:underline">
+              Complete your profile
+            </Link>
+          </div>
+        )}
       </FacetGroup>
 
       <div className="py-3">
@@ -530,10 +542,15 @@ function UnifiedSearchInner() {
     return () => observer.disconnect();
   }, [hasMore, isLoading, isLoadingMore, filters.programId, loadMore]);
 
+  // Keep the tier pills while loading (we don't yet know if scores exist); hide
+  // them only once a non-empty result set has come back with no tiers at all.
+  const showTierFacet = isLoading || results.length === 0 || results.some((r) => Boolean(r.tier));
+
   const facetSections = (
     <FacetSections
       filters={filters}
       facets={facets}
+      showTierFacet={showTierFacet}
       onToggleCountry={handleToggleCountry}
       onToggleSubject={handleToggleSubject}
       onToggleLevel={handleToggleLevel}
@@ -563,8 +580,6 @@ function UnifiedSearchInner() {
 
       <SavedSearchesRow />
 
-      {activeChips.length > 0 ? <ActiveFilterBar chips={activeChips} onClearAll={handleClearAll} /> : null}
-
       <div className="grid items-start gap-6 lg:grid-cols-[280px,1fr]">
         <div className="hidden lg:block">
           <FilterRail onClearAll={handleClearAll} activeFilterCount={activeFilterCount}>
@@ -573,22 +588,28 @@ function UnifiedSearchInner() {
         </div>
 
         <section className="min-w-0 space-y-6">
-          <SearchToolbar
-            query={searchQuery}
-            onQueryChange={setSearchQuery}
-            onSubmitQuery={handleSubmitQuery}
-            onSelectSuggestion={handleSelectSuggestion}
-            resultCount={filteredResults.length}
-            totalCount={totalCount}
-            isClientFiltered={isClientFiltered}
-            isLoading={isLoading}
-            sort={filters.sort}
-            onSortChange={handleSortChange}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            activeFilterCount={activeFilterCount}
-            onOpenMobileFilters={() => setMobileFiltersOpen(true)}
-          />
+          <div className="space-y-3">
+            <SearchToolbar
+              query={searchQuery}
+              onQueryChange={setSearchQuery}
+              onSubmitQuery={handleSubmitQuery}
+              onSelectSuggestion={handleSelectSuggestion}
+              resultCount={filteredResults.length}
+              totalCount={totalCount}
+              isClientFiltered={isClientFiltered}
+              isLoading={isLoading}
+              sort={filters.sort}
+              onSortChange={handleSortChange}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              activeFilterCount={activeFilterCount}
+              onOpenMobileFilters={() => setMobileFiltersOpen(true)}
+            />
+
+            {activeChips.length > 0 ? (
+              <ActiveFilterBar chips={activeChips} onClearAll={handleClearAll} />
+            ) : null}
+          </div>
 
           {isLoading ? (
             <div className={gridClass}>
@@ -671,7 +692,9 @@ function UnifiedSearchInner() {
                     logoUrl={result.logoUrl ?? undefined}
                     fitScore={result.fitScore}
                     tier={result.tier ?? undefined}
-                    highlights={result.highlights}
+                    tuitionLabel={result.tuitionLabel}
+                    durationLabel={result.durationLabel}
+                    levelLabel={result.levelLabel}
                     variant={viewMode === 'list' ? 'compact' : 'default'}
                   />
                 </motion.div>

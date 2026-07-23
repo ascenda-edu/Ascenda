@@ -15,13 +15,7 @@ interface RangeSliderProps {
   formatValue?: (n: number) => string;
 }
 
-const defaultFormat = (n: number): string => {
-  if (n >= 1000) {
-    const k = n / 1000;
-    return `£${Number.isInteger(k) ? k : k.toFixed(1)}k`;
-  }
-  return `£${n}`;
-};
+const defaultFormat = (n: number): string => `£${n.toLocaleString('en-GB')}`;
 
 type Thumb = 'min' | 'max';
 

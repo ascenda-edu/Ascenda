@@ -37,6 +37,9 @@ export default function UniversitySearchShortlistPage() {
         fitScore: item.fitScore ?? null,
         tier: null,
         highlights: [],
+        durationLabel: null,
+        levelLabel: null,
+        tuitionLabel: null,
         requiresTest: null,
       })),
     [items]

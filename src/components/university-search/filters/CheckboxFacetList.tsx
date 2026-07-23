@@ -64,7 +64,7 @@ export function CheckboxFacetList({
                   role="checkbox"
                   aria-checked={checked}
                   onClick={() => onToggle(option)}
-                  className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm transition-colors cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                  className="flex min-h-[40px] w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm transition-colors cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                 >
                   <span
                     aria-hidden

@@ -34,7 +34,7 @@ export interface SearchFilters {
   tuitionMax: number | null;
   /** wellKnown: recognition_score ≥ 5 · topTier: recognition_score ≥ 8 */
   ranking: RankingBand;
-  /** universities.requires_test = false */
+  /** excludes programmes where admission_test = 'Required' */
   testOptional: boolean;
   /** Client-side fit-tier filter over loaded results (existing behaviour) */
   tiers: MatchTier[];

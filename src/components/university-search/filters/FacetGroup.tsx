@@ -24,7 +24,7 @@ export function FacetGroup({ title, icon: Icon, activeCount = 0, defaultOpen = t
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-controls={bodyId}
-        className="flex min-h-[44px] w-full items-center justify-between gap-3 py-4 text-left transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:rounded-lg"
+        className="flex min-h-[44px] w-full items-center justify-between gap-3 py-3.5 text-left transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:rounded-lg"
       >
         <span className="flex items-center gap-2.5">
           {Icon ? <Icon className="h-4 w-4 text-muted-foreground" aria-hidden /> : null}
