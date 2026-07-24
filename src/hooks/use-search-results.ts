@@ -81,7 +81,6 @@ type UniListRow = {
   country: string | null;
   recognition_score: number | null;
   rank_overall: number | null;
-  requires_test: boolean | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -103,7 +102,7 @@ const loadUniversities = async (
     universitiesPromise = (async () => {
       const { data, error } = await supabase
         .from('universities')
-        .select('id, name, country, recognition_score, rank_overall, requires_test');
+        .select('id, name, country, recognition_score, rank_overall');
       if (error) {
         universitiesPromise = null; // allow a retry on the next call
         throw error;
@@ -224,7 +223,6 @@ type UniConstraint =
       kind: 'embedded';
       countries: string[];
       recognitionGte: number | null;
-      requiresTestFalse: boolean;
     };
 
 interface QueryCtx {
@@ -236,6 +234,8 @@ interface QueryCtx {
   tuitionMin: number | null;
   tuitionMax: number | null;
   tuitionNotNull: boolean;
+  /** Test-optional: exclude programmes whose admission_test = 'Required'. */
+  testOptional: boolean;
   uni: UniConstraint;
   courseWords: string[];
 }
@@ -268,6 +268,13 @@ const applyWhere = (query: any, ctx: QueryCtx, includeCourseWords: boolean) => {
   // two queries describe the same set.
   if (ctx.tuitionNotNull) q = q.not('yearly_international_tuition_fee_gbp', 'is', null);
 
+  // Test-optional — a PROGRAM-side constraint (universities.requires_test is
+  // false for every row, so the old uni-side filter was inert). Exclude
+  // programmes that REQUIRE a test. Plain `.neq('Required')` alone would also
+  // drop rows where admission_test is null, so OR the null case back in. Fixed
+  // literals only — never user input in `.or` (PostgREST parse safety).
+  if (ctx.testOptional) q = q.or('admission_test.is.null,admission_test.neq.Required');
+
   // University-side facets.
   switch (ctx.uni.kind) {
     case 'in':
@@ -282,7 +289,6 @@ const applyWhere = (query: any, ctx: QueryCtx, includeCourseWords: boolean) => {
       if (ctx.uni.recognitionGte !== null) {
         q = q.gte('universities.recognition_score', ctx.uni.recognitionGte);
       }
-      if (ctx.uni.requiresTestFalse) q = q.eq('universities.requires_test', false);
       break;
     case 'empty':
     case 'none':
@@ -334,6 +340,83 @@ const buildSelect = (join: '!left' | '!inner') => `
   )
 `;
 
+// ---------------------------------------------------------------------------
+// Card label normalisation. Raw programs.duration is free-text and frequently
+// garbage ("4F or 8P", "1 Years", duplicated fragments) — never render it. The
+// helpers below produce clean, display-ready labels or null (no pill).
+// ---------------------------------------------------------------------------
+const formatYears = (n: number): string => (n === 1 ? '1 year' : `${n} years`);
+
+const normalizeDurationLabel = (
+  duration: string | null,
+  durationYears: number | null
+): string | null => {
+  if (
+    durationYears !== null &&
+    Number.isFinite(durationYears) &&
+    durationYears > 0 &&
+    durationYears <= 10
+  ) {
+    return formatYears(durationYears);
+  }
+  if (duration) {
+    const yearMatch = duration.match(/(\d+(?:\.\d+)?)\s*(?:year|yr)/i);
+    if (yearMatch) {
+      const n = Number.parseFloat(yearMatch[1]);
+      if (Number.isFinite(n) && n > 0) return formatYears(n);
+    }
+    const monthMatch = duration.match(/(\d+)\s*month/i);
+    if (monthMatch) {
+      const n = Number.parseInt(monthMatch[1], 10);
+      if (Number.isFinite(n) && n > 0) return `${n} months`;
+    }
+  }
+  return null;
+};
+
+const normalizeLevelLabel = (level: string | null): string | null => {
+  if (!level) return null;
+  const trimmed = level.trim();
+  if (!trimmed) return null;
+  // Title-case: capitalise the first letter of each word, lowercase the rest.
+  return trimmed.replace(/\S+/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+};
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  GBP: '£',
+  USD: '$',
+  EUR: '€',
+  AUD: 'A$',
+  CAD: 'C$',
+  SGD: 'S$',
+};
+
+const currencySymbol = (currency: string | null): string => {
+  if (!currency) return '';
+  return CURRENCY_SYMBOLS[currency] ?? `${currency} `;
+};
+
+const buildTuitionLabel = (
+  tuition: number | null,
+  currency: string | null,
+  intlLow: number | null,
+  intlHigh: number | null
+): string | null => {
+  if (tuition !== null && Number.isFinite(tuition)) {
+    return `${currencySymbol(currency)}${tuition.toLocaleString('en-GB')}/yr`;
+  }
+  if (
+    intlLow !== null &&
+    intlHigh !== null &&
+    Number.isFinite(intlLow) &&
+    Number.isFinite(intlHigh)
+  ) {
+    const sym = currencySymbol(currency);
+    return `≈${sym}${Math.round(intlLow / 1000)}k–${Math.round(intlHigh / 1000)}k/yr`;
+  }
+  return null;
+};
+
 const mapRows = (
   rows: ProgramRow[],
   uniNameById: Map<string, string>,
@@ -363,8 +446,18 @@ const mapRows = (
     const tier = tierFromScore(score);
     const programName = program.course_name ?? program.name ?? 'Program';
     const level = program.study_level ?? program.level ?? null;
-    const duration =
-      program.duration ?? (program.duration_years ? `${program.duration_years} years` : null);
+    const currency = program.currency ?? uni?.currency ?? null;
+    const durationLabel = normalizeDurationLabel(
+      program.duration ?? null,
+      program.duration_years ?? null
+    );
+    const levelLabel = normalizeLevelLabel(level);
+    const tuitionLabel = buildTuitionLabel(
+      program.tuition ?? null,
+      currency,
+      uni?.intl_tuition_low ?? null,
+      uni?.intl_tuition_high ?? null
+    );
     return {
       id: program.id,
       universityId: uniId,
@@ -374,14 +467,19 @@ const mapRows = (
       logoUrl: logoUrl ?? null,
       fitScore: score ?? null,
       tier: tier ?? null,
-      highlights: [level, duration].filter(Boolean) as string[],
+      // Legacy consumers read `highlights` — build it from the clean labels so
+      // no raw duration/level garbage leaks through.
+      highlights: [levelLabel, durationLabel].filter(Boolean) as string[],
+      durationLabel,
+      levelLabel,
+      tuitionLabel,
       acceptanceRate: uni?.acceptance_rate ?? null,
-      duration: duration ?? null,
+      duration: durationLabel,
       intlTuitionLow: uni?.intl_tuition_low ?? null,
       intlTuitionHigh: uni?.intl_tuition_high ?? null,
       requiresTest: uni?.requires_test ?? null,
       tuition: program.tuition ?? null,
-      currency: program.currency ?? uni?.currency ?? null,
+      currency,
       studyLevel: level,
     };
   });
@@ -518,13 +616,14 @@ export function useSearchResults(filters: SearchFilters): SearchResultsState {
         // --- Resolve university-side facets (predicate over the uni list). ----
         const recognitionGte = rankingGteFor(f.ranking);
         const countrySet = new Set(f.countries);
-        const facetActive = f.countries.length > 0 || recognitionGte !== null || f.testOptional;
+        // testOptional is NO LONGER a university-side facet (it's applied
+        // program-side in applyWhere) — it must not narrow the uni set.
+        const facetActive = f.countries.length > 0 || recognitionGte !== null;
         const facetPredicate = (u: UniListRow) => {
           if (countrySet.size && !(u.country && countrySet.has(u.country))) return false;
           if (recognitionGte !== null && (u.recognition_score ?? -Infinity) < recognitionGte) {
             return false;
           }
-          if (f.testOptional && u.requires_test !== false) return false;
           return true;
         };
         const facetMatched = facetActive ? unis.filter(facetPredicate) : unis;
@@ -554,7 +653,6 @@ export function useSearchResults(filters: SearchFilters): SearchResultsState {
                   kind: 'embedded',
                   countries: f.countries,
                   recognitionGte,
-                  requiresTestFalse: f.testOptional,
                 };
         }
 
@@ -628,6 +726,7 @@ export function useSearchResults(filters: SearchFilters): SearchResultsState {
             tuitionMin: f.tuitionMin,
             tuitionMax: f.tuitionMax,
             tuitionNotNull: false,
+            testOptional: f.testOptional,
             uni: { kind: 'none' }, // uni set is expressed via the batch `.in` below
             courseWords: [],
           };
@@ -680,6 +779,7 @@ export function useSearchResults(filters: SearchFilters): SearchResultsState {
           tuitionMin: f.tuitionMin,
           tuitionMax: f.tuitionMax,
           tuitionNotNull,
+          testOptional: f.testOptional,
           uni,
           courseWords,
         };

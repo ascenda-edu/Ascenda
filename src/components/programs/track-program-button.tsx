@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { Bookmark, BookmarkCheck } from 'lucide-react';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { useShortlist } from '@/components/university-search/shortlist-store';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,9 @@ type TrackProgramButtonProps = {
   size?: ButtonProps['size'];
   variant?: ButtonProps['variant'];
   className?: string;
+  /** Icon-only bookmark button — for tight card action rows where a second
+   * text label can't fit. The label still reaches AT via aria-label/title. */
+  iconOnly?: boolean;
 };
 
 export const TrackProgramButton = ({
@@ -40,7 +44,8 @@ export const TrackProgramButton = ({
   labelVariant = 'shortlist',
   size = 'sm',
   variant,
-  className
+  className,
+  iconOnly = false
 }: TrackProgramButtonProps) => {
   const { items, addItem, removeItem } = useShortlist();
   const labels = useMemo(() => LABELS[labelVariant], [labelVariant]);
@@ -64,6 +69,29 @@ export const TrackProgramButton = ({
   };
 
   const resolvedVariant = variant ?? (isTracked ? 'secondary' : 'outline');
+
+  if (iconOnly) {
+    const label = isTracked ? labels.active : labels.idle;
+    return (
+      <Button
+        type="button"
+        size="icon"
+        variant={resolvedVariant}
+        className={cn(
+          'h-9 w-9 shrink-0 rounded-full',
+          isTracked &&
+            'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25',
+          className
+        )}
+        onClick={handleClick}
+        aria-pressed={isTracked}
+        aria-label={label}
+        title={label}
+      >
+        {isTracked ? <BookmarkCheck className="h-4 w-4" aria-hidden /> : <Bookmark className="h-4 w-4" aria-hidden />}
+      </Button>
+    );
+  }
 
   return (
     <Button

@@ -10,6 +10,12 @@ export type ProgramSearchResult = {
   fitScore?: number | null;
   tier?: MatchTier | null;
   highlights: string[];
+  /** Clean, display-ready duration label (e.g. "3 years", "18 months"); null when unparseable */
+  durationLabel: string | null;
+  /** Title-cased study level (e.g. "Bachelor"); null when absent */
+  levelLabel: string | null;
+  /** Formatted tuition (e.g. "£24,500/yr" or "≈£20k–35k/yr"); null when unknown */
+  tuitionLabel: string | null;
   acceptanceRate?: number | null;
   duration?: string | null;
   durationYears?: number | null;

@@ -44,6 +44,37 @@ type ShortlistRow = {
 };
 type Client = SupabaseClient<Database>;
 
+// Single-flight the remote hydrate. Every TrackProgramButton mounts its own
+// useShortlist() (50+ on a results page). Before this, each instance fired its
+// own SELECT before the first failure could flip remoteShortlistAvailable —
+// producing 50× 404 + 50× console.warn when the table is missing remotely.
+// Now the first mount for a given userId creates ONE promise (the SELECT); all
+// others await it. A `null` resolution means remote is unavailable (flag
+// flipped) and callers fall back to localStorage. The promise is keyed by
+// userId and reset when the id changes (sign in/out).
+let remoteHydratePromise: Promise<ShortlistRow[] | null> | null = null;
+let remoteHydrateUserId: string | null = null;
+
+const hydrateRemote = (client: Client, userId: string): Promise<ShortlistRow[] | null> => {
+  if (remoteHydratePromise && remoteHydrateUserId === userId) {
+    return remoteHydratePromise;
+  }
+  remoteHydrateUserId = userId;
+  remoteHydratePromise = (async (): Promise<ShortlistRow[] | null> => {
+    if (!remoteShortlistAvailable) return null;
+    const { data, error } = await (client as any)
+      .from(TABLE_NAME)
+      .select('program_id,program_name,university_name,location,fit_score,stage,next_action,due_date')
+      .eq('profile_id', userId);
+    if (error) {
+      markRemoteUnavailable(error);
+      return null;
+    }
+    return (data ?? []) as ShortlistRow[];
+  })();
+  return remoteHydratePromise;
+};
+
 export const useShortlist = () => {
   const [items, setItems] = useState<ShortlistItem[]>([]);
   const [ready, setReady] = useState(false);
@@ -162,19 +193,16 @@ export const useShortlist = () => {
         return;
       }
 
-      const { data, error } = await (supabase as any)
-        .from(TABLE_NAME)
-        .select('program_id,program_name,university_name,location,fit_score,stage,next_action,due_date')
-        .eq('profile_id', userId);
-
-      if (error) {
-        markRemoteUnavailable(error);
+      // Shared single-flight SELECT (see hydrateRemote). `null` = remote
+      // unavailable — the flag has been flipped, fall back to localStorage.
+      const remoteRows = await hydrateRemote(supabase, userId);
+      if (remoteRows === null) {
         setItems(localItems);
         setReady(true);
         return;
       }
 
-      const remoteItems: ShortlistItem[] = (data ?? []).map((row: ShortlistRow) => mapRowToItem(row as any));
+      const remoteItems: ShortlistItem[] = remoteRows.map((row) => mapRowToItem(row));
       const merged: ShortlistItem[] = [...remoteItems];
 
       // Merge in any local-only items and persist them remotely

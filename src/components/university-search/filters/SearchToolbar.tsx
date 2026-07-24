@@ -78,9 +78,11 @@ export function SearchToolbar({
   // rounded radius doesn't need overflow clipping.
   return (
     <div className="surface-toolbar !overflow-visible sticky top-20 sm:top-24 z-20 rounded-2xl !px-3 !py-3 sm:!px-4">
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      {/* Stable layout: one row on lg+, an intentional two-row wrap below (search
+          on the first row, controls on the second) — never a jumpy 1↔2 reflow. */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <form
-          className="min-w-[12rem] flex-1"
+          className="w-full lg:min-w-[200px] lg:flex-1"
           onSubmit={(e) => {
             e.preventDefault();
             onSubmitQuery();
@@ -95,22 +97,22 @@ export function SearchToolbar({
           />
         </form>
 
-        <div className="order-3 flex-1 sm:order-none sm:flex-none">
-          <CountText
-            resultCount={resultCount}
-            totalCount={totalCount}
-            isClientFiltered={isClientFiltered}
-            isLoading={isLoading}
-          />
-        </div>
+        <div className="flex items-center gap-2">
+          <div className="mr-auto hidden md:block lg:mr-2">
+            <CountText
+              resultCount={resultCount}
+              totalCount={totalCount}
+              isClientFiltered={isClientFiltered}
+              isLoading={isLoading}
+            />
+          </div>
 
-        <div className="ml-auto flex items-center gap-2 sm:ml-0">
           <SortMenu value={sort} onChange={onSortChange} />
 
           <div
             role="group"
             aria-label="View mode"
-            className="flex items-center gap-1 rounded-full border border-border bg-background p-1 dark:border-white/10"
+            className="flex items-center gap-1 rounded-full border border-transparent bg-transparent p-1 transition-colors hover:border-border dark:hover:border-white/10"
           >
             <button
               type="button"
@@ -141,7 +143,7 @@ export function SearchToolbar({
           <button
             type="button"
             onClick={onOpenMobileFilters}
-            className="relative inline-flex h-11 min-h-[44px] items-center gap-2 rounded-full border border-border bg-background px-4 text-sm font-medium text-foreground transition-[transform,box-shadow,border-color,background-color] duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:hidden dark:border-white/10"
+            className="relative inline-flex h-11 min-h-[44px] items-center gap-2 rounded-full border border-border bg-background px-4 text-sm font-medium text-foreground transition-[box-shadow,border-color,background-color] duration-200 cursor-pointer hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:hidden dark:border-white/10"
           >
             <SlidersHorizontal className="h-4 w-4 text-muted-foreground" aria-hidden />
             <span>Filters</span>

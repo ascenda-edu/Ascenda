@@ -2,11 +2,9 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { MatchTier } from '@/lib/matching/match-tier';
 import { TrackProgramButton, type TrackLabelVariant } from '@/components/programs/track-program-button';
-import { ACTION_TEXT } from '@/lib/constants/text';
 import { getFitScoreVisuals } from '@/lib/theme/fit-score';
 
 // Define a unified interface that covers both PlaceholderResult and EnrichedMatch
@@ -24,7 +22,22 @@ export interface UniversityCardProps {
     variant?: 'default' | 'compact';
     trackingLabelVariant?: TrackLabelVariant;
     hideTrackingButton?: boolean;
+    // Pre-normalized display strings supplied by the search page (never raw
+    // duration/level/tuition). Optional so matches/shortlist callers stay valid.
+    tuitionLabel?: string | null;
+    durationLabel?: string | null;
+    levelLabel?: string | null;
+    country?: string | null;
 }
+
+// Soft, quiet fit chip — tone-tinted background + hue-matched text, both with
+// dark handling. Replaces the old ring/border badge to match the house style.
+const FIT_TONE_CLASS: Record<string, string> = {
+    strong: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+    solid: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+    risk: 'bg-orange-500/10 text-orange-700 dark:text-orange-300',
+    unknown: 'bg-muted text-muted-foreground',
+};
 
 export function UniversityCard({
     id,
@@ -33,150 +46,206 @@ export function UniversityCard({
     location,
     logoUrl,
     fitScore,
-    tier,
     reasons = [],
     highlights = [],
     actions,
     variant = 'default',
     trackingLabelVariant = 'shortlist',
-    hideTrackingButton = false
+    hideTrackingButton = false,
+    tuitionLabel,
+    durationLabel,
+    levelLabel,
+    country,
 }: UniversityCardProps) {
-    const { value: scoreValue, badgeClass: scoreColorClass } = getFitScoreVisuals(fitScore);
+    const { value: scoreValue, tone } = getFitScoreVisuals(fitScore);
     const courseHref = id ? `/course/${encodeURIComponent(id)}?from=search` : null;
+    const isCompact = variant === 'compact';
+
+    // The default (search) card has no per-card button — the whole card is the
+    // link. Callers that pass `actions` (matches / shortlist) keep their own
+    // buttons, so the card is NOT a stretched-link there.
+    const isLinkCard = !actions && Boolean(courseHref);
+
+    const metaLocation = location || country || '';
+    const metaText = [tuitionLabel, durationLabel, levelLabel].filter(Boolean).join(' · ');
+
+    const logo = logoUrl ? (
+        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-border bg-white shadow-sm dark:border-white/10">
+            <Image src={logoUrl} alt={`${name} logo`} fill className="object-contain p-1" sizes="40px" />
+        </div>
+    ) : null;
+
+    const fitBadge =
+        scoreValue !== null ? (
+            <span
+                className={cn(
+                    'inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums',
+                    FIT_TONE_CLASS[tone] ?? FIT_TONE_CLASS.unknown
+                )}
+            >
+                {scoreValue}%
+            </span>
+        ) : null;
+
+    const ghostBookmark = !hideTrackingButton ? (
+        <TrackProgramButton
+            programId={id}
+            programName={program}
+            universityName={name}
+            location={location}
+            fitScore={fitScore ?? null}
+            labelVariant={trackingLabelVariant}
+            variant="ghost"
+            className="h-8 w-8 text-muted-foreground shadow-none hover:translate-y-0 hover:text-primary hover:shadow-none"
+            iconOnly
+        />
+    ) : null;
+
+    // Name is the stretched link (its `after:` overlay covers the card) only on
+    // the buttonless search path; on the actions path it stays plain text.
+    const nameEl =
+        isLinkCard && courseHref ? (
+            <Link
+                href={courseHref}
+                prefetch={false}
+                title={name}
+                className="focus-visible:outline-none after:absolute after:inset-0"
+            >
+                {name}
+            </Link>
+        ) : (
+            name
+        );
+
+    const identity = (
+        <div className="flex min-w-0 items-start gap-3">
+            {logo}
+            <div className="min-w-0">
+                <h3
+                    className={cn(
+                        'font-heading font-semibold text-foreground',
+                        isCompact ? 'line-clamp-1 text-sm' : 'line-clamp-2 text-base'
+                    )}
+                    title={name}
+                >
+                    {nameEl}
+                </h3>
+                <p
+                    className={cn('text-sm text-muted-foreground', isCompact ? 'line-clamp-1' : 'mt-0.5 line-clamp-2')}
+                    title={program}
+                >
+                    {program}
+                </p>
+            </div>
+        </div>
+    );
+
+    // Top-right cluster. Actions path shows the fit badge only (the bookmark is
+    // part of the caller's `actions`); link path shows fit badge + ghost bookmark.
+    const topRight = actions ? (
+        fitBadge
+    ) : (
+        <div className="relative z-10 flex shrink-0 items-center gap-1">
+            {fitBadge}
+            {ghostBookmark}
+        </div>
+    );
+
+    const metaLine = metaText ? (
+        <p className="truncate text-xs tabular-nums text-muted-foreground" title={metaText}>
+            {metaText}
+        </p>
+    ) : null;
+
+    if (isCompact) {
+        return (
+            <article className="group relative flex h-full items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm transition-[box-shadow,border-color] duration-200 focus-within:ring-2 focus-within:ring-ring hover:border-primary/30 hover:shadow-md dark:border-white/10">
+                <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-start justify-between gap-3">
+                        {identity}
+                        {topRight}
+                    </div>
+                    {(metaLocation || metaLine) && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {metaLocation ? (
+                                <span className="truncate" title={metaLocation}>
+                                    {metaLocation}
+                                </span>
+                            ) : null}
+                            {metaLocation && metaText ? <span aria-hidden>·</span> : null}
+                            {metaLine}
+                        </div>
+                    )}
+                </div>
+                {actions ? <div className="relative z-10 shrink-0">{actions}</div> : null}
+            </article>
+        );
+    }
 
     return (
-        <article
-            className={cn(
-                'group relative flex h-full flex-col overflow-hidden rounded-[28px] border border-border bg-card/80 shadow-[0_22px_50px_-28px_rgba(15,23,42,0.38)] backdrop-blur-xl transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1.5 hover:shadow-[0_28px_70px_-30px_rgba(15,23,42,0.42)] dark:bg-muted/20 dark:border-white/10 dark:shadow-none dark:hover:border-primary/50 dark:hover:bg-muted/30',
-                variant === 'compact' ? 'p-4' : 'p-5'
-            )}
-        >
-            <span
-                className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(79,70,229,0.14),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.1),transparent_32%)] opacity-80"
-                aria-hidden
-            />
-            <span
-                className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"
-                aria-hidden
-            />
-            {/* Header: Score & Location */}
-            <div className="relative z-10 flex items-start justify-between">
-                <div className={cn('flex items-center justify-center rounded-[18px] border border-white/50 ring-4 shadow-[0_16px_30px_-20px_rgba(15,23,42,0.55)]', scoreColorClass, variant === 'compact' ? 'h-10 w-10' : 'h-12 w-12')}>
-                    <span className={cn('font-bold', variant === 'compact' ? 'text-xs' : 'text-sm')}>
-                        {scoreValue !== null ? `${scoreValue}%` : 'N/A'}
-                    </span>
-                </div>
-                <div className="text-right">
-                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">{location}</p>
-                    {tier ? (
-                        <p className="mt-1 text-xs font-semibold text-foreground/80">{tier} tier</p>
-                    ) : null}
-                </div>
+        <article className="group relative flex h-full flex-col rounded-2xl border border-border bg-card p-5 shadow-sm transition-[box-shadow,border-color] duration-200 focus-within:ring-2 focus-within:ring-ring hover:border-primary/30 hover:shadow-md dark:border-white/10">
+            {/* Identity + top-right cluster */}
+            <div className="flex items-start justify-between gap-3">
+                {identity}
+                {topRight}
             </div>
 
-            {/* Content */}
-            <div className="relative z-10 mt-4 flex-1">
-                <div className="flex items-center gap-3">
-                    {logoUrl ? (
-                        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-border bg-black shadow-sm">
-                            <Image
-                                src={logoUrl}
-                                alt={`${name} logo`}
-                                fill
-                                className="object-contain"
-                                sizes="48px"
-                            />
-                        </div>
-                    ) : null}
-                    <div className="min-w-0">
-                        <h3
-                            className={cn('font-bold text-foreground line-clamp-1', variant === 'compact' ? 'text-lg' : 'text-xl')}
-                            title={name}
+            {/* Location */}
+            {metaLocation ? (
+                <p className="mt-2 truncate text-xs text-muted-foreground" title={metaLocation}>
+                    {metaLocation}
+                </p>
+            ) : null}
+
+            {/* Highlights (matches / shortlist path) */}
+            {highlights.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                    {highlights.slice(0, 3).map((highlight) => (
+                        <span
+                            key={highlight}
+                            className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-[0.6875rem] font-medium text-foreground/80 dark:bg-muted/30"
                         >
-                            {name}
-                        </h3>
-                        <p className="text-sm font-medium text-muted-foreground line-clamp-1" title={program}>
-                            {program}
-                        </p>
-                    </div>
+                            {highlight}
+                        </span>
+                    ))}
+                    {highlights.length > 3 && (
+                        <span className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-[0.6875rem] font-medium text-muted-foreground dark:bg-muted/30">
+                            +{highlights.length - 3}
+                        </span>
+                    )}
                 </div>
+            )}
 
-                {/* Highlights */}
-                {highlights.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        {highlights.slice(0, 3).map((highlight) => (
-                            <span
-                                key={highlight}
-                                className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-2.5 py-1 text-[0.6875rem] font-medium text-foreground/80 shadow-sm"
-                            >
-                                {highlight}
-                            </span>
-                        ))}
-                        {highlights.length > 3 && (
-                            <span className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-2.5 py-1 text-[0.6875rem] font-medium text-muted-foreground shadow-sm">
-                                +{highlights.length - 3}
-                            </span>
-                        )}
-                    </div>
-                )}
-
-                {/* Eligibility Reasons */}
-                {reasons.length > 0 && (
-                    <div className="mt-3 flex flex-col gap-1.5">
-                        <p className="text-[0.625rem] uppercase tracking-wider text-muted-foreground/70 font-semibold px-1">Eligibility Details</p>
-                        <div className="flex flex-col gap-1">
-                            {reasons.map((reason, idx) => (
-                                <div
-                                    key={idx}
-                                    className={cn(
-                                        "text-[0.6875rem] px-2 py-1 rounded-lg border",
-                                        reason.includes("below requirement") || reason.includes("missing")
-                                            ? "bg-red-500/5 border-red-500/20 text-red-600 dark:text-red-400"
-                                            : "bg-emerald-500/5 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                                    )}
-                                >
-                                    {reason}
-                                </div>
-                            ))}
+            {/* Eligibility reasons (matches path) */}
+            {reasons.length > 0 && (
+                <div className="mt-3 flex flex-col gap-1">
+                    {reasons.map((reason, idx) => (
+                        <div
+                            key={idx}
+                            className={cn(
+                                'rounded-lg border px-2 py-1 text-[0.6875rem]',
+                                reason.includes('below requirement') || reason.includes('missing')
+                                    ? 'border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300'
+                                    : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                            )}
+                        >
+                            {reason}
                         </div>
-                    </div>
-                )}
-            </div>
+                    ))}
+                </div>
+            )}
 
-            {/* Actions */}
-            <div className="relative z-10 mt-6 grid grid-cols-2 gap-3">
-                {actions ? (
-                    actions
-                ) : (
-                    <>
-                        {courseHref ? (
-                            <Link
-                                href={courseHref}
-                                className={cn(
-                                    buttonVariants({ size: 'sm', className: 'w-full rounded-full font-semibold shadow-sm' })
-                                )}
-                                prefetch={false}
-                            >
-                                {ACTION_TEXT.viewCourse}
-                            </Link>
-                        ) : (
-                            <Button size="sm" className="w-full rounded-full font-semibold shadow-sm" disabled>
-                                {ACTION_TEXT.viewCourse}
-                            </Button>
-                        )}
-                        {!hideTrackingButton && (
-                            <TrackProgramButton
-                                programId={id}
-                                programName={program}
-                                universityName={name}
-                                location={location}
-                                fitScore={fitScore ?? null}
-                                labelVariant={trackingLabelVariant}
-                            />
-                        )}
-                    </>
-                )}
-            </div>
+            {/* Footer, pinned to the bottom. The meta line gets the full row —
+                the card's link affordance is the cursor + hover border, matching
+                the app's other clickable rows (no inline hint). */}
+            {actions ? (
+                <div className="mt-auto flex flex-col gap-4 pt-4">
+                    {metaLine ? <div className="border-t border-border/60 pt-3">{metaLine}</div> : null}
+                    {actions}
+                </div>
+            ) : (
+                metaLine && <div className="mt-auto border-t border-border/60 pt-3">{metaLine}</div>
+            )}
         </article>
     );
 }

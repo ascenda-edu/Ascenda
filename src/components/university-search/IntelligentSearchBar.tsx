@@ -423,7 +423,7 @@ export function IntelligentSearchBar({
                     role="listbox"
                     aria-label="Search suggestions"
                     className={cn(
-                        "absolute left-0 right-0 z-50 mt-2 overflow-hidden rounded-2xl border border-border bg-card shadow-xl",
+                        "absolute left-0 right-0 z-50 mt-2 overflow-hidden rounded-2xl border border-border bg-card shadow-lg dark:border-white/10",
                         variant === 'default' ? "top-full" : "top-full"
                     )}
                 >
@@ -433,7 +433,7 @@ export function IntelligentSearchBar({
                         ) : suggestionsError && !hasSuggestions ? (
                             <p className="px-3 py-2 text-xs text-muted-foreground">Suggestions unavailable — try again in a moment.</p>
                         ) : (
-                            <div className="max-h-72 divide-y divide-border overflow-y-auto">
+                            <div className="max-h-[360px] divide-y divide-border overflow-y-auto">
                                 {suggestions.programs.length > 0 && (
                                     <div role="group" aria-label="Programs">
                                         <p className="px-3 pt-2 text-[0.625rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Programs</p>
@@ -497,7 +497,7 @@ export function IntelligentSearchBar({
                             </div>
                         )
                     ) : (
-                        <div className="space-y-2 p-3">
+                        <div className="max-h-[360px] space-y-2 overflow-y-auto p-3">
                             {isLoadingPrefill ? (
                                 <p className="px-1 py-1 text-xs text-muted-foreground">Loading ideas…</p>
                             ) : hasPrefill ? (
