@@ -3,8 +3,6 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Check, X } from 'lucide-react';
 import { fadeIn } from '@/lib/motion';
-import { MatchCard, TaskRow } from './product-widgets';
-import { PipelineBar, TierTiles } from './mock-viz';
 
 // Positions form an overlapping diagonal "pile" on md+ (fills the box instead of
 // pinning cards to empty corners); on mobile they render as a plain stacked list.
@@ -15,17 +13,11 @@ const chaosNotes = [
     { h: 'Vague', body: '“Just apply broadly and see what happens.”', pos: 'md:left-[33%] md:top-[68%] md:z-40 md:rotate-[4deg]' },
 ];
 
-// Each chaos pain gets a direct product answer in the same order: the eyebrow
-// strikes the pain word and names the answer, so the 1:1 mapping reads even
-// though the left pile is scattered.
-function RebuttalEyebrow({ pain, answer }: { pain: string; answer: string }) {
-    return (
-        <p className="mb-2 text-[0.6875rem] font-bold uppercase tracking-[0.1em]">
-            <s className="mr-1.5 text-rose-700 line-through decoration-2 dark:text-rose-400">{pain}</s>
-            <span className="text-emerald-700 dark:text-emerald-400">→ {answer}</span>
-        </p>
-    );
-}
+const clarityPoints = [
+    'One ranked list, scored to you.',
+    'Every programme, task and deadline in one workspace.',
+    'Deadlines that find you first.',
+];
 
 export function ComparisonSection() {
     return (
@@ -52,7 +44,7 @@ export function ComparisonSection() {
                             Without Ascenda
                         </span>
                         {/* Mobile: a plain stacked list. md+: absolutely-positioned, rotated "mess". */}
-                        <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-rose-500/30 bg-rose-500/[0.04] p-4 md:relative md:block md:h-[400px] md:overflow-hidden md:p-0">
+                        <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-rose-500/30 bg-rose-500/[0.04] p-4 md:relative md:block md:h-[360px] md:overflow-hidden md:p-0">
                             {/* faint stack of browser tabs behind the pile (scatter only) */}
                             <div className="absolute right-[6%] top-[38%] hidden -rotate-6 gap-1.5 opacity-40 md:flex">
                                 {[0, 1, 2, 3].map((i) => (
@@ -80,35 +72,22 @@ export function ComparisonSection() {
                         </span>
                     </div>
 
-                    {/* With — the same four pains, answered by the product */}
+                    {/* With — clarity */}
                     <div>
                         <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.05em] text-emerald-700 dark:text-emerald-400">
                             <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />
                             With Ascenda
                         </span>
                         <div className="flex flex-col gap-3">
-                            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-3">
-                                <RebuttalEyebrow pain="Rankings" answer="Scored to you" />
-                                <MatchCard name="TU Delft" sub="MSc Aerospace Engineering" location="Netherlands" score={92} compact />
-                            </div>
-                            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-3.5">
-                                <RebuttalEyebrow pain="40 tabs" answer="One workspace" />
-                                <PipelineBar
-                                    stages={[
-                                        { label: 'Planning', count: 1, colorClass: 'bg-slate-400' },
-                                        { label: 'In progress', count: 3, colorClass: 'bg-sky-500' },
-                                        { label: 'Submitted', count: 2, colorClass: 'bg-emerald-500' },
-                                    ]}
-                                />
-                            </div>
-                            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-3">
-                                <RebuttalEyebrow pain="Too late" answer="Deadlines find you first" />
-                                <TaskRow tone="emerald" title="UCAS submission" sub="Flagged 3 weeks out" due="21d" compact />
-                            </div>
-                            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-3.5">
-                                <RebuttalEyebrow pain="“Apply broadly”" answer="A real strategy" />
-                                <TierTiles counts={{ safety: 1, match: 1, reach: 1 }} />
-                            </div>
+                            {clarityPoints.map((pt) => (
+                                <div
+                                    key={pt}
+                                    className="flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4 text-[0.9375rem] font-medium leading-snug text-foreground shadow-sm"
+                                >
+                                    <Check className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" strokeWidth={2.4} aria-hidden />
+                                    {pt}
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
