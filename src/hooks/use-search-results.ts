@@ -464,6 +464,7 @@ const mapRows = (
       universityName: uniName ?? 'University',
       programName,
       location: location || 'Location unavailable',
+      country: uni?.country ?? null,
       logoUrl: logoUrl ?? null,
       fitScore: score ?? null,
       tier: tier ?? null,

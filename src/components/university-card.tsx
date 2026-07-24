@@ -2,10 +2,12 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { MatchTier } from '@/lib/matching/match-tier';
 import { TrackProgramButton, type TrackLabelVariant } from '@/components/programs/track-program-button';
 import { getFitScoreVisuals } from '@/lib/theme/fit-score';
+import { countryFlagEmoji } from '@/lib/utils/flag';
 
 // Define a unified interface that covers both PlaceholderResult and EnrichedMatch
 export interface UniversityCardProps {
@@ -30,14 +32,100 @@ export interface UniversityCardProps {
     country?: string | null;
 }
 
-// Soft, quiet fit chip — tone-tinted background + hue-matched text, both with
-// dark handling. Replaces the old ring/border badge to match the house style.
-const FIT_TONE_CLASS: Record<string, string> = {
-    strong: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-    solid: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
-    risk: 'bg-orange-500/10 text-orange-700 dark:text-orange-300',
-    unknown: 'bg-muted text-muted-foreground',
+const RING_STROKE: Record<string, string> = {
+    strong: 'stroke-emerald-500',
+    solid: 'stroke-amber-500',
+    risk: 'stroke-orange-500',
+    unknown: 'stroke-muted-foreground/40',
 };
+
+const RING_TEXT: Record<string, string> = {
+    strong: 'text-emerald-700 dark:text-emerald-300',
+    solid: 'text-amber-700 dark:text-amber-300',
+    risk: 'text-orange-700 dark:text-orange-300',
+    unknown: 'text-muted-foreground',
+};
+
+// Fit score as a small donut gauge — reads at a glance where the old text chip
+// disappeared into the surrounding copy. Tone hues match the fit-chip palette.
+function FitRing({ value, tone, size = 40 }: { value: number; tone: string; size?: number }) {
+    return (
+        <div
+            className="relative shrink-0"
+            style={{ width: size, height: size }}
+            role="img"
+            aria-label={`Fit score ${value}%`}
+            title={`Fit score ${value}%`}
+        >
+            <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
+                <circle cx="18" cy="18" r="15.5" fill="none" strokeWidth="3.5" className="stroke-border/70" />
+                <circle
+                    cx="18"
+                    cy="18"
+                    r="15.5"
+                    fill="none"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    pathLength={100}
+                    strokeDasharray={`${value} 100`}
+                    className={RING_STROKE[tone] ?? RING_STROKE.unknown}
+                />
+            </svg>
+            <span
+                className={cn(
+                    'absolute inset-0 flex items-center justify-center text-[10px] font-semibold tabular-nums',
+                    RING_TEXT[tone] ?? RING_TEXT.unknown
+                )}
+            >
+                {value}
+            </span>
+        </div>
+    );
+}
+
+// Tinted monogram tile for universities without a logo, so no card is ever a
+// bare text stack. Tone is a stable hash of the name; hues from the app's
+// status palette.
+const MONOGRAM_TONES = [
+    'bg-sky-500/10 text-sky-700 dark:text-sky-300',
+    'bg-violet-500/10 text-violet-700 dark:text-violet-300',
+    'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+    'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+    'bg-rose-500/10 text-rose-700 dark:text-rose-300',
+];
+
+const MONOGRAM_STOP_WORDS = new Set(['of', 'the', 'and', 'for', 'at', 'de', 'la']);
+
+const monogramFor = (name: string): string => {
+    const words = name.split(/\s+/).filter((w) => w && !MONOGRAM_STOP_WORDS.has(w.toLowerCase()));
+    const initials = words
+        .slice(0, 2)
+        .map((w) => w[0]!.toUpperCase())
+        .join('');
+    return initials || 'U';
+};
+
+const monogramToneFor = (name: string): string => {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+    return MONOGRAM_TONES[hash % MONOGRAM_TONES.length];
+};
+
+function Stat({ label, value }: { label: string; value?: string | null }) {
+    return (
+        <div className="min-w-0">
+            <dt className="text-[0.625rem] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                {label}
+            </dt>
+            <dd
+                className="mt-0.5 truncate text-xs font-semibold tabular-nums text-foreground"
+                title={value ?? undefined}
+            >
+                {value ?? '—'}
+            </dd>
+        </div>
+    );
+}
 
 export function UniversityCard({
     id,
@@ -68,24 +156,37 @@ export function UniversityCard({
 
     const metaLocation = location || country || '';
     const metaText = [tuitionLabel, durationLabel, levelLabel].filter(Boolean).join(' · ');
+    // Flag from the explicit country when supplied; otherwise the location's
+    // last comma-segment is the country by construction ("City, Region, Country").
+    const flag = countryFlagEmoji(country ?? metaLocation.split(',').pop()?.trim() ?? null);
 
-    const logo = logoUrl ? (
-        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-border bg-white shadow-sm dark:border-white/10">
-            <Image src={logoUrl} alt={`${name} logo`} fill className="object-contain p-1" sizes="40px" />
-        </div>
-    ) : null;
-
-    const fitBadge =
-        scoreValue !== null ? (
-            <span
+    const logoTile = (size: 'default' | 'sm') => {
+        const sizeClass = size === 'sm' ? 'h-10 w-10' : 'h-11 w-11';
+        return logoUrl ? (
+            <div
                 className={cn(
-                    'inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums',
-                    FIT_TONE_CLASS[tone] ?? FIT_TONE_CLASS.unknown
+                    sizeClass,
+                    'relative shrink-0 overflow-hidden rounded-xl border border-border bg-white shadow-sm dark:border-white/10'
                 )}
             >
-                {scoreValue}%
-            </span>
-        ) : null;
+                <Image src={logoUrl} alt={`${name} logo`} fill className="object-contain p-1" sizes="44px" />
+            </div>
+        ) : (
+            <div
+                aria-hidden
+                className={cn(
+                    sizeClass,
+                    'flex shrink-0 items-center justify-center rounded-xl font-heading text-sm font-semibold',
+                    monogramToneFor(name)
+                )}
+            >
+                {monogramFor(name)}
+            </div>
+        );
+    };
+
+    const fitRing = (size: number) =>
+        scoreValue !== null ? <FitRing value={scoreValue} tone={tone} size={size} /> : null;
 
     const ghostBookmark = !hideTrackingButton ? (
         <TrackProgramButton
@@ -101,100 +202,100 @@ export function UniversityCard({
         />
     ) : null;
 
-    // Name is the stretched link (its `after:` overlay covers the card) only on
-    // the buttonless search path; on the actions path it stays plain text.
-    const nameEl =
+    // Programme is the heading AND the stretched link (its `after:` overlay
+    // covers the card) — the card navigates to the programme page, so the
+    // programme carries the affordance. On the actions path it stays plain text.
+    const programEl =
         isLinkCard && courseHref ? (
             <Link
                 href={courseHref}
                 prefetch={false}
-                title={name}
+                title={program}
                 className="focus-visible:outline-none after:absolute after:inset-0"
             >
-                {name}
+                {program}
             </Link>
         ) : (
-            name
+            program
         );
 
-    const identity = (
-        <div className="flex min-w-0 items-start gap-3">
-            {logo}
-            <div className="min-w-0">
-                <h3
-                    className={cn(
-                        'font-heading font-semibold text-foreground',
-                        isCompact ? 'line-clamp-1 text-sm' : 'line-clamp-2 text-base'
-                    )}
-                    title={name}
-                >
-                    {nameEl}
-                </h3>
-                <p
-                    className={cn('text-sm text-muted-foreground', isCompact ? 'line-clamp-1' : 'mt-0.5 line-clamp-2')}
-                    title={program}
-                >
-                    {program}
-                </p>
-            </div>
-        </div>
-    );
-
-    // Top-right cluster. Actions path shows the fit badge only (the bookmark is
-    // part of the caller's `actions`); link path shows fit badge + ghost bookmark.
-    const topRight = actions ? (
-        fitBadge
-    ) : (
-        <div className="relative z-10 flex shrink-0 items-center gap-1">
-            {fitBadge}
-            {ghostBookmark}
-        </div>
-    );
-
-    const metaLine = metaText ? (
-        <p className="truncate text-xs tabular-nums text-muted-foreground" title={metaText}>
-            {metaText}
-        </p>
+    const locationLine = metaLocation ? (
+        <span className="flex min-w-0 items-center gap-1.5">
+            {flag ? (
+                <span aria-hidden className="text-sm leading-none">
+                    {flag}
+                </span>
+            ) : null}
+            <span className="truncate" title={metaLocation}>
+                {metaLocation}
+            </span>
+        </span>
     ) : null;
 
     if (isCompact) {
         return (
-            <article className="group relative flex h-full items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm transition-[box-shadow,border-color] duration-200 focus-within:ring-2 focus-within:ring-ring hover:border-primary/30 hover:shadow-md dark:border-white/10">
-                <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex items-start justify-between gap-3">
-                        {identity}
-                        {topRight}
-                    </div>
-                    {(metaLocation || metaLine) && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {metaLocation ? (
-                                <span className="truncate" title={metaLocation}>
-                                    {metaLocation}
-                                </span>
-                            ) : null}
-                            {metaLocation && metaText ? <span aria-hidden>·</span> : null}
-                            {metaLine}
+            <article className="group relative flex h-full items-center gap-3.5 rounded-2xl border border-border bg-card p-4 shadow-sm transition-[box-shadow,border-color] duration-200 focus-within:ring-2 focus-within:ring-ring hover:border-primary/30 hover:shadow-md dark:border-white/10">
+                {logoTile('sm')}
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                        <h3
+                            className="min-w-0 flex-1 truncate font-heading text-sm font-semibold text-foreground"
+                            title={program}
+                        >
+                            {programEl}
+                        </h3>
+                        <div className="relative z-10 flex shrink-0 items-center gap-1">
+                            {fitRing(32)}
+                            {!actions ? ghostBookmark : null}
                         </div>
-                    )}
+                    </div>
+                    <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="truncate font-medium text-foreground/75" title={name}>
+                            {name}
+                        </span>
+                        {locationLine ? (
+                            <>
+                                <span aria-hidden>·</span>
+                                {locationLine}
+                            </>
+                        ) : null}
+                    </p>
+                    {metaText ? (
+                        <p className="mt-1 truncate text-xs tabular-nums text-muted-foreground" title={metaText}>
+                            {metaText}
+                        </p>
+                    ) : null}
                 </div>
                 {actions ? <div className="relative z-10 shrink-0">{actions}</div> : null}
             </article>
         );
     }
 
+    const hasStats = Boolean(tuitionLabel || durationLabel || levelLabel);
+
     return (
         <article className="group relative flex h-full flex-col rounded-2xl border border-border bg-card p-5 shadow-sm transition-[box-shadow,border-color] duration-200 focus-within:ring-2 focus-within:ring-ring hover:border-primary/30 hover:shadow-md dark:border-white/10">
-            {/* Identity + top-right cluster */}
+            {/* Visual anchors: logo/monogram left, fit ring + bookmark right */}
             <div className="flex items-start justify-between gap-3">
-                {identity}
-                {topRight}
+                {logoTile('default')}
+                <div className="relative z-10 flex shrink-0 items-center gap-1.5">
+                    {fitRing(40)}
+                    {!actions ? ghostBookmark : null}
+                </div>
             </div>
 
-            {/* Location */}
-            {metaLocation ? (
-                <p className="mt-2 truncate text-xs text-muted-foreground" title={metaLocation}>
-                    {metaLocation}
-                </p>
+            {/* Programme-first identity */}
+            <h3
+                className="mt-3 line-clamp-2 font-heading text-base font-semibold leading-snug text-foreground"
+                title={program}
+            >
+                {programEl}
+            </h3>
+            <p className="mt-1 line-clamp-1 text-sm font-medium text-foreground/75" title={name}>
+                {name}
+            </p>
+            {locationLine ? (
+                <p className="mt-1 flex items-center text-xs text-muted-foreground">{locationLine}</p>
             ) : null}
 
             {/* Highlights (matches / shortlist path) */}
@@ -216,36 +317,47 @@ export function UniversityCard({
                 </div>
             )}
 
-            {/* Eligibility reasons (matches path) */}
+            {/* Eligibility reasons (matches path) — icon rows, not boxes */}
             {reasons.length > 0 && (
-                <div className="mt-3 flex flex-col gap-1">
-                    {reasons.map((reason, idx) => (
-                        <div
-                            key={idx}
-                            className={cn(
-                                'rounded-lg border px-2 py-1 text-[0.6875rem]',
-                                reason.includes('below requirement') || reason.includes('missing')
-                                    ? 'border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300'
-                                    : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                            )}
-                        >
-                            {reason}
-                        </div>
-                    ))}
-                </div>
+                <ul className="mt-3 space-y-1.5">
+                    {reasons.map((reason, idx) => {
+                        const isBlocking = reason.includes('below requirement') || reason.includes('missing');
+                        return (
+                            <li key={idx} className="flex items-start gap-1.5 text-[0.6875rem] leading-snug">
+                                {isBlocking ? (
+                                    <AlertTriangle className="mt-px h-3 w-3 shrink-0 text-rose-500" aria-hidden />
+                                ) : (
+                                    <CheckCircle2 className="mt-px h-3 w-3 shrink-0 text-emerald-500" aria-hidden />
+                                )}
+                                <span
+                                    className={
+                                        isBlocking
+                                            ? 'text-rose-700 dark:text-rose-300'
+                                            : 'text-emerald-700 dark:text-emerald-300'
+                                    }
+                                >
+                                    {reason}
+                                </span>
+                            </li>
+                        );
+                    })}
+                </ul>
             )}
 
-            {/* Footer, pinned to the bottom. The meta line gets the full row —
-                the card's link affordance is the cursor + hover border, matching
-                the app's other clickable rows (no inline hint). */}
-            {actions ? (
+            {/* Footer, pinned to the bottom: labelled stat strip (scannable
+                columns instead of a dot-separated text run) + caller actions. */}
+            {hasStats || actions ? (
                 <div className="mt-auto flex flex-col gap-4 pt-4">
-                    {metaLine ? <div className="border-t border-border/60 pt-3">{metaLine}</div> : null}
-                    {actions}
+                    {hasStats ? (
+                        <dl className="grid grid-cols-3 gap-3 border-t border-border/60 pt-3">
+                            <Stat label="Tuition" value={tuitionLabel} />
+                            <Stat label="Duration" value={durationLabel} />
+                            <Stat label="Level" value={levelLabel} />
+                        </dl>
+                    ) : null}
+                    {actions ? <div className="relative z-10">{actions}</div> : null}
                 </div>
-            ) : (
-                metaLine && <div className="mt-auto border-t border-border/60 pt-3">{metaLine}</div>
-            )}
+            ) : null}
         </article>
     );
 }
