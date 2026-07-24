@@ -19,9 +19,9 @@ const steps = [
         copy: 'Predicted grades, subjects and what you want from a place. Five minutes, once.',
         widget: (
             <AppFrame title="Your profile">
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4">
                     <ProgressRing value={80} size={56} stroke={5.5} colorClass="stroke-primary" label="80% profile complete" />
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 grow basis-40">
                         <WizardSteps
                             steps={['Personal info', 'Your studies', 'Grades & tests', 'Activities', 'Lifestyle']}
                             currentIndex={4}
