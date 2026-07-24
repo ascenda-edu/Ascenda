@@ -687,6 +687,7 @@ function UnifiedSearchInner() {
                     name={result.universityName}
                     program={result.programName}
                     location={result.location}
+                    country={result.country}
                     logoUrl={result.logoUrl ?? undefined}
                     fitScore={result.fitScore}
                     tier={result.tier ?? undefined}

@@ -59,3 +59,9 @@ export const flagEmoji = (nationality?: string | null, fallbackCountry?: string 
   const iso = lookup(nationality) ?? lookup(fallbackCountry);
   return iso ? isoToEmoji(iso) : '🎓';
 };
+
+/** Country → flag emoji, or null when unknown — for surfaces that hide the flag rather than show 🎓. */
+export const countryFlagEmoji = (country?: string | null): string | null => {
+  const iso = lookup(country);
+  return iso ? isoToEmoji(iso) : null;
+};
