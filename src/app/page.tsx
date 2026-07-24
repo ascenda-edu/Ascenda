@@ -1,6 +1,7 @@
 import { HeroSection } from '@/components/landing/HeroSection';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { ShortlistSection } from '@/components/landing/ShortlistSection';
+import { TeamSection } from '@/components/landing/TeamSection';
 import { ComparisonSection } from '@/components/landing/ComparisonSection';
 import { ProofPointsSection } from '@/components/landing/ProofPointsSection';
 import { FAQSection } from '@/components/landing/FAQSection';
@@ -21,6 +22,7 @@ export default function HomePage() {
       <ProofPointsSection />
       <FeaturesSection />
       <ShortlistSection />
+      <TeamSection />
       <ComparisonSection />
       <FAQSection />
       <CTASection />

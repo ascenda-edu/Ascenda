@@ -6,29 +6,24 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform, type Variants } from 'framer-motion';
 import {
     ArrowRight,
-    CalendarClock,
     ChevronDown,
-    CheckCircle2,
     Laptop,
-    Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useAnimatedNumber } from '@/hooks/use-animated-number';
 import { RETURNING_USER_STORAGE_KEY } from '@/lib/constants';
-import { fadeIn, blurIn } from '@/lib/motion';
+import { fadeIn, blurIn, scaleIn } from '@/lib/motion';
 import { useThemeMode } from '../theme/theme-provider';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '../theme/theme-toggle';
+import { HeroAppTour } from './hero-app-tour';
 
 const heroHeadlinePrefix = "Find universities you'll actually ";
 // Rotating payoff word — the three things every applicant actually worries about.
 // Widest phrase (`thrive at.`) sets the reserved width so the headline never reflows.
 const ROTATING_WORDS = ['get into.', 'afford.', 'thrive at.'] as const;
-const FIT_SCORE_TARGET = 92;
 const PROGRAMMES_TARGET = 119000;
-const PROFILE_SEGMENTS = 5;
-const PROFILE_FILLED = 4;
 
 const topBarVariants: Variants = {
     hidden: { opacity: 0, y: -18, scale: 0.96, filter: 'blur(4px)' },
@@ -40,32 +35,6 @@ const topBarVariants: Variants = {
         transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] }
     }
 };
-
-const dashboardContainerVariants: Variants = {
-    hidden: { opacity: 0, y: 20, scale: 0.98 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        transition: { duration: 0.55, ease: 'easeOut', staggerChildren: 0.08, delayChildren: 0.15 }
-    }
-};
-
-const dashboardItemVariants: Variants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.38, ease: 'easeOut' } }
-};
-
-const radarItemVariants: Variants = {
-    hidden: { opacity: 0, x: -12, filter: 'blur(4px)' },
-    visible: { opacity: 1, x: 0, filter: 'blur(0px)', transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } }
-};
-
-const radarContainerVariants: Variants = {
-    hidden: {},
-    visible: { transition: { staggerChildren: 0.12, delayChildren: 0.1 } }
-};
-
 
 /**
  * Cycles the final headline word (`get into.` → `afford.` → `thrive at.`) with a
@@ -127,12 +96,6 @@ export function HeroSection() {
     useEffect(() => {
         setBgEnhanced(!shouldReduceMotion);
     }, [shouldReduceMotion]);
-
-    const fitScore = useAnimatedNumber(
-        FIT_SCORE_TARGET,
-        true,
-        shouldReduceMotion ? 0 : 1400,
-    );
 
     const programmes = useAnimatedNumber(
         PROGRAMMES_TARGET,
@@ -251,7 +214,9 @@ export function HeroSection() {
                 <div className="w-full max-w-7xl px-4 pb-10 pt-10 sm:px-6 lg:px-10 mx-auto">
                     <section className="space-y-12 pb-16 pt-4">
                         <motion.div
-                            className="grid items-center gap-10 lg:grid-cols-[0.9fr,1.1fr]"
+                            // minmax(0,…) tracks: an auto/fr track would refuse to shrink below the
+                            // tour's min-content (its nowrap tab-pill row) and overflow small viewports.
+                            className="grid grid-cols-[minmax(0,1fr)] items-center gap-10 lg:grid-cols-[minmax(0,0.9fr),minmax(0,1.1fr)]"
                             initial="hidden"
                             animate="visible"
                             variants={storyVariants}
@@ -329,176 +294,8 @@ export function HeroSection() {
                                     Search {programmes.toLocaleString('en-US')}+ real programmes.
                                 </motion.p>
                             </div>
-                            <motion.div
-                                className="relative rounded-2xl border border-border/60 bg-card/70 p-3 sm:p-5 text-card-foreground shadow-xl backdrop-blur-xl overflow-hidden"
-                                initial="hidden"
-                                animate="visible"
-                                variants={dashboardContainerVariants}
-                            >
-                                {/* Ambient blobs matching the real dashboard */}
-                                <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary/5 blur-3xl" aria-hidden />
-                                <div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-primary/3 blur-2xl" aria-hidden />
-
-                                {/* Live focus badge — mirrors PageHero */}
-                                <motion.div
-                                    className="relative flex items-center justify-between gap-4"
-                                    variants={dashboardItemVariants}
-                                >
-                                    <div className="flex items-center gap-2.5">
-                                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/5 ring-1 ring-primary/10">
-                                            <Zap className="h-4 w-4 text-primary" aria-hidden />
-                                        </span>
-                                        <div>
-                                            <p className="text-xs font-medium text-muted-foreground">Your dashboard</p>
-                                            <p className="text-sm font-semibold text-foreground">Good morning, Maya</p>
-                                        </div>
-                                    </div>
-                                    <span className="flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[0.6875rem] font-medium text-primary/80">
-                                        Today
-                                    </span>
-                                </motion.div>
-
-                                {/* Stat strip — hero fit score + secondary stats */}
-                                <motion.div className="relative mt-4 sm:mt-5 grid grid-cols-3 gap-1.5 sm:gap-3" variants={dashboardItemVariants}>
-                                    {/* Fit score — hero stat with extra weight */}
-                                    <div className="relative min-w-0 overflow-hidden rounded-2xl border border-emerald-500/20 bg-background px-2 py-4 text-center shadow-sm sm:px-4">
-                                        <div className="pointer-events-none absolute -top-8 -right-8 h-28 w-28 rounded-full bg-emerald-400 blur-2xl opacity-30" aria-hidden />
-                                        <p className="text-[0.6875rem] font-medium text-muted-foreground">Fit score</p>
-                                        <p className="mt-1 text-xl sm:text-4xl font-bold text-foreground leading-none tracking-tight">{fitScore}<span className="text-base sm:text-xl text-emerald-500">%</span></p>
-                                        <p className="mt-1 text-[0.625rem] text-emerald-600 dark:text-emerald-400 font-medium">Top match</p>
-                                    </div>
-                                    {/* Due soon */}
-                                    <div className="relative min-w-0 overflow-hidden rounded-2xl border border-border bg-background px-2 py-4 text-center shadow-sm sm:px-4">
-                                        <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-amber-400 blur-2xl opacity-40" aria-hidden />
-                                        <p className="text-[0.6875rem] font-medium text-muted-foreground">Due soon</p>
-                                        <p className="mt-1 text-xl sm:text-2xl font-semibold text-foreground leading-tight tracking-tight">3</p>
-                                        <p className="mt-0.5 text-[0.625rem] text-muted-foreground">This week</p>
-                                    </div>
-                                    {/* Profile — with animated circular progress */}
-                                    <div className="relative min-w-0 overflow-hidden rounded-2xl border border-border bg-background px-2 py-4 text-center shadow-sm sm:px-4">
-                                        <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-primary blur-2xl opacity-40" aria-hidden />
-                                        <p className="text-[0.6875rem] font-medium text-muted-foreground">Profile</p>
-                                        <div className="mt-1 flex min-w-0 items-center justify-center gap-2">
-                                            {/* Mini circular progress ring */}
-                                            <svg width="28" height="28" viewBox="0 0 28 28" className="shrink-0 -rotate-90">
-                                                <circle
-                                                    cx="14" cy="14" r="11"
-                                                    fill="none"
-                                                    className="stroke-border"
-                                                    strokeWidth="3"
-                                                />
-                                                <motion.circle
-                                                    cx="14" cy="14" r="11"
-                                                    fill="none"
-                                                    className="stroke-primary"
-                                                    strokeWidth="3"
-                                                    strokeLinecap="round"
-                                                    strokeDasharray={2 * Math.PI * 11}
-                                                    initial={{ strokeDashoffset: 2 * Math.PI * 11 }}
-                                                    animate={{ strokeDashoffset: 2 * Math.PI * 11 * (1 - PROFILE_FILLED / PROFILE_SEGMENTS) }}
-                                                    transition={{
-                                                        delay: shouldReduceMotion ? 0 : 0.9,
-                                                        duration: shouldReduceMotion ? 0 : 1.2,
-                                                        ease: [0.22, 1, 0.36, 1],
-                                                    }}
-                                                />
-                                            </svg>
-                                            <p className="shrink text-xl sm:text-2xl font-semibold text-foreground leading-tight tracking-tight">4/5</p>
-                                        </div>
-                                        <p className="mt-0.5 text-[0.625rem] text-muted-foreground">80% complete</p>
-                                    </div>
-                                </motion.div>
-
-                                {/* Profile completion bar — animated loading */}
-                                <motion.div
-                                    className="relative mt-4"
-                                    variants={dashboardItemVariants}
-                                >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <p className="text-[0.6875rem] font-medium text-muted-foreground">Profile progress</p>
-                                        <motion.p
-                                            className="text-[0.6875rem] font-medium text-primary/80"
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            transition={{ delay: shouldReduceMotion ? 0 : 1.6, duration: 0.4 }}
-                                        >
-                                            80% ready
-                                        </motion.p>
-                                    </div>
-                                    <div className="flex gap-1.5">
-                                        {Array.from({ length: PROFILE_SEGMENTS }).map((_, i) => {
-                                            const isFilled = i < PROFILE_FILLED;
-                                            return (
-                                                <motion.div
-                                                    key={i}
-                                                    className={cn(
-                                                        'h-2 flex-1 rounded-full',
-                                                        isFilled ? 'bg-primary' : 'bg-border'
-                                                    )}
-                                                    initial={{ scaleX: 0, opacity: 0 }}
-                                                    animate={{ scaleX: 1, opacity: 1 }}
-                                                    transition={{
-                                                        delay: shouldReduceMotion ? 0 : 0.8 + i * 0.18,
-                                                        duration: shouldReduceMotion ? 0 : 0.45,
-                                                        ease: [0.22, 1, 0.36, 1],
-                                                    }}
-                                                    style={{ originX: 0 }}
-                                                />
-                                            );
-                                        })}
-                                    </div>
-                                </motion.div>
-
-                                {/* Focus radar — staggered entry */}
-                                <motion.div
-                                    className="relative mt-4 space-y-2"
-                                    variants={radarContainerVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                >
-                                    <motion.div className="flex items-center gap-2" variants={radarItemVariants}>
-                                        <p className="text-xs font-medium text-muted-foreground">Up next</p>
-                                    </motion.div>
-                                    {[
-                                        { num: 1, label: 'Due today', title: 'Scholarship essay — Parsons Paris', detail: 'Final draft due Friday', border: 'border-l-rose-500', badge: 'bg-rose-500/10 text-rose-600 dark:text-rose-400' },
-                                        { num: 2, label: 'Milestone', title: 'UCAS submission opens', detail: 'In 4 days · ESADE + Imperial', border: 'border-l-amber-400', badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' },
-                                        { num: 3, label: 'Checklist', title: 'Upload reference letter', detail: '2 of 3 references submitted', border: 'border-l-primary', badge: 'bg-primary/10 text-primary' },
-                                    ].map((item) => (
-                                        <motion.div
-                                            key={item.num}
-                                            className={cn('flex items-start gap-3 rounded-xl border border-border bg-background/80 backdrop-blur-sm px-4 py-3 border-l-[3px]', item.border)}
-                                            variants={radarItemVariants}
-                                        >
-                                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/10 text-[0.6875rem] font-bold text-primary">
-                                                {item.num}
-                                            </span>
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-semibold', item.badge)}>
-                                                        {item.label}
-                                                    </span>
-                                                </div>
-                                                <p className="mt-1 text-sm font-medium text-foreground leading-snug">{item.title}</p>
-                                                <p className="text-[0.6875rem] text-muted-foreground">{item.detail}</p>
-                                            </div>
-                                        </motion.div>
-                                    ))}
-                                </motion.div>
-
-                                {/* Footer — task progress */}
-                                <motion.div
-                                    className="relative mt-4 flex items-center justify-between text-xs text-muted-foreground"
-                                    variants={dashboardItemVariants}
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" aria-hidden />
-                                        <span>7 of 12 tasks done</span>
-                                    </div>
-                                    <span className="flex items-center gap-1.5 text-primary/70 font-medium">
-                                        <CalendarClock className="h-3.5 w-3.5" aria-hidden />
-                                        3 deadlines this week
-                                    </span>
-                                </motion.div>
+                            <motion.div variants={scaleIn} initial="hidden" animate="visible">
+                                <HeroAppTour />
                             </motion.div>
                         </motion.div>
                         <motion.div
