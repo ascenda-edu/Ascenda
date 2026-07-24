@@ -97,7 +97,7 @@ export default async function SimulationPage() {
 
   return (
     <DashboardShell>
-      <div className="max-w-7xl mx-auto px-4 py-8 space-y-10">
+      <div className="py-8 space-y-10">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Algorithm Simulation</h1>
           <p className="mt-1 text-sm text-muted-foreground">

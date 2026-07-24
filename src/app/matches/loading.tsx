@@ -16,7 +16,7 @@ const TierBlock = ({ count = 3 }: { count?: number }) => (
         <Skeleton className="h-4 w-64" />
       </div>
     </div>
-    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       {Array.from({ length: count }).map((_, i) => (
         <UniversityCardSkeleton key={i} />
       ))}
