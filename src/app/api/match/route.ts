@@ -3,7 +3,7 @@ import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
 import { loadMatchesForProfile } from '@/lib/matching/service';
 
 export async function GET(request: NextRequest) {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

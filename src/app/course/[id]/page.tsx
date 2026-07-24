@@ -72,11 +72,12 @@ const PROGRAMS_SELECT = `
 
 export const revalidate = 3600;
 
-export default async function CoursePage({ params }: { params: { id: string } }) {
+export default async function CoursePage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   let initialData: CourseRawData | null = null;
 
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const { data, error } = await supabase
       .from('programs')
       .select(PROGRAMS_SELECT)

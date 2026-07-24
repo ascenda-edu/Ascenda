@@ -10,7 +10,7 @@ const VALID_FITS = new Set(['reach', 'match', 'safety']);
 // Add a programme card to a deck. RLS (counsellor_deck_programs_write)
 // requires the deck to belong to the caller.
 export async function POST(request: NextRequest) {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const auth = await requireCounsellor(supabase);
   if (!auth.user) return auth.errorResponse;
 
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
 // Remove a card from a deck (?id=<card row id>).
 export async function DELETE(request: NextRequest) {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const auth = await requireCounsellor(supabase);
   if (!auth.user) return auth.errorResponse;
 

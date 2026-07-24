@@ -9,7 +9,7 @@ import { buildStudentProfilePayload } from '@/lib/scoring/student_score_loader';
 import { writeStudentIntake } from '@/lib/profile/persist-intake';
 
 const ensureUser = async () => {
-  const supabase = createServerActionSupabaseClient();
+  const supabase = await createServerActionSupabaseClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();
@@ -19,14 +19,15 @@ const ensureUser = async () => {
   return { supabase, userId: user.id };
 };
 
-const clearOnboardingCache = () => {
-  cookies().set('onboarding_complete', '', {
+const clearOnboardingCache = async () => {
+  const cookieStore = await cookies();
+  cookieStore.set('onboarding_complete', '', {
     path: '/',
     maxAge: 0,
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production'
   });
-  cookies().set('onboarding_status', '', {
+  cookieStore.set('onboarding_status', '', {
     path: '/',
     maxAge: 0,
     httpOnly: true,
@@ -39,7 +40,7 @@ export const saveStudentIntake = async (payload: StudentProfilePayload) => {
     const { supabase, userId } = await ensureUser();
     await writeStudentIntake(supabase, userId, payload);
 
-    clearOnboardingCache();
+    await clearOnboardingCache();
     revalidatePath('/profile');
     revalidatePath('/dashboard');
     return { success: true };

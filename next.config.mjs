@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Pin the tracing root to this repo — a stray lockfile in the home directory
+  // otherwise makes Next guess the workspace root and warn on every build.
+  outputFileTracingRoot: import.meta.dirname,
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [

@@ -10,7 +10,7 @@ import { ACTIVE_CHILD_COOKIE } from '@/lib/parent/active-child';
 import type { LinkedChild } from '@/lib/parent/types';
 
 export interface ParentContext {
-  supabase: ReturnType<typeof createServerSupabaseClient>;
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>;
   userId: string;
   linkedChildren: LinkedChild[];
   /** null ⇒ the account has no active guardian_links — render NoLinkedChildren. */
@@ -18,11 +18,11 @@ export interface ParentContext {
 }
 
 export const resolveParentContext = async (): Promise<ParentContext> => {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
   const linkedChildren = await loadLinkedChildren(supabase, user.id);
-  const activeChild = pickActiveChild(linkedChildren, cookies().get(ACTIVE_CHILD_COOKIE)?.value);
+  const activeChild = pickActiveChild(linkedChildren, (await cookies()).get(ACTIVE_CHILD_COOKIE)?.value);
   return { supabase, userId: user.id, linkedChildren, activeChild };
 };

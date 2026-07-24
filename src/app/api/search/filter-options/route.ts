@@ -6,7 +6,7 @@ import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
 // this route just caches the result — the options change when the catalogue
 // is re-imported, not per request.
 export async function GET() {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const { data, error } = await (supabase as any).rpc('search_filter_options');
 
   if (error) {

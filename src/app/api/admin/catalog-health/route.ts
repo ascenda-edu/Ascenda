@@ -14,7 +14,7 @@ const unauthorized = () =>
 
 // Lightweight health check to verify catalog data is present and key fields are usable.
 export async function GET(request: Request) {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
 
   // Access requires EITHER a server-to-server bearer token (ADMIN_API_KEY, for
   // CLI/cron use) OR an authenticated admin user. Without one of these the
