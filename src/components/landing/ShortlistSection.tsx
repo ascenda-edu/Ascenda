@@ -35,8 +35,8 @@ const steps = [
         widget: (
             <AppFrame title="Top matches">
                 <div className="space-y-2.5">
-                    <MatchCard name="TU Delft" sub="Safe · Aerospace" score={92} colorClass="stroke-emerald-500" compact />
-                    <MatchCard name="Imperial College" sub="Match · Aeronautics" score={85} colorClass="stroke-amber-500" compact />
+                    <MatchCard name="TU Delft" sub="MSc Aerospace Eng." location="Netherlands" score={92} compact />
+                    <MatchCard name="Imperial College" sub="MEng Aeronautics" location="United Kingdom" score={85} compact />
                 </div>
             </AppFrame>
         ),
@@ -48,9 +48,9 @@ const steps = [
         widget: (
             <AppFrame title="This week">
                 <div className="space-y-2.5">
-                    <TaskRow tone="amber" title="Draft scholarship essay" sub="Toolbox" due="3d" compact />
-                    <TaskRow tone="sky" title="Confirm reference" sub="Ms Okonkwo" due="6d" compact />
-                    <TaskRow tone="emerald" title="Submit UCAS" sub="Cambridge" due="Ready" compact />
+                    <TaskRow tone="rose" title="Scholarship essay" sub="Imperial" due="Today" compact />
+                    <TaskRow tone="amber" title="Reference letter" sub="TU Delft" due="6d" compact />
+                    <TaskRow tone="sky" title="UCAS opens" sub="ESADE + Imperial" due="4d" compact />
                 </div>
             </AppFrame>
         ),

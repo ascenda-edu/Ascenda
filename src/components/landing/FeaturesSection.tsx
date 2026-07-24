@@ -8,9 +8,9 @@ import {
     AppFrame,
     MatchCard,
     SearchWidget,
-    StatTile,
     TaskRow,
 } from './product-widgets';
+import { PipelineBar } from './mock-viz';
 
 type WidgetKind = 'fit' | 'search' | 'plan';
 
@@ -53,9 +53,9 @@ function FeatureWidget({ kind }: { kind: WidgetKind }) {
         return (
             <AppFrame route="/matches">
                 <div className="space-y-2.5">
-                    <MatchCard country="Netherlands" tier="safe" name="TU Delft" sub="MSc Aerospace Engineering" score={92} colorClass="stroke-emerald-500" />
-                    <MatchCard country="United Kingdom" tier="match" name="Imperial College London" sub="MEng Aeronautics" score={85} colorClass="stroke-amber-500" />
-                    <MatchCard country="Switzerland" tier="reach" name="ETH Zürich" sub="MSc Mechanical Engineering" score={71} colorClass="stroke-rose-500" />
+                    <MatchCard name="TU Delft" sub="MSc Aerospace Engineering" location="Delft, Netherlands" tier="Safe" score={92} meta="€18,750/yr · 2 yrs · Master's" />
+                    <MatchCard name="Imperial College London" sub="MEng Aeronautics" location="London, United Kingdom" tier="Match" score={85} meta="£40,940/yr · 4 yrs · Master's" />
+                    <MatchCard name="ETH Zürich" sub="MSc Mechanical Engineering" location="Zürich, Switzerland" tier="Reach" score={71} meta="CHF 1,460/yr · 2 yrs · Master's" />
                 </div>
             </AppFrame>
         );
@@ -63,21 +63,28 @@ function FeatureWidget({ kind }: { kind: WidgetKind }) {
     if (kind === 'search') {
         return (
             <AppFrame title="Search hub">
-                <SearchWidget />
+                <SearchWidget
+                    query="aerospace engineering in europe"
+                    chips={[{ label: 'Netherlands', active: true }, { label: 'Engineering' }, { label: "Master's" }]}
+                />
             </AppFrame>
         );
     }
     return (
         <AppFrame route="/applications">
-            <div className="mb-3 grid grid-cols-3 gap-2.5">
-                <StatTile label="Tracked" value={6} detail="applications" />
-                <StatTile label="In progress" value={4} detail="working now" />
-                <StatTile label="Submitted" value={2} detail="awaiting" accent />
+            <div className="mb-3.5">
+                <PipelineBar
+                    stages={[
+                        { label: 'Planning', count: 1, colorClass: 'bg-slate-400' },
+                        { label: 'In progress', count: 3, colorClass: 'bg-sky-500' },
+                        { label: 'Submitted', count: 2, colorClass: 'bg-emerald-500' },
+                    ]}
+                />
             </div>
             <div className="space-y-2.5">
-                <TaskRow tone="amber" title="Tailor personal statement" sub="University of Manchester · Computer Science" due="Due in 3d" />
-                <TaskRow tone="sky" title="Confirm reference from Ms Okonkwo" sub="Imperial College London" due="In 6d" />
-                <TaskRow tone="emerald" title="Submit UCAS application" sub="University of Cambridge" due="Ready" />
+                <TaskRow tone="rose" title="Tailor personal statement" sub="Imperial College London" due="2d" />
+                <TaskRow tone="amber" title="Confirm reference from Ms Okonkwo" sub="TU Delft" due="6d" />
+                <TaskRow tone="sky" title="Submit UCAS application" sub="ESADE + Imperial" due="12d" />
             </div>
         </AppFrame>
     );
