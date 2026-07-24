@@ -119,7 +119,7 @@ const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite']
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerSupabaseClient();
+    const supabase = await createRouteHandlerSupabaseClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();

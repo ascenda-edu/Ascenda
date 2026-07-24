@@ -8,7 +8,7 @@ import { QuestsClient } from './_quests-client';
 // from Shortlist (the student's own saved programmes) and Search (the
 // catalogue) — this is counsellor-curated, read-only-with-actions.
 export default async function QuestsPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

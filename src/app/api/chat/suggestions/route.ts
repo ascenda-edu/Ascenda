@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerSupabaseClient();
+    const supabase = await createRouteHandlerSupabaseClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     const mode = resolved.mode;
 
     const activeChildId =
-      mode === 'parent' ? cookies().get(ACTIVE_CHILD_COOKIE)?.value : undefined;
+      mode === 'parent' ? (await cookies()).get(ACTIVE_CHILD_COOKIE)?.value : undefined;
     const cacheKey = contextCacheKey(mode, user.id, activeChildId);
     let chatContext = getCachedContext(cacheKey);
     if (!chatContext) {

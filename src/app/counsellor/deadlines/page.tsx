@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: 'Deadlines · Counsellor' };
 export const dynamic = 'force-dynamic';
 
 export default async function CounsellorDeadlinesPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   const cohort = await loadCohort(supabase, { excludeId: user?.id });
   const allDeadlines = deriveAllDeadlines(cohort);

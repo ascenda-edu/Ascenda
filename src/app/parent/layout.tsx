@@ -8,7 +8,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 // page resolves guardian_links via resolveLinkedChildIds() and renders an
 // empty state when the account has no linked children — never the cohort.
 export default async function ParentLayout({ children }: { children: ReactNode }) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

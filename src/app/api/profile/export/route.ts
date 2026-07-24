@@ -35,7 +35,7 @@ const slugify = (value: string) =>
     .replace(/(^-|-$)+/g, '');
 
 export async function GET(request: Request) {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const url = new URL(request.url);
   const format = url.searchParams.get('format');
   const {

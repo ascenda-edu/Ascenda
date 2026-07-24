@@ -13,9 +13,8 @@ import { CharacterSheet } from '../../_components/character-sheet';
 
 export const dynamic = 'force-dynamic';
 
-// Next 14 passes params as a plain object (the Promise shape is Next 15).
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 const FLAG_LABELS: Record<string, { label: string; color: string }> = {
@@ -53,9 +52,10 @@ function getNextDeadlineDays(student: CounsellorStudent) {
   return daysUntil(upcoming[0].date);
 }
 
-export default async function StudentDetailPage({ params }: Props) {
+export default async function StudentDetailPage(props: Props) {
+  const params = await props.params;
   const { id } = params;
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const student = await loadStudentById(supabase, id);
   if (!student) notFound();
   const [evolution, questDecks] = await Promise.all([
@@ -86,7 +86,6 @@ export default async function StudentDetailPage({ params }: Props) {
           {student.personal.firstName} {student.personal.lastName}
         </span>
       </nav>
-
       {/* Header card */}
       <div className="surface-card surface-card--static">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
@@ -207,10 +206,8 @@ export default async function StudentDetailPage({ params }: Props) {
           </div>
         )}
       </div>
-
       {/* RPG character sheet: level/XP, stat blocks, assigned-deck quest log */}
       <CharacterSheet student={student} questDecks={questDecks} />
-
       {/* Tabbed detail view */}
       <StudentDetailTabs student={student} evolution={evolution} />
     </div>

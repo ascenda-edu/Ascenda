@@ -7,7 +7,7 @@ import { assignDeck, requireCounsellor, unassignDeck } from '@/lib/counsellor/de
 // the trg_deck_assignment_notify DB trigger — do NOT insert notifications here
 // (same convention as the help-system triggers).
 export async function POST(request: NextRequest) {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const auth = await requireCounsellor(supabase);
   if (!auth.user) return auth.errorResponse;
 
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
 // Unassign (?id=<assignment id>).
 export async function DELETE(request: NextRequest) {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const auth = await requireCounsellor(supabase);
   if (!auth.user) return auth.errorResponse;
 

@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: 'Assistant · Parent' };
 export const dynamic = 'force-dynamic';
 
 export default async function ParentAssistantPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

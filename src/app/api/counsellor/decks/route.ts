@@ -9,7 +9,7 @@ import type { DeckTheme } from '@/lib/types/demo-tables';
 // the in-app requireCounsellor check is defense in depth on top of that.
 
 export async function POST(request: NextRequest) {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const auth = await requireCounsellor(supabase);
   if (!auth.user) return auth.errorResponse;
 
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const auth = await requireCounsellor(supabase);
   if (!auth.user) return auth.errorResponse;
 

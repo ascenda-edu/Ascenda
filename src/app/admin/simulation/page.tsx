@@ -54,7 +54,7 @@ function bandColor(band: string | null) {
 }
 
 export default async function SimulationPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 

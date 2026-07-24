@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: 'Outcomes · Counsellor' };
 export const dynamic = 'force-dynamic';
 
 export default async function CounsellorOutcomesPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   const outcomes = await loadOutcomes(supabase, { excludeId: user?.id });
   const stats = deriveOutcomeStats(outcomes);

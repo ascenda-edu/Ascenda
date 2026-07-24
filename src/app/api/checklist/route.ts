@@ -27,7 +27,7 @@ const failureResponse = (
 };
 
 export async function PATCH(request: NextRequest) {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();
@@ -52,7 +52,7 @@ export async function PATCH(request: NextRequest) {
 
 // Create a new checklist task under one of the user's own applications.
 export async function POST(request: NextRequest) {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
 // Delete a checklist task the caller owns.
 export async function DELETE(request: NextRequest) {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

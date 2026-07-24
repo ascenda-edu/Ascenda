@@ -37,7 +37,7 @@ type ApplicationJoin = {
 };
 
 export default async function TasksPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

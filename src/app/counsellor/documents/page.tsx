@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: 'Documents · Counsellor' };
 export const dynamic = 'force-dynamic';
 
 export default async function CounsellorDocumentsPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const docs = await loadCounsellorDocuments(supabase);
   const received = docs.filter((d) => d.status === 'received').length;
   const pending = docs.filter((d) => d.status === 'pending').length;
