@@ -158,8 +158,8 @@ export const UniversityInformation = ({
   return (
     <div
       className={cn(
-        'min-h-screen w-full space-y-10 bg-background px-4 pb-12 pt-28 text-foreground md:px-8 lg:px-12',
-        'mx-auto w-full max-w-none',
+        'min-h-screen w-full space-y-10 bg-background pb-12 pt-28 text-foreground',
+        'shell-gutter mx-auto w-full max-w-6xl',
         className
       )}
     >

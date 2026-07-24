@@ -60,7 +60,7 @@ export const Navbar = () => {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50">
-      <div className="px-3 pb-2 pt-2 sm:px-6 sm:pb-3 sm:pt-3 lg:px-10">
+      <div className="shell-gutter pb-2 pt-2 sm:pb-3 sm:pt-3">
         <div
           className={cn(
             'flex w-full items-center justify-between rounded-2xl border border-border bg-card/95 px-3 py-1.5 sm:px-4 sm:py-2 text-foreground backdrop-blur-lg transition-all dark:border-white/10 dark:bg-card/90',

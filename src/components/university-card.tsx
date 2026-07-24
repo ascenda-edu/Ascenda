@@ -349,9 +349,9 @@ export function UniversityCard({
             {hasStats || actions ? (
                 <div className="mt-auto flex flex-col gap-4 pt-4">
                     {hasStats ? (
-                        <dl className="grid grid-cols-3 gap-3 border-t border-border/60 pt-3">
+                        <dl className="grid grid-cols-[auto_auto_auto] justify-between gap-x-5 border-t border-border/60 pt-3">
                             <Stat label="Tuition" value={tuitionLabel} />
-                            <Stat label="Duration" value={durationLabel} />
+                            <Stat label="Length" value={durationLabel} />
                             <Stat label="Level" value={levelLabel} />
                         </dl>
                     ) : null}

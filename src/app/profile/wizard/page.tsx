@@ -63,7 +63,7 @@ export default async function ProfileWizardPage({ searchParams }: ProfileWizardP
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
-      <div className="relative z-10 mx-auto flex w-full max-w-none flex-col gap-6 px-4 pb-16 pt-20 sm:px-6 lg:px-10">
+      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-16 pt-20 sm:px-6 lg:px-10">
         <div className="flex flex-wrap items-center justify-between gap-4 relative z-[100] pointer-events-auto">
           <div className="flex items-center gap-2">
             <Link

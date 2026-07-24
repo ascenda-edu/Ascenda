@@ -7,7 +7,6 @@ import messages from '@/messages/en.json';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme/theme-provider';
 import { ThemeScript } from '@/components/theme/theme-script';
-import { PageWrapper } from '@/components/layout/page-wrapper';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -81,9 +80,7 @@ export default function RootLayout({
               scroll container, which would neutralise every position:sticky element in the app */}
           <div className="relative min-h-screen overflow-x-clip bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground">
             <Providers messages={messages}>
-              <PageWrapper>
-                {children}
-              </PageWrapper>
+              {children}
             </Providers>
           </div>
         </ThemeProvider>

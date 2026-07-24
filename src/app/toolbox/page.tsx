@@ -154,7 +154,7 @@ export default async function ToolboxPage() {
       </AnimatedSection>
 
       {/* Tool cards grid */}
-      <AnimatedGrid className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <AnimatedGrid className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         {TOOL_CARDS.map((tool) => {
           const visual = TOOL_VISUAL[tool.tool];
           const Icon = visual.icon;

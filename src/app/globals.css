@@ -202,6 +202,13 @@
     @apply text-sm text-muted-foreground/90 leading-relaxed;
   }
 
+  /* THE app-wide horizontal gutter. The fixed navbar and the shell row both
+     use this one class so the sidebar/content edges always align with the
+     navbar pill — never re-hardcode these paddings in either place. */
+  .shell-gutter {
+    @apply px-3 sm:px-6 lg:px-10;
+  }
+
   .surface-card {
     @apply relative overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-sm transition-[transform,box-shadow,border-color,background-color] duration-200 hover:-translate-y-px hover:shadow-md dark:border-white/10 dark:bg-card;
   }
