@@ -14,6 +14,7 @@ import {
     IB_MIN,
     MiniCalendar,
     SpotlightPanel,
+    TierTiles,
     ringToneClass,
 } from './mock-viz';
 
@@ -84,12 +85,6 @@ const CHANCE_PROGRAMMES = [
     { name: 'ETH Zürich', monogram: 'EZ', sub: 'MSc Mechanical', minScore: 41 },
 ] as const;
 
-const TIER_TILE_STYLES = {
-    safety: 'text-emerald-600 dark:text-emerald-400',
-    match: 'text-amber-600 dark:text-amber-400',
-    reach: 'text-rose-600 dark:text-rose-400',
-} as const;
-
 function ChancesPanel({ onInteract }: { onInteract: () => void }) {
     const [score, setScore] = useState(38);
     const pct = ((score - IB_MIN) / (IB_MAX - IB_MIN)) * 100;
@@ -135,17 +130,8 @@ function ChancesPanel({ onInteract }: { onInteract: () => void }) {
                     <span>{IB_MAX}</span>
                 </div>
             </div>
-            <div className="grid grid-cols-3 gap-2" aria-live="polite">
-                {(['safety', 'match', 'reach'] as const).map((tier) => (
-                    <div key={tier} className="rounded-xl border border-border bg-card px-2 py-1.5 text-center dark:border-white/10">
-                        <p className={cn('font-heading text-lg font-bold leading-tight tabular-nums', TIER_TILE_STYLES[tier])}>
-                            {counts[tier]}
-                        </p>
-                        <p className={cn('text-[0.5625rem] font-bold uppercase tracking-[0.1em]', TIER_TILE_STYLES[tier])}>
-                            {tier === 'safety' ? 'Safety' : tier === 'match' ? 'Match' : 'Reach'}
-                        </p>
-                    </div>
-                ))}
+            <div aria-live="polite">
+                <TierTiles counts={counts} />
             </div>
             {CHANCE_PROGRAMMES.map((p) => (
                 <ChanceMeter
