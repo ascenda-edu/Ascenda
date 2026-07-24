@@ -3,7 +3,8 @@
 import { motion } from 'framer-motion';
 import { AnimatedSection } from '@/components/layout/animated-section';
 import { cn } from '@/lib/utils';
-import { AppFrame, CheckItem, MatchCard, TaskRow } from './product-widgets';
+import { AppFrame, MatchCard, ProgressRing, TaskRow } from './product-widgets';
+import { SharedWithRow, WizardSteps } from './mock-viz';
 
 const NUMBER_GRADIENTS = [
     'from-indigo-500 to-violet-500',
@@ -17,14 +18,17 @@ const steps = [
         title: 'Tell us where you stand',
         copy: 'Predicted grades, subjects and what you want from a place. Five minutes, once.',
         widget: (
-            <AppFrame title="Profile · 5/5">
-                <div className="flex flex-col gap-2.5">
-                    <CheckItem label="Personal info" />
-                    <CheckItem label="Your studies" />
-                    <CheckItem label="Grades & tests" />
-                    <CheckItem label="Activities" />
-                    <CheckItem label="Lifestyle" />
+            <AppFrame title="Your profile">
+                <div className="flex flex-wrap items-center gap-4">
+                    <ProgressRing value={80} size={56} stroke={5.5} colorClass="stroke-primary" label="80% profile complete" />
+                    <div className="min-w-0 grow basis-40">
+                        <WizardSteps
+                            steps={['Personal info', 'Your studies', 'Grades & tests', 'Activities', 'Lifestyle']}
+                            currentIndex={4}
+                        />
+                    </div>
                 </div>
+                <p className="mt-3 text-[0.8125rem] text-muted-foreground">80% ready · 5 minutes, once</p>
             </AppFrame>
         ),
     },
@@ -34,10 +38,28 @@ const steps = [
         copy: 'Fit Scores and admission odds, ordered by what suits you — not a league table.',
         widget: (
             <AppFrame title="Top matches">
+                <div className="mb-2.5 flex gap-1.5">
+                    {['All', 'Match', 'Safe', 'Reach'].map((pill, i) => (
+                        <span
+                            key={pill}
+                            className={cn(
+                                'rounded-full border px-2.5 py-1 text-[0.6875rem] font-semibold',
+                                i === 0
+                                    ? 'border-primary bg-primary text-primary-foreground'
+                                    : 'border-border bg-card text-muted-foreground dark:border-white/10',
+                            )}
+                        >
+                            {pill}
+                        </span>
+                    ))}
+                </div>
                 <div className="space-y-2.5">
                     <MatchCard name="TU Delft" sub="MSc Aerospace Eng." location="Netherlands" score={92} compact />
                     <MatchCard name="Imperial College" sub="MEng Aeronautics" location="United Kingdom" score={85} compact />
                 </div>
+                <p className="mt-2.5 text-[0.8125rem] text-muted-foreground">
+                    <b className="font-semibold tabular-nums text-foreground">18</b> ranked for you
+                </p>
             </AppFrame>
         ),
     },
@@ -50,7 +72,12 @@ const steps = [
                 <div className="space-y-2.5">
                     <TaskRow tone="rose" title="Scholarship essay" sub="Imperial" due="Today" compact />
                     <TaskRow tone="amber" title="Reference letter" sub="TU Delft" due="6d" compact />
-                    <TaskRow tone="sky" title="UCAS opens" sub="ESADE + Imperial" due="4d" compact />
+                    <SharedWithRow
+                        people={[
+                            { initials: 'MO', name: 'Ms Okonkwo', toneClass: 'bg-violet-500/10 text-violet-700 dark:text-violet-300', dotClass: 'bg-violet-500' },
+                            { initials: 'D', name: 'Dad', toneClass: 'bg-sky-500/10 text-sky-700 dark:text-sky-300', dotClass: 'bg-sky-500' },
+                        ]}
+                    />
                 </div>
             </AppFrame>
         ),
