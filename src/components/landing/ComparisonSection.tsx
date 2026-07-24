@@ -3,7 +3,6 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Check, X } from 'lucide-react';
 import { fadeIn } from '@/lib/motion';
-import { AppFrame, StatTile, TaskRow } from './product-widgets';
 
 // Positions form an overlapping diagonal "pile" on md+ (fills the box instead of
 // pinning cards to empty corners); on mobile they render as a plain stacked list.
@@ -17,7 +16,7 @@ const chaosNotes = [
 const clarityPoints = [
     'One ranked list, scored to you.',
     'Every programme, task and deadline in one workspace.',
-    'Deadlines that find you — before they bite.',
+    'Deadlines that find you first.',
 ];
 
 export function ComparisonSection() {
@@ -35,9 +34,6 @@ export function ComparisonSection() {
                     <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground tracking-tight">
                         Same student. Different year.
                     </h2>
-                    <p className="text-base text-muted-foreground max-w-lg leading-relaxed">
-                        The mess on the left. One ranked, shareable plan on the right.
-                    </p>
                 </div>
 
                 <div className="mt-12 grid items-center gap-8 md:grid-cols-[1fr_auto_1fr] md:gap-6">
@@ -82,18 +78,13 @@ export function ComparisonSection() {
                             <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />
                             With Ascenda
                         </span>
-                        <AppFrame title="Your dashboard">
-                            <div className="mb-3 grid grid-cols-3 gap-2.5">
-                                <StatTile label="Matches" value={18} />
-                                <StatTile label="This week" value={3} />
-                                <StatTile label="Profile" value={100} suffix="%" accent />
-                            </div>
-                            <TaskRow tone="emerald" title="Next move: submit Cambridge" sub="Everything ready" due="Go" />
-                        </AppFrame>
-                        <div className="mt-4 flex flex-col gap-2.5">
+                        <div className="flex flex-col gap-3">
                             {clarityPoints.map((pt) => (
-                                <div key={pt} className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" strokeWidth={2.4} aria-hidden />
+                                <div
+                                    key={pt}
+                                    className="flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4 text-[0.9375rem] font-medium leading-snug text-foreground shadow-sm"
+                                >
+                                    <Check className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" strokeWidth={2.4} aria-hidden />
                                     {pt}
                                 </div>
                             ))}

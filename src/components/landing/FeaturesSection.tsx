@@ -7,13 +7,12 @@ import { cn } from '@/lib/utils';
 import {
     AppFrame,
     MatchCard,
-    ProgressRing,
     SearchWidget,
     StatTile,
     TaskRow,
 } from './product-widgets';
 
-type WidgetKind = 'fit' | 'search' | 'plan' | 'dashboard';
+type WidgetKind = 'fit' | 'search' | 'plan';
 
 interface FeatureRow {
     label: string;
@@ -28,32 +27,24 @@ const rows: FeatureRow[] = [
     {
         label: 'Fit Score',
         title: 'See exactly where you stand.',
-        copy: 'Every programme scored against your real grades, subjects and goals — sorted into reach, match and safe, with your estimated admission chance on each card.',
-        chips: ['Reach / match / safe tiers', 'Odds on every card'],
+        copy: 'Every programme scored against your grades, subjects and goals — sorted into reach, match and safe, with your admission odds on each card.',
+        chips: ['Reach / match / safe', 'Recalculates as your profile grows'],
         widget: 'fit',
     },
     {
         label: 'The catalogue',
         title: 'Every programme, one search.',
-        copy: '119,000+ courses in one place. Filter by country, subject and the kind of life you want — and preview how each one fits your profile before you ever book a call.',
-        chips: ['119,000+ programmes', 'Live fit preview'],
+        copy: '119,000+ courses, one search. Filter by country, subject and the life you want — and see your fit before you shortlist.',
+        chips: ['119,000+ programmes', 'Fit preview on every result'],
         widget: 'search',
         reverse: true,
     },
     {
         label: 'Your plan',
         title: 'A plan that keeps you moving.',
-        copy: 'Essays, references and deadlines tracked per application — the most urgent thing surfaced first, everything else in order, with help one tap away.',
-        chips: ['Per-application tracking', 'Urgent surfaced first'],
+        copy: 'Essays, references and deadlines tracked per application — the most urgent thing always on top.',
+        chips: ['Per-application tracking', 'Counsellor built in'],
         widget: 'plan',
-    },
-    {
-        label: 'Command centre',
-        title: 'Your whole journey, one view.',
-        copy: 'Matches, tasks, deadlines and your counsellor in a single home that always shows the next move — so nothing slips between the cracks.',
-        chips: ['Matches, tasks & deadlines together', 'Counsellor built in'],
-        widget: 'dashboard',
-        reverse: true,
     },
 ];
 
@@ -76,40 +67,17 @@ function FeatureWidget({ kind }: { kind: WidgetKind }) {
             </AppFrame>
         );
     }
-    if (kind === 'plan') {
-        return (
-            <AppFrame route="/applications">
-                <div className="mb-3 grid grid-cols-3 gap-2.5">
-                    <StatTile label="Tracked" value={6} detail="applications" />
-                    <StatTile label="In progress" value={4} detail="working now" />
-                    <StatTile label="Submitted" value={2} detail="awaiting" accent />
-                </div>
-                <div className="space-y-2.5">
-                    <TaskRow tone="amber" title="Tailor personal statement" sub="University of Manchester · Computer Science" due="Due in 3d" />
-                    <TaskRow tone="sky" title="Confirm reference from Ms Okonkwo" sub="Imperial College London" due="In 6d" />
-                    <TaskRow tone="emerald" title="Submit UCAS application" sub="University of Cambridge" due="Ready" />
-                </div>
-            </AppFrame>
-        );
-    }
     return (
-        <AppFrame route="/dashboard">
-            <div className="mb-3 flex items-center gap-4 rounded-2xl border border-border bg-card p-4 dark:border-white/10">
-                <ProgressRing value={100} size={88} stroke={8} colorClass="stroke-emerald-500" label="Profile 100% complete" />
-                <div>
-                    <p className="text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-emerald-600 dark:text-emerald-400">
-                        Profile complete
-                    </p>
-                    <p className="mt-1 text-[0.9375rem] font-semibold tracking-tight text-foreground">Everything&apos;s in place</p>
-                    <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
-                        Matches &amp; requirements running on your full profile.
-                    </p>
-                </div>
+        <AppFrame route="/applications">
+            <div className="mb-3 grid grid-cols-3 gap-2.5">
+                <StatTile label="Tracked" value={6} detail="applications" />
+                <StatTile label="In progress" value={4} detail="working now" />
+                <StatTile label="Submitted" value={2} detail="awaiting" accent />
             </div>
-            <div className="grid grid-cols-3 gap-2.5">
-                <StatTile label="Applications" value={6} />
-                <StatTile label="Due this week" value={3} />
-                <StatTile label="Profile" value={100} suffix="%" accent />
+            <div className="space-y-2.5">
+                <TaskRow tone="amber" title="Tailor personal statement" sub="University of Manchester · Computer Science" due="Due in 3d" />
+                <TaskRow tone="sky" title="Confirm reference from Ms Okonkwo" sub="Imperial College London" due="In 6d" />
+                <TaskRow tone="emerald" title="Submit UCAS application" sub="University of Cambridge" due="Ready" />
             </div>
         </AppFrame>
     );
@@ -125,8 +93,8 @@ export function FeaturesSection() {
                         From a blank shortlist to a submitted application.
                     </h2>
                     <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl">
-                        One workspace for the whole cycle — matched programmes, a plan that knows your deadlines, and the
-                        people helping you get there.
+                        Three things do the heavy lifting: scores you can trust, one searchable catalogue, and a plan that
+                        keeps moving.
                     </p>
                 </AnimatedSection>
 

@@ -190,7 +190,7 @@ export function HeroSection() {
                 <div className="absolute -left-24 top-[-15%] h-[55vw] w-[55vw] rounded-full bg-indigo-500/25 blur-3xl" aria-hidden />
                 <div className="absolute -right-24 bottom-[-20%] h-[45vw] w-[45vw] rounded-full bg-emerald-400/20 blur-3xl" aria-hidden />
                 <Image
-                    src="/ascenda-banner.png"
+                    src="/ascenda-banner.jpg"
                     alt=""
                     fill
                     priority
@@ -277,7 +277,7 @@ export function HeroSection() {
                                         initial="hidden"
                                         animate="visible"
                                     >
-                                        Real fit scores, real deadlines, real plans — built around your grades, your goals, and the universities you&apos;re actually aiming at.
+                                        Fit Scores, deadlines and a plan — built around your grades, your goals and the universities you&apos;re aiming at.
                                     </motion.p>
                                 </motion.div>
                                 <motion.div
@@ -313,11 +313,7 @@ export function HeroSection() {
                                 >
                                     <li className="flex items-center gap-2">
                                         <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                                        See your real odds on each programme.
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                                        Catch every deadline before it closes.
+                                        Your odds on every programme.
                                     </li>
                                     <li className="flex items-center gap-2">
                                         <span className="h-1.5 w-1.5 rounded-full bg-accent" />

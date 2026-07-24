@@ -14,7 +14,7 @@ const faqs = [
     },
     {
         question: 'Who is Ascenda for?',
-        answer: 'International school students (IB and A-Level), and the counsellors and families supporting them.'
+        answer: 'International school students (IB and A-Level), and the counsellors and families supporting them — across the US, Canada, UK, EU, Australia, Singapore and Hong Kong, with visa insights for each.'
     },
     {
         question: 'How do I get access?',
@@ -25,16 +25,6 @@ const faqs = [
         question: 'Is my data private?',
         answer:
             'Yes. Ascenda stores data in region, enforces multi-factor sign-in, and gives you control over exactly who sees what — student, counsellor, or parent.'
-    },
-    {
-        question: 'Which destinations are covered?',
-        answer:
-            'The US, Canada, UK, EU, Australia, Singapore and Hong Kong — with visa insights preloaded for each.'
-    },
-    {
-        question: 'Can I talk to someone?',
-        answer:
-            'Absolutely. Email hello@ascendaedu.com for a live walkthrough or onboarding help.'
     }
 ];
 
@@ -42,7 +32,7 @@ export function FAQSection() {
     const [openFaq, setOpenFaq] = useState<string | null>(faqs[0].question);
 
     return (
-        <section id="faq" className="section-fade w-full py-24 bg-secondary/40 sm:py-32 scroll-mt-14">
+        <section id="faq" className="w-full py-24 bg-background sm:py-32 scroll-mt-14">
             <div className="max-w-7xl mx-auto px-6 grid gap-12 lg:grid-cols-[0.4fr_0.6fr]">
                 <motion.div
                     className="space-y-4"
@@ -52,11 +42,8 @@ export function FAQSection() {
                     variants={fadeIn}
                 >
                     <p className="text-sm font-medium uppercase tracking-widest text-primary/80">FAQ</p>
-                    <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground tracking-tight">Answers before you even ask.</h2>
-                    <p className="text-lg text-muted-foreground leading-relaxed">
-                        Clear timelines, real privacy controls, and a human to talk to when you need one.
-                    </p>
-                    <div className="hidden lg:block pt-4">
+                    <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground tracking-tight">Common questions.</h2>
+                    <div className="pt-4">
                         <div className="rounded-2xl border border-primary/10 bg-primary/5 p-5 space-y-2">
                             <p className="text-sm font-semibold text-foreground">Still deciding?</p>
                             <p className="text-sm text-muted-foreground">Talk to a real person on the team — no bots, no sales script.</p>

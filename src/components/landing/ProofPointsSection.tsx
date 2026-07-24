@@ -15,7 +15,7 @@ const metrics = [
         total: 10,
         filled: 4,
         label: 'of students regret where or what they studied.',
-        fix: 'Fit Scores steer you to programmes you’ll actually thrive in.',
+        fix: 'Fit Scores steer you to programmes you’ll thrive in.',
     },
     {
         value: 20,
@@ -96,7 +96,7 @@ export function ProofPointsSection() {
                         animate={inView ? { opacity: 1, y: 0 } : undefined}
                         transition={{ duration: 0.5, delay: 0.1 }}
                     >
-                        Three things that quietly cost students years — and what Ascenda does about each.
+                        Three gaps that cost students years — and what we do about each.
                     </motion.p>
                 </div>
 
