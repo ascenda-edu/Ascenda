@@ -1,6 +1,6 @@
 # Landing page (pre-login) — premium design rules
 
-Scope: this directory (`src/components/landing/`) and `src/app/page.tsx` only. These rules bias the public marketing/hero page toward a premium agency feel — editorial typography, scroll-triggered motion, restraint over decoration. Target: looks like a $2k+ client site, not a template.
+Scope: `src/components/landing-preview/` (where the live landing page's own components live — the folder keeps its build-time name), this directory (`src/components/landing/`, now shared sections and widget mocks only) and `src/app/page.tsx`. These rules bias the public marketing/hero page toward a premium agency feel — editorial typography, scroll-triggered motion, restraint over decoration. Target: looks like a $2k+ client site, not a template.
 
 These are design rules layered on top of the root CLAUDE.md — project conventions (Framer Motion, Outfit/Inter fonts, existing card/button patterns, `@/*` alias) still apply.
 

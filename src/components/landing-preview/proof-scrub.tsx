@@ -7,9 +7,9 @@ import { cn } from '@/lib/utils';
 import { SCENE_SPRING, useMotionReady } from './ascent-scroll';
 
 /**
- * Scrubbed variant of ProofPointsSection: identical layout, copy and data, but
- * the count-ups and dot meters are tied to the scrollbar instead of firing once
- * on view. Each card owns its own 0→1 travel (its top crossing the viewport
+ * Scrubbed proof points: same layout, copy and data as the static version this
+ * replaced, but the count-ups and dot meters are tied to the scrollbar instead
+ * of firing once on view. Each card owns its own 0→1 travel (its top crossing the viewport
  * bottom → reaching 35% height), so the three statistics fill in sequence as the
  * band rises — and scrolling back rewinds them.
  *

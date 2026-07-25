@@ -9,7 +9,7 @@ import { PinnedScene, type SceneCtx } from './ascent-scroll';
 
 /**
  * The three scrubbed chapters of "The Ascent" — Fit Score, the catalogue, your
- * plan. Copy and widget canon come straight from the live FeaturesSection; the
+ * plan. Copy and widget canon come from the features section this replaced; the
  * only new thing here is the choreography: each widget *performs* its story as
  * you scroll through the pinned scene rather than fading in whole.
  *

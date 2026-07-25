@@ -7,7 +7,7 @@ import { RETURNING_USER_STORAGE_KEY } from '@/lib/constants';
 /**
  * Where should a landing-page CTA send this visitor? `/login` by default,
  * `/dashboard` for returning users (localStorage flag) or live sessions.
- * Same logic as HeroSection/DemoSection/CTASection — extracted for reuse.
+ * Extracted for reuse across the landing hero, nav and CTA.
  */
 export function useLaunchHref() {
     const supabase = useSupabase();

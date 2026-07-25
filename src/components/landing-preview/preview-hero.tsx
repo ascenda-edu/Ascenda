@@ -99,7 +99,7 @@ function RotatingHeadlineWord() {
 }
 
 /**
- * Preview hero — the shipped HeroSection with two additions from the approved
+ * Landing hero — the original static hero plus two additions from the approved
  * mock: a word-by-word headline reveal on first paint, and a scrubbed exit that
  * lifts the copy and the app tour out of frame as the banner dissolves.
  *

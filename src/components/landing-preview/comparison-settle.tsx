@@ -152,7 +152,7 @@ const PANEL_BASE = 'rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.0
  * middle of the viewport, while the answers slide in from the right behind it.
  *
  * Not a pinned scene — the scrub rides the section's normal travel (start end →
- * center center) so the layout is identical to the shipped ComparisonSection.
+ * center center) so the layout matches the static comparison grid it replaced.
  * Static and reduced-motion users see the settled final state (the `md:` position
  * and rotation classes carry it).
  */
