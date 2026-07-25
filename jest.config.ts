@@ -11,6 +11,7 @@ const config: Config = {
     '<rootDir>/.next/',
     '<rootDir>/node_modules/',
     // Fixture/helper modules that live under __tests__/ but contain no tests.
+    '<rootDir>/__tests__/helpers/',
     '<rootDir>/__tests__/scoring_validation/phase1_profiles.ts',
     '<rootDir>/__tests__/scoring_validation/batch_runner.ts'
   ],

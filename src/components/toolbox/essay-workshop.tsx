@@ -444,7 +444,6 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
                   essay={editorText}
                   platform={platform}
                   selectedBlocks={blocks.filter((b) => selectedBlocks.has(b.id))}
-                  allBlocks={blocks}
                   onInsertText={(text) => {
                     if (!editor) return;
                     const paragraphs = text.split(/\n\n+/).filter(Boolean);

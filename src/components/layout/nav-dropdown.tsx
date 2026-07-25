@@ -9,13 +9,20 @@ import { isNavActive, type NavItem } from './navigation';
 
 interface NavDropdownProps {
   label: string;
+  /**
+   * Group icon from the nav config. Deliberately NOT rendered in the top bar:
+   * NavLink also renders label-only there, and drawing an icon on grouped pills
+   * only would break the "one row" reading. Kept on the props so the same nav
+   * group object can be spread here and into the icon-bearing mobile/sidebar
+   * renderers without a separate shape.
+   */
   icon: LucideIcon;
   items: NavItem[];
 }
 
 // A single top-bar pill that opens a small menu of related destinations.
 // Styled to match NavLink so grouped and ungrouped pills read as one row.
-export const NavDropdown = ({ label, icon: GroupIcon, items }: NavDropdownProps) => {
+export const NavDropdown = ({ label, items }: NavDropdownProps) => {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);

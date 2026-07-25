@@ -866,7 +866,6 @@ export function useSearchResults(filters: SearchFilters): SearchResultsState {
         }
       } catch (fetchError) {
         if (signal.aborted) return; // superseded request — ignore
-        // eslint-disable-next-line no-console
         console.error('[useSearchResults] fetch error:', fetchError);
         setError(friendlyError(fetchError));
         if (isFirstPage) {

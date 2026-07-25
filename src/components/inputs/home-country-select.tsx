@@ -32,8 +32,10 @@ const getCountryOptions = (): CountryOption[] => {
         }))
         .filter((option: { code: string; label: string }) => Boolean(option.label))
         .sort((a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label));
-    } catch (error) {
-      // fall through to fallback list
+    } catch {
+      // Intl.supportedValuesOf('region') is not universally implemented; fall
+      // through to the hand-maintained fallback list. Nothing to report — the
+      // component still renders a usable set of countries.
     }
   }
   return FALLBACK_COUNTRIES;

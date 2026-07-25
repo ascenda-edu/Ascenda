@@ -13,10 +13,13 @@ export const createServerSupabaseClient = async () => {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        // Server Components cannot set cookies
-        set(name: string, value: string, options: CookieOptions) {
+        // Server Components cannot set cookies, but @supabase/ssr requires the
+        // handlers to exist. Intentional no-ops: a token refresh in a Server
+        // Component is persisted by middleware instead. Params are positional
+        // and part of the interface, so they are `_`-prefixed, not removed.
+        set(_name: string, _value: string, _options: CookieOptions) {
         },
-        remove(name: string, options: CookieOptions) {
+        remove(_name: string, _options: CookieOptions) {
         },
       },
     }

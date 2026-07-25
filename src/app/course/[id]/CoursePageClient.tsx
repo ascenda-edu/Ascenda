@@ -491,7 +491,6 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
   const [showAllFlatModules, setShowAllFlatModules] = useState(false);
-  const [expandedYears, setExpandedYears] = useState<Record<string, boolean>>({});
   type ActionButton = {
     key: string;
     href: string;
@@ -527,7 +526,6 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
     () => extractYearSections(course?.modules, course?.duration),
     [course?.modules, course?.duration]
   );
-  const visibleModules = showAllFlatModules ? moduleItems : moduleItems.slice(0, 8);
   const hasOutcomes = Boolean(course?.outcomes && (
     course.outcomes.satisfaction ||
     course.outcomes.employment ||

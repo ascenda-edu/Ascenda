@@ -181,6 +181,5 @@ export function useRealtimePoll({
     // Channel identity is fully determined by these; handlers/subscriptions are
     // read via refs above so their re-creation each render is intentionally not
     // a dependency.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, channelName, enabled, fastMs, slowMs, maxMs]);
 }

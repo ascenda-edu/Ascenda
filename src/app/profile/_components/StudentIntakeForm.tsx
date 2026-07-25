@@ -3,8 +3,8 @@
 import { type FormEvent, type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Check, ChevronDown, ChevronRight, ChevronLeft, GraduationCap, User, Heart, Sparkles,
-  Trash2, PlusCircle, Trophy, Globe2, Briefcase, Info, X
+  Check, ChevronDown, ChevronRight, ChevronLeft,
+  Trash2, PlusCircle, Info, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
@@ -174,16 +174,6 @@ const COMMITMENT_OPTIONS = [
   { value: 'moderate', label: 'Moderate', desc: '1–2 serious activities, regular commitment' },
   { value: 'deep', label: 'Deep', desc: 'Competitive level or school-wide recognition' },
   { value: 'exceptional', label: 'Exceptional', desc: 'National awards, publications, or elite-level' },
-];
-
-const KEY_ACTIVITIES_OPTIONS = [
-  'Sport (competitive)', 'Music (Grade 5+)', 'Drama / theatre', 'Debate / Model UN',
-  'Community service', 'Science competition', 'Entrepreneurship', 'Art / design',
-  'Writing / journalism', 'Coding / hackathons', 'Research project', 'Other',
-];
-
-const INTL_EXPERIENCE_OPTIONS = [
-  'Study abroad', 'Exchange programme', 'International competition', 'Gap year travel', 'None',
 ];
 
 const GRADUATION_YEARS = (() => {

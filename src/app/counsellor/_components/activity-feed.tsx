@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { MessageSquare, Flag, RefreshCw, Pin, PinOff, EyeOff, Eye, Settings2, X, ChevronDown } from 'lucide-react';
+import { MessageSquare, Flag, RefreshCw, Pin, PinOff, EyeOff, Eye, Settings2, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 
