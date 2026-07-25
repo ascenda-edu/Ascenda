@@ -14,7 +14,7 @@ import { HubCard } from '@/components/dashboard/hub/hub-card';
  */
 
 export async function CounsellorQuests({ profileId }: { profileId: string }) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const questDecks = await loadStudentQuestDecks(supabase, profileId).catch(() => []);
   if (questDecks.length === 0) return null;
 

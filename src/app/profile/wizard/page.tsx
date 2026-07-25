@@ -16,11 +16,12 @@ export const metadata: Metadata = {
 };
 
 interface ProfileWizardPageProps {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function ProfileWizardPage({ searchParams }: ProfileWizardPageProps) {
-  const supabase = createServerSupabaseClient();
+export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
+  const searchParams = await props.searchParams;
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

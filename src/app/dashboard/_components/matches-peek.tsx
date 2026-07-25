@@ -12,7 +12,7 @@ import { HubCard } from '@/components/dashboard/hub/hub-card';
  * dashboard must not block on it.
  */
 export async function MatchesPeek({ profileId }: { profileId: string }) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const result = await loadMatchesForProfile(supabase, profileId, { resultLimit: 60 });
   const matchError = Boolean(result.error);
   const matches = matchError ? [] : result.matches;

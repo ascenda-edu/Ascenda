@@ -4,7 +4,7 @@ import { templateTableMap, validateTemplateRows, type TemplateKey } from './vali
 
 export async function POST(request: Request) {
   try {
-    const supabase = createRouteHandlerSupabaseClient();
+    const supabase = await createRouteHandlerSupabaseClient();
     const {
       data: { user }
     } = await supabase.auth.getUser();

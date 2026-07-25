@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

@@ -117,3 +117,7 @@ SUPABASE_PROJECT_ID
 - **`recognition_score`** column on `universities` — used by search suggestions to prioritise well-known unis (threshold ≥ 5).
 - **PageHero** (`src/components/layout/page-hero.tsx`) — shared header used on every student-facing page. Tone prop: `'student'` (default warm) | `'counsellor'` (operational).
 - **`@/*` path alias** maps to `src/` — use `@/components/...`, `@/lib/...` etc.
+- **Supabase server factories are async (Next 15).** `createServerSupabaseClient` / `createRouteHandlerSupabaseClient` / `createServerActionSupabaseClient` all `await cookies()` — always `await` them. Same for `params`/`searchParams` on dynamic pages (they're Promises).
+- **`middleware.ts` must live in `src/`** (app dir is `src/app`) — at the repo root Next silently ignores it; that exact bug shipped auth-bypass to prod once already.
+- **`ssr: false` is forbidden in Server Components (Next 15).** Put `next/dynamic` + `ssr: false` in a `'use client'` wrapper (see `chatbot-widget-lazy.tsx`, `essay-workshop-lazy.tsx`).
+- **npm `overrides` pin `postcss@8.5.23` + `sharp@0.35.3` inside `next`** to clear advisories Next 15.5.21 still ships vulnerable; drop the overrides once a Next release bumps them. `lucide-react` is pinned to 0.577.0 — 1.x removes the deprecated icon aliases this codebase uses.

@@ -8,7 +8,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 // which opened can_act_as_counsellor() the same way). Restore the
 // profiles.role check here to re-restrict.
 export default async function CounsellorLayout({ children }: { children: ReactNode }) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

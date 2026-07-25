@@ -36,7 +36,7 @@ type DocumentJoin = {
 };
 
 export default async function DocumentsPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

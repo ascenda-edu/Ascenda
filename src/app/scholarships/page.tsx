@@ -53,7 +53,7 @@ const sampleScholarships: Scholarship[] = [
 ];
 
 export default async function ScholarshipsPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   // `scholarships` is not yet a real table — this query returns nothing today and
   // the page falls back to sample data (clearly labelled below). When a live feed
   // is added, real rows flow straight through this mapping.

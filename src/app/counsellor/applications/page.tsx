@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: 'Applications · Counsellor' };
 export const dynamic = 'force-dynamic';
 
 export default async function CounsellorApplicationsPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   const cohort = await loadCohort(supabase, { excludeId: user?.id });
   const allApps = deriveApplicationsWithPlatform(cohort);

@@ -13,7 +13,7 @@ import { trackProgram } from '@/lib/applications/server-actions';
 // (applications_self) is the real enforcement — a student can only ever write
 // rows where profile_id = auth.uid().
 export async function POST(request: NextRequest) {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

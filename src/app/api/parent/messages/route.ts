@@ -14,7 +14,7 @@ const MAX_TEMPLATE_LENGTH = 100;
 // counsellor-open policy (any authenticated session), so this app-layer check
 // is the enforcement that matters until Phase 2 tightens the DB.
 export async function POST(request: NextRequest) {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

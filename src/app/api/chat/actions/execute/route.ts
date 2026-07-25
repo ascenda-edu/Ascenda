@@ -50,7 +50,7 @@ const jsonError = (error: string, status: number) =>
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerSupabaseClient();
+    const supabase = await createRouteHandlerSupabaseClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();

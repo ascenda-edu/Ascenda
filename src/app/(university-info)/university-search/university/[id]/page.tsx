@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 type PageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 type ProgramRecord = {
@@ -110,8 +110,10 @@ const mapToUniversityData = (program?: ProgramRecord | null, university?: Univer
   };
 };
 
-export default async function UniversityDetailPage({ params, searchParams }: PageProps & { searchParams: { from?: string } }) {
-  const supabase = createServerSupabaseClient();
+export default async function UniversityDetailPage(props: PageProps & { searchParams: Promise<{ from?: string }> }) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
+  const supabase = await createServerSupabaseClient();
   const { data: programRecord, error } = await supabase.from('programs').select('*, universities(*)').eq('id', params.id).maybeSingle();
   const contextSource = searchParams.from === 'course' ? 'course' : searchParams.from === 'search' ? 'search' : 'direct';
 
