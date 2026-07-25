@@ -1,11 +1,10 @@
-import { ShortlistSection } from '@/components/landing/ShortlistSection';
 import { TeamSection } from '@/components/landing/TeamSection';
 import { FAQSection } from '@/components/landing/FAQSection';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 import { PreviewNav } from '@/components/landing-preview/preview-nav';
 import { PreviewHero } from '@/components/landing-preview/preview-hero';
 import { ProofScrub } from '@/components/landing-preview/proof-scrub';
-import { ChapterIntro, SceneCatalogue, SceneFit, ScenePlan } from '@/components/landing-preview/scenes';
+import { HowItWorksScrub } from '@/components/landing-preview/how-it-works-scrub';
 import { ComparisonSettle } from '@/components/landing-preview/comparison-settle';
 import { AltitudeWash } from '@/components/landing-preview/altitude-wash';
 import { SectionReveal } from '@/components/landing-preview/section-reveal';
@@ -32,14 +31,12 @@ export default function HomePage() {
             <PreviewNav />
             <PreviewHero />
             <ProofScrub />
-            {/* Narrative arc: promise → problem → product (three scrubbed chapters) → how → team → before/after → answers → launch */}
-            <ChapterIntro />
-            <SceneFit />
-            <SceneCatalogue />
-            <ScenePlan />
-            <SectionReveal>
-                <ShortlistSection />
-            </SectionReveal>
+            {/* Narrative arc: promise → problem → how it works (three scrubbed
+                steps) → team → before/after → answers → launch.
+                No SectionReveal on the stepper: it pins a sticky stage, and a
+                transformed ancestor becomes the containing block for its sticky
+                descendants — the stage would stick to the wrapper, not the viewport. */}
+            <HowItWorksScrub />
             <SectionReveal>
                 <TeamSection />
             </SectionReveal>

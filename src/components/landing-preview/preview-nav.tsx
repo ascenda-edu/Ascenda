@@ -13,14 +13,15 @@ import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLaunchHref } from '@/hooks/use-launch-href';
 import { cn } from '@/lib/utils';
-import { LAYOUT_SHIFT_EVENT, useMotionReady, usePageScroll } from './ascent-scroll';
+import { useMotionReady, usePageScroll } from './ascent-scroll';
 // From the choreography module, never from preview-cta: the finale is lazily
 // imported by the page, and reaching into it for two constants would bundle it here.
 import { CTA_COPY_POINT, CTA_IGNITION_POINT } from './cta-choreography';
+import { LAYOUT_SHIFT_EVENT } from './pinned-stage';
 import { useSmoothScroll } from './smooth-scroll';
 
 const NAV_LINKS = [
-    { label: 'Inside Ascenda', href: '#features', id: 'features' },
+    { label: 'The reality', href: '#proof', id: 'proof' },
     { label: 'How it works', href: '#how-it-works', id: 'how-it-works' },
     { label: 'FAQ', href: '#faq', id: 'faq' },
 ];
@@ -117,20 +118,19 @@ export function PreviewNav() {
         // layouts at mount for one result. The pre-measure countdown state (T–10.0)
         // is the correct seed for the frame in between.
         schedule();
-        // Document height — not just viewport — because the scenes' pins collapse
-        // AFTER mount for reduced-motion users (`pinned` depends on `mounted`, and
-        // React flushes this effect before committing that re-render). That removes
-        // ~1000vh of pin height without firing `resize`, which used to leave the
-        // countdown frozen mid-count. Fonts and next/image settling shift it too.
+        // Document height — not just viewport — because the CTA band unpins AFTER
+        // mount on short viewports and for reduced-motion users, removing pin height
+        // without firing `resize`, which used to leave the countdown frozen
+        // mid-count. Fonts and next/image settling shift it too.
         const observer = new ResizeObserver(schedule);
         observer.observe(document.documentElement);
         window.addEventListener('resize', schedule, { passive: true });
-        // Pinned chapters now also collapse mid-session, one per chapter, each
-        // deleting ~1 screen of document height above #cta and compensating the
-        // scroll position to match. The ResizeObserver above would eventually
-        // catch it, but PinnedScene announces the shift in the same commit as the
-        // compensating jump — so the countdown re-maps against the new geometry
-        // instead of reading the old ready point for a frame.
+        // A PinnedStage also changes the document height mid-session — once when it
+        // arms its pin and once when it settles, each time by ~2 screens, and the
+        // settle compensates the scroll position to match. The ResizeObserver above
+        // would eventually catch both, but the stage announces the shift in the same
+        // commit, so the countdown re-maps against the new geometry rather than
+        // reading a stale ready point for a frame.
         window.addEventListener(LAYOUT_SHIFT_EVENT, schedule);
         return () => {
             cancelAnimationFrame(queued);

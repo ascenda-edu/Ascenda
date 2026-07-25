@@ -151,8 +151,10 @@ function ProofCard({ metric }: { metric: Metric }) {
 }
 
 export function ProofScrub() {
+    // scroll-mt-14: #proof is a nav target and the hero's scroll cue now, not just
+    // a band you arrive at by scrolling, so it has to clear the fixed nav.
     return (
-        <section id="proof" className="w-full bg-background py-24 sm:py-32">
+        <section id="proof" className="w-full scroll-mt-14 bg-background py-24 sm:py-32">
             <div className="mx-auto max-w-7xl px-6">
                 <div className="mb-14 flex flex-col justify-between gap-8 border-b border-border/40 pb-8 md:flex-row md:items-end">
                     <motion.div

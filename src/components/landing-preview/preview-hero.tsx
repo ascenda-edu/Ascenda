@@ -269,7 +269,7 @@ export function PreviewHero() {
                                             variant="outline"
                                             className="border-border bg-card text-foreground hover:bg-muted/60"
                                         >
-                                            <Link href="#features">See how it works</Link>
+                                            <Link href="#how-it-works">See how it works</Link>
                                         </Button>
                                     </motion.div>
                                     <motion.ul
@@ -317,8 +317,11 @@ export function PreviewHero() {
                             style={ready ? { opacity: cueOpacity } : undefined}
                         >
                             <motion.a
-                                href="#features"
-                                aria-label="Scroll to features"
+                                // #proof, not the stepper: the cue promises "the next
+                                // thing down", and that is the section immediately
+                                // below the hero.
+                                href="#proof"
+                                aria-label="Scroll to the reality of applying"
                                 className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 initial={{ opacity: 0, y: -4 }}
                                 animate={{ opacity: 0.9, y: 0 }}

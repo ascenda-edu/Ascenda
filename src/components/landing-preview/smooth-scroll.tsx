@@ -1,6 +1,15 @@
 'use client';
 
-import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    createContext,
+    ReactNode,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import type Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 import { PageScrollProvider } from './ascent-scroll';
@@ -16,12 +25,20 @@ interface SmoothScrollApi {
     scrollTo: (target: string | number | HTMLElement) => boolean;
     /**
      * Instant, unanimated scroll adjustment — the pin-collapse compensation in
-     * PinnedScene, where the whole point is that nothing appears to move.
+     * PinnedStage, where the whole point is that nothing appears to move.
      * Returns true when Lenis owns the offset and false when the native
      * fallback ran, so callers that also have to reason about the browser's own
      * scroll anchoring can tell which engine just moved the page.
      */
     jumpBy: (delta: number) => boolean;
+    /**
+     * True while a programmatic glide from `scrollTo` is still in flight.
+     * `jumpBy` REPLACES an in-flight Lenis animation, so anything compensating
+     * for a layout change has to hold off until the glide lands — otherwise a nav
+     * click is stranded short of its anchor and `scrollTo`'s settle handler (hash
+     * + focus) never runs.
+     */
+    isGliding: () => boolean;
 }
 
 const SmoothScrollContext = createContext<SmoothScrollApi>({
@@ -32,6 +49,9 @@ const SmoothScrollContext = createContext<SmoothScrollApi>({
         window.scrollBy(0, delta);
         return false;
     },
+    // No Lenis, so no glide to collide with: native anchor scrolling is not
+    // something `jumpBy` can interrupt.
+    isGliding: () => false,
 });
 
 export function useSmoothScroll(): SmoothScrollApi {
@@ -63,6 +83,30 @@ const easeExpoOut = (t: number) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t));
  */
 export function SmoothScroll({ children }: { children: ReactNode }) {
     const lenisRef = useRef<Lenis | null>(null);
+    // Glide-in-flight flag for `isGliding`. The watchdog matters: a wheel event
+    // during a glide lets Lenis abandon the animation WITHOUT calling onComplete,
+    // and a flag stuck true would block a pin's settle compensation for the rest
+    // of the session. Slightly longer than the 1.2s glide, so it only ever fires
+    // for an abandoned one.
+    const glidingRef = useRef(false);
+    const glideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const clearGlideTimer = () => {
+        if (glideTimerRef.current) clearTimeout(glideTimerRef.current);
+        glideTimerRef.current = null;
+    };
+    /** Longer than either glide duration (1.2s anchors, 0.8s keyboard). */
+    const beginGlide = useCallback(() => {
+        glidingRef.current = true;
+        clearGlideTimer();
+        glideTimerRef.current = setTimeout(() => {
+            glidingRef.current = false;
+        }, 1400);
+    }, []);
+    const endGlide = useCallback(() => {
+        glidingRef.current = false;
+        clearGlideTimer();
+    }, []);
+    useEffect(() => clearGlideTimer, []);
     // Starts false so SSR and the first paint emit the native-scroll tree; Lenis
     // has only ever existed post-mount, so this is not a new behaviour.
     const [enabled, setEnabled] = useState(false);
@@ -127,7 +171,16 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
             if (to === null) return;
 
             event.preventDefault();
-            instance.scrollTo(to, { duration: 0.8, easing: easeExpoOut });
+            // Flagged like the anchor glides: a keyboard glide is just as
+            // interruptible by a `jumpBy`, and End/PageDown are exactly the keys that
+            // travel far enough to cross a pin as it completes. Without this, one
+            // press in the run down the page silently stops short.
+            beginGlide();
+            instance.scrollTo(to, {
+                duration: 0.8,
+                easing: easeExpoOut,
+                onComplete: endGlide,
+            });
         };
 
         // Deferred import: Lenis is ~6 kB gz of critical-path JS that every phone
@@ -154,7 +207,9 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
             lenis?.destroy();
             lenisRef.current = null;
         };
-    }, [enabled]);
+        // beginGlide/endGlide are stable useCallbacks — listed for exhaustiveness, not
+        // because this effect should ever re-run for them.
+    }, [enabled, beginGlide, endGlide]);
 
     const api = useMemo<SmoothScrollApi>(
         () => ({
@@ -178,26 +233,29 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
                 // Runs when the glide lands, not while it is in flight: an engine
                 // that ignores `preventScroll` would otherwise teleport mid-glide.
                 const el = node;
-                const settle = el
-                    ? () => {
-                          // preventDefault() cost us both of native fragment navigation's
-                          // side effects: a shareable/back-navigable hash, and the reset of
-                          // the sequential-focus starting point (without which the next Tab
-                          // continues from the nav, not the section just navigated to).
-                          // Repeated clicks replace rather than push — native fragment
-                          // navigation adds no history entry when the URL is unchanged,
-                          // and five identical #faq entries would break the Back button.
-                          const href = `#${el.id}`;
-                          if (location.hash === href) history.replaceState(null, '', href);
-                          else history.pushState(null, '', href);
-                          if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
-                          // A programmatically-focused section must not draw the UA focus
-                          // ring around its entire box.
-                          el.classList.add('outline-none');
-                          el.focus({ preventScroll: true });
-                      }
-                    : undefined;
+                const settle = () => {
+                    endGlide();
+                    if (!el) return;
+                    // preventDefault() cost us both of native fragment navigation's
+                    // side effects: a shareable/back-navigable hash, and the reset of
+                    // the sequential-focus starting point (without which the next Tab
+                    // continues from the nav, not the section just navigated to).
+                    // Repeated clicks replace rather than push — native fragment
+                    // navigation adds no history entry when the URL is unchanged,
+                    // and five identical #faq entries would break the Back button.
+                    const href = `#${el.id}`;
+                    if (location.hash === href) history.replaceState(null, '', href);
+                    else history.pushState(null, '', href);
+                    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
+                    // A programmatically-focused section must not draw the UA focus
+                    // ring around its entire box.
+                    el.classList.add('outline-none');
+                    el.focus({ preventScroll: true });
+                };
 
+                // Set before the call and cleared in `settle`, so a `jumpBy` caller
+                // can hold off rather than replace this animation mid-flight.
+                beginGlide();
                 lenis.scrollTo(node ?? (target as number), {
                     duration: 1.2,
                     easing: easeExpoOut,
@@ -216,19 +274,34 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
                     return false;
                 }
 
-                // Through Lenis, never window.scrollBy: mid-glide Lenis writes the
-                // real scrollTop from its own `targetScroll` on every rAF, so a
-                // native jump would be lerped straight back out within a frame or
-                // two. Moving `targetScroll` instead keeps the glide continuous.
-                // `immediate` because this must be invisible rather than animated
-                // (an eased "compensation" is exactly the jump it exists to hide),
-                // and `force` so it is not clamped or dropped while an animation is
-                // in flight or the instance is momentarily stopped.
-                lenis.scrollTo(lenis.targetScroll + delta, { immediate: true, force: true });
+                // Through Lenis, never window.scrollBy: Lenis rewrites the real
+                // scrollTop from its own state every rAF, so a native jump is lerped
+                // straight back out within a frame or two.
+                //
+                // Off `actualScroll` — the RENDERED position — not `targetScroll`.
+                // While the wheel is moving, `targetScroll` runs ahead of what is on
+                // screen by the outstanding lerp gap (~50px gently, 150-250px in a
+                // fling). Callers measure the shift they are correcting for with
+                // getBoundingClientRect, i.e. against the rendered position, so
+                // compensating off the target added that whole gap on top of the
+                // correction and lurched the page forward.
+                //
+                // `immediate` because this must be invisible rather than animated (an
+                // eased "compensation" is precisely the movement it exists to hide),
+                // and `force` so it is not clamped or dropped while the instance is
+                // momentarily stopped. Note `immediate` also calls Lenis's `reset()`,
+                // which discards any remaining wheel momentum — the scroll settles
+                // where it is instead of coasting on. Unavoidable while the fix has
+                // to land in one frame, and only ever felt on the frame a pin settles.
+                lenis.scrollTo(lenis.actualScroll + delta, { immediate: true, force: true });
                 return true;
             },
+            isGliding: () => glidingRef.current,
         }),
-        [],
+        // Both are stable useCallbacks, so the api identity never actually changes —
+        // consumers that hold it in an effect dep list (PinnedStage's compensation)
+        // depend on that.
+        [beginGlide, endGlide],
     );
 
     return (

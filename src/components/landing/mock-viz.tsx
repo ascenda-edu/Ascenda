@@ -416,43 +416,6 @@ export function TierTiles({ counts }: { counts: { safety: number; match: number;
     );
 }
 
-/**
- * Horizontal connected wizard steps — mirrors the real profile StepRoadmap
- * (done = emerald check dots, current = primary-ringed dot, primary connectors).
- */
-export function WizardSteps({ steps, currentIndex }: { steps: string[]; currentIndex: number }) {
-    return (
-        <div>
-            <div className="flex items-center" role="img" aria-label={`Profile step ${currentIndex + 1} of ${steps.length}: ${steps[currentIndex]}`}>
-                {steps.map((step, i) => (
-                    <Fragment key={step}>
-                        {i > 0 && (
-                            <span
-                                className={cn('h-0.5 min-w-[8px] flex-1', i <= currentIndex ? 'bg-primary' : 'bg-muted')}
-                                aria-hidden
-                            />
-                        )}
-                        <span
-                            className={cn(
-                                'grid h-6 w-6 shrink-0 place-items-center rounded-full text-[0.625rem] font-extrabold',
-                                i < currentIndex && 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-                                i === currentIndex && 'bg-primary/10 text-primary ring-[1.5px] ring-inset ring-primary',
-                                i > currentIndex && 'bg-muted text-muted-foreground',
-                            )}
-                            aria-hidden
-                        >
-                            {i < currentIndex ? <Check className="h-3 w-3" strokeWidth={3.4} /> : i + 1}
-                        </span>
-                    </Fragment>
-                ))}
-            </div>
-            <p className="mt-2 text-[0.6875rem] text-muted-foreground" aria-hidden>
-                Next up: <span className="font-semibold text-primary">{steps[currentIndex]}</span> · step {currentIndex + 1} of {steps.length}
-            </p>
-        </div>
-    );
-}
-
 /** "Shared with" avatar chips + live dot — mirrors the counsellor/guardian loop. */
 export function SharedWithRow({ people }: { people: { initials: string; name: string; toneClass: string; dotClass: string }[] }) {
     return (

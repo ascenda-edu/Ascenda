@@ -1,11 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
     MotionValue,
     motion,
-    useMotionValueEvent,
     useReducedMotion,
     useScroll,
     useSpring,
@@ -15,7 +14,16 @@ import {
 import { Button } from '@/components/ui/button';
 import { useLaunchHref } from '@/hooks/use-launch-href';
 import { cn } from '@/lib/utils';
-import { SCENE_SPRING, useLatchedProgress, useMotionReady, useMounted } from './ascent-scroll';
+import {
+    SCENE_SPRING,
+    clamp01,
+    easeOut,
+    seg,
+    useLatchedProgress,
+    useMotionReady,
+    useMounted,
+    useScrubbed,
+} from './ascent-scroll';
 import { COPY, IGNITION } from './cta-choreography';
 import { CursorGrid } from './cursor-grid';
 import {
@@ -36,14 +44,9 @@ import {
  *    flame, copy visible), so SSR and reduced-motion users get the payoff; every
  *    scroll-driven style sits behind `useMotionReady()`;
  *  - the pin collapses entirely after mount for reduced-motion users, as
- *    PinnedScene does, so there is no dead scroll;
+ *    PinnedStage does, so there is no dead scroll;
  *  - transform/opacity/canvas only — no layout animation.
  */
-
-const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
-/** Normalised 0→1 progress of the [a, b] slice of the scene's travel. */
-const seg = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
-const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
 const PIN_VH = 170;
 
@@ -76,33 +79,6 @@ const LIFTOFF_LABEL = 'Lift-off, your plan is ready to go';
  * waiting" — seeding it with LIFTOFF_LABEL captioned a grounded rocket "Lift-off".
  */
 const STANDBY_LABEL = 'Cleared for launch';
-
-/**
- * Derive React state from the scrub. Mirrors the private helper in scenes.tsx:
- * `final` is what SSR and reduced-motion users see, so the static frame is the
- * end of the story, and the callback is stable because this component
- * re-renders on every scroll frame.
- */
-function useScrubbed<T>(p: MotionValue<number>, ready: boolean, final: T, compute: (v: number) => T): T {
-    const [value, setValue] = useState<T>(final);
-    const computeRef = useRef(compute);
-    computeRef.current = compute;
-    const readyRef = useRef(ready);
-    readyRef.current = ready;
-
-    const update = useCallback((v: number) => {
-        if (readyRef.current) setValue(computeRef.current(v));
-    }, []);
-
-    useMotionValueEvent(p, 'change', update);
-    // `change` only fires on movement — seed from the current position so a band
-    // entered without scrolling (deep link, restored position) is correct.
-    useEffect(() => {
-        if (ready) update(p.get());
-    }, [p, ready, update]);
-
-    return ready ? value : final;
-}
 
 /* --------------------------------------------------------- module cards */
 
@@ -253,8 +229,8 @@ function LaunchReadout({ p, ready }: { p: MotionValue<number>; ready: boolean })
 
 export function PreviewCta() {
     const ref = useRef<HTMLElement>(null);
-    // `useSceneProgress` inlined (same offsets) so the RAW scrollYProgress can be
-    // latched before the spring: the finale is one-way, so once the launch has
+    // The pin's scroll subscription inlined (same offsets PinnedStage uses) so
+    // the RAW scrollYProgress can be latched before the spring: the finale is one-way, so once the launch has
     // played the band holds its finished frame — the vehicle stays gone, the ask
     // stays legible and the CTA stays clickable — instead of re-assembling the
     // rocket and fading the copy back out on scroll-up. Latching the spring's
