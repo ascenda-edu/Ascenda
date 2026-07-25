@@ -6,10 +6,8 @@ import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { loadStudentById, loadStudentEvolution } from '@/lib/counsellor/data';
-import { loadStudentQuestDecks } from '@/lib/counsellor/decks';
 import { StudentDetailTabs } from '../../_components/student-detail-tabs';
 import { MessageStudentButton } from '../../_components/message-student-button';
-import { CharacterSheet } from '../../_components/character-sheet';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,16 +56,13 @@ export default async function StudentDetailPage(props: Props) {
   const supabase = await createServerSupabaseClient();
   const student = await loadStudentById(supabase, id);
   if (!student) notFound();
-  const [evolution, questDecks] = await Promise.all([
-    loadStudentEvolution(supabase, id),
-    // Deck tables may not exist until the migration is applied — degrade to an
-    // empty quest log rather than tripping the section error boundary.
-    loadStudentQuestDecks(supabase, id).catch(() => []),
-  ]);
+  const evolution = await loadStudentEvolution(supabase, id);
 
   const initials = `${student.personal.firstName[0] ?? ''}${student.personal.lastName[0] ?? ''}`.toUpperCase() || '–';
   const avColor = avatarColor(student.id);
-  const avgScore = getAvgMatchScore(student.matches);
+  // Computed but not yet surfaced anywhere on this page — see report: the
+  // quick-stats grid shows match COUNT but never the average match score.
+  const _avgScore = getAvgMatchScore(student.matches);
   const nextDeadlineDays = getNextDeadlineDays(student);
 
   return (
@@ -206,8 +201,6 @@ export default async function StudentDetailPage(props: Props) {
           </div>
         )}
       </div>
-      {/* RPG character sheet: level/XP, stat blocks, assigned-deck quest log */}
-      <CharacterSheet student={student} questDecks={questDecks} />
       {/* Tabbed detail view */}
       <StudentDetailTabs student={student} evolution={evolution} />
     </div>
