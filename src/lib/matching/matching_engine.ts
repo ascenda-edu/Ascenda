@@ -603,6 +603,27 @@ const categoryToTierFit = (category: Category): RankedCourseMatch['tier_fit'] =>
 
 const clampChance = (value: number) => Math.max(5, Math.min(95, Math.round(value)));
 
+// ── Per-course chance classification (shared) ──────────────────────────────
+//
+// Single scoring path for both the ranked-matches pipeline and the on-demand
+// scorer (explore page) — the two must produce identical numbers for the same
+// course, so the metadata fallbacks and classify call live here, not inline.
+
+export const classifyCourseChance = (
+  studentIb: number,
+  course: EnrichedCourseRecord
+): { category: Category; admitPct: number; chancePercent: number } => {
+  const meta = (course as any).metadata ?? {};
+  const courseScore =
+    course.total_course_score ??
+    (typeof meta.total_course_score === 'number' ? meta.total_course_score : null);
+  const selectivityScore =
+    course.course_selectivity_score ??
+    (typeof meta.selectivity_score === 'number' ? meta.selectivity_score : null);
+  const { category, admitPct } = classify(studentIb, course.min_ib_score, courseScore, selectivityScore);
+  return { category, admitPct, chancePercent: clampChance(admitPct) };
+};
+
 // ── A-level → IB equivalent conversion ────────────────────────────────────
 //
 // Used when a student has no ib_total_points (i.e. A-level pathway).
@@ -671,6 +692,29 @@ export const actToIbEquivalent = (actScore: number | null | undefined): number =
 
 // ── MAIN EXPORT ────────────────────────────────────────────────────────────
 
+// Resolve student's academic level to an IB equivalent for the classifier.
+// Priority: explicit IB total → A-level predicted grades → ACT score → population median (33).
+// The wizard stores ib_total_points as the subject sum (/42) with core points
+// (TOK + EE, max 3) in ib_core_points — course minima are on the /45 scale,
+// so the two must be summed here, mirroring scoreStudentProfile.
+export const resolveStudentIbEquivalent = (student: StudentProfilePayload): number => {
+  const ibTotal =
+    student.academic_input.ib_total_points != null
+      ? Math.min(
+          45,
+          student.academic_input.ib_total_points + (student.academic_input.ib_core_points ?? 0)
+        )
+      : null;
+  return (
+    ibTotal ??
+    (student.academic_input.a_level_predicted_grades
+      ? aLevelToIbEquivalent(student.academic_input.a_level_predicted_grades)
+      : student.academic_input.programme_type === 'ACT'
+      ? actToIbEquivalent(student.lifestyle_preference.act_score)
+      : 33)
+  );
+};
+
 export const rankCourseMatches = (
   student: StudentProfilePayload,
   _score: StudentScoreResult,
@@ -683,25 +727,7 @@ export const rankCourseMatches = (
   ];
   const targetFields = resolveTargetFields(clusters);
 
-  // Resolve student's academic level to an IB equivalent for the classifier.
-  // Priority: explicit IB total → A-level predicted grades → ACT score → population median (33).
-  // The wizard stores ib_total_points as the subject sum (/42) with core points
-  // (TOK + EE, max 3) in ib_core_points — course minima are on the /45 scale,
-  // so the two must be summed here, mirroring scoreStudentProfile.
-  const ibTotal =
-    student.academic_input.ib_total_points != null
-      ? Math.min(
-          45,
-          student.academic_input.ib_total_points + (student.academic_input.ib_core_points ?? 0)
-        )
-      : null;
-  const studentIb =
-    ibTotal ??
-    (student.academic_input.a_level_predicted_grades
-      ? aLevelToIbEquivalent(student.academic_input.a_level_predicted_grades)
-      : student.academic_input.programme_type === 'ACT'
-      ? actToIbEquivalent(student.lifestyle_preference.act_score)
-      : 33);
+  const studentIb = resolveStudentIbEquivalent(student);
 
   // Budget in USD — from lifestyle preference or default to 45k
   // The current profile doesn't have a direct budget field, so we
@@ -737,15 +763,14 @@ export const rankCourseMatches = (
     // Get scoring data from metadata (populated by our transform)
     const meta = (course as any).metadata ?? {};
     const courseScore = course.total_course_score ?? (typeof meta.total_course_score === 'number' ? meta.total_course_score : null);
-    const selectivityScore = course.course_selectivity_score ?? (typeof meta.selectivity_score === 'number' ? meta.selectivity_score : null);
     const courseTierRaw = course.course_tier ?? (typeof meta.course_tier === 'number' ? meta.course_tier : 5);
     const courseTier = (courseTierRaw >= 1 && courseTierRaw <= 5 ? courseTierRaw : 5) as 1 | 2 | 3 | 4 | 5;
 
     // Min IB from the course data
     const minIb = course.min_ib_score;
 
-    // Classify
-    const { category, admitPct } = classify(studentIb, minIb, courseScore, selectivityScore);
+    // Classify (shared path with the on-demand scorer)
+    const { category, admitPct, chancePercent } = classifyCourseChance(studentIb, course);
 
     if (category === 'excluded') continue;
     if (category === 'safety' && (courseScore ?? 0) < minFloor) continue;
@@ -765,7 +790,7 @@ export const rankCourseMatches = (
       university_id: (course as any).university_id,
       course_tier: courseTier,
       tier_fit: tierFit,
-      chance_percent: clampChance(admitPct),
+      chance_percent: chancePercent,
       chance_category:
         admitPct >= 80 ? 'Very likely'
           : admitPct >= 65 ? 'Likely'
