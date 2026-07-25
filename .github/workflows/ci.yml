@@ -6,13 +6,59 @@ on:
     branches: [main]
 
 jobs:
+  # GitHub runs PR checks against a merge of head into base *as it was when the
+  # run started*. If base moves afterwards, the green tick refers to a merge
+  # that no longer exists — which is how #33 and #34 both passed CI and then
+  # landed together untested, having edited the same three files.
+  #
+  # "Require branches to be up to date" would prevent this, but it needs GitHub
+  # Pro on a private repo. This is the free approximation, narrowed to the case
+  # that actually matters: base and PR touching the SAME file. A blanket
+  # is-behind-base check would redden every open PR on every push to main, and a
+  # warning that fires constantly is a warning nobody reads.
+  #
+  # Advisory only — without branch protection no check can block a merge.
+  overlap-guard:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Fail if base moved under this PR in shared files
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          # Explicit refspec: checkout's default config only tracks the PR ref,
+          # so a bare `git fetch origin $BASE` would not create origin/$BASE.
+          git fetch --no-tags origin "+refs/heads/${BASE}:refs/remotes/origin/${BASE}"
+
+          merge_base=$(git merge-base HEAD "origin/${BASE}")
+          git diff --name-only "$merge_base" HEAD | sort > /tmp/pr-files
+          git diff --name-only "$merge_base" "origin/${BASE}" | sort > /tmp/base-files
+          comm -12 /tmp/pr-files /tmp/base-files > /tmp/overlap
+
+          if [ -s /tmp/overlap ]; then
+            echo "::error::${BASE} has moved under this PR in files it also changes. Merge ${BASE} into this branch and push, so CI tests the combined state."
+            echo "Files changed by BOTH this PR and ${BASE} since ${merge_base}:"
+            sed 's/^/  /' /tmp/overlap
+            exit 1
+          fi
+
+          echo "No shared-file drift against ${BASE} since ${merge_base}."
+
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          # Must stay >= 22: jest.environment-node.js exists to strip the
+          # experimental localStorage/sessionStorage globals Node 22 introduced,
+          # and on Node 20 that wrapper is a no-op — so CI never exercised the
+          # path every developer machine actually takes.
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run lint
