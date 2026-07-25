@@ -6,7 +6,6 @@ import { CTASection } from '@/components/landing/CTASection';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 import { PreviewNav } from '@/components/landing-preview/preview-nav';
 import { PreviewHero } from '@/components/landing-preview/preview-hero';
-import { MarqueeStrip } from '@/components/landing-preview/marquee-strip';
 import { ProofScrub } from '@/components/landing-preview/proof-scrub';
 import { ChapterIntro, SceneCatalogue, SceneFit, ScenePlan } from '@/components/landing-preview/scenes';
 import { ComparisonSettle } from '@/components/landing-preview/comparison-settle';
@@ -29,7 +28,6 @@ export default function LandingPreviewPage() {
         <main id="main-content" className="bg-background text-foreground font-sans w-full">
             <PreviewNav />
             <PreviewHero />
-            <MarqueeStrip />
             <ProofScrub />
             {/* Narrative arc unchanged: promise → problem → product (three scrubbed chapters) → how → team → before/after → answers → CTA */}
             <ChapterIntro />
