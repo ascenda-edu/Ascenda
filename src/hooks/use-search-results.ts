@@ -538,6 +538,9 @@ export function useSearchResults(filters: SearchFilters): SearchResultsState {
   const requestSpecRef = useRef<RequestSpec | null>(null);
   const nextCursorRef = useRef<Cursor | null>(null);
   const rankedIdsRef = useRef<string[]>([]); // ranked uni ids for the active cohort walk
+  // On-demand fit scores already computed this session (program id → score),
+  // keyed by user so an in-tab auth change can't leak another user's scores.
+  const onDemandScoresRef = useRef<{ userId: string; scores: Map<string, number> } | null>(null);
   const stateRef = useRef({ isLoading, isLoadingMore, hasMore });
   stateRef.current = { isLoading, isLoadingMore, hasMore };
 
@@ -904,20 +907,58 @@ export function useSearchResults(filters: SearchFilters): SearchResultsState {
         .eq('profile_id', userId)
         .in('program_id', ids)
         .abortSignal(sig);
-      if (matchErr || !data) return {};
-      return data.reduce<Record<string, number>>((acc, entry) => {
-        const raw = (entry as { program_id: string; score: unknown }).score;
-        const numeric =
-          typeof raw === 'string'
-            ? Number.parseFloat(raw)
-            : typeof raw === 'number'
-              ? raw
-              : null;
-        if (numeric !== null && Number.isFinite(numeric)) {
-          acc[(entry as { program_id: string }).program_id] = numeric;
+      const scores =
+        matchErr || !data
+          ? {}
+          : data.reduce<Record<string, number>>((acc, entry) => {
+              const raw = (entry as { program_id: string; score: unknown }).score;
+              const numeric =
+                typeof raw === 'string'
+                  ? Number.parseFloat(raw)
+                  : typeof raw === 'number'
+                    ? raw
+                    : null;
+              if (numeric !== null && Number.isFinite(numeric)) {
+                acc[(entry as { program_id: string }).program_id] = numeric;
+              }
+              return acc;
+            }, {});
+
+      // student_matches only caches the student's ranked top-N — anything the
+      // search surfaces outside that set is scored on demand so every card
+      // carries a fit score. Session-cached per user; failures leave the
+      // affected ids scoreless rather than failing the page.
+      if (onDemandScoresRef.current?.userId !== userId) {
+        onDemandScoresRef.current = { userId, scores: new Map() };
+      }
+      const sessionScores = onDemandScoresRef.current.scores;
+      const missing = ids.filter((id) => !(id in scores));
+      const uncached = missing.filter((id) => !sessionScores.has(id));
+      if (uncached.length > 0 && !sig.aborted) {
+        try {
+          const response = await fetch('/api/match/score', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ programIds: uncached }),
+            signal: sig
+          });
+          if (response.ok) {
+            const payload = (await response.json()) as { scores?: Record<string, number> };
+            for (const [id, value] of Object.entries(payload.scores ?? {})) {
+              if (typeof value === 'number' && Number.isFinite(value)) {
+                sessionScores.set(id, value);
+              }
+            }
+          }
+        } catch {
+          // Aborted or transient network failure — best-effort, same as above.
         }
-        return acc;
-      }, {});
+      }
+      for (const id of missing) {
+        const value = sessionScores.get(id);
+        if (value !== undefined) scores[id] = value;
+      }
+      return scores;
     }
 
     // Writes a fetched page into state (dedup on append) and records the cursor
