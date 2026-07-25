@@ -68,7 +68,7 @@ interface ChatMessage {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerSupabaseClient();
+    const supabase = await createRouteHandlerSupabaseClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
 
     // ── Live account context (cached 60s per user+mode) ─────────────────────
     const activeChildId =
-      mode === 'parent' ? cookies().get(ACTIVE_CHILD_COOKIE)?.value : undefined;
+      mode === 'parent' ? (await cookies()).get(ACTIVE_CHILD_COOKIE)?.value : undefined;
     const cacheKey = contextCacheKey(mode, user.id, activeChildId);
     let chatContext = getCachedContext(cacheKey);
     if (!chatContext) {

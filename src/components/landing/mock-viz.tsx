@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useInView, useReducedMotion } from 'framer-motion';
 import { AlertCircle, Check, Clock3 } from 'lucide-react';
 import { getFitScoreVisuals } from '@/lib/theme/fit-score';
@@ -13,6 +13,21 @@ import { cn } from '@/lib/utils';
  * theme-aware HTML/SVG — never by importing the real components, which drag
  * Supabase/data deps into the public bundle. Same rule as product-widgets.tsx.
  */
+
+/**
+ * Post-mount reduced-motion flag. `useReducedMotion()` returns the true
+ * preference on the FIRST client render while SSR always computed `false`, so
+ * feeding it straight into rendered `style` props mismatches the server HTML
+ * ("Prop `style` did not match") for every reduced-motion visitor. Gating on
+ * mount keeps render #1 identical to SSR; the effect flush then snaps those
+ * users to the final values with zero-duration transitions, as before.
+ */
+function useMountedReducedMotion(): boolean {
+    const shouldReduceMotion = useReducedMotion();
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    return mounted && !!shouldReduceMotion;
+}
 
 /** Ring stroke class from the real score→tone mapping (fit-score.ts). */
 export const ringToneClass = (score: number): string => {
@@ -64,8 +79,8 @@ export function SpotlightPanel({ className, children }: { className?: string; ch
 export function FactorBars({ factors }: { factors: { label: string; value: number }[] }) {
     const ref = useRef<HTMLDivElement>(null);
     const inView = useInView(ref, { once: true, amount: 0.5 });
-    const shouldReduceMotion = useReducedMotion();
-    const play = inView || shouldReduceMotion;
+    const reduced = useMountedReducedMotion();
+    const play = inView || reduced;
 
     return (
         <div ref={ref} className="rounded-xl border border-border bg-card p-3.5 dark:border-white/10">
@@ -78,8 +93,8 @@ export function FactorBars({ factors }: { factors: { label: string; value: numbe
                                 className="block h-full origin-left rounded-full bg-primary transition-transform duration-700 ease-out"
                                 style={{
                                     transform: `scaleX(${play ? f.value / 100 : 0})`,
-                                    transitionDelay: shouldReduceMotion ? '0ms' : `${i * 90}ms`,
-                                    transitionDuration: shouldReduceMotion ? '0ms' : undefined,
+                                    transitionDelay: reduced ? '0ms' : `${i * 90}ms`,
+                                    transitionDuration: reduced ? '0ms' : undefined,
                                 }}
                             />
                         </span>
@@ -346,8 +361,8 @@ export function HeatmapGrid({
 export function FunnelChart({ stages }: { stages: { label: string; count: number; colorClass: string; width: number }[] }) {
     const ref = useRef<HTMLDivElement>(null);
     const inView = useInView(ref, { once: true, amount: 0.5 });
-    const shouldReduceMotion = useReducedMotion();
-    const play = inView || shouldReduceMotion;
+    const reduced = useMountedReducedMotion();
+    const play = inView || reduced;
 
     return (
         <div ref={ref} className="flex flex-col gap-1.5">
@@ -361,8 +376,8 @@ export function FunnelChart({ stages }: { stages: { label: string; count: number
                         style={{
                             width: `${stage.width}%`,
                             transform: `scaleX(${play ? 1 : 0})`,
-                            transitionDelay: shouldReduceMotion ? '0ms' : `${i * 100}ms`,
-                            transitionDuration: shouldReduceMotion ? '0ms' : undefined,
+                            transitionDelay: reduced ? '0ms' : `${i * 100}ms`,
+                            transitionDuration: reduced ? '0ms' : undefined,
                         }}
                     >
                         {stage.label}
@@ -370,6 +385,91 @@ export function FunnelChart({ stages }: { stages: { label: string; count: number
                     <span className="w-6 text-right text-xs font-bold tabular-nums text-foreground">{stage.count}</span>
                 </div>
             ))}
+        </div>
+    );
+}
+
+const TIER_TILE_STYLES = {
+    safety: { label: 'Safety', cls: 'text-emerald-600 dark:text-emerald-400' },
+    match: { label: 'Match', cls: 'text-amber-600 dark:text-amber-400' },
+    reach: { label: 'Reach', cls: 'text-rose-600 dark:text-rose-400' },
+} as const;
+
+/** The chances-calculator tier summary tiles (Safety / Match / Reach counts). */
+export function TierTiles({ counts }: { counts: { safety: number; match: number; reach: number } }) {
+    return (
+        <div className="grid grid-cols-3 gap-2">
+            {(['safety', 'match', 'reach'] as const).map((tier) => (
+                <div key={tier} className="rounded-xl border border-border bg-card px-2 py-1.5 text-center dark:border-white/10">
+                    <p className={cn('font-heading text-lg font-bold leading-tight tabular-nums', TIER_TILE_STYLES[tier].cls)}>
+                        {counts[tier]}
+                    </p>
+                    <p className={cn('text-[0.5625rem] font-bold uppercase tracking-[0.1em]', TIER_TILE_STYLES[tier].cls)}>
+                        {TIER_TILE_STYLES[tier].label}
+                    </p>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+/**
+ * Horizontal connected wizard steps — mirrors the real profile StepRoadmap
+ * (done = emerald check dots, current = primary-ringed dot, primary connectors).
+ */
+export function WizardSteps({ steps, currentIndex }: { steps: string[]; currentIndex: number }) {
+    return (
+        <div>
+            <div className="flex items-center" role="img" aria-label={`Profile step ${currentIndex + 1} of ${steps.length}: ${steps[currentIndex]}`}>
+                {steps.map((step, i) => (
+                    <Fragment key={step}>
+                        {i > 0 && (
+                            <span
+                                className={cn('h-0.5 min-w-[8px] flex-1', i <= currentIndex ? 'bg-primary' : 'bg-muted')}
+                                aria-hidden
+                            />
+                        )}
+                        <span
+                            className={cn(
+                                'grid h-6 w-6 shrink-0 place-items-center rounded-full text-[0.625rem] font-extrabold',
+                                i < currentIndex && 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+                                i === currentIndex && 'bg-primary/10 text-primary ring-[1.5px] ring-inset ring-primary',
+                                i > currentIndex && 'bg-muted text-muted-foreground',
+                            )}
+                            aria-hidden
+                        >
+                            {i < currentIndex ? <Check className="h-3 w-3" strokeWidth={3.4} /> : i + 1}
+                        </span>
+                    </Fragment>
+                ))}
+            </div>
+            <p className="mt-2 text-[0.6875rem] text-muted-foreground" aria-hidden>
+                Next up: <span className="font-semibold text-primary">{steps[currentIndex]}</span> · step {currentIndex + 1} of {steps.length}
+            </p>
+        </div>
+    );
+}
+
+/** "Shared with" avatar chips + live dot — mirrors the counsellor/guardian loop. */
+export function SharedWithRow({ people }: { people: { initials: string; name: string; toneClass: string; dotClass: string }[] }) {
+    return (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-[0.6875rem] text-muted-foreground dark:border-white/10">
+            Shared with
+            {people.map((p) => (
+                <span
+                    key={p.name}
+                    className={cn('inline-flex items-center gap-1.5 rounded-full py-0.5 pl-1 pr-2.5 text-[0.6875rem] font-semibold', p.toneClass)}
+                >
+                    <span className={cn('grid h-5 w-5 place-items-center rounded-full text-[0.5625rem] font-extrabold text-white', p.dotClass)} aria-hidden>
+                        {p.initials}
+                    </span>
+                    {p.name}
+                </span>
+            ))}
+            <span className="ml-auto inline-flex items-center gap-1.5 text-[0.625rem] font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500 motion-reduce:animate-none" aria-hidden />
+                Live
+            </span>
         </div>
     );
 }

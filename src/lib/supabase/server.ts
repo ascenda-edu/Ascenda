@@ -2,8 +2,8 @@ import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import type { Database } from '../types/database';
 
-export const createServerSupabaseClient = () => {
-  const cookieStore = cookies();
+export const createServerSupabaseClient = async () => {
+  const cookieStore = await cookies();
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,8 +23,8 @@ export const createServerSupabaseClient = () => {
   );
 };
 
-export const createServerActionSupabaseClient = () => {
-  const cookieStore = cookies();
+export const createServerActionSupabaseClient = async () => {
+  const cookieStore = await cookies();
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,8 +45,8 @@ export const createServerActionSupabaseClient = () => {
   );
 };
 
-export const createRouteHandlerSupabaseClient = () => {
-  const cookieStore = cookies();
+export const createRouteHandlerSupabaseClient = async () => {
+  const cookieStore = await cookies();
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

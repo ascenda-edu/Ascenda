@@ -4,7 +4,7 @@ import { buildStudentProfilePayload } from '@/lib/scoring/student_score_loader';
 import { scoreStudentProfile } from '@/lib/scoring/student_scoring';
 
 export async function POST() {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

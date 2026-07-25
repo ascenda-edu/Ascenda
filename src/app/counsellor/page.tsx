@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 export type { DashboardFilter } from './_dashboard-client';
 
 export default async function CounsellorOverviewPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   const students = await loadCohort(supabase, { excludeId: user?.id });
 

@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { Outfit, Inter } from 'next/font/google';
 import '@/app/globals.css';
 import { Providers } from './providers';
-import messages from '@/messages/en.json';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme/theme-provider';
 import { ThemeScript } from '@/components/theme/theme-script';
@@ -79,7 +78,7 @@ export default function RootLayout({
           {/* overflow-x-clip (not overflow-hidden): clips decorative blob overflow without creating a
               scroll container, which would neutralise every position:sticky element in the app */}
           <div className="relative min-h-screen overflow-x-clip bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground">
-            <Providers messages={messages}>
+            <Providers>
               {children}
             </Providers>
           </div>

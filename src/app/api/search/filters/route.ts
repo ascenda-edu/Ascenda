@@ -10,7 +10,7 @@ const applyProgramVisibilityFilters = (query: any) => {
 };
 
 export async function GET() {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
 
   const flaggedIds = getFlaggedProgramIds();
 

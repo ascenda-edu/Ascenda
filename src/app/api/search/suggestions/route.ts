@@ -61,7 +61,7 @@ export async function GET(request: Request) {
   const query = url.searchParams.get('q')?.trim() ?? '';
   const trending = url.searchParams.get('trending') === 'true';
 
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
 
   if (!trending && query.length < MIN_QUERY_LENGTH) {
     return NextResponse.json({ programs: [], universities: [] }, {

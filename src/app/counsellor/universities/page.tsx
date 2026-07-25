@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: 'University decks · Counsellor' };
 export const dynamic = 'force-dynamic';
 
 export default async function CounsellorUniversitiesPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   const [decks, roster] = await Promise.all([
     // Deck tables may not exist until the migration is applied — the search

@@ -320,3 +320,26 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Compositor-friendly replacements for two formerly-JS-driven loops on the
+   landing page (nav chip pulse, app-tour countdown hairline). Pure opacity /
+   transform, visually identical to the framer versions they replace; the
+   reduced-motion block above already quiets them. */
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

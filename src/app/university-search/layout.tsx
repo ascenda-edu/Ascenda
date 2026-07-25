@@ -5,7 +5,7 @@ import { DashboardShell } from '@/components/layout/shell';
 import { UniversitySearchNav } from '@/components/university-search/nav';
 
 export default async function UniversitySearchLayout({ children }: { children: ReactNode }) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();

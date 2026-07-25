@@ -1,10 +1,26 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Briefcase, Check, Clock3, FileText, Home, TrendingUp, Wallet } from 'lucide-react';
+import { Briefcase, Check, Clock3, FileText, Heart, Home, TrendingUp, Users, Wallet } from 'lucide-react';
 import { AnimatedSection } from '@/components/layout/animated-section';
+import { cn } from '@/lib/utils';
 import { AppFrame, ProgressRing } from './product-widgets';
 import { FunnelChart, MonitorRow } from './mock-viz';
+
+/** Overlapping role chip on a frame's top edge — marks who the surface is for. */
+function RoleBadge({ icon: Icon, label, className }: { icon: typeof Users; label: string; className: string }) {
+    return (
+        <span
+            className={cn(
+                'absolute -top-3.5 left-4 z-10 inline-flex items-center gap-1.5 rounded-full border bg-card px-3 py-1 text-[0.6875rem] font-bold uppercase tracking-[0.08em] shadow-md',
+                className,
+            )}
+        >
+            <Icon className="h-3.5 w-3.5" aria-hidden />
+            {label}
+        </span>
+    );
+}
 
 /**
  * "Built for the whole team" — the two non-student surfaces that close the
@@ -46,6 +62,8 @@ export function TeamSection() {
                         viewport={{ once: true, amount: 0.25 }}
                         transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
                     >
+                        <div className="relative">
+                        <RoleBadge icon={Users} label="Counsellors" className="border-violet-500/30 text-violet-700 dark:text-violet-300" />
                         <AppFrame route="/counsellor">
                             <div className="flex items-center gap-4 sm:gap-5">
                                 <div className="shrink-0 text-center">
@@ -92,6 +110,7 @@ export function TeamSection() {
                                 ▲ +12% offers vs last year
                             </p>
                         </AppFrame>
+                        </div>
                         <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
                             <span className="font-semibold text-foreground">Counsellors</span> chase missing documents and
                             looming deadlines across the whole cohort, and track outcomes — no spreadsheets.
@@ -104,6 +123,8 @@ export function TeamSection() {
                         viewport={{ once: true, amount: 0.25 }}
                         transition={{ duration: 0.55, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
                     >
+                        <div className="relative">
+                        <RoleBadge icon={Heart} label="Parents" className="border-sky-500/30 text-sky-700 dark:text-sky-300" />
                         <AppFrame route="/parent">
                             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                                 <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-muted-foreground">
@@ -146,6 +167,7 @@ export function TeamSection() {
                                 <span className="font-heading text-lg font-bold tabular-nums text-foreground">€56,700</span>
                             </div>
                         </AppFrame>
+                        </div>
                         <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
                             <span className="font-semibold text-foreground">Parents</span> get read-only progress and the
                             full financial picture — tuition, living costs and graduate outcomes, converted to home currency.

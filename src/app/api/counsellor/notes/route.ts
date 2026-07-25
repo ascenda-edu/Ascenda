@@ -8,7 +8,7 @@ const VALID_TYPES = new Set(['session', 'flag', 'update']);
 // requires can_act_as_counsellor() AND author_profile_id = auth.uid();
 // the in-app role check is defense in depth on top of that.
 export async function POST(request: NextRequest) {
-  const supabase = createRouteHandlerSupabaseClient();
+  const supabase = await createRouteHandlerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

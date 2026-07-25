@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ComponentType, type KeyboardEvent } from 'react';
-import { motion, useInView, useReducedMotion } from 'framer-motion';
+import { useInView, useReducedMotion } from 'framer-motion';
 import { CalendarDays, LayoutGrid, SlidersHorizontal, Target, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MatchCard, monogramToneFor, ProgressRing } from './product-widgets';
@@ -14,6 +14,7 @@ import {
     IB_MIN,
     MiniCalendar,
     SpotlightPanel,
+    TierTiles,
     ringToneClass,
 } from './mock-viz';
 
@@ -84,12 +85,6 @@ const CHANCE_PROGRAMMES = [
     { name: 'ETH Zürich', monogram: 'EZ', sub: 'MSc Mechanical', minScore: 41 },
 ] as const;
 
-const TIER_TILE_STYLES = {
-    safety: 'text-emerald-600 dark:text-emerald-400',
-    match: 'text-amber-600 dark:text-amber-400',
-    reach: 'text-rose-600 dark:text-rose-400',
-} as const;
-
 function ChancesPanel({ onInteract }: { onInteract: () => void }) {
     const [score, setScore] = useState(38);
     const pct = ((score - IB_MIN) / (IB_MAX - IB_MIN)) * 100;
@@ -135,17 +130,8 @@ function ChancesPanel({ onInteract }: { onInteract: () => void }) {
                     <span>{IB_MAX}</span>
                 </div>
             </div>
-            <div className="grid grid-cols-3 gap-2" aria-live="polite">
-                {(['safety', 'match', 'reach'] as const).map((tier) => (
-                    <div key={tier} className="rounded-xl border border-border bg-card px-2 py-1.5 text-center dark:border-white/10">
-                        <p className={cn('font-heading text-lg font-bold leading-tight tabular-nums', TIER_TILE_STYLES[tier])}>
-                            {counts[tier]}
-                        </p>
-                        <p className={cn('text-[0.5625rem] font-bold uppercase tracking-[0.1em]', TIER_TILE_STYLES[tier])}>
-                            {tier === 'safety' ? 'Safety' : tier === 'match' ? 'Match' : 'Reach'}
-                        </p>
-                    </div>
-                ))}
+            <div aria-live="polite">
+                <TierTiles counts={counts} />
             </div>
             {CHANCE_PROGRAMMES.map((p) => (
                 <ChanceMeter
@@ -264,6 +250,13 @@ export function HeroAppTour({ className }: { className?: string }) {
     // Progress hairline restarts per activation; keyed by a counter so the same
     // tab re-triggers its CSS animation after a full rotation cycle.
     const [cycle, setCycle] = useState(0);
+    // useReducedMotion() resolves the real preference on the FIRST client render
+    // while the server rendered it as false, so anything that reaches the DOM
+    // (text, style props) must wait for mount or it mismatches the SSR HTML.
+    // `paused` is exempt: !inViewNow already makes it true on both sides.
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    const reduced = mounted && !!shouldReduceMotion;
 
     const paused = pinned || hovered || focused || !inViewNow || !!shouldReduceMotion;
 
@@ -353,13 +346,20 @@ export function HeroAppTour({ className }: { className?: string }) {
                                 <tab.icon className="h-3.5 w-3.5" aria-hidden />
                                 {tab.label}
                                 {/* Countdown hairline to the next auto-advance */}
+                                {/* CSS keyframe, not framer: a 100%-duty-cycle JS
+                                    animation ran for as long as the hero was visible.
+                                    key={cycle} remounts the node, which restarts the
+                                    animation — same restart-per-activation as before.
+                                    Only mounted while !paused, so reduced-motion users
+                                    (paused === true) never see it, exactly as today. */}
                                 {selected && !paused && (
-                                    <motion.span
+                                    <span
                                         key={cycle}
                                         className="absolute inset-x-3 bottom-[3px] h-0.5 origin-left rounded-full bg-primary-foreground/50"
-                                        initial={{ scaleX: 0 }}
-                                        animate={{ scaleX: 1 }}
-                                        transition={{ duration: ROTATE_MS / 1000, ease: 'linear' }}
+                                        style={{
+                                            animation: `grow-x ${ROTATE_MS}ms linear`,
+                                            transformOrigin: 'left',
+                                        }}
                                         aria-hidden
                                     />
                                 )}
@@ -400,7 +400,7 @@ export function HeroAppTour({ className }: { className?: string }) {
                 </div>
 
                 <p className="relative mt-3 text-center text-[0.6875rem] text-muted-foreground">
-                    {shouldReduceMotion
+                    {reduced
                         ? 'Tabs above switch the preview — nothing moves on its own.'
                         : pinned
                           ? 'Pinned — click around, nothing moves without you.'

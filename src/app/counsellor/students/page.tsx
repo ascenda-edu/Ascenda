@@ -7,14 +7,14 @@ import { StudentsPageClient } from './_students-page-client';
 export const metadata: Metadata = { title: 'Students · Counsellor' };
 export const dynamic = 'force-dynamic';
 
-// Next 14 passes searchParams as a plain object (the Promise shape is Next 15).
 interface Props {
-  searchParams: { stage?: string; tier?: string; programme?: string; field?: string; filter?: string };
+  searchParams: Promise<{ stage?: string; tier?: string; programme?: string; field?: string; filter?: string }>;
 }
 
-export default async function CounsellorStudentsPage({ searchParams }: Props) {
+export default async function CounsellorStudentsPage(props: Props) {
+  const searchParams = await props.searchParams;
   const params = searchParams;
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   // Unlike the analytics/overview pages, this roster does NOT exclude the current
   // user: in the single-account demo that keeps the demo student (greg) in the
   // list so the counsellor can open his card and message him, and the message
