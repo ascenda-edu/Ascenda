@@ -5,12 +5,17 @@ import { MotionValue, motion, useScroll, useSpring, useTransform } from 'framer-
 import { ArrowRight, Check, X } from 'lucide-react';
 import { MatchCard, TaskRow } from '@/components/landing/product-widgets';
 import { PipelineBar, TierTiles } from '@/components/landing/mock-viz';
-import { SCENE_SPRING, useMotionReady } from './ascent-scroll';
+import { SCENE_SPRING, useLatchedProgress, useMotionReady } from './ascent-scroll';
 
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
 // Positions form an overlapping diagonal "pile" on md+ (fills the box instead of
 // pinning cards to empty corners); on mobile they render as a plain stacked list.
+// The `top` percentages resolve against the chaos box, which no longer has a fixed
+// 400px height — it stretches to the answers column (~440px), so the tops are
+// spread 3%→72% rather than the old 3%→68%: at the old values the extra height all
+// landed as dead space under the last note. A note is ~85px tall, so ~72% is the
+// deepest top that still keeps the bottom edge inside the box.
 // `rotate` is the note's final tilt as a number: the md: rotate class still ships
 // for static/reduced-motion users, but once scrubbing takes over the inline
 // transform owns the whole rotation (base + scatter), since an inline transform
@@ -27,21 +32,21 @@ const chaosNotes = [
     {
         h: 'Everywhere',
         body: '40 tabs, 3 spreadsheets, a notes app.',
-        pos: 'md:left-[34%] md:top-[24%] md:z-30 md:rotate-[3deg]',
+        pos: 'md:left-[34%] md:top-[26%] md:z-30 md:rotate-[3deg]',
         rotate: 3,
         scatter: [70, -30, 14] as const,
     },
     {
         h: 'Too late',
         body: 'Found out about the deadline the day it closed.',
-        pos: 'md:left-[8%] md:top-[47%] md:z-20 md:-rotate-[2deg]',
+        pos: 'md:left-[8%] md:top-[49%] md:z-20 md:-rotate-[2deg]',
         rotate: -2,
         scatter: [-70, 40, -12] as const,
     },
     {
         h: 'Vague',
         body: '“Just apply broadly and see what happens.”',
-        pos: 'md:left-[33%] md:top-[68%] md:z-40 md:rotate-[4deg]',
+        pos: 'md:left-[33%] md:top-[72%] md:z-40 md:rotate-[4deg]',
         rotate: 4,
         scatter: [60, 60, 15] as const,
     },
@@ -148,21 +153,25 @@ const PANEL_BASE = 'rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.0
 
 /**
  * "Same student. Different year." with the mock's scrub-settle motion: the chaos
- * pile flies in from a scatter and settles into place as the section rises to the
- * middle of the viewport, while the answers slide in from the right behind it.
+ * pile flies in from a scatter and settles into place as the section rises through
+ * the viewport, while the answers slide in from the right behind it.
  *
  * Not a pinned scene — the scrub rides the section's normal travel (start end →
- * center center) so the layout matches the static comparison grid it replaced.
- * Static and reduced-motion users see the settled final state (the `md:` position
- * and rotation classes carry it).
+ * center 0.75, i.e. settled before the section reaches the middle) so the layout
+ * matches the static comparison grid it replaced. The travel is latched one-way,
+ * so a settled pile stays settled when the user scrolls back up. Static and
+ * reduced-motion users see the settled final state (the `md:` position and
+ * rotation classes carry it).
  */
 export function ComparisonSettle() {
     const sectionRef = useRef<HTMLElement>(null);
     const { scrollYProgress } = useScroll({
         target: sectionRef,
-        offset: ['start end', 'center center'],
+        offset: ['start end', 'center 0.75'],
     });
-    const p = useSpring(scrollYProgress, SCENE_SPRING);
+    // Latch the RAW progress, then spring it — latching the spring's output would
+    // freeze its overshoot as the permanent maximum.
+    const p = useSpring(useLatchedProgress(scrollYProgress), SCENE_SPRING);
     const ready = useMotionReady();
     const isDesktop = useDesktopPile();
 
@@ -176,17 +185,26 @@ export function ComparisonSettle() {
                     </h2>
                 </div>
 
-                <div className="mt-12 grid items-center gap-8 md:grid-cols-[1fr_auto_1fr] md:gap-6">
+                {/* items-stretch (not items-center): the right column's four panels
+                    are the tallest cell, so they define the row height and the
+                    chaos box grows to match it — the two sides read as one pair of
+                    equal boxes instead of a short box beside a tall stack. */}
+                <div className="mt-12 grid items-stretch gap-8 md:grid-cols-[1fr_auto_1fr] md:gap-6">
                     {/* Without — chaos */}
-                    <div>
-                        <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-rose-500/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.05em] text-rose-700 dark:text-rose-400">
+                    <div className="flex flex-col">
+                        {/* self-start: the wrapper is now a flex column, whose default
+                            stretch would blow this pill out to the full column width. */}
+                        <span className="mb-4 inline-flex self-start items-center gap-2 rounded-full bg-rose-500/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.05em] text-rose-700 dark:text-rose-400">
                             <X className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />
                             Without Ascenda
                         </span>
-                        {/* Mobile: a plain stacked list. md+: absolutely-positioned, rotated "mess". */}
-                        <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-rose-500/30 bg-rose-500/[0.04] p-4 md:relative md:block md:h-[400px] md:overflow-hidden md:p-0">
+                        {/* Mobile: a plain stacked list. md+: absolutely-positioned, rotated "mess".
+                            md:flex-1 replaces the old fixed md:h-[400px] — the box now takes
+                            whatever height the answers column sets, so the note `pos`
+                            percentages below resolve against a taller box. */}
+                        <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-rose-500/30 bg-rose-500/[0.04] p-4 md:relative md:block md:flex-1 md:overflow-hidden md:p-0">
                             {/* faint stack of browser tabs behind the pile (scatter only) */}
-                            <div className="absolute right-[6%] top-[38%] hidden -rotate-6 gap-1.5 opacity-40 md:flex">
+                            <div className="absolute right-[6%] top-[42%] hidden -rotate-6 gap-1.5 opacity-40 md:flex">
                                 {[0, 1, 2, 3].map((i) => (
                                     <span key={i} className="h-[30px] w-[50px] rounded-t-md border border-b-0 border-border bg-muted/60" />
                                 ))}
@@ -204,16 +222,20 @@ export function ComparisonSettle() {
                         </div>
                     </div>
 
-                    {/* Arrow */}
-                    <div className="grid place-items-center">
+                    {/* Arrow — self-center so it stays on the row's midline now that
+                        the two columns stretch to full height. */}
+                    <div className="grid place-items-center self-center">
                         <span className="grid h-11 w-11 place-items-center rounded-full border border-border bg-card text-muted-foreground shadow-md max-md:rotate-90">
                             <ArrowRight className="h-5 w-5" aria-hidden />
                         </span>
                     </div>
 
-                    {/* With — the same four pains, answered by the product */}
-                    <div>
-                        <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.05em] text-emerald-700 dark:text-emerald-400">
+                    {/* With — the same four pains, answered by the product. This
+                        column's natural height is what the row (and so the chaos
+                        box opposite) is sized from. */}
+                    <div className="flex flex-col">
+                        {/* self-start — same flex-column stretch caveat as the pill opposite. */}
+                        <span className="mb-4 inline-flex self-start items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.05em] text-emerald-700 dark:text-emerald-400">
                             <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />
                             With Ascenda
                         </span>

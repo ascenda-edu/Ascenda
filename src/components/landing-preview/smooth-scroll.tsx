@@ -14,9 +14,25 @@ interface SmoothScrollApi {
      * itself only warns and returns in that case.
      */
     scrollTo: (target: string | number | HTMLElement) => boolean;
+    /**
+     * Instant, unanimated scroll adjustment — the pin-collapse compensation in
+     * PinnedScene, where the whole point is that nothing appears to move.
+     * Returns true when Lenis owns the offset and false when the native
+     * fallback ran, so callers that also have to reason about the browser's own
+     * scroll anchoring can tell which engine just moved the page.
+     */
+    jumpBy: (delta: number) => boolean;
 }
 
-const SmoothScrollContext = createContext<SmoothScrollApi>({ scrollTo: () => false });
+const SmoothScrollContext = createContext<SmoothScrollApi>({
+    scrollTo: () => false,
+    // Outside the provider there is no Lenis to keep in sync, so the native jump
+    // is the whole implementation (only ever called from effects, never on SSR).
+    jumpBy: (delta) => {
+        window.scrollBy(0, delta);
+        return false;
+    },
+});
 
 export function useSmoothScroll(): SmoothScrollApi {
     return useContext(SmoothScrollContext);
@@ -187,6 +203,28 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
                     easing: easeExpoOut,
                     onComplete: settle,
                 });
+                return true;
+            },
+            jumpBy: (delta) => {
+                const lenis = lenisRef.current;
+                if (!lenis) {
+                    // Coarse pointer, reduced motion, or the tick before the chunk
+                    // resolves: nothing is animating the scroll, so the native jump
+                    // IS the truth. Reported as false — the caller may need to
+                    // account for the browser's own scroll anchoring.
+                    window.scrollBy(0, delta);
+                    return false;
+                }
+
+                // Through Lenis, never window.scrollBy: mid-glide Lenis writes the
+                // real scrollTop from its own `targetScroll` on every rAF, so a
+                // native jump would be lerped straight back out within a frame or
+                // two. Moving `targetScroll` instead keeps the glide continuous.
+                // `immediate` because this must be invisible rather than animated
+                // (an eased "compensation" is exactly the jump it exists to hide),
+                // and `force` so it is not clamped or dropped while an animation is
+                // in flight or the instance is momentarily stopped.
+                lenis.scrollTo(lenis.targetScroll + delta, { immediate: true, force: true });
                 return true;
             },
         }),

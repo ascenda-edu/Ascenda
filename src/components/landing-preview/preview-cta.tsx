@@ -7,13 +7,15 @@ import {
     motion,
     useMotionValueEvent,
     useReducedMotion,
+    useScroll,
+    useSpring,
     useTransform,
     type MotionStyle,
 } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useLaunchHref } from '@/hooks/use-launch-href';
 import { cn } from '@/lib/utils';
-import { useMotionReady, useMounted, useSceneProgress } from './ascent-scroll';
+import { SCENE_SPRING, useLatchedProgress, useMotionReady, useMounted } from './ascent-scroll';
 import { COPY, IGNITION } from './cta-choreography';
 import { CursorGrid } from './cursor-grid';
 import {
@@ -67,7 +69,7 @@ const PROOF: [number, number] = [0.5, 0.68];
 export { CTA_COPY_POINT, CTA_IGNITION_POINT } from './cta-choreography';
 
 const T_MINUS_START = 10;
-const LIFTOFF_LABEL = 'Lift-off · your plan is go';
+const LIFTOFF_LABEL = 'Lift-off, your plan is ready to go';
 /**
  * The static frame's caption. SSR, no-JS and reduced-motion users see the rocket
  * assembled on the pad with a cold engine, so the readout must say "fuelled and
@@ -251,7 +253,14 @@ function LaunchReadout({ p, ready }: { p: MotionValue<number>; ready: boolean })
 
 export function PreviewCta() {
     const ref = useRef<HTMLElement>(null);
-    const p = useSceneProgress(ref);
+    // `useSceneProgress` inlined (same offsets) so the RAW scrollYProgress can be
+    // latched before the spring: the finale is one-way, so once the launch has
+    // played the band holds its finished frame — the vehicle stays gone, the ask
+    // stays legible and the CTA stays clickable — instead of re-assembling the
+    // rocket and fading the copy back out on scroll-up. Latching the spring's
+    // output instead would freeze its overshoot as the permanent maximum.
+    const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] });
+    const p = useSpring(useLatchedProgress(scrollYProgress), SCENE_SPRING);
     const ready = useMotionReady();
     const mounted = useMounted();
     const shouldReduceMotion = useReducedMotion();
@@ -354,6 +363,8 @@ export function PreviewCta() {
     // Pointer gate for the copy block: until the reveal, the primary CTA is at
     // opacity 0 and must not be a phantom click target. Threshold is the middle
     // of the rise so the cursor can't land on a ~4%-opacity button either.
+    // Driven by the same latched `p` as `copyOpacity`, so interactivity tracks
+    // visibility exactly — and both stay on once the reveal has happened.
     const revealed = useScrubbed(p, scrub, true, (v) => v > (COPY[0] + COPY[1]) / 2);
     // Keyboard/AT stay welcome the whole time: the block is never inert (an inert
     // finale would remove the page's primary CTA from the tab order and the
@@ -533,7 +544,7 @@ export function PreviewCta() {
                                 className="group h-12 bg-slate-50 px-8 text-base text-slate-900 shadow-xl transition-all hover:bg-slate-100 hover:shadow-2xl"
                             >
                                 <Link href={launchHref} className="flex items-center gap-2">
-                                    {launchHref === '/dashboard' ? 'Go to dashboard' : 'Build your plan'}
+                                    Launch Ascenda
                                     <svg
                                         viewBox="0 0 16 16"
                                         className="h-4 w-4 transition-transform group-hover:translate-x-1"

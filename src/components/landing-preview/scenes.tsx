@@ -157,8 +157,8 @@ export function ChapterIntro() {
                 className="mx-auto max-w-7xl px-6"
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-100px' }}
-                transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                viewport={{ once: true, margin: '-60px' }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             >
                 <span className="inline-flex rounded-full border border-primary/30 bg-primary/[0.08] px-3 py-1 font-heading text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-primary">
                     Inside Ascenda
@@ -273,7 +273,7 @@ export function SceneFit() {
             ghost="01 — FIT SCORE"
             ghostDrift={-0.5}
             alt
-            pinVh={250}
+            pinVh={190}
             title={
                 <>
                     See exactly{' '}
@@ -347,7 +347,7 @@ export function SceneCatalogue() {
             ghost="02 — THE CATALOGUE"
             ghostDrift={0.5}
             flip
-            pinVh={260}
+            pinVh={200}
             title={
                 <>
                     Every programme,{' '}
@@ -462,7 +462,7 @@ export function ScenePlan() {
             ghost="03 — YOUR PLAN"
             ghostDrift={-0.4}
             alt
-            pinVh={260}
+            pinVh={200}
             title={
                 <>
                     A plan that{' '}

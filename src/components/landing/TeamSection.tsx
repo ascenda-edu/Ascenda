@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Briefcase, Check, Clock3, FileText, Heart, Home, TrendingUp, Users, Wallet } from 'lucide-react';
+import { Bot, Briefcase, Check, Clock3, FileText, Heart, Home, TrendingUp, Users, Wallet } from 'lucide-react';
 import { AnimatedSection } from '@/components/layout/animated-section';
 import { cn } from '@/lib/utils';
 import { AppFrame, ProgressRing } from './product-widgets';
@@ -55,12 +55,15 @@ export function TeamSection() {
                     </p>
                 </AnimatedSection>
 
-                <div className="mt-14 grid gap-8 md:grid-cols-2 md:gap-10">
+                {/* Three columns on md+: counsellors · Ascendi · parents. The middle
+                    column is `auto` so the two surfaces keep the width, and the DOM order
+                    is the mobile stack order for free — card, node, card. */}
+                <div className="mt-14 grid gap-8 md:grid-cols-[1fr_auto_1fr] md:gap-6">
                     <motion.div
                         initial={{ opacity: 0, y: 24 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, amount: 0.25 }}
-                        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+                        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                     >
                         <div className="relative">
                         <RoleBadge icon={Users} label="Counsellors" className="border-violet-500/30 text-violet-700 dark:text-violet-300" />
@@ -117,11 +120,48 @@ export function TeamSection() {
                         </p>
                     </motion.div>
 
+                    {/* Ascendi as the literal connection point between the two surfaces.
+                        Same flex box in both layouts: a column on mobile (dashed rule above
+                        and below, node between the stacked cards) that turns into a row on
+                        md+ (dashed rules reaching left and right toward each card). */}
+                    <motion.div
+                        className="flex flex-col items-center gap-3 self-center justify-self-center md:flex-row md:gap-2"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true, amount: 0.25 }}
+                        transition={{ duration: 0.45, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
+                    >
+                        <span
+                            className="h-6 w-0 border-l border-dashed border-violet-400/40 md:h-0 md:w-5 md:border-l-0 md:border-t"
+                            aria-hidden
+                        />
+                        <div className="flex flex-col items-center gap-2">
+                            <span
+                                className="grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-violet-500 to-violet-600 text-white shadow-lg shadow-violet-500/25 ring-4 ring-violet-500/10"
+                                aria-hidden
+                            >
+                                <Bot className="h-6 w-6" />
+                            </span>
+                            {/* Capped width so the one-liner wraps instead of widening the
+                                middle column and squeezing both surfaces. */}
+                            <div className="max-w-[7rem] text-center">
+                                <p className="font-heading text-sm font-semibold text-foreground">Ascendi</p>
+                                <p className="text-xs leading-snug text-muted-foreground">
+                                    keeps everyone on the same page
+                                </p>
+                            </div>
+                        </div>
+                        <span
+                            className="h-6 w-0 border-l border-dashed border-violet-400/40 md:h-0 md:w-5 md:border-l-0 md:border-t"
+                            aria-hidden
+                        />
+                    </motion.div>
+
                     <motion.div
                         initial={{ opacity: 0, y: 24 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, amount: 0.25 }}
-                        transition={{ duration: 0.55, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                        transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
                     >
                         <div className="relative">
                         <RoleBadge icon={Heart} label="Parents" className="border-sky-500/30 text-sky-700 dark:text-sky-300" />

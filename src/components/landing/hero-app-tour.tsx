@@ -43,9 +43,7 @@ interface TourTab {
 function MatchesPanel() {
     return (
         <div className="flex flex-col gap-2.5">
-            <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                Top match · <span className="text-foreground">Why 92?</span>
-            </p>
+            <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-muted-foreground">Top match</p>
             <MatchCard
                 name="TU Delft"
                 sub="MSc Aerospace Engineering"
@@ -120,7 +118,10 @@ function ChancesPanel({ onInteract }: { onInteract: () => void }) {
                         '[&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-[3px] [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:bg-card [&::-moz-range-thumb]:shadow-md',
                     )}
                     style={{
-                        background: `linear-gradient(to right, hsl(var(--primary)) ${pct}%, hsl(var(--muted)) ${pct}%)`,
+                        // The unfilled half is muted-foreground at 25%, not --muted: on dark
+                        // --muted is ~4% lightness, i.e. invisible against the card behind it,
+                        // so the track looked like it simply ended at the thumb.
+                        background: `linear-gradient(to right, hsl(var(--primary)) ${pct}%, hsl(var(--muted-foreground) / 0.25) ${pct}%)`,
                     }}
                 />
                 <div className="mt-1 flex justify-between text-[0.625rem] tabular-nums text-muted-foreground" aria-hidden>
@@ -206,7 +207,9 @@ function RequirementsPanel() {
                                     {bar.done}/{bar.total}
                                 </span>
                             </div>
-                            <div className="h-1 overflow-hidden rounded-full bg-muted">
+                            {/* dark:bg-white/10 — same as the mock-viz meters: a --muted
+                                track on bg-card is ~4% lightness apart in dark. */}
+                            <div className="h-1 overflow-hidden rounded-full bg-muted dark:bg-white/10">
                                 <span
                                     className={cn('block h-full rounded-full', bar.colorClass)}
                                     style={{ width: `${(bar.done / bar.total) * 100}%` }}
@@ -251,13 +254,9 @@ export function HeroAppTour({ className }: { className?: string }) {
     // tab re-triggers its CSS animation after a full rotation cycle.
     const [cycle, setCycle] = useState(0);
     // useReducedMotion() resolves the real preference on the FIRST client render
-    // while the server rendered it as false, so anything that reaches the DOM
-    // (text, style props) must wait for mount or it mismatches the SSR HTML.
-    // `paused` is exempt: !inViewNow already makes it true on both sides.
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => setMounted(true), []);
-    const reduced = mounted && !!shouldReduceMotion;
-
+    // while the server rendered it as false, so it must never feed anything that
+    // reaches the DOM (text, style props) without a mount gate. `paused` is the
+    // one exempt consumer: !inViewNow already makes it true on both sides.
     const paused = pinned || hovered || focused || !inViewNow || !!shouldReduceMotion;
 
     useEffect(() => {
@@ -271,6 +270,29 @@ export function HeroAppTour({ className }: { className?: string }) {
     }, [paused]);
 
     const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+    const panelRefs = useRef<(HTMLDivElement | null)[]>([]);
+    // null until the first measurement lands. Nothing depends on it for *layout*
+    // correctness — only the active panel is in flow, so `height: auto` is already
+    // the right height at SSR and on the first paint. The measured px value exists
+    // solely so the height can TRANSITION: CSS cannot interpolate from `auto`.
+    const [stackHeight, setStackHeight] = useState<number | null>(null);
+
+    // The stack's height tracks the ACTIVE panel only. ResizeObserver rather than
+    // a one-shot measure because content changes size *within* a tab too: dragging
+    // the chances slider re-tiers programmes and reflows the rows.
+    // offsetHeight, not getBoundingClientRect(): the incoming panel is still at
+    // scale-[0.985] on the frame we measure (its transform transition has only just
+    // started), and a transformed rect would read ~1.5% short — and ResizeObserver
+    // never fires again for a transform, so that error would stick.
+    useEffect(() => {
+        const el = panelRefs.current[active];
+        if (!el) return;
+        const measure = () => setStackHeight(el.offsetHeight);
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [active]);
 
     const pin = (index?: number) => {
         if (index !== undefined) setActive(index);
@@ -368,29 +390,48 @@ export function HeroAppTour({ className }: { className?: string }) {
                     })}
                 </div>
 
-                {/* Panels stacked in one grid cell: the tallest sets the height at every
-                    breakpoint, so tab switches never shift the page layout. Pure CSS
-                    transitions (not framer) so the hidden state is in the SSR HTML — no
-                    flash of four overlapping panels before hydration. Incoming-only fade:
-                    the panel background is translucent, so a true cross-fade would show
-                    both panels' text mid-transition. */}
+                {/* The card is content-fitted per tab and animates between heights.
+                    Previously all four panels sat in one grid cell, so the TALLEST tab set
+                    the height for all of them — layout never shifted, but the short tabs
+                    showed a slab of dead space between their content and the caption. The
+                    trade is now inverted: content always fills the card, and the card
+                    resizes. Only the ACTIVE panel is in flow (self-start, content-sized),
+                    so `height: auto` is already correct at SSR and on the first paint —
+                    that's why there's no measured height in the server markup and no snap
+                    after hydration. The inactive panels are absolutely stacked into the same
+                    col-start-1/row-start-1 grid area (still the fade's overlap; browsers
+                    without abspos-grid-area support fall back to the padding box, which is
+                    the identical rect for a single full-width column) and contribute no
+                    height. Pure CSS transitions (not framer) so the hidden state is in the
+                    SSR HTML — no flash of four overlapping panels before hydration.
+                    Incoming-only fade: the panel background is translucent, so a true
+                    cross-fade would show both panels' text mid-transition. overflow-hidden
+                    is what stops the outgoing (taller) panel bleeding over the caption
+                    while the height shrinks — every focusable control sits well inside a
+                    padded card, so no focus ring lands on the clipped edge. */}
                 {/* minmax(0,1fr): an implicit `auto` track would size to the widest
                     panel's max-content and blow out the hero on narrow viewports. */}
-                <div className="relative grid grid-cols-[minmax(0,1fr)]">
+                <div
+                    className="relative grid grid-cols-[minmax(0,1fr)] overflow-hidden transition-[height] duration-300 ease-out motion-reduce:transition-none"
+                    style={stackHeight !== null ? { height: stackHeight } : undefined}
+                >
                     {TOUR_TABS.map((tab, i) => {
                         const selected = i === active;
                         return (
                             <div
                                 key={tab.id}
+                                ref={(el) => {
+                                    panelRefs.current[i] = el;
+                                }}
                                 role="tabpanel"
                                 id={`tour-panel-${tab.id}`}
                                 aria-labelledby={`tour-tab-${tab.id}`}
                                 aria-hidden={!selected}
                                 className={cn(
-                                    'col-start-1 row-start-1 min-w-0 transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none',
+                                    'col-start-1 row-start-1 min-w-0 self-start transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none',
                                     selected
-                                        ? 'translate-y-0 scale-100 opacity-100'
-                                        : 'pointer-events-none invisible translate-y-2 scale-[0.985] opacity-0',
+                                        ? 'relative translate-y-0 scale-100 opacity-100'
+                                        : 'pointer-events-none invisible absolute inset-x-0 top-0 translate-y-2 scale-[0.985] opacity-0',
                                 )}
                             >
                                 <tab.Panel onInteract={() => pin()} />
@@ -400,11 +441,7 @@ export function HeroAppTour({ className }: { className?: string }) {
                 </div>
 
                 <p className="relative mt-3 text-center text-[0.6875rem] text-muted-foreground">
-                    {reduced
-                        ? 'Tabs above switch the preview — nothing moves on its own.'
-                        : pinned
-                          ? 'Pinned — click around, nothing moves without you.'
-                          : 'Auto-touring the app · click a tab or drag the slider to pin'}
+                    Pinned. Nothing moves without you.
                 </p>
             </div>
         </SpotlightPanel>

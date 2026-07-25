@@ -5,6 +5,7 @@ import { AnimatedSection } from '@/components/layout/animated-section';
 import { cn } from '@/lib/utils';
 import { AppFrame, MatchCard, ProgressRing, TaskRow } from './product-widgets';
 import { SharedWithRow, WizardSteps } from './mock-viz';
+import { ScrollRevealHeading } from './scroll-reveal-heading';
 
 const NUMBER_GRADIENTS = [
     'from-indigo-500 to-violet-500',
@@ -88,11 +89,17 @@ export function ShortlistSection() {
     return (
         <section id="how-it-works" className="w-full py-24 bg-background sm:py-32 scroll-mt-14">
             <div className="max-w-7xl mx-auto px-6">
-                <AnimatedSection className="max-w-2xl space-y-4 mb-14">
+                {/* AnimatedSection stays for the eyebrow's fade — it composes with the
+                    heading's word reveal, which is driven off the heading's own scroll
+                    position rather than the wrapper's. */}
+                <AnimatedSection className="max-w-2xl space-y-4 mb-10">
                     <p className="text-sm font-medium uppercase tracking-widest text-primary/80">How it works</p>
-                    <h2 className="text-4xl md:text-5xl font-heading font-bold text-foreground tracking-tight">
+                    <ScrollRevealHeading
+                        as="h2"
+                        className="text-3xl md:text-4xl font-heading font-bold text-foreground tracking-tight"
+                    >
                         Three steps from sign-up to a plan you can share.
-                    </h2>
+                    </ScrollRevealHeading>
                 </AnimatedSection>
 
                 <div className="grid gap-y-12 gap-x-6 md:grid-cols-3">
@@ -103,7 +110,7 @@ export function ShortlistSection() {
                             initial={{ opacity: 0, y: 24 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true, amount: 0.3 }}
-                            transition={{ duration: 0.5, delay: index * 0.12 }}
+                            transition={{ duration: 0.4, delay: index * 0.08 }}
                         >
                             <span
                                 className={cn(

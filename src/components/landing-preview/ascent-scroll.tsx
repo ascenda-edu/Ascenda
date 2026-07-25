@@ -6,6 +6,7 @@ import {
     createContext,
     useContext,
     useEffect,
+    useLayoutEffect,
     useMemo,
     useRef,
     useState,
@@ -13,12 +14,56 @@ import {
 import {
     MotionValue,
     motion,
+    useMotionValue,
+    useMotionValueEvent,
     useReducedMotion,
     useScroll,
     useSpring,
     useTransform,
 } from 'framer-motion';
 import { cn } from '@/lib/utils';
+// Import cycle by design: smooth-scroll.tsx imports PageScrollProvider from here.
+// It is inert — both directions are referenced only at render/call time, never
+// during module evaluation, so whichever module the bundler reaches first the
+// other's bindings are initialised by the time anything reads them.
+import { useSmoothScroll } from './smooth-scroll';
+
+/**
+ * Fired once a pinned scene has collapsed and its compensating scroll jump has
+ * landed. A collapse removes ~1 screen of document height WITHOUT a `resize`
+ * event, so anything caching a document offset (the nav's T-minus countdown maps
+ * scroll offsets onto `#cta`'s position) has to re-measure.
+ */
+export const LAYOUT_SHIFT_EVENT = 'ascenda:layout-shift';
+
+/**
+ * The collapse compensation has to land before paint or the page visibly jumps,
+ * but React warns when a component calls useLayoutEffect during SSR — so alias it
+ * on the server, exactly as framer-motion does internally. Nothing in this effect
+ * runs outside the browser anyway.
+ */
+const useBeforePaint = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+
+/**
+ * One-way scroll progress: mirrors `source` but never decreases, so scrubbed
+ * reveals play forward once and stay settled when the user scrolls back up —
+ * content that has "loaded" never unloads (2026-07 polish pass decision).
+ *
+ * Latch the RAW scrollYProgress and spring the latched value, not the other
+ * way around: latching a spring's output would freeze any overshoot as the
+ * permanent maximum.
+ */
+export function useLatchedProgress(source: MotionValue<number>): MotionValue<number> {
+    const latched = useMotionValue(source.get());
+    useEffect(() => {
+        const sync = (v: number) => {
+            if (v > latched.get()) latched.set(v);
+        };
+        sync(source.get());
+        return source.on('change', sync);
+    }, [source, latched]);
+    return latched;
+}
 
 /**
  * Post-mount gate (the HeroSection `bgEnhanced` pattern): scroll-driven styles
@@ -101,9 +146,16 @@ export interface SceneChapter {
 }
 
 export interface SceneCtx {
-    /** Springed 0→1 progress through the pinned travel. */
+    /**
+     * Springed 0→1 progress through the pinned travel. Latched: it never runs
+     * backwards, so scene choreography plays forward once and stays settled.
+     */
     p: MotionValue<number>;
-    /** False until mounted, and always false for reduced-motion users. */
+    /**
+     * False until mounted, always false for reduced-motion users, and false again
+     * once the scene has collapsed — in all three cases the shot renders its
+     * static final frame.
+     */
     ready: boolean;
 }
 
@@ -114,6 +166,13 @@ export interface SceneCtx {
  *
  * Reduced-motion (and pre-JS) users see the final frame; after mount the pin
  * collapses entirely for them so there is no dead scroll.
+ *
+ * The pin is also strictly single-use (2026-07 polish pass): a chapter that has
+ * been scrubbed to the end and then scrolled off the top collapses to a plain,
+ * fully-settled section — same rendering reduced-motion users get — with the lost
+ * height compensated out of the scroll position before paint. Scrolling back up
+ * re-reads the chapter as a normal band of the page instead of forcing the whole
+ * pin travel again in reverse.
  */
 export function PinnedScene({
     chapter,
@@ -125,7 +184,7 @@ export function PinnedScene({
     ghostDrift = -0.5,
     flip = false,
     alt = false,
-    pinVh = 250,
+    pinVh = 190,
     shot,
 }: {
     chapter: SceneChapter;
@@ -143,12 +202,86 @@ export function PinnedScene({
     shot: (ctx: SceneCtx) => ReactNode;
 }) {
     const ref = useRef<HTMLElement>(null);
-    const p = useSceneProgress(ref);
+    const { scrollYProgress: raw } = useScroll({ target: ref, offset: ['start start', 'end end'] });
+    // Two springs off the one raw progress, deliberately:
+    //  · `p` springs the LATCHED value — every scrubbed reveal in the scene (and
+    //    everything the `shot` render prop derives from ctx.p) plays forward once
+    //    and holds, so nothing un-animates on the way back up;
+    //  · `live` springs the raw value and therefore tracks both directions. Only
+    //    the exit handoff reads it: latching that would leave a chapter the user
+    //    has already passed permanently dimmed and lifted by 24px.
+    // Latching before the spring, never after — see useLatchedProgress.
+    const p = useSpring(useLatchedProgress(raw), SCENE_SPRING);
+    const live = useSpring(raw, SCENE_SPRING);
     const ready = useMotionReady();
     const mounted = useMounted();
     const shouldReduceMotion = useReducedMotion();
-    // Collapse the pin after mount for reduced-motion users — no dead scroll.
-    const pinned = !(mounted && shouldReduceMotion);
+    const [collapsed, setCollapsed] = useState(false);
+    // Collapse the pin after mount for reduced-motion users — no dead scroll —
+    // and for everyone else once the chapter has played out and left the screen.
+    const pinned = !(mounted && shouldReduceMotion) && !collapsed;
+    // Scrubbed styles live and die with the pin: a collapsed scene renders the
+    // static final frame, byte for byte the one reduced-motion users get.
+    const scrub = ready && !collapsed;
+    const { jumpBy } = useSmoothScroll();
+
+    // Refs, not state: this runs inside a scroll subscription, and re-rendering
+    // per frame to track "has it finished" would undo the whole point of driving
+    // the scene with MotionValues.
+    const completedRef = useRef(false);
+    const collapsedRef = useRef(false);
+    /** Pinned height + viewport-relative bottom edge captured at collapse time. */
+    const heightRef = useRef(0);
+    const bottomRef = useRef(0);
+
+    useMotionValueEvent(raw, 'change', (v) => {
+        // 0.999, not 1: the closing frame of a scrub routinely lands a hair short.
+        if (v >= 0.999) completedRef.current = true;
+    });
+
+    // The "gone above the viewport" check CANNOT ride `raw`: MotionValue only
+    // notifies when the value actually changes, and once the user scrolls past
+    // the section `scrollYProgress` sits clamped at 1 — the exact stretch where
+    // the section's bottom finally crosses the viewport top is silent. Page
+    // scrollY keeps changing, so the check rides that instead.
+    const { scrollY: pageScrollY } = usePageScroll();
+    useMotionValueEvent(pageScrollY, 'change', () => {
+        if (!completedRef.current || collapsedRef.current) return;
+        const node = ref.current;
+        if (!node) return;
+        // Only once the WHOLE section sits above the viewport. Collapsing while any
+        // of it is still on screen would pull a screen of height out from under
+        // content the user is reading. (One rect read per frame, and only during
+        // the stretch between "finished" and "gone".)
+        const bottom = node.getBoundingClientRect().bottom;
+        if (bottom > 0) return;
+        collapsedRef.current = true;
+        heightRef.current = node.offsetHeight;
+        bottomRef.current = bottom;
+        setCollapsed(true);
+    });
+
+    useBeforePaint(() => {
+        if (!collapsed) return;
+        const node = ref.current;
+        if (!node) return;
+
+        const delta = heightRef.current - node.offsetHeight;
+        if (delta > 0) {
+            // The section shrank entirely above the viewport, so everything below
+            // it just moved up by `delta`. Scroll up by the same amount, before
+            // paint, and the user sees nothing move at all.
+            if (!jumpBy(-delta)) {
+                // Native path only: the browser's own scroll anchoring may already
+                // have absorbed this shift, in which case the jump above
+                // double-counted it. Trust the measurement instead of the maths —
+                // put the section's bottom edge back where it was.
+                const residual = node.getBoundingClientRect().bottom - bottomRef.current;
+                if (Math.abs(residual) > 0.5) window.scrollBy(0, residual);
+            }
+        }
+        window.dispatchEvent(new Event(LAYOUT_SHIFT_EVENT));
+    }, [collapsed, jumpBy]);
 
     const enter = useTransform(p, [0, 0.18], [0, 1], { clamp: true });
     const shotOpacity = useTransform(enter, [0, 0.75], [0, 1]);
@@ -164,8 +297,10 @@ export function PinnedScene({
     // the next one instead of snapping loose the instant the pin releases.
     // Deliberately not applied to the sticky stage itself: that carries the `alt`
     // background slab, and lifting it would expose a 24px strip of page beneath.
-    const exitY = useTransform(p, [0.92, 1], [0, -24]);
-    const exitOpacity = useTransform(p, [0.92, 1], [1, 0.85]);
+    // Driven by `live`, not `p`: a handoff is a position, not a reveal, so it has
+    // to un-happen when the user scrolls back into the chapter.
+    const exitY = useTransform(live, [0.92, 1], [0, -24]);
+    const exitOpacity = useTransform(live, [0.92, 1], [1, 0.85]);
     // The numeral is centred with a -50% translate, so its exit offset has to
     // compose with that rather than replace it.
     const ghostY = useTransform(exitY, (v) => `calc(-50% + ${v}px)`);
@@ -194,13 +329,13 @@ export function PinnedScene({
                         'pointer-events-none absolute top-1/2 z-0 -translate-y-1/2 select-none whitespace-nowrap font-heading text-[clamp(220px,42vw,520px)] font-bold leading-none tracking-tighter text-foreground/[0.04] dark:text-foreground/[0.05]',
                         flip ? 'right-[-4%]' : 'left-[-4%]',
                     )}
-                    style={ready ? { x: ghostX, y: ghostY, opacity: exitOpacity } : undefined}
+                    style={scrub ? { x: ghostX, y: ghostY, opacity: exitOpacity } : undefined}
                 >
                     {chapter.num}
                 </motion.p>
                 <motion.div
                     className="relative z-10 mx-auto w-full max-w-7xl px-6"
-                    style={ready ? { y: exitY, opacity: exitOpacity } : undefined}
+                    style={scrub ? { y: exitY, opacity: exitOpacity } : undefined}
                 >
                     <div
                         className={cn(
@@ -210,7 +345,7 @@ export function PinnedScene({
                     >
                         <motion.div
                             className={cn('max-w-xl', flip && 'lg:order-2')}
-                            style={ready ? { opacity: copyOpacity, y: copyY } : undefined}
+                            style={scrub ? { opacity: copyOpacity, y: copyY } : undefined}
                         >
                             <div className="flex items-baseline gap-3">
                                 <span className="font-heading text-5xl font-bold leading-none tracking-tight text-primary tabular-nums lg:text-6xl">
@@ -250,7 +385,7 @@ export function PinnedScene({
                         <motion.div
                             className={cn('[transform-style:preserve-3d]', flip && 'lg:order-1')}
                             style={
-                                ready
+                                scrub
                                     ? {
                                           opacity: shotOpacity,
                                           y: shotY,
@@ -261,7 +396,11 @@ export function PinnedScene({
                                     : undefined
                             }
                         >
-                            {shot({ p, ready })}
+                            {/* `scrub`, not `ready`: a collapsed scene hands the shot
+                                the same static-final-frame contract it gets on SSR —
+                                which for a chapter played to the end is the frame it
+                                is already showing, so the swap is invisible. */}
+                            {shot({ p, ready: scrub })}
                         </motion.div>
                     </div>
                 </motion.div>
