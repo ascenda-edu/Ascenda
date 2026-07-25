@@ -19,7 +19,6 @@ import {
     clamp01,
     easeOut,
     seg,
-    useLatchedProgress,
     useMotionReady,
     useMounted,
     useScrubbed,
@@ -229,14 +228,14 @@ function LaunchReadout({ p, ready }: { p: MotionValue<number>; ready: boolean })
 
 export function PreviewCta() {
     const ref = useRef<HTMLElement>(null);
-    // The pin's scroll subscription inlined (same offsets PinnedStage uses) so
-    // the RAW scrollYProgress can be latched before the spring: the finale is one-way, so once the launch has
-    // played the band holds its finished frame — the vehicle stays gone, the ask
-    // stays legible and the CTA stays clickable — instead of re-assembling the
-    // rocket and fading the copy back out on scroll-up. Latching the spring's
-    // output instead would freeze its overshoot as the permanent maximum.
+    // The pin's scroll subscription inlined (same offsets PinnedStage uses), and
+    // deliberately NOT latched. The rest of the page holds what it has played, but
+    // the finale is a vehicle on a pad: latching left an empty dark band behind once
+    // the rocket had gone, so scrolling back up into the last screen of the site
+    // showed nothing but copy. Tracking both ways keeps the rocket there — it flies
+    // out as you leave and settles back onto the pad as you return.
     const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] });
-    const p = useSpring(useLatchedProgress(scrollYProgress), SCENE_SPRING);
+    const p = useSpring(scrollYProgress, SCENE_SPRING);
     const ready = useMotionReady();
     const mounted = useMounted();
     const shouldReduceMotion = useReducedMotion();
@@ -376,16 +375,23 @@ export function PreviewCta() {
                     className="absolute inset-0"
                     style={scrub ? { y: fieldY } : undefined}
                 >
+                    {/* Turned up from the original settings: at gridOpacity 0.05 the
+                        lattice was barely there on a slate-950 band, so the one
+                        interactive surface on the page read as flat black unless you
+                        happened to sweep the cursor across it. A brighter resting
+                        lattice, a wider and stronger pointer bloom and a faint cell
+                        fill make it visible while scrolling past, not only on hover. */}
                     <CursorGrid
                         interactive={ready}
                         cellSize={64}
-                        radius={150}
+                        radius={210}
                         falloff="smooth"
-                        holdTime={350}
-                        fadeDuration={900}
+                        holdTime={450}
+                        fadeDuration={1100}
                         lineWidth={1}
-                        maxOpacity={0.42}
-                        gridOpacity={0.05}
+                        maxOpacity={0.72}
+                        fillOpacity={0.12}
+                        gridOpacity={0.14}
                         pulseSpeed={520}
                     />
                 </motion.div>

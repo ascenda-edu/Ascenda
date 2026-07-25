@@ -121,8 +121,7 @@ export function PinnedStage({
     const compensatedRef = useRef(false);
     /** Whether this settle needs a scroll correction — see trySettle. */
     const compensateRef = useRef(false);
-    /** Pinned height + viewport-relative bottom edge captured at settle time. */
-    const heightRef = useRef(0);
+    /** Where the section's bottom edge sat the frame before the swap. */
     const bottomRef = useRef(0);
 
     // `ready` is false on the server and on the first client render, so the settled
@@ -184,12 +183,15 @@ export function PinnedStage({
         const node = ref.current;
         if (!node) return;
         const rect = node.getBoundingClientRect();
-        // Off-screen in EITHER direction. Downward is the usual exit; upward matters
-        // just as much, because a visitor who turns back mid-stage would otherwise
-        // leave the pin armed and have to scroll its whole travel again on the next
-        // way down — the forced-scroll-once rule cuts both ways.
-        const goneAbove = rect.bottom <= 0;
-        const goneBelow = rect.top >= window.innerHeight;
+        // Off-screen in EITHER direction, with half a screen of margin. Downward is
+        // the usual exit; upward matters just as much, because a visitor who turns
+        // back mid-stage would otherwise leave the pin armed and have to scroll its
+        // whole travel again on the next way down — the forced-scroll-once rule cuts
+        // both ways. The margin means a small nudge back the way they came doesn't
+        // immediately reveal the swapped-in tree.
+        const margin = window.innerHeight * 0.5;
+        const goneAbove = rect.bottom <= -margin;
+        const goneBelow = rect.top >= window.innerHeight + margin;
         if (!goneAbove && !goneBelow) return;
 
         if (!completedRef.current) {
@@ -217,7 +219,6 @@ export function PinnedStage({
             return;
         }
         settledRef.current = true;
-        heightRef.current = node.offsetHeight;
         bottomRef.current = rect.bottom;
         // Only an exit above the viewport moves anything the visitor can see: the
         // shrink happens over their head, so the page beneath slides up and has to be
@@ -227,11 +228,26 @@ export function PinnedStage({
         setPinned(false);
     }, [pinned, isGliding, latched]);
 
-    // The "gone above the viewport" test cannot ride `raw`: MotionValue only
-    // notifies on change, and once the visitor is past the section its progress
-    // sits clamped at 1 — the exact stretch where the bottom edge crosses the
-    // viewport top is silent. Page scrollY keeps moving, so it rides that.
-    useMotionValueEvent(pageScrollY, 'change', trySettle);
+    // Debounced, and this is the whole difference between a settle you never notice
+    // and one that feels like the page hitting a wall. The swap removes ~1.5 screens
+    // of document and corrects the scroll position to match; that correction goes
+    // through Lenis's `immediate` mode, which resets its animation state and throws
+    // away whatever momentum a fling still had. Doing that mid-scroll reads as a hard
+    // stop and a stutter back up to speed, even though the content never moves.
+    //
+    // So: only settle once scrolling has actually stopped. Nothing is waiting on it —
+    // the section is half a screen off-screen by then — and at rest there is no
+    // momentum to destroy and no velocity to interrupt.
+    //
+    // It also rides page scrollY rather than `raw`: MotionValue only notifies on
+    // change, and once the visitor is past the section its progress sits clamped at
+    // 1, so the stretch where the section finally clears the viewport is silent.
+    const idleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useMotionValueEvent(pageScrollY, 'change', () => {
+        if (settledRef.current) return;
+        if (idleRef.current) clearTimeout(idleRef.current);
+        idleRef.current = setTimeout(trySettle, 180);
+    });
     useEffect(
         () => () => {
             if (retryRef.current) clearTimeout(retryRef.current);
@@ -256,13 +272,16 @@ export function PinnedStage({
         if (compensatedRef.current) return;
         compensatedRef.current = true;
 
-        const delta = heightRef.current - node.offsetHeight;
-        if (compensateRef.current && delta > 0 && !jumpBy(-delta)) {
-            // Native path only: the browser's own scroll anchoring may already have
-            // absorbed this shift, in which case the jump double-counted it. Trust
-            // the measurement over the maths — put the bottom edge back where it was.
+        // Correct by what actually moved, not by the height that was removed. The two
+        // are the same only in the easy case. If the visitor is at the bottom of the
+        // page the browser has already clamped the scroll position to the shorter
+        // document — subtracting the removed height on top of that double-counts it
+        // and throws the page a screen and a half. Browser scroll anchoring can do the
+        // same on the native path. Measuring the section's own edge against where it
+        // sat a frame ago covers every one of those cases with one number.
+        if (compensateRef.current) {
             const residual = node.getBoundingClientRect().bottom - bottomRef.current;
-            if (Math.abs(residual) > 0.5) window.scrollBy(0, residual);
+            if (Math.abs(residual) > 0.5) jumpBy(residual);
         }
         window.dispatchEvent(new Event(LAYOUT_SHIFT_EVENT));
     }, [pinned, jumpBy]);

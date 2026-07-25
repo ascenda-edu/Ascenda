@@ -56,7 +56,7 @@ const STEPS: Step[] = [
         title: 'Tell us where you stand',
         copy: 'Predicted grades, subjects and what you want from a place. Five minutes, once.',
         chips: ['Reach / match / safe', 'Recalculates as your profile grows'],
-        window: [0.08, 0.34],
+        window: [0.04, 0.26],
         Shot: FitShot,
     },
     {
@@ -66,7 +66,7 @@ const STEPS: Step[] = [
         title: 'See your ranked matches',
         copy: 'Fit Scores and admission odds, ordered by what suits you — not a league table.',
         chips: ['119,000+ programmes', 'Fit preview on every result'],
-        window: [0.34, 0.68],
+        window: [0.26, 0.48],
         Shot: CatalogueShot,
     },
     {
@@ -76,7 +76,7 @@ const STEPS: Step[] = [
         title: 'Build & share your plan',
         copy: 'Auto-timelines for essays and deadlines — shared with your counsellor and family in a tap.',
         chips: ['Per-application tracking', 'Counsellor built in'],
-        window: [0.68, 0.92],
+        window: [0.48, 0.68],
         Shot: PlanShot,
     },
 ];
@@ -86,7 +86,16 @@ const STEPS: Step[] = [
  * i.e. the centres of the cross-fades below — so the list and the visual change on
  * the same frame instead of one leading the other.
  */
-const stepAt = (v: number) => (v < 0.34 ? 0 : v < 0.68 ? 1 : 2);
+const stepAt = (v: number) => (v < 0.26 ? 0 : v < 0.48 ? 1 : 2);
+
+/**
+ * The finale: once the third step has played, the stepper resolves into the three
+ * steps side by side — the same composition the settled grid shows. So the pin ends
+ * on the shape the section keeps, and the swap that follows (off-screen, once
+ * scrolling has stopped) has nothing left to give away.
+ */
+const CONVERGE_OUT: [number, number] = [0.7, 0.82];
+const CONVERGE_IN: [number, number] = [0.74, 0.88];
 
 /** Half-width of the dissolve either side of a window boundary. */
 const FADE = 0.02;
@@ -182,7 +191,13 @@ function StepGrid({ p, afterPin }: { p: MotionValue<number>; afterPin: boolean }
                             >
                                 {step.num}
                             </span>
-                            <step.Shot p={p} scrub={false} />
+                            {/* The three shots are different heights (the fit card is
+                                ~170px shorter than the other two), so without a floor
+                                the labels beneath them land on three different lines.
+                                lg only: stacked, each card sets its own height. */}
+                            <div className="lg:min-h-[26rem]">
+                                <step.Shot p={p} scrub={false} />
+                            </div>
                             <p className="mt-4 text-xs font-bold uppercase tracking-[0.12em] text-primary">{step.lab}</p>
                             <h3 className="mt-1.5 text-xl font-heading font-bold tracking-tight text-foreground">
                                 {step.title}
@@ -299,7 +314,84 @@ function StepVisual({ p, scrub, index, step }: PinnedStageCtx & { index: number;
     );
 }
 
+/**
+ * The converged frame: all three steps at once, in the arrangement the settled grid
+ * uses. Rendered inside the pin and cross-faded in over the stepper's tail, so the
+ * three visuals the visitor has just been walked through end up side by side rather
+ * than the last one simply leaving.
+ *
+ * Every shot draws its finished frame (`scrub={false}`), which is what makes this a
+ * resolution rather than another state to read: nothing here is still animating.
+ * aria-hidden because it restates the list beside it, and the settled grid restates
+ * it again afterwards — assistive tech should hear these three steps once.
+ */
+function StepSummary() {
+    // Stable, never read: `scrub={false}` shots return their final frame regardless.
+    const staticP = useMotionValue(1);
+    return (
+        <div aria-hidden className="mx-auto w-full max-w-7xl px-6">
+            <p className="text-sm font-medium uppercase tracking-widest text-primary/80">{EYEBROW}</p>
+            <h2 className={cn('mt-3 max-w-2xl', HEADING_CLASS)}>{HEADING}</h2>
+            <div className="mt-8 grid grid-cols-3 gap-6">
+                {STEPS.map((step, index) => (
+                    <div key={step.id} className="relative min-w-0">
+                        <span
+                            className={cn(
+                                'absolute -right-1.5 -top-3.5 z-10 grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br text-sm font-bold text-white shadow-lg',
+                                NUMBER_GRADIENTS[index],
+                            )}
+                        >
+                            {step.num}
+                        </span>
+                        {/* Same floor as the settled grid, so the converged frame and
+                            the tree that replaces it put their labels on one line. */}
+                        <div className="min-h-[26rem]">
+                            <step.Shot p={staticP} scrub={false} />
+                        </div>
+                        <p className="mt-4 text-xs font-bold uppercase tracking-[0.12em] text-primary">{step.lab}</p>
+                        <h3 className="mt-1.5 font-heading text-lg font-bold tracking-tight text-foreground">
+                            {step.title}
+                        </h3>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 function StepStage({ p, scrub }: PinnedStageCtx) {
+    // The stepper hands over to the converged frame: it lifts and dissolves while the
+    // three-up rises into its place. Overlapping windows, so there is no blank beat
+    // between them.
+    const stepperOpacity = useTransform(p, CONVERGE_OUT, [1, 0], { clamp: true });
+    const stepperY = useTransform(p, CONVERGE_OUT, [0, -16], { clamp: true });
+    const summaryOpacity = useTransform(p, CONVERGE_IN, [0, 1], { clamp: true });
+    const summaryY = useTransform(p, CONVERGE_IN, [24, 0], { clamp: true });
+
+    return (
+        // One cell, both layers stacked: the cross-fade must not change the stage's
+        // height, or the sticky pin re-measures mid-scrub.
+        <div className="grid w-full grid-cols-[minmax(0,1fr)] items-center">
+            <motion.div
+                className="col-start-1 row-start-1"
+                style={scrub ? { opacity: stepperOpacity, y: stepperY } : undefined}
+            >
+                <Stepper p={p} scrub={scrub} />
+            </motion.div>
+            {scrub && (
+                <motion.div
+                    className="pointer-events-none col-start-1 row-start-1"
+                    style={{ opacity: summaryOpacity, y: summaryY }}
+                >
+                    <StepSummary />
+                </motion.div>
+            )}
+        </div>
+    );
+}
+
+/** The stepper itself: the list on the left, one visual at a time on the right. */
+function Stepper({ p, scrub }: PinnedStageCtx) {
     return (
         // No entrance animation, deliberately. `p` is 0 at the top of the section,
         // which is exactly where an anchor lands — and `#how-it-works` is a nav link,
