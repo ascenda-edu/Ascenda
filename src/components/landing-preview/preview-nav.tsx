@@ -16,6 +16,8 @@ import { Button } from '@/components/ui/button';
 import { useLaunchHref } from '@/hooks/use-launch-href';
 import { cn } from '@/lib/utils';
 import { useMotionReady, usePageProgress } from './ascent-scroll';
+import { CTA_IGNITION_POINT } from './preview-cta';
+import { useSmoothScroll } from './smooth-scroll';
 
 const NAV_LINKS = [
     { label: 'Inside Ascenda', href: '#features', id: 'features' },
@@ -60,13 +62,15 @@ export function PreviewNav() {
     const launchHref = useLaunchHref();
     const shouldReduceMotion = useReducedMotion();
     const ready = useMotionReady();
+    const { scrollTo } = useSmoothScroll();
 
     const pageProgress = usePageProgress();
     const hairlineScale = useTransform(pageProgress, (v) => clamp01(v));
 
-    // Scroll offset at which the countdown reads READY. Prefer the CTA section's
-    // own position; it carries no id today, so fall back to "one screen-and-a-bit
-    // before the document ends", which lands in the same band.
+    // Scroll offset at which the countdown reads READY: ignition, 70% through the
+    // CTA band's pinned travel, so the chip flips in the same frame the rocket
+    // lights (falls back to "one screen-and-a-bit before the document ends" if
+    // the band is ever missing).
     const readyPointRef = useRef<number | null>(null);
     const { scrollY } = useScroll();
 
@@ -81,10 +85,14 @@ export function PreviewNav() {
         const measure = () => {
             const cta = document.getElementById('cta');
             const viewport = window.innerHeight;
+            // Pin travel is 0 when the finale's pin is collapsed (reduced motion),
+            // which degrades to READY at the band top — the static frame is
+            // already "launched" there.
+            const pinTravel = cta ? Math.max(0, cta.offsetHeight - viewport) : 0;
             readyPointRef.current = Math.max(
                 1,
                 cta
-                    ? documentTop(cta) - viewport * 0.6
+                    ? documentTop(cta) + pinTravel * CTA_IGNITION_POINT
                     : document.documentElement.scrollHeight - viewport * 2.2,
             );
             updateCountdown(window.scrollY);
@@ -154,7 +162,7 @@ export function PreviewNav() {
                         initial={{ y: '-110%' }}
                         animate={{ y: 0 }}
                         exit={{ y: '-110%' }}
-                        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
                     >
                         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-2 sm:gap-4 sm:px-6 lg:px-10">
                             <Link href="/landing-preview" aria-label="Ascenda home" className="shrink-0">
@@ -174,6 +182,11 @@ export function PreviewNav() {
                                         <a
                                             key={link.href}
                                             href={link.href}
+                                            onClick={(event) => {
+                                                // Glide instead of teleporting; native anchor
+                                                // behaviour when Lenis is off (reduced motion).
+                                                if (scrollTo(link.href)) event.preventDefault();
+                                            }}
                                             aria-current={isActive ? 'true' : undefined}
                                             className={cn(
                                                 'relative rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors',
@@ -184,7 +197,7 @@ export function PreviewNav() {
                                                 <motion.span
                                                     layoutId="previewnav-pill"
                                                     className="absolute inset-0 rounded-full bg-primary/10"
-                                                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                                                    transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                                                     aria-hidden
                                                 />
                                             )}

@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { ShortlistSection } from '@/components/landing/ShortlistSection';
 import { TeamSection } from '@/components/landing/TeamSection';
 import { FAQSection } from '@/components/landing/FAQSection';
-import { CTASection } from '@/components/landing/CTASection';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 import { PreviewNav } from '@/components/landing-preview/preview-nav';
 import { PreviewHero } from '@/components/landing-preview/preview-hero';
@@ -12,6 +11,8 @@ import { ComparisonSettle } from '@/components/landing-preview/comparison-settle
 import { PreviewBanner } from '@/components/landing-preview/preview-banner';
 import { AltitudeWash } from '@/components/landing-preview/altitude-wash';
 import { SectionReveal } from '@/components/landing-preview/section-reveal';
+import { PreviewCta } from '@/components/landing-preview/preview-cta';
+import { SmoothScroll } from '@/components/landing-preview/smooth-scroll';
 
 export const metadata: Metadata = {
     title: 'Ascenda — landing redesign preview',
@@ -26,6 +27,8 @@ export const metadata: Metadata = {
 export default function LandingPreviewPage() {
     return (
         <main id="main-content" className="bg-background text-foreground font-sans w-full">
+            {/* Page-scoped Lenis glide — destroyed on unmount, rest of the app unaffected. */}
+            <SmoothScroll>
             <PreviewNav />
             <PreviewHero />
             <ProofScrub />
@@ -44,12 +47,13 @@ export default function LandingPreviewPage() {
             <SectionReveal>
                 <FAQSection />
             </SectionReveal>
-            <SectionReveal>
-                <CTASection />
-            </SectionReveal>
+            {/* No SectionReveal: the launch finale is its own entrance, and a
+                transformed ancestor would fight the 220vh sticky pin. */}
+            <PreviewCta />
             <LandingFooter />
             <AltitudeWash />
             <PreviewBanner />
+            </SmoothScroll>
         </main>
     );
 }

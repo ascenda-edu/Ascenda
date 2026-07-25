@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useMotionValueEvent, useScroll, useSpring } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useMotionReady } from './ascent-scroll';
+import { SCENE_SPRING, useMotionReady } from './ascent-scroll';
 
 /**
  * Scrubbed variant of ProofPointsSection: identical layout, copy and data, but
@@ -71,7 +71,7 @@ function ProofCard({ metric }: { metric: Metric }) {
     const ready = useMotionReady();
     const cardRef = useRef<HTMLDivElement>(null);
     const { scrollYProgress } = useScroll({ target: cardRef, offset: ['start end', 'start 0.35'] });
-    const q = useSpring(scrollYProgress, { stiffness: 90, damping: 26, mass: 0.7 });
+    const q = useSpring(scrollYProgress, SCENE_SPRING);
 
     const [count, setCount] = useState(metric.value);
     const [filled, setFilled] = useState(metric.filled);
@@ -142,7 +142,7 @@ export function ProofScrub() {
                         initial={{ opacity: 0, y: 16 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, margin: '-80px' }}
-                        transition={{ duration: 0.5 }}
+                        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                     >
                         <p className="text-sm font-medium uppercase tracking-widest text-primary/80">The reality</p>
                         <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
@@ -154,7 +154,7 @@ export function ProofScrub() {
                         initial={{ opacity: 0, y: 16 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, margin: '-80px' }}
-                        transition={{ duration: 0.5, delay: 0.1 }}
+                        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
                     >
                         Three gaps that cost students years — and what we do about each.
                     </motion.p>

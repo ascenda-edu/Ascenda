@@ -5,7 +5,7 @@ import { MotionValue, motion, useScroll, useSpring, useTransform } from 'framer-
 import { ArrowRight, Check, X } from 'lucide-react';
 import { MatchCard, TaskRow } from '@/components/landing/product-widgets';
 import { PipelineBar, TierTiles } from '@/components/landing/mock-viz';
-import { useMotionReady } from './ascent-scroll';
+import { SCENE_SPRING, useMotionReady } from './ascent-scroll';
 
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
@@ -162,7 +162,7 @@ export function ComparisonSettle() {
         target: sectionRef,
         offset: ['start end', 'center center'],
     });
-    const p = useSpring(scrollYProgress, { stiffness: 90, damping: 26 });
+    const p = useSpring(scrollYProgress, SCENE_SPRING);
     const ready = useMotionReady();
     const isDesktop = useDesktopPile();
 

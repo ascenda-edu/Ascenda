@@ -31,7 +31,13 @@ export function useMounted(): boolean {
     return mounted;
 }
 
-const SCENE_SPRING = { stiffness: 90, damping: 26, mass: 0.7 };
+/**
+ * The one scrub-smoothing knob for every pinned scene. With Lenis smoothing the
+ * scroll itself (smooth-scroll.tsx), this spring is deliberately stiff — it
+ * acts as micro-smoothing on top of the glide, not a second inertia layer
+ * (the original 90/26 read as floaty lag once Lenis landed).
+ */
+export const SCENE_SPRING = { stiffness: 170, damping: 30, mass: 0.7 };
 
 /**
  * Smoothed 0→1 progress across a pinned scene's scroll travel (start of the
@@ -115,6 +121,11 @@ export function PinnedScene({
     const copyOpacity = useTransform(p, [0, 0.14], [0, 1]);
     const copyY = useTransform(p, [0, 0.14], [24, 0]);
     const ghostX = useTransform(p, (v) => `${(v - 0.5) * ghostDrift * 55}vw`);
+    // Exit ease — mirror of the entrance: over the last stretch of travel the
+    // stage visibly hands off to the next chapter instead of snapping loose
+    // the instant the pin releases.
+    const exitY = useTransform(p, [0.92, 1], [0, -24]);
+    const exitOpacity = useTransform(p, [0.92, 1], [1, 0.85]);
 
     return (
         <section
@@ -143,7 +154,10 @@ export function PinnedScene({
                 >
                     {chapter.num}
                 </motion.p>
-                <div className="relative z-10 mx-auto w-full max-w-7xl px-6">
+                <motion.div
+                    className="relative z-10 mx-auto w-full max-w-7xl px-6"
+                    style={ready ? { y: exitY, opacity: exitOpacity } : undefined}
+                >
                     <div
                         className={cn(
                             'grid items-center gap-10 lg:gap-16 [perspective:1400px]',
@@ -206,7 +220,7 @@ export function PinnedScene({
                             {shot({ p, ready })}
                         </motion.div>
                     </div>
-                </div>
+                </motion.div>
             </div>
         </section>
     );

@@ -21,6 +21,7 @@ import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { HeroAppTour } from '@/components/landing/hero-app-tour';
 import { cn } from '@/lib/utils';
 import { useMotionReady } from './ascent-scroll';
+import { BorderBeam } from './border-beam';
 
 // Split so each word can arrive on its own beat; the trailing space lives inside
 // the last span (whitespace-pre) so the rotating word never butts up against it.
@@ -78,7 +79,7 @@ function RotatingHeadlineWord() {
                         initial={{ y: '110%', opacity: 0 }}
                         animate={{ y: '0%', opacity: 1 }}
                         exit={{ y: '-110%', opacity: 0 }}
-                        transition={{ duration: shouldReduceMotion ? 0 : 0.5, ease: [0.16, 1, 0.3, 1] }}
+                        transition={{ duration: shouldReduceMotion ? 0 : 0.5, ease: CINEMATIC }}
                     >
                         {ROTATING_WORDS[index]}
                     </motion.span>
@@ -289,11 +290,16 @@ export function PreviewHero() {
                             </motion.div>
                             <motion.div style={ready ? { y: tourY, opacity: tourOpacity } : undefined}>
                                 <motion.div
+                                    // relative + the tour frame's own radius so the beam can ride
+                                    // its border ring (`rounded-[inherit]`); no overflow-hidden here.
+                                    className="relative rounded-2xl"
                                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     transition={{ duration: 0.6, delay: AFTER_HEADLINE + 0.06, ease: CINEMATIC }}
                                 >
                                     <HeroAppTour />
+                                    {/* One slow lap — reads as "this is the live app", not a beacon. */}
+                                    <BorderBeam className="z-20" duration={9} />
                                 </motion.div>
                             </motion.div>
                         </div>
@@ -307,7 +313,7 @@ export function PreviewHero() {
                                 className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 initial={{ opacity: 0, y: -4 }}
                                 animate={{ opacity: 0.9, y: 0 }}
-                                transition={{ delay: 1.55, duration: 0.6, ease: 'easeOut' }}
+                                transition={{ delay: 1.55, duration: 0.6, ease: CINEMATIC }}
                             >
                                 {/* Same DOM for all users (SSR-safe); MotionConfig snaps the
                                     y-bounce to rest for reduced-motion users */}
