@@ -77,7 +77,7 @@ export function PinnedScene({
     body,
     chips,
     cue,
-    ghost,
+    ghost: _ghost,
     ghostDrift = -0.5,
     flip = false,
     alt = false,
@@ -89,8 +89,9 @@ export function PinnedScene({
     body: string;
     chips: string[];
     cue: string;
-    ghost: string;
-    /** Horizontal drift factor for the ghost numeral (-1..1). */
+    /** @deprecated the watermark now derives from chapter.num (Luke-style solid numeral). */
+    ghost?: string;
+    /** Horizontal drift factor for the watermark numeral (-1..1). */
     ghostDrift?: number;
     flip?: boolean;
     alt?: boolean;
@@ -125,45 +126,49 @@ export function PinnedScene({
                 className={cn(
                     'overflow-hidden',
                     pinned
-                        ? 'sticky top-0 flex min-h-svh items-center'
+                        ? 'sticky top-0 flex min-h-[100svh] items-center py-16'
                         : 'relative py-20',
                     alt && 'bg-secondary/40',
                 )}
             >
-                {/* Ghost chapter numeral — background texture; the real header is below */}
+                {/* Watermark chapter numeral — solid, very low contrast, structural
+                    (Luke-style "01 / 05" markers); the legible header is below. */}
                 <motion.p
                     aria-hidden
-                    className="pointer-events-none absolute left-0 top-[7%] z-0 select-none whitespace-nowrap font-heading text-[clamp(80px,15vw,190px)] font-bold leading-none tracking-tight text-transparent [-webkit-text-stroke:1.5px_hsl(var(--foreground)/0.1)]"
-                    style={ready ? { x: ghostX } : undefined}
+                    className={cn(
+                        'pointer-events-none absolute top-1/2 z-0 -translate-y-1/2 select-none whitespace-nowrap font-heading text-[clamp(220px,42vw,520px)] font-bold leading-none tracking-tighter text-foreground/[0.04] dark:text-foreground/[0.05]',
+                        flip ? 'right-[-4%]' : 'left-[-4%]',
+                    )}
+                    style={ready ? { x: ghostX, y: '-50%' } : undefined}
                 >
-                    {ghost}
+                    {chapter.num}
                 </motion.p>
                 <div className="relative z-10 mx-auto w-full max-w-7xl px-6">
                     <div
                         className={cn(
-                            'grid items-center gap-8 lg:gap-14 [perspective:1400px]',
-                            'lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]',
+                            'grid items-center gap-10 lg:gap-16 [perspective:1400px]',
+                            'lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]',
                         )}
                     >
                         <motion.div
                             className={cn('max-w-xl', flip && 'lg:order-2')}
                             style={ready ? { opacity: copyOpacity, y: copyY } : undefined}
                         >
-                            <div className="flex items-baseline gap-2.5">
-                                <span className="font-heading text-4xl font-bold leading-none tracking-tight text-primary tabular-nums lg:text-[2.75rem]">
+                            <div className="flex items-baseline gap-3">
+                                <span className="font-heading text-5xl font-bold leading-none tracking-tight text-primary tabular-nums lg:text-6xl">
                                     {chapter.num}
                                 </span>
-                                <span className="font-heading text-sm font-semibold text-muted-foreground/70 tabular-nums">
+                                <span className="font-heading text-base font-semibold text-muted-foreground/70 tabular-nums">
                                     / {chapter.of}
                                 </span>
-                                <span className="ml-1 rounded-full border border-primary/30 bg-primary/[0.08] px-3 py-1 font-heading text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-primary">
+                                <span className="ml-1 rounded-full border border-primary/30 bg-primary/[0.08] px-3.5 py-1.5 font-heading text-xs font-semibold uppercase tracking-[0.14em] text-primary">
                                     {chapter.label}
                                 </span>
                             </div>
-                            <h3 className="mt-3.5 font-heading text-3xl font-bold leading-[1.1] tracking-tight text-foreground lg:text-4xl">
+                            <h3 className="mt-5 font-heading text-3xl font-bold leading-[1.08] tracking-tight text-foreground sm:text-4xl lg:text-[2.75rem]">
                                 {title}
                             </h3>
-                            <p className="mt-3 text-[0.96875rem] leading-relaxed text-muted-foreground">
+                            <p className="mt-4 text-base leading-relaxed text-muted-foreground lg:text-lg">
                                 {body}
                             </p>
                             <div className="mt-4 flex flex-wrap gap-2">

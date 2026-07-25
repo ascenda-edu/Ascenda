@@ -12,6 +12,7 @@ import { ChapterIntro, SceneCatalogue, SceneFit, ScenePlan } from '@/components/
 import { ComparisonSettle } from '@/components/landing-preview/comparison-settle';
 import { PreviewBanner } from '@/components/landing-preview/preview-banner';
 import { AltitudeWash } from '@/components/landing-preview/altitude-wash';
+import { SectionReveal } from '@/components/landing-preview/section-reveal';
 
 export const metadata: Metadata = {
     title: 'Ascenda — landing redesign preview',
@@ -35,11 +36,19 @@ export default function LandingPreviewPage() {
             <SceneFit />
             <SceneCatalogue />
             <ScenePlan />
-            <ShortlistSection />
-            <TeamSection />
+            <SectionReveal>
+                <ShortlistSection />
+            </SectionReveal>
+            <SectionReveal>
+                <TeamSection />
+            </SectionReveal>
             <ComparisonSettle />
-            <FAQSection />
-            <CTASection />
+            <SectionReveal>
+                <FAQSection />
+            </SectionReveal>
+            <SectionReveal>
+                <CTASection />
+            </SectionReveal>
             <LandingFooter />
             <AltitudeWash />
             <PreviewBanner />
