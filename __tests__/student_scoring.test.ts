@@ -1,5 +1,12 @@
+/**
+ * Student scoring — band assertions plus a printed score breakdown per case.
+ *
+ * The breakdowns are OFF by default; set VERBOSE_SCORING=1 (or VERBOSE_TESTS=1)
+ * to see them. See `__tests__/helpers/report.ts`.
+ */
 import { scoreStudentProfile } from '@/lib/scoring/student_scoring';
 import type { StudentProfilePayload } from '@/lib/profile/intake-types';
+import { report } from './helpers/report';
 
 const basePayload: StudentProfilePayload = {
   personal_information: {
@@ -103,7 +110,7 @@ describe('student scoring', () => {
     };
 
     const result = scoreStudentProfile(sofia);
-    console.log('Sofia breakdown', result.breakdown);
+    report('Sofia breakdown', result.breakdown);
     // 164 after the HL-strength recalibration (max 40 → 16): IB 44 still maxes
     // academic_performance (80), but a 85th-pct UCAT keeps Sofia below the
     // 168 'Exceptional' cutoff.
@@ -153,7 +160,7 @@ describe('student scoring', () => {
     };
 
     const result = scoreStudentProfile(daniel);
-    console.log('Daniel breakdown', result.breakdown);
+    report('Daniel breakdown', result.breakdown);
     expect(result.total_score).toBe(111);
     expect(result.student_band).toBe('Solid');
     expect(result.readiness_flags.length).toBe(0);
@@ -190,7 +197,7 @@ describe('student scoring', () => {
     };
 
     const result = scoreStudentProfile(lucas);
-    console.log('Lucas breakdown', result.breakdown);
+    report('Lucas breakdown', result.breakdown);
     expect(result.total_score).toBe(39);
     expect(result.student_band).toBe('Weak');
     expect(result.readiness_flags).toContain('english_test_missing');
@@ -216,7 +223,7 @@ describe('student scoring', () => {
     };
 
     const result = scoreStudentProfile(incomplete);
-    console.log('Missing grades breakdown', result.breakdown);
+    report('Missing grades breakdown', result.breakdown);
     expect(result.total_score).toBeGreaterThanOrEqual(0);
     expect(result.student_band).toBeDefined();
   });
@@ -245,7 +252,7 @@ describe('student scoring', () => {
     };
 
     const result = scoreStudentProfile(waiver);
-    console.log('English waiver breakdown', result.breakdown);
+    report('English waiver breakdown', result.breakdown);
     expect(result.readiness_flags.length).toBe(0);
   });
 });

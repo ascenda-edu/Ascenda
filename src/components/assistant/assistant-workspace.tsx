@@ -13,7 +13,6 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { PanelLeft, Plus, Sparkles, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { useRealtimePoll } from '@/hooks/use-realtime-poll';

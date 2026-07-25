@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutGrid, List, ChevronRight, Filter } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { LayoutGrid, List, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { parseLocalDate } from '@/lib/utils/dates';

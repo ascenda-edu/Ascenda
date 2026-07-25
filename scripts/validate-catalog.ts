@@ -89,7 +89,7 @@ const main = async () => {
         .is('cities.id', null)
     );
     logStat('Universities with non-matching city_id', orphanedCity);
-  } catch (err) {
+  } catch {
     console.warn('City FK check skipped (join filter not supported).');
   }
 

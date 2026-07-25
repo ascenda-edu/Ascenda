@@ -5,7 +5,6 @@ import {
   Compass,
   Flag,
   MessageSquare,
-  Milestone,
   Sparkles,
   Target,
   Trophy

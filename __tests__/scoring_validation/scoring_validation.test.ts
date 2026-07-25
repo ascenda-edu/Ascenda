@@ -8,12 +8,17 @@
  * Green = results match our hypotheses.
  *
  * npm test -- scoring_validation
+ *
+ * The printed report is OFF by default (it is ~1,000 lines). To see it:
+ *   VERBOSE_SCORING=1 npm test -- scoring_validation
+ * See `__tests__/helpers/report.ts`.
  */
 
 import { scoreStudentProfile } from '../../src/lib/scoring/student_scoring';
 import { wei, amara, marcus, priya } from './phase1_profiles';
 import { runBatch } from './batch_runner';
 import { PHASE1_PROFILES } from './phase1_profiles';
+import { report } from '../helpers/report';
 
 // ── Phase 1 assertions ───────────────────────────────────────────────────────
 
@@ -21,8 +26,8 @@ describe('Phase 1 — Band & activity boost assertions', () => {
 
   it('Wei (IB 44, light extracurriculars) → Exceptional band', () => {
     const r = scoreStudentProfile(wei);
-    console.log('Wei breakdown:', r.breakdown);
-    console.log('Wei activities:', r.breakdown.activities);
+    report('Wei breakdown:', r.breakdown);
+    report('Wei activities:', r.breakdown.activities);
     expect(r.student_band).toBe('Exceptional');
     // Activities should be minimal (light commitment, 1 activity)
     expect(r.breakdown.activities.total).toBeLessThanOrEqual(4);
@@ -30,8 +35,8 @@ describe('Phase 1 — Band & activity boost assertions', () => {
 
   it('Amara (A*AA law, exceptional extracurriculars) → at least Very strong', () => {
     const r = scoreStudentProfile(amara);
-    console.log('Amara breakdown:', r.breakdown);
-    console.log('Amara activities:', r.breakdown.activities);
+    report('Amara breakdown:', r.breakdown);
+    report('Amara activities:', r.breakdown.activities);
     const bands = ['Very strong', 'Exceptional'];
     expect(bands).toContain(r.student_band);
     // Activities should provide a meaningful boost (≥15 pts)
@@ -40,8 +45,8 @@ describe('Phase 1 — Band & activity boost assertions', () => {
 
   it('Marcus (BCC CS, exceptional extracurriculars) — activities provide max boost', () => {
     const r = scoreStudentProfile(marcus);
-    console.log('Marcus breakdown:', r.breakdown);
-    console.log('Marcus activities:', r.breakdown.activities);
+    report('Marcus breakdown:', r.breakdown);
+    report('Marcus activities:', r.breakdown.activities);
     // Activities should max out (commitment=15 + leadership=5 = 20 cap)
     expect(r.breakdown.activities.total).toBe(20);
     // Even with max boost, weak academics should keep him out of Strong
@@ -67,8 +72,8 @@ describe('Phase 1 — Band & activity boost assertions', () => {
     };
     const withoutActivities = scoreStudentProfile(priyaNoActivities);
 
-    console.log('Priya with activities:', withActivities.total_score, withActivities.student_band);
-    console.log('Priya without activities:', withoutActivities.total_score, withoutActivities.student_band);
+    report('Priya with activities:', withActivities.total_score, withActivities.student_band);
+    report('Priya without activities:', withoutActivities.total_score, withoutActivities.student_band);
 
     // Activities should add at least 8 points
     expect(withActivities.total_score - withoutActivities.total_score).toBeGreaterThanOrEqual(8);

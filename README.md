@@ -85,6 +85,7 @@ Visit http://localhost:3000 to view the marketing site. Protected routes (`/dash
 - `npm run lint` – Next.js ESLint configuration.
 - `npm run typecheck` – TypeScript compiler in check mode.
 - `npm test` – Jest unit tests (includes matching engine coverage).
+- `VERBOSE_SCORING=1 npm test` – as above, plus the scoring/matching diagnostic reports (score breakdowns, band tables, per-profile programme matches). These are silenced by default; `VERBOSE_TESTS=1` is an equivalent catch-all. See `__tests__/helpers/report.ts`.
 
 Continuous integration via GitHub Actions runs the above commands on pushes and pull requests targeting `main`.
 

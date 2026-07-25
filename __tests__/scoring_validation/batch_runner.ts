@@ -8,6 +8,14 @@
  *
  * Or as a Jest test: npm test -- batch_runner
  *
+ * OUTPUT IS OFF BY DEFAULT. Every line below goes through `report()` from
+ * `__tests__/helpers/report.ts`, which only prints when VERBOSE_SCORING=1 (or
+ * VERBOSE_TESTS=1) is set — otherwise this report buries the whole test run:
+ *
+ *   VERBOSE_SCORING=1 npm test -- scoring_validation
+ *
+ * Running this file directly turns the flag on for you (see the bottom).
+ *
  * The report shows, for each profile:
  *  - Score breakdown (each component)
  *  - Activities breakdown (new)
@@ -21,6 +29,7 @@ import { ACTIVITIES_WEIGHTS } from '../../src/lib/scoring/activities_scoring';
 import type { StudentProfilePayload } from '../../src/lib/profile/intake-types';
 import type { EnrichedCourseRecord } from '../../src/lib/tiering/course_tiering';
 import { PHASE1_PROFILES } from './phase1_profiles';
+import { report, setVerbose } from '../helpers/report';
 
 // ── Representative programme catalogue ───────────────────────────────────────
 // A curated cross-cluster set of real programmes at different tiers.
@@ -72,9 +81,9 @@ const pad = (s: string, len: number) => s.padEnd(len, ' ').slice(0, len);
 
 function printHeader(label: string) {
   const line = '═'.repeat(80);
-  console.log(`\n${line}`);
-  console.log(`  ${label}`);
-  console.log(line);
+  report(`\n${line}`);
+  report(`  ${label}`);
+  report(line);
 }
 
 function printBreakdown(profile: StudentProfilePayload) {
@@ -85,28 +94,28 @@ function printBreakdown(profile: StudentProfilePayload) {
   // Score without activities (for delta comparison)
   const withoutActivities = result.total_score - b.activities.total;
 
-  console.log(`\n  Band: ${emoji} ${result.student_band}   (score: ${result.total_score}/200)`);
-  console.log(`  Activities added: +${b.activities.total} pts  (base without activities: ${withoutActivities})`);
-  console.log(`\n  Score breakdown:`);
-  console.log(`    Academic performance .......... ${b.academic_performance}`);
-  console.log(`    IB HL strength ................ ${b.ib_hl_strength}`);
-  console.log(`    Preferred subject alignment ... ${b.preferred_subjects_alignment}`);
-  console.log(`    Key subject grades ............ ${b.key_subject_grades}`);
-  console.log(`    Subject rigour ................ ${b.rigour_score}`);
-  console.log(`    EE relevance bonus ............ ${b.ee_relevance_bonus}`);
-  console.log(`    Tests & English ............... ${b.tests_and_english}`);
-  console.log(`    ─────────────────────────────── ──`);
-  console.log(`    Activities total .............. +${b.activities.total}`);
-  console.log(`      └ commitment (${profile.lifestyle_preference.commitment_level ?? 'none'}) .. ${b.activities.commitment}`);
-  console.log(`      └ leadership ................ ${b.activities.leadership}`);
-  console.log(`      └ key activities (${(profile.lifestyle_preference.key_activities ?? []).length}) .... ${b.activities.key_activities}`);
-  console.log(`      └ intl experience ........... ${b.activities.intl_experience}`);
-  console.log(`      └ work experience ........... ${b.activities.work_experience}`);
+  report(`\n  Band: ${emoji} ${result.student_band}   (score: ${result.total_score}/200)`);
+  report(`  Activities added: +${b.activities.total} pts  (base without activities: ${withoutActivities})`);
+  report(`\n  Score breakdown:`);
+  report(`    Academic performance .......... ${b.academic_performance}`);
+  report(`    IB HL strength ................ ${b.ib_hl_strength}`);
+  report(`    Preferred subject alignment ... ${b.preferred_subjects_alignment}`);
+  report(`    Key subject grades ............ ${b.key_subject_grades}`);
+  report(`    Subject rigour ................ ${b.rigour_score}`);
+  report(`    EE relevance bonus ............ ${b.ee_relevance_bonus}`);
+  report(`    Tests & English ............... ${b.tests_and_english}`);
+  report(`    ─────────────────────────────── ──`);
+  report(`    Activities total .............. +${b.activities.total}`);
+  report(`      └ commitment (${profile.lifestyle_preference.commitment_level ?? 'none'}) .. ${b.activities.commitment}`);
+  report(`      └ leadership ................ ${b.activities.leadership}`);
+  report(`      └ key activities (${(profile.lifestyle_preference.key_activities ?? []).length}) .... ${b.activities.key_activities}`);
+  report(`      └ intl experience ........... ${b.activities.intl_experience}`);
+  report(`      └ work experience ........... ${b.activities.work_experience}`);
 
   if (result.eligibility_flags.length > 0)
-    console.log(`\n  ⚠ Eligibility flags: ${result.eligibility_flags.join(', ')}`);
+    report(`\n  ⚠ Eligibility flags: ${result.eligibility_flags.join(', ')}`);
   if (result.readiness_flags.length > 0)
-    console.log(`  ⚠ Readiness flags:   ${result.readiness_flags.join(', ')}`);
+    report(`  ⚠ Readiness flags:   ${result.readiness_flags.join(', ')}`);
 
   return result;
 }
@@ -119,24 +128,24 @@ function printMatches(profile: StudentProfilePayload, result: ReturnType<typeof 
   const safety  = matches.filter(m => !m.excluded && m.tier_fit === 'Safety');
 
   const printRow = (m: (typeof matches)[0]) =>
-    console.log(`    ${pad(m.university, 35)} ${pad(m.course.slice(0, 30), 30)} ${m.chance_percent}%`);
+    report(`    ${pad(m.university, 35)} ${pad(m.course.slice(0, 30), 30)} ${m.chance_percent}%`);
 
-  console.log('\n  Programme matches:');
+  report('\n  Programme matches:');
 
   if (reach.length > 0) {
-    console.log('  🔺 Reach');
+    report('  🔺 Reach');
     reach.slice(0, 3).forEach(printRow);
   }
   if (target.length > 0) {
-    console.log('  🎯 Target');
+    report('  🎯 Target');
     target.slice(0, 3).forEach(printRow);
   }
   if (safety.length > 0) {
-    console.log('  🛡  Safety');
+    report('  🛡  Safety');
     safety.slice(0, 3).forEach(printRow);
   }
   if (reach.length + target.length + safety.length === 0) {
-    console.log('  (no matches in current catalogue for this cluster)');
+    report('  (no matches in current catalogue for this cluster)');
   }
 }
 
@@ -146,10 +155,10 @@ export function runBatch(
   batch: Array<{ label: string; profile: StudentProfilePayload }>,
   title = 'Scoring Batch Run'
 ) {
-  console.log(`\n${'▓'.repeat(80)}`);
-  console.log(`  ASCENDA SCORING VALIDATOR — ${title}`);
-  console.log(`  Weights: commitment max=${ACTIVITIES_WEIGHTS.commitment['exceptional']}  cap=${ACTIVITIES_WEIGHTS.max_total}`);
-  console.log(`${'▓'.repeat(80)}`);
+  report(`\n${'▓'.repeat(80)}`);
+  report(`  ASCENDA SCORING VALIDATOR — ${title}`);
+  report(`  Weights: commitment max=${ACTIVITIES_WEIGHTS.commitment['exceptional']}  cap=${ACTIVITIES_WEIGHTS.max_total}`);
+  report(`${'▓'.repeat(80)}`);
 
   const summary: Array<{ label: string; band: string; score: number; actBoost: number }> = [];
 
@@ -166,20 +175,23 @@ export function runBatch(
   });
 
   // Summary table
-  console.log(`\n\n${'─'.repeat(80)}`);
-  console.log('  SUMMARY TABLE');
-  console.log(`${'─'.repeat(80)}`);
-  console.log(`  ${'Profile'.padEnd(45)} ${'Band'.padEnd(14)} ${'Score'.padEnd(7)} ${'Activity+'.padEnd(9)}`);
-  console.log(`  ${'─'.repeat(45)} ${'─'.repeat(14)} ${'─'.repeat(7)} ${'─'.repeat(9)}`);
+  report(`\n\n${'─'.repeat(80)}`);
+  report('  SUMMARY TABLE');
+  report(`${'─'.repeat(80)}`);
+  report(`  ${'Profile'.padEnd(45)} ${'Band'.padEnd(14)} ${'Score'.padEnd(7)} ${'Activity+'.padEnd(9)}`);
+  report(`  ${'─'.repeat(45)} ${'─'.repeat(14)} ${'─'.repeat(7)} ${'─'.repeat(9)}`);
   summary.forEach(({ label, band, score, actBoost }) => {
     const e = BAND_EMOJI[band] ?? '?';
-    console.log(`  ${pad(label, 45)} ${e} ${pad(band, 12)} ${String(score).padEnd(7)} +${actBoost}`);
+    report(`  ${pad(label, 45)} ${e} ${pad(band, 12)} ${String(score).padEnd(7)} +${actBoost}`);
   });
-  console.log('');
+  report('');
 }
 
 // ── Direct execution ──────────────────────────────────────────────────────────
 
 if (require.main === module) {
+  // Printing the report IS the point when this file is executed as a script,
+  // so switch diagnostics on rather than emitting nothing at all.
+  setVerbose(true);
   runBatch(PHASE1_PROFILES, 'Phase 1 — 4 Synthetic Profiles');
 }

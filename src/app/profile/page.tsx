@@ -11,7 +11,7 @@ import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { ProfileProgressCard } from './_components/profile-progress-card';
 import { Compass, GraduationCap, MapPin, Target } from 'lucide-react';
 import { AnimatedSection, AnimatedGrid, AnimatedGridItem } from '@/components/layout/animated-section';
-import { PROFILE_SECTION_VISUAL, COMPLETION_VISUAL, classifyCompletion } from '@/lib/theme/categories';
+import { PROFILE_SECTION_VISUAL } from '@/lib/theme/categories';
 import { cn } from '@/lib/utils';
 import { summarisePathwayStatus } from '@/lib/profile/pathway-status';
 import { PathwayStatusPill } from '@/components/profile/pathway-status-pill';

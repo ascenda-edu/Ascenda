@@ -29,13 +29,6 @@ const TIER_COLORS = {
   Safe: 'bg-emerald-500/10 text-emerald-600 border-emerald-200/50 dark:border-emerald-500/20'
 };
 
-const FLAG_LABELS: Record<string, string> = {
-  profile_incomplete: 'Profile incomplete',
-  deadline_urgent: 'Deadline urgent',
-  no_matches: 'No matches',
-  stalled: 'Stalled'
-};
-
 function getInitials(first: string, last: string) {
   return `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase() || '–';
 }

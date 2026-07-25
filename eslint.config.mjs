@@ -2,6 +2,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { FlatCompat } from '@eslint/eslintrc';
+import tsPlugin from '@typescript-eslint/eslint-plugin';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -24,15 +25,38 @@ const config = [
     ignores: ['.next/**', 'out/**', 'build/**', 'coverage/**', 'next-env.d.ts'],
   },
   {
-    // eslintrc defaulted this to "off"; flat config defaults it to "warn". Keep the
-    // old behaviour so the migration is a no-op. Flipping this to 'warn' surfaces
-    // three dead `eslint-disable-next-line` comments that are safe to delete.
-    linterOptions: { reportUnusedDisableDirectives: 'off' },
+    // An `eslint-disable` that no longer suppresses anything is a lie about the
+    // code — it hides the fact that the underlying problem is gone (or that the
+    // rule was never enabled). Error on them so they get deleted, not accumulated.
+    linterOptions: { reportUnusedDisableDirectives: 'error' },
   },
   ...compat.extends('next/core-web-vitals').map((entry) => ({
     ...entry,
     files: entry.files ?? LINTED,
   })),
+  {
+    // `next/core-web-vitals` wires up the TS parser but enables no TS rules at all,
+    // so unused variables went uncaught for the life of this project. The plugin is
+    // re-registered here because flat config resolves rule prefixes per config
+    // object, not globally.
+    files: ['**/*.ts', '**/*.tsx'],
+    plugins: { '@typescript-eslint': tsPlugin },
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          // `_`-prefixed names are the conventional "deliberately unused" marker —
+          // positional params you must accept, discarded destructuring targets, and
+          // `catch (_)` where the error genuinely does not matter.
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          // `const { secret, ...safe } = row` is an idiomatic omit, not a mistake.
+          ignoreRestSiblings: true,
+        },
+      ],
+    },
+  },
 ];
 
 export default config;

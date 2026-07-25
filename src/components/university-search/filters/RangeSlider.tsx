@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, type PointerEvent as ReactPointerEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { cn } from '@/lib/utils';
 
 interface RangeSliderProps {
   min: number;

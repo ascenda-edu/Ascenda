@@ -7,10 +7,14 @@ import type { StudentProfilePayload } from '@/lib/profile/intake-types';
 import { scoreStudentProfile } from '@/lib/scoring/student_scoring';
 import { mapIntakeRowsToPayload } from '@/lib/scoring/student_score_loader';
 import type { CourseRecord, EnrichedCourseRecord } from '@/lib/tiering/course_tiering';
-import { rankCourseMatches, resolveTargetFields, type RankedCourseMatch } from '@/lib/matching/matching_engine';
+import {
+  classifyCourseChance,
+  rankCourseMatches,
+  resolveStudentIbEquivalent,
+  resolveTargetFields,
+  type RankedCourseMatch
+} from '@/lib/matching/matching_engine';
 
-type StudentAcademicInputRow = Database['public']['Tables']['student_academic_input']['Row'];
-type StudentLifestyleRow = Database['public']['Tables']['student_lifestyle_preference']['Row'];
 type StudentSubjectRow = Database['public']['Tables']['student_subjects']['Row'];
 type StudentAdmissionsTestRow = Database['public']['Tables']['student_admissions_tests']['Row'];
 type ProgramRow = Database['public']['Tables']['programs']['Row'];
@@ -911,4 +915,109 @@ export const loadMatchesForProfile = async (
     catalogSize: { programs: filteredPrograms.length, universities: universitiesCount },
     missingSections
   };
+};
+
+// ── On-demand scoring ───────────────────────────────────────────────────────
+//
+// Scores an explicit list of programs for a student, regardless of whether
+// they made the ranked top-N cached in student_matches. Used by the explore
+// page so every result card carries a fit score — the ranked pipeline's
+// exclusion gates (field mismatch, budget, postgrad, quality) are pool-
+// selection concerns, not score validity, so none apply here. Uses the same
+// classifier as the ranked path (classifyCourseChance), so a program that IS
+// in the cache gets the identical number from either source.
+export const scoreProgramsForProfile = async (
+  supabase: Client,
+  profileId: string,
+  programIds: string[]
+): Promise<Record<string, number>> => {
+  const ids = [...new Set(programIds)].filter(Boolean);
+  if (!ids.length) return {};
+
+  const [{ data: academicData, error: academicError }, { data: lifestyleData }, { data: subjectsData }, { data: admissionsData }] =
+    await Promise.all([
+      supabase.from('student_academic_input').select('*').eq('profile_id', profileId).maybeSingle(),
+      supabase.from('student_lifestyle_preference').select('*').eq('profile_id', profileId).maybeSingle(),
+      supabase.from('student_subjects').select('*').eq('profile_id', profileId),
+      supabase.from('student_admissions_tests').select('*').eq('profile_id', profileId)
+    ]);
+  // No academic input → no basis for a personal score (matches the ranked
+  // pipeline, which reports academic_input as a missing section).
+  if (academicError || !academicData) return {};
+
+  const studentPayload = mapIntakeRowsToPayload({
+    personal: null,
+    academic: academicData,
+    lifestyle: lifestyleData ?? null,
+    subjects: (subjectsData ?? []) as StudentSubjectRow[],
+    admissionsTests: (admissionsData ?? []) as StudentAdmissionsTestRow[],
+    // Activities don't feed the IB-equivalent resolution the classifier uses.
+    activities: []
+  });
+  const studentIb = resolveStudentIbEquivalent(studentPayload);
+
+  // programs.metadata carries the pre-computed import scores that the scoring
+  // view lacks for non-UK rows — inject them exactly like the ranked path.
+  const { data: programsData } = await supabase.from('programs').select('id,metadata').in('id', ids);
+  const metadataByProgramId = new Map<string, Record<string, unknown>>();
+  for (const p of programsData ?? []) {
+    const meta = p.metadata;
+    if (meta && typeof meta === 'object' && !Array.isArray(meta)) {
+      metadataByProgramId.set(p.id, meta as Record<string, unknown>);
+    }
+  }
+
+  // Only the classifier inputs — the full view row isn't needed here.
+  const scoringColumns =
+    'course_id, program_id, university_id, course, min_ib_score, university_score, course_selectivity_score, total_course_score, course_tier';
+  const batchResults = await mapWithConcurrency(chunk(ids, 200), 3, (batch) =>
+    supabase
+      .from('course_scoring_v1' as any)
+      .select(scoringColumns)
+      .in('course_id', batch)
+  );
+  const courseRows: CourseScoringRow[] = [];
+  for (const { data, error } of batchResults) {
+    // Best-effort: a failed batch just yields no rows — those ids fall through
+    // to the null-input fallback below rather than failing the whole page.
+    if (error) continue;
+    courseRows.push(...((data as unknown as CourseScoringRow[]) ?? []));
+  }
+
+  const scores: Record<string, number> = {};
+  for (const row of courseRows) {
+    const pid = String(row.program_id ?? row.course_id ?? '');
+    if (!pid) continue;
+    const meta = metadataByProgramId.get(pid);
+    if (meta) {
+      if (meta.total_course_score != null && row.meta_total_course_score == null) {
+        (row as any).meta_total_course_score = meta.total_course_score;
+      }
+      if (meta.selectivity_score != null && row.meta_selectivity_score == null) {
+        (row as any).meta_selectivity_score = meta.selectivity_score;
+      }
+      if (meta.course_tier != null && row.meta_course_tier == null) {
+        (row as any).meta_course_tier = meta.course_tier;
+      }
+      if (meta.university_score != null && row.meta_university_score == null) {
+        (row as any).meta_university_score = meta.university_score;
+      }
+    }
+    scores[pid] = classifyCourseChance(studentIb, mapCourseScoringRow(row)).chancePercent;
+  }
+
+  // Programs absent from the scoring view still get a score — classify with
+  // null course data (the classifier's documented defaults kick in), so no
+  // card is ever left blank.
+  const nullCourse = {
+    min_ib_score: null,
+    total_course_score: null,
+    course_selectivity_score: null
+  } as unknown as EnrichedCourseRecord;
+  const fallbackScore = classifyCourseChance(studentIb, nullCourse).chancePercent;
+  for (const id of ids) {
+    if (!(id in scores)) scores[id] = fallbackScore;
+  }
+
+  return scores;
 };

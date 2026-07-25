@@ -16,7 +16,6 @@ interface EssayAIPanelProps {
   essay: string;
   platform: string;
   selectedBlocks: EssayBuildingBlock[];
-  allBlocks: EssayBuildingBlock[];
   onInsertText?: (text: string) => void;
 }
 
@@ -25,7 +24,7 @@ const ACTIONS: { key: Action; label: string; icon: typeof Sparkles; description:
   { key: 'outline', label: 'Suggest Outline', icon: ListTree, description: 'Generate essay structure from your blocks', color: 'text-emerald-500 bg-emerald-500/10' },
 ];
 
-export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onInsertText }: EssayAIPanelProps) {
+export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: EssayAIPanelProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -43,7 +42,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, allBlocks, onIns
 
   const lastRunRef = useRef<number>(0);
 
-  const runAction = useCallback(async (action: Action, block?: EssayBuildingBlock) => {
+  const runAction = useCallback(async (action: Action) => {
     const now = Date.now();
     if (now - lastRunRef.current < 1500) return;
     lastRunRef.current = now;

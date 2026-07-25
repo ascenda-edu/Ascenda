@@ -12,6 +12,7 @@ npm run build        # Production build
 npm run typecheck    # tsc --noEmit (run after every change)
 npm run lint         # ESLint
 npm run test         # Jest (route-handler tests use ./jest.environment-node.js via @jest-environment docblock)
+VERBOSE_SCORING=1 npm test   # + the scoring/matching diagnostic reports, silenced by default (see __tests__/helpers/report.ts)
 
 # Regenerate Supabase TypeScript types after schema changes
 npm run supabase:types   # requires SUPABASE_PROJECT_ID in env

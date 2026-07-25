@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, HTMLMotionProps } from 'framer-motion';
-import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const FOCUSABLE =

@@ -2,9 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, XCircle, Clock, MinusCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, MinusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { stagger, cardFade } from '@/lib/motion';
 import type { OutcomeResult, MatchTier, CounsellorOutcome } from '@/lib/counsellor/types';
 import type { OutcomeStats } from '@/lib/counsellor/data';
 

@@ -4,7 +4,7 @@
 // under the user-scoped client so RLS has the final word. validateParams
 // re-checks the (possibly user-edited) params server-side at execute time.
 
-import { Type, type FunctionDeclaration } from '@google/genai';
+import { Type } from '@google/genai';
 import {
   trackProgram,
   createChecklistTask,

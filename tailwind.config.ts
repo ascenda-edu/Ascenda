@@ -1,22 +1,8 @@
 import type { Config } from 'tailwindcss';
 import plugin from 'tailwindcss/plugin';
-const {
-  default: flattenColorPalette,
-} = require("tailwindcss/lib/util/flattenColorPalette");
-
-function addVariablesForColors({ addBase, theme }: { addBase: (styles: Record<string, Record<string, unknown>>) => void; theme: (path: string) => Record<string, string> }) {
-  let allColors = flattenColorPalette(theme("colors"));
-  let newVars = Object.fromEntries(
-    Object.entries(allColors).map(([key, val]) => [`--${key}`, val])
-  );
-
-  addBase({
-    ":root": newVars,
-  });
-}
 
 // Plugin to add the glass and form utilities
-const customUtilitiesPlugin = plugin(function ({ addComponents, theme }) {
+const customUtilitiesPlugin = plugin(function ({ addComponents }) {
   addComponents({
     // Opaque elevated surface (not actual glassmorphism — no backdrop blur).
     '.panel': {

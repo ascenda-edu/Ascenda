@@ -1,7 +1,15 @@
+/**
+ * Matching demo — prints a ranked programme-match report for three synthetic
+ * profiles (Sofia / Daniel / Lucas) against a small sample catalogue.
+ *
+ * Diagnostics are OFF by default; set VERBOSE_SCORING=1 (or VERBOSE_TESTS=1)
+ * to see the report. See `__tests__/helpers/report.ts`.
+ */
 import { scoreStudentProfile } from '../src/lib/scoring/student_scoring';
 import { rankCourseMatches } from '../src/lib/matching/matching_engine';
 import type { StudentProfilePayload } from '../src/lib/profile/intake-types';
 import type { EnrichedCourseRecord } from '../src/lib/tiering/course_tiering';
+import { report } from './helpers/report';
 
 const sampleCourses: Partial<EnrichedCourseRecord>[] = [
     {
@@ -233,22 +241,26 @@ function runDemo() {
         const score = scoreStudentProfile(student);
         const matches = rankCourseMatches(student, score, sampleCourses as EnrichedCourseRecord[]);
 
-        console.log(`\n========================================`);
-        console.log(`MATCHES FOR ${student.personal_information.first_name.toUpperCase()}`);
-        console.log(`Band: ${score.student_band} (Score: ${score.total_score})`);
-        console.log(`========================================`);
+        report(`\n========================================`);
+        report(`MATCHES FOR ${student.personal_information.first_name.toUpperCase()}`);
+        report(`Band: ${score.student_band} (Score: ${score.total_score})`);
+        report(`========================================`);
 
         matches.slice(0, 10).forEach((match, i) => {
-            console.log(`${i + 1}. ${match.university} - ${match.course}`);
-            console.log(`   Tier: ${match.course_tier} | Fit: ${match.tier_fit}`);
-            console.log(`   Chance: ${match.chance_percent}% (${match.chance_category})`);
-            if (match.excluded) console.log(`   EXCLUDED`);
-            if (match.reasons.length) console.log(`   Reasons: ${match.reasons.join(', ')}`);
-            console.log(`----------------------------------------`);
+            report(`${i + 1}. ${match.university} - ${match.course}`);
+            report(`   Tier: ${match.course_tier} | Fit: ${match.tier_fit}`);
+            report(`   Chance: ${match.chance_percent}% (${match.chance_category})`);
+            if (match.excluded) report(`   EXCLUDED`);
+            if (match.reasons.length) report(`   Reasons: ${match.reasons.join(', ')}`);
+            report(`----------------------------------------`);
         });
     });
 }
 
+// NOTE: this runs the demo twice per Jest run — once here at module scope and
+// once inside the test below. Kept as-is so `VERBOSE_SCORING=1` reproduces the
+// historical output exactly; the module-scope call is redundant for the
+// assertion and could be dropped if anyone wants a shorter report.
 runDemo();
 
 test('matching demo runs without throwing', () => {
