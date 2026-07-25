@@ -238,7 +238,7 @@ export function PreviewNav() {
                         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
                     >
                         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-2 sm:gap-4 sm:px-6 lg:px-10">
-                            <Link href="/landing-preview" aria-label="Ascenda home" className="shrink-0">
+                            <Link href="/" aria-label="Ascenda home" className="shrink-0">
                                 <Image
                                     src="/ascenda-rocket.png"
                                     alt=""

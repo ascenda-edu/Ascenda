@@ -180,7 +180,7 @@ export function PreviewHero() {
                     variants={topBarVariants}
                 >
                     <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 text-foreground sm:px-6 lg:px-10">
-                        <Link href="/landing-preview" className="flex items-center gap-3 text-lg font-semibold tracking-tight text-foreground">
+                        <Link href="/" className="flex items-center gap-3 text-lg font-semibold tracking-tight text-foreground">
                             <Image
                                 src="/ascenda-logo.png"
                                 alt="Ascenda logo"
