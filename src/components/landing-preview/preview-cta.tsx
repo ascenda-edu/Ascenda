@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
     MotionValue,
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { useLaunchHref } from '@/hooks/use-launch-href';
 import { cn } from '@/lib/utils';
 import { useMotionReady, useMounted, useSceneProgress } from './ascent-scroll';
+import { CursorGrid } from './cursor-grid';
 import {
     ROCKET_BAYS,
     ROCKET_HEIGHT,
@@ -41,10 +42,13 @@ const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 const seg = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
-const PIN_VH = 220;
+const PIN_VH = 170;
 
-// Choreography breakpoints, in scene progress. Assembly first, then the modules
-// dock, then ignition overlaps the start of liftoff, then the ask rises.
+// Choreography breakpoints, in scene progress. Assembly first, then the ask
+// rises WHILE the modules dock — the copy is legible from mid-band, and
+// ignition/liftoff play out above the settled text (the vehicle translates
+// -108vh, clearing it). The audited original held the copy to the last 12% of
+// travel, which meant ~103vh of blank band before a single legible word.
 const A_HULL: [number, number] = [0.05, 0.17];
 const A_NOSE: [number, number] = [0.16, 0.28];
 const A_FINS: [number, number] = [0.27, 0.38];
@@ -58,10 +62,19 @@ const IGNITION: [number, number] = [0.7, 0.78];
 /** Ignition as a fraction of the pin travel — preview-nav lands its READY here. */
 export const CTA_IGNITION_POINT = IGNITION[0];
 const LIFTOFF: [number, number] = [0.78, 0.97];
-const COPY: [number, number] = [0.86, 0.98];
+const COPY: [number, number] = [0.42, 0.58];
+/** Where the ask is legible — the countdown chip's jump target. */
+export const CTA_COPY_POINT = COPY[1];
+const PROOF: [number, number] = [0.5, 0.68];
 
 const T_MINUS_START = 10;
 const LIFTOFF_LABEL = 'Lift-off · your plan is go';
+/**
+ * The static frame's caption. SSR, no-JS and reduced-motion users see the rocket
+ * assembled on the pad with a cold engine, so the readout must say "fuelled and
+ * waiting" — seeding it with LIFTOFF_LABEL captioned a grounded rocket "Lift-off".
+ */
+const STANDBY_LABEL = 'Cleared for launch';
 
 /**
  * Derive React state from the scrub. Mirrors the private helper in scenes.tsx:
@@ -88,234 +101,6 @@ function useScrubbed<T>(p: MotionValue<number>, ready: boolean, final: T, comput
     }, [p, ready, update]);
 
     return ready ? value : final;
-}
-
-/* ------------------------------------------------------------- dot field */
-
-const DOT_GAP = 26;
-const DOT_R = 1.5;
-const DOT_REST = 'rgba(148,163,184,0.3)';
-/** indigo-400, tinted in by cursor proximity. */
-const DOT_ACCENT = '129,140,248';
-const INTERACTION_RADIUS = 120;
-const REPULSION = 0.42;
-const SPRING_K = 0.055;
-const DAMPING = 0.86;
-/** Hard cap on displacement — the field stays a grid, it doesn't billow. */
-const MAX_OFFSET = 10;
-const IDLE_MS = 2800;
-const REST_EPSILON = 0.04;
-
-interface Dot {
-    ox: number;
-    oy: number;
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-    tint: number;
-}
-
-/**
- * Calm interactive dot grid (physics adapted from nexus-ui's "Interactive Dot
- * Grid Hero"): cursor proximity tints and gently repels, a spring pulls every
- * dot home. The loop runs only while the band is on screen AND something is
- * still moving — once the pointer has been idle a few seconds and the grid has
- * settled it stops until the next pointer move.
- *
- * `active` false (pre-mount, reduced motion) draws the resting grid once with no
- * loop at all.
- */
-function DotField({ active }: { active: boolean }) {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        let width = 0;
-        let height = 0;
-        let dots: Dot[] = [];
-        let raf = 0;
-
-        const build = () => {
-            const cols = Math.floor(width / DOT_GAP) + 1;
-            const rows = Math.floor(height / DOT_GAP) + 1;
-            const insetX = (width - (cols - 1) * DOT_GAP) / 2;
-            const insetY = (height - (rows - 1) * DOT_GAP) / 2;
-            const next: Dot[] = [];
-            for (let r = 0; r < rows; r += 1) {
-                for (let c = 0; c < cols; c += 1) {
-                    const ox = insetX + c * DOT_GAP;
-                    const oy = insetY + r * DOT_GAP;
-                    next.push({ ox, oy, x: ox, y: oy, vx: 0, vy: 0, tint: 0 });
-                }
-            }
-            dots = next;
-        };
-
-        const resize = () => {
-            const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            width = canvas.offsetWidth;
-            height = canvas.offsetHeight;
-            canvas.width = Math.max(1, Math.round(width * dpr));
-            canvas.height = Math.max(1, Math.round(height * dpr));
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            build();
-        };
-
-        /** One pass: rest dots batched into a single path, tinted ones on top. */
-        const paint = () => {
-            ctx.clearRect(0, 0, width, height);
-            ctx.fillStyle = DOT_REST;
-            ctx.beginPath();
-            for (const dot of dots) {
-                if (dot.tint > 0) continue;
-                ctx.moveTo(dot.x + DOT_R, dot.y);
-                ctx.arc(dot.x, dot.y, DOT_R, 0, Math.PI * 2);
-            }
-            ctx.fill();
-            for (const dot of dots) {
-                if (dot.tint <= 0) continue;
-                ctx.fillStyle = `rgba(${DOT_ACCENT},${(0.28 + 0.5 * dot.tint).toFixed(3)})`;
-                ctx.beginPath();
-                ctx.arc(dot.x, dot.y, DOT_R + dot.tint * 0.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        };
-
-        // Resizing reallocates (and so clears) the bitmap — always repaint, even
-        // in the active path, where the loop may currently be idle-stopped.
-        const observer = new ResizeObserver(() => {
-            resize();
-            paint();
-        });
-        observer.observe(canvas);
-        resize();
-
-        if (!active) {
-            paint();
-            return () => observer.disconnect();
-        }
-
-        const pointer = { x: -9999, y: -9999, active: false };
-        let lastMove = 0;
-        let onScreen = true;
-
-        const start = () => {
-            if (!raf && onScreen && !document.hidden) raf = requestAnimationFrame(frame);
-        };
-
-        const trackPointer = (clientX: number, clientY: number) => {
-            const rect = canvas.getBoundingClientRect();
-            pointer.x = clientX - rect.left;
-            pointer.y = clientY - rect.top;
-            pointer.active = true;
-            lastMove = performance.now();
-            start();
-        };
-
-        const onPointerMove = (event: PointerEvent) => trackPointer(event.clientX, event.clientY);
-        const onPointerLeave = () => {
-            pointer.active = false;
-            lastMove = performance.now();
-            start();
-        };
-
-        function frame() {
-            if (document.hidden || !onScreen) {
-                raf = 0;
-                return;
-            }
-
-            const radius = INTERACTION_RADIUS;
-            const radius2 = radius * radius;
-            let busy = false;
-
-            for (const dot of dots) {
-                dot.tint = 0;
-                if (pointer.active) {
-                    const dx = dot.x - pointer.x;
-                    const dy = dot.y - pointer.y;
-                    const dist2 = dx * dx + dy * dy;
-                    if (dist2 < radius2) {
-                        const dist = Math.sqrt(dist2) || 0.001;
-                        const falloff = (radius - dist) / radius;
-                        dot.tint = falloff;
-                        const force = falloff * falloff * REPULSION;
-                        dot.vx += (dx / dist) * force;
-                        dot.vy += (dy / dist) * force;
-                    }
-                }
-
-                dot.vx = (dot.vx + (dot.ox - dot.x) * SPRING_K) * DAMPING;
-                dot.vy = (dot.vy + (dot.oy - dot.y) * SPRING_K) * DAMPING;
-                dot.x += dot.vx;
-                dot.y += dot.vy;
-
-                // Clamp displacement so the repel can never exceed MAX_OFFSET.
-                const offX = dot.x - dot.ox;
-                const offY = dot.y - dot.oy;
-                const off = Math.hypot(offX, offY);
-                if (off > MAX_OFFSET) {
-                    const k = MAX_OFFSET / off;
-                    dot.x = dot.ox + offX * k;
-                    dot.y = dot.oy + offY * k;
-                }
-
-                if (
-                    !busy &&
-                    (Math.abs(dot.vx) > REST_EPSILON ||
-                        Math.abs(dot.vy) > REST_EPSILON ||
-                        off > REST_EPSILON ||
-                        dot.tint > 0)
-                ) {
-                    busy = true;
-                }
-            }
-
-            paint();
-
-            // Idle stop: pointer parked and the grid has settled.
-            if (!busy && performance.now() - lastMove > IDLE_MS) {
-                raf = 0;
-                return;
-            }
-            raf = requestAnimationFrame(frame);
-        }
-
-        const io = new IntersectionObserver(
-            ([entry]) => {
-                onScreen = entry?.isIntersecting ?? true;
-                if (onScreen) start();
-            },
-            { threshold: 0 },
-        );
-        io.observe(canvas);
-
-        const onVisibility = () => start();
-        document.addEventListener('visibilitychange', onVisibility);
-        window.addEventListener('pointermove', onPointerMove, { passive: true });
-        // pointerleave doesn't bubble — bind the root element, not window.
-        document.documentElement.addEventListener('pointerleave', onPointerLeave);
-
-        lastMove = performance.now();
-        start();
-
-        return () => {
-            cancelAnimationFrame(raf);
-            raf = 0;
-            observer.disconnect();
-            io.disconnect();
-            document.removeEventListener('visibilitychange', onVisibility);
-            window.removeEventListener('pointermove', onPointerMove);
-            document.documentElement.removeEventListener('pointerleave', onPointerLeave);
-        };
-    }, [active]);
-
-    return <canvas ref={canvasRef} aria-hidden className="absolute inset-0 h-full w-full" />;
 }
 
 /* --------------------------------------------------------- module cards */
@@ -357,7 +142,7 @@ function ModuleCard({
     return (
         <motion.div
             aria-hidden
-            className="pointer-events-none absolute w-[188px]"
+            className="pointer-events-none absolute w-[188px] max-w-[calc(100vw-3rem)]"
             style={{
                 left: bay.x,
                 top: bay.y,
@@ -436,6 +221,35 @@ function ChecklistGlyph() {
 
 /* ----------------------------------------------------------------- scene */
 
+/**
+ * The ticking readout is a leaf on purpose: `toFixed(1)` yields ~100 distinct
+ * strings across the countdown window, and owning that state here means only
+ * this <p> re-renders per tick instead of the whole finale subtree (rocket SVG,
+ * three module cards, copy) reconciling every ~7px of scroll.
+ */
+function LaunchReadout({ p, ready }: { p: MotionValue<number>; ready: boolean }) {
+    const countdown = useScrubbed(p, ready, STANDBY_LABEL, (v) => {
+        if (v >= IGNITION[0]) return LIFTOFF_LABEL;
+        const t = T_MINUS_START * clamp01(1 - v / IGNITION[0]);
+        return `T–${t < T_MINUS_START ? '0' : ''}${t.toFixed(1)}`;
+    });
+    const launched = countdown === LIFTOFF_LABEL;
+
+    return (
+        // Decorative pacing cue, same idiom as the nav's T-minus chip, so it
+        // isn't announced.
+        <p
+            aria-hidden
+            className={cn(
+                'font-heading text-xs font-semibold uppercase tabular-nums transition-colors duration-300',
+                launched ? 'tracking-[0.2em] text-emerald-400' : 'tracking-[0.28em] text-slate-400',
+            )}
+        >
+            {countdown}
+        </p>
+    );
+}
+
 export function PreviewCta() {
     const ref = useRef<HTMLElement>(null);
     const p = useSceneProgress(ref);
@@ -443,8 +257,41 @@ export function PreviewCta() {
     const mounted = useMounted();
     const shouldReduceMotion = useReducedMotion();
     const launchHref = useLaunchHref();
-    // Collapse the pin after mount for reduced-motion users — no dead scroll.
-    const pinned = !(mounted && shouldReduceMotion);
+
+    // Post-mount viewport gates (same collapse pattern as reduced motion — the
+    // SSR frame is always the pinned layout, and unpinning happens client-side):
+    //  - short viewports can't fit pad + copy in one 100svh stage, so the pin
+    //    would park the button below the fold for its entire travel;
+    //  - narrow viewports get the module cards' vertical fly-in (a ±270px
+    //    horizontal entrance starts outside a 375px stage entirely).
+    const [shortViewport, setShortViewport] = useState(false);
+    const [compact, setCompact] = useState(false);
+    useEffect(() => {
+        const short = window.matchMedia('(max-height: 719px)');
+        // 767, not the pad's own sm breakpoint: the ±270px fly-in needs roughly
+        // (768 - 220)/2 = 274px of stage on each side of the pad to start inside
+        // the overflow-hidden edge.
+        const narrow = window.matchMedia('(max-width: 767px)');
+        const apply = () => {
+            setShortViewport(short.matches);
+            setCompact(narrow.matches);
+        };
+        apply();
+        short.addEventListener('change', apply);
+        narrow.addEventListener('change', apply);
+        return () => {
+            short.removeEventListener('change', apply);
+            narrow.removeEventListener('change', apply);
+        };
+    }, []);
+
+    // Collapse the pin after mount for reduced-motion users and viewports the
+    // stage can't fit — no dead scroll, straight to the assembled final frame.
+    const pinned = !(mounted && (shouldReduceMotion || shortViewport));
+    // Scrub only while pinned: an unpinned band has almost no travel, so driving
+    // the choreography from p would strand a short-viewport (but motion-enabled)
+    // user on a half-assembled rocket. Collapsed ⇒ static final frame.
+    const scrub = ready && pinned;
 
     // Staged assembly: hull rises onto the pad, nose lowers on, fins sweep in,
     // engine bell docks from below.
@@ -461,13 +308,19 @@ export function PreviewCta() {
     const engineY = useTransform(p, (v) => (1 - easeOut(seg(v, ...A_ENGINE))) * 92);
     const engineOpacity = useTransform(p, (v) => seg(v, A_ENGINE[0], A_ENGINE[0] + 0.05));
 
-    const groups: Partial<Record<RocketGroupId, MotionStyle>> = {
-        gHull: { y: hullY, opacity: hullOpacity },
-        gNose: { y: noseY, opacity: noseOpacity },
-        gFinL: { x: finLeftX, rotate: finLeftRotate, opacity: finOpacity },
-        gFinR: { x: finRightX, rotate: finRightRotate, opacity: finOpacity },
-        gEngine: { y: engineY, opacity: engineOpacity },
-    };
+    // Stable identity: the MotionValues never change across renders, and a fresh
+    // object here would re-render RocketArt's ~70 SVG nodes on every state tick.
+    const groups: Partial<Record<RocketGroupId, MotionStyle>> = useMemo(
+        () => ({
+            gHull: { y: hullY, opacity: hullOpacity },
+            gNose: { y: noseY, opacity: noseOpacity },
+            gFinL: { x: finLeftX, rotate: finLeftRotate, opacity: finOpacity },
+            gFinR: { x: finRightX, rotate: finRightRotate, opacity: finOpacity },
+            gEngine: { y: engineY, opacity: engineOpacity },
+        }),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [],
+    );
 
     // Ignition → liftoff. The jitter is a high-frequency function of the scrub,
     // so it shudders as you scroll rather than running on its own clock.
@@ -491,18 +344,24 @@ export function PreviewCta() {
 
     const copyOpacity = useTransform(p, (v) => seg(v, ...COPY));
     const copyY = useTransform(p, (v) => (1 - easeOut(seg(v, ...COPY))) * 24);
-    const proofOpacity = useTransform(p, (v) => seg(v, COPY[0] + 0.04, 1));
+    const proofOpacity = useTransform(p, (v) => seg(v, ...PROOF));
 
-    const litBays = useScrubbed(p, ready, ROCKET_BAYS.length, (v) =>
+    const litBays = useScrubbed(p, scrub, ROCKET_BAYS.length, (v) =>
         DOCK_WINDOWS.filter(([, end]) => v >= end - 0.015).length,
     );
-    const flicker = useScrubbed(p, ready, false, (v) => v > IGNITION[0] + 0.02);
-    const countdown = useScrubbed(p, ready, LIFTOFF_LABEL, (v) => {
-        if (v >= IGNITION[0]) return LIFTOFF_LABEL;
-        const t = T_MINUS_START * clamp01(1 - v / IGNITION[0]);
-        return `T–${t < T_MINUS_START ? '0' : ''}${t.toFixed(1)}`;
-    });
-    const launched = countdown === LIFTOFF_LABEL;
+    // `< 0.99`: p clamps at 1, so without the ceiling both flicker keyframe loops
+    // would run forever after the user scrolls past the band.
+    const flicker = useScrubbed(p, scrub, false, (v) => v > IGNITION[0] + 0.02 && v < 0.99);
+    // Pointer gate for the copy block: until the reveal, the primary CTA is at
+    // opacity 0 and must not be a phantom click target. Threshold is the middle
+    // of the rise so the cursor can't land on a ~4%-opacity button either.
+    const revealed = useScrubbed(p, scrub, true, (v) => v > (COPY[0] + COPY[1]) / 2);
+    // Keyboard/AT stay welcome the whole time: the block is never inert (an inert
+    // finale would remove the page's primary CTA from the tab order and the
+    // accessibility tree entirely), and tabbing into it forces the copy visible
+    // so focus never sits on an invisible control.
+    const [focusRevealed, setFocusRevealed] = useState(false);
+    const shown = revealed || focusRevealed;
 
     return (
         // Theme-locked: this band is deliberately dark in BOTH themes. The semantic
@@ -511,7 +370,7 @@ export function PreviewCta() {
         <section
             ref={ref}
             id="cta"
-            className="relative w-full bg-slate-950 text-slate-50"
+            className="relative w-full scroll-mt-14 bg-slate-950 text-slate-50"
             style={pinned ? { height: `${PIN_VH}vh` } : undefined}
         >
             <div
@@ -520,20 +379,44 @@ export function PreviewCta() {
                     pinned ? 'sticky top-0 flex min-h-[100svh] items-center' : 'relative py-24',
                 )}
             >
-                {/* Dot field — drifts down as the camera follows the vehicle up. */}
+                {/* Instrument lattice — lights up under the cursor, and drifts down
+                    as the camera follows the vehicle up. Deliberately NOT
+                    pointer-events-none: the grid owns its own pointer listeners
+                    instead of one on window. */}
                 <motion.div
                     aria-hidden
-                    className="pointer-events-none absolute inset-0"
-                    style={ready ? { y: fieldY } : undefined}
+                    className="absolute inset-0"
+                    style={scrub ? { y: fieldY } : undefined}
                 >
-                    <DotField active={ready} />
+                    <CursorGrid
+                        interactive={ready}
+                        cellSize={64}
+                        radius={150}
+                        falloff="smooth"
+                        holdTime={350}
+                        fadeDuration={900}
+                        lineWidth={1}
+                        maxOpacity={0.42}
+                        gridOpacity={0.05}
+                        pulseSpeed={520}
+                    />
                 </motion.div>
                 <div
                     aria-hidden
                     className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-slate-950"
                 />
 
-                <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center gap-6 px-6 py-10 text-center">
+                {/* pointer-events-none so pointermove reaches the CursorGrid under
+                    the whole central column — only the copy block opts back in.
+                    Everything else here is decorative. */}
+                <div className="pointer-events-none relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center gap-4 px-6 py-6 text-center sm:gap-6 sm:py-10">
+                    {/* Pad scale wrapper: on narrow viewports the 248px-tall pad is
+                        most of the fixed chrome that overflows a small 100svh stage,
+                        so it renders at 0.66. The explicit height keeps layout in
+                        step, since scale alone doesn't give space back. Everything
+                        inside (cards included) shares the scaled space, so bay
+                        coordinates keep mapping 1:1. */}
+                    <div className="h-[164px] origin-top scale-[0.66] sm:h-[248px] sm:scale-100">
                     {/* Launch pad: the assembly box is 1:1 with the art's viewBox,
                         so bay coordinates double as docking pixel offsets. */}
                     <motion.div
@@ -541,34 +424,38 @@ export function PreviewCta() {
                         style={{
                             width: ROCKET_WIDTH,
                             height: ROCKET_HEIGHT,
-                            ...(ready ? { scale: cameraScale } : {}),
+                            ...(scrub ? { scale: cameraScale } : {}),
                         }}
                     >
                         <div className="pointer-events-none absolute left-1/2 top-[188px] h-16 w-56 -translate-x-1/2">
                             <motion.div
-                                className="h-full w-full rounded-[50%] bg-amber-400/45 blur-2xl"
-                                style={{ opacity: ready ? padGlow : 0 }}
+                                className="h-full w-full rounded-[50%] bg-indigo-400/40 blur-2xl"
+                                style={{ opacity: scrub ? padGlow : 0 }}
                             />
                         </div>
 
                         <motion.div
                             className="pointer-events-none absolute inset-0"
-                            style={ready ? { x: shakeX, y: liftY } : undefined}
+                            style={scrub ? { x: shakeX, y: liftY } : undefined}
                         >
                             <RocketArt
-                                groups={ready ? groups : undefined}
+                                groups={scrub ? groups : undefined}
                                 litBays={litBays}
-                                flame={ready ? flame : undefined}
-                                smoke={ready ? smoke : undefined}
+                                flame={scrub ? flame : undefined}
+                                smoke={scrub ? smoke : undefined}
                                 flicker={flicker}
                             />
                         </motion.div>
 
+                        {/* On narrow stages the horizontal fly-in would start beyond
+                            the overflow-hidden edge and the card labels — the beat's
+                            whole payload — would never be readable, so it becomes a
+                            short vertical rise. */}
                         <ModuleCard
                             p={p}
-                            ready={ready}
+                            ready={scrub}
                             at={DOCK_WINDOWS[0]}
-                            from={{ x: -268, y: -76 }}
+                            from={compact ? { x: 0, y: -64 } : { x: -268, y: -76 }}
                             bay={ROCKET_BAYS[0]}
                             glyph={<GaugeGlyph />}
                             label="Fit Score locked"
@@ -577,9 +464,9 @@ export function PreviewCta() {
                         />
                         <ModuleCard
                             p={p}
-                            ready={ready}
+                            ready={scrub}
                             at={DOCK_WINDOWS[1]}
-                            from={{ x: 274, y: 8 }}
+                            from={compact ? { x: 0, y: -64 } : { x: 274, y: 8 }}
                             bay={ROCKET_BAYS[1]}
                             glyph={<DateGlyph />}
                             label="Deadline tracked"
@@ -588,9 +475,9 @@ export function PreviewCta() {
                         />
                         <ModuleCard
                             p={p}
-                            ready={ready}
+                            ready={scrub}
                             at={DOCK_WINDOWS[2]}
-                            from={{ x: -276, y: 84 }}
+                            from={compact ? { x: 0, y: -64 } : { x: -276, y: 48 }}
                             bay={ROCKET_BAYS[2]}
                             glyph={<ChecklistGlyph />}
                             label="Requirements green"
@@ -598,22 +485,39 @@ export function PreviewCta() {
                             value="6/6"
                         />
                     </motion.div>
+                    </div>
 
-                    {/* Launch readout — decorative pacing cue, same idiom as the
-                        nav's T-minus chip, so it isn't announced. */}
-                    <p
-                        aria-hidden
-                        className={cn(
-                            'font-heading text-[0.6875rem] font-semibold uppercase tabular-nums transition-colors duration-300',
-                            launched ? 'tracking-[0.2em] text-emerald-400' : 'tracking-[0.28em] text-slate-400',
-                        )}
+                    <LaunchReadout p={p} ready={scrub} />
+
+                    {/* Focus force-reveal: Tab reaching the CTA snaps the copy to
+                        full opacity (the un-gated static frame), so keyboard focus
+                        is never on an invisible control — while the block stays in
+                        the tab order and the accessibility tree at all times. */}
+                    <div
+                        className="w-full"
+                        onFocus={() => setFocusRevealed(true)}
+                        onBlur={(event) => {
+                            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                                setFocusRevealed(false);
+                            }
+                        }}
                     >
-                        {countdown}
-                    </p>
-
                     <motion.div
-                        className="w-full space-y-5"
-                        style={ready ? { opacity: copyOpacity, y: copyY } : undefined}
+                        className={cn(
+                            'w-full space-y-5',
+                            shown ? 'pointer-events-auto' : 'pointer-events-none',
+                        )}
+                        // Static 1/0 override rather than dropping the binding:
+                        // framer leaves the last written inline value (opacity 0)
+                        // behind when a MotionValue simply disappears from style.
+                        style={
+                            scrub
+                                ? {
+                                      opacity: focusRevealed ? 1 : copyOpacity,
+                                      y: focusRevealed ? 0 : copyY,
+                                  }
+                                : undefined
+                        }
                     >
                         <h2 className="font-heading text-4xl font-bold leading-[1.1] tracking-tight [text-wrap:balance] sm:text-5xl">
                             Your shortlist is waiting.
@@ -625,7 +529,7 @@ export function PreviewCta() {
                             <Button
                                 asChild
                                 size="lg"
-                                className="group h-12 bg-white px-8 text-base text-slate-900 shadow-xl transition-all hover:bg-white/90 hover:shadow-2xl"
+                                className="group h-12 bg-slate-50 px-8 text-base text-slate-900 shadow-xl transition-all hover:bg-slate-100 hover:shadow-2xl"
                             >
                                 <Link href={launchHref} className="flex items-center gap-2">
                                     {launchHref === '/dashboard' ? 'Go to dashboard' : 'Build your plan'}
@@ -649,7 +553,7 @@ export function PreviewCta() {
                         </div>
                         <motion.div
                             className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-3 text-sm text-slate-400"
-                            style={ready ? { opacity: proofOpacity } : undefined}
+                            style={scrub ? { opacity: proofOpacity } : undefined}
                         >
                             <span className="flex items-center gap-2">
                                 <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
@@ -665,6 +569,7 @@ export function PreviewCta() {
                             </span>
                         </motion.div>
                     </motion.div>
+                    </div>
                 </div>
             </div>
         </section>

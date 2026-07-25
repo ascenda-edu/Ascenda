@@ -3,12 +3,14 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef } from 'react';
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
+import { PageScrollProvider } from './ascent-scroll';
 
 interface SmoothScrollApi {
     /**
      * Glide to an anchor (`'#cta'`), pixel offset or element. Returns false when
-     * Lenis is off (reduced motion, pre-mount) so callers fall back to native
-     * anchor behaviour.
+     * Lenis is off (reduced motion, pre-mount, coarse pointer) OR when an anchor
+     * doesn't resolve, so callers can fall back to native anchor behaviour rather
+     * than swallowing the click — Lenis itself only warns and returns in that case.
      */
     scrollTo: (target: string | number | HTMLElement) => boolean;
 }
@@ -29,19 +31,26 @@ const easeExpoOut = (t: number) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t));
  * framer `useScroll` scrub inherits the smoothing with no changes.
  *
  * Reduced-motion users keep fully native scrolling — the check runs post-mount
- * (never an SSR branch, per the preview's hydration rules). Touch input stays
- * native (Lenis default); only wheel scrolling is smoothed.
+ * (never an SSR branch, per the preview's hydration rules). Lenis only smooths
+ * the wheel (`syncTouch` is off by default), so it is skipped entirely on coarse
+ * pointers, where it would install a perpetual rAF and eight listeners to smooth
+ * nothing at all.
  *
- * `lenis/dist/lenis.css` is safe to import globally: every rule is scoped to
- * the `.lenis*` classes Lenis stamps on <html> while alive, including the
- * `scroll-behavior: auto` override that stops the app-wide
- * `html { scroll-behavior: smooth }` from double-animating anchor jumps.
+ * `lenis/dist/lenis.css` is safe to import here: every rule is scoped to the
+ * `.lenis*` classes Lenis stamps on <html>, and Next scopes the import to this
+ * route's stylesheet. It does NOT contain a `scroll-behavior` override — the
+ * app-wide `html { scroll-behavior: smooth }` in globals.css is instead defused
+ * by Lenis writing scroll with `behavior: 'instant'`, and for the native-anchor
+ * fallback path by globals.css's own reduced-motion `scroll-behavior: auto`.
  */
 export function SmoothScroll({ children }: { children: ReactNode }) {
     const lenisRef = useRef<Lenis | null>(null);
 
     useEffect(() => {
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        // Nothing to smooth without a wheel, and instantiating anyway would cost a
+        // permanent rAF plus eight listeners on every phone.
+        if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
 
         const lenis = new Lenis({ lerp: 0.1, smoothWheel: true });
         lenisRef.current = lenis;
@@ -51,8 +60,43 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
             rafId = requestAnimationFrame(raf);
         });
 
+        // Lenis registers no `keydown` listener, so PageDown/Space/Home/End would
+        // otherwise jump natively while the wheel glides — two physics on one page,
+        // with the harsher one going to keyboard users.
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+            const target = event.target as HTMLElement | null;
+            // Never hijack keys while focus is on anything interactive. Space is
+            // the dangerous one: a button's synthetic click fires on keyup only if
+            // its Space KEYDOWN ran the default handler, so preventDefault() here
+            // would silently break keyboard activation of every button on the page
+            // (FAQ accordion, the countdown chip). Fields keep their keys too.
+            if (
+                target?.closest(
+                    'button, [role="button"], a[href], summary, input, textarea, select, ' +
+                        '[contenteditable=""], [contenteditable="true"], ' +
+                        '[role="checkbox"], [role="switch"], [role="menuitem"], [role="option"], [role="tab"]',
+                )
+            ) {
+                return;
+            }
+
+            const page = window.innerHeight * 0.9;
+            let to: number | null = null;
+            if (event.key === 'PageDown' || (event.key === ' ' && !event.shiftKey)) to = lenis.actualScroll + page;
+            else if (event.key === 'PageUp' || (event.key === ' ' && event.shiftKey)) to = lenis.actualScroll - page;
+            else if (event.key === 'Home') to = 0;
+            else if (event.key === 'End') to = document.documentElement.scrollHeight;
+            if (to === null) return;
+
+            event.preventDefault();
+            lenis.scrollTo(to, { duration: 0.8, easing: easeExpoOut });
+        };
+        window.addEventListener('keydown', onKeyDown);
+
         return () => {
             cancelAnimationFrame(rafId);
+            window.removeEventListener('keydown', onKeyDown);
             lenis.destroy();
             lenisRef.current = null;
         };
@@ -63,12 +107,50 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
             scrollTo: (target) => {
                 const lenis = lenisRef.current;
                 if (!lenis) return false;
-                lenis.scrollTo(target, { duration: 1.2, easing: easeExpoOut });
+
+                // Resolve anchors ourselves: Lenis only console.warns and returns
+                // for a missing target, and callers preventDefault() on `true` —
+                // so reporting success blindly turns a renamed section into a link
+                // that does nothing at all, which is worse than no smoothing.
+                let node: HTMLElement | null = null;
+                if (typeof target === 'string') {
+                    if (!target.startsWith('#')) return false;
+                    node = document.getElementById(target.slice(1));
+                    if (!node) return false;
+                } else if (typeof target !== 'number') {
+                    node = target;
+                }
+
+                lenis.scrollTo(node ?? (target as number), { duration: 1.2, easing: easeExpoOut });
+
+                if (node) {
+                    // preventDefault() cost us both of native fragment navigation's
+                    // side effects: a shareable/back-navigable hash, and the reset of
+                    // the sequential-focus starting point (without which the next Tab
+                    // continues from the nav, not the section just navigated to).
+                    // Repeated clicks replace rather than push — native fragment
+                    // navigation adds no history entry when the URL is unchanged,
+                    // and five identical #faq entries would break the Back button.
+                    const href = `#${node.id}`;
+                    if (location.hash === href) history.replaceState(null, '', href);
+                    else history.pushState(null, '', href);
+                    if (!node.hasAttribute('tabindex')) node.setAttribute('tabindex', '-1');
+                    // A programmatically-focused section must not draw the UA focus
+                    // ring around its entire box.
+                    node.classList.add('outline-none');
+                    node.focus({ preventScroll: true });
+                }
                 return true;
             },
         }),
         [],
     );
 
-    return <SmoothScrollContext.Provider value={api}>{children}</SmoothScrollContext.Provider>;
+    return (
+        <SmoothScrollContext.Provider value={api}>
+            {/* Nested here so the page needs one wrapper: the scroll subscription and
+                the smoothing that drives it share a lifetime. */}
+            <PageScrollProvider>{children}</PageScrollProvider>
+        </SmoothScrollContext.Provider>
+    );
 }

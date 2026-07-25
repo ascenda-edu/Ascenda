@@ -8,15 +8,14 @@ import {
     motion,
     useMotionValueEvent,
     useReducedMotion,
-    useScroll,
     useTransform,
 } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLaunchHref } from '@/hooks/use-launch-href';
 import { cn } from '@/lib/utils';
-import { useMotionReady, usePageProgress } from './ascent-scroll';
-import { CTA_IGNITION_POINT } from './preview-cta';
+import { useMotionReady, usePageScroll } from './ascent-scroll';
+import { CTA_COPY_POINT, CTA_IGNITION_POINT } from './preview-cta';
 import { useSmoothScroll } from './smooth-scroll';
 
 const NAV_LINKS = [
@@ -57,14 +56,18 @@ function documentTop(el: HTMLElement): number {
  */
 export function PreviewNav() {
     const [visible, setVisible] = useState(false);
+    const [overBand, setOverBand] = useState(false);
     const [activeId, setActiveId] = useState<string | null>(null);
+    const navCtaRef = useRef<HTMLAnchorElement>(null);
     const [countdown, setCountdown] = useState(`T–${T_MINUS_START.toFixed(1)}`);
     const launchHref = useLaunchHref();
     const shouldReduceMotion = useReducedMotion();
     const ready = useMotionReady();
     const { scrollTo } = useSmoothScroll();
 
-    const pageProgress = usePageProgress();
+    // One shared document-scroll subscription (see PageScrollProvider) — this file
+    // previously owned two of the page's three duplicate ones.
+    const { progress: pageProgress, scrollY } = usePageScroll();
     const hairlineScale = useTransform(pageProgress, (v) => clamp01(v));
 
     // Scroll offset at which the countdown reads READY: ignition, 70% through the
@@ -72,7 +75,6 @@ export function PreviewNav() {
     // lights (falls back to "one screen-and-a-bit before the document ends" if
     // the band is ever missing).
     const readyPointRef = useRef<number | null>(null);
-    const { scrollY } = useScroll();
 
     const updateCountdown = useCallback((y: number) => {
         const point = readyPointRef.current;
@@ -87,7 +89,7 @@ export function PreviewNav() {
             const viewport = window.innerHeight;
             // Pin travel is 0 when the finale's pin is collapsed (reduced motion),
             // which degrades to READY at the band top — the static frame is
-            // already "launched" there.
+            // already fuelled and waiting there.
             const pinTravel = cta ? Math.max(0, cta.offsetHeight - viewport) : 0;
             readyPointRef.current = Math.max(
                 1,
@@ -98,12 +100,45 @@ export function PreviewNav() {
             updateCountdown(window.scrollY);
         };
 
+        // Coalesce to one measure per frame: `measure()` forces three layouts, and
+        // its triggers fire in bursts (mobile URL-bar collapse emits `resize`
+        // mid-scroll, and a resize drag emits continuously).
+        let queued = 0;
+        const schedule = () => {
+            if (queued) return;
+            queued = requestAnimationFrame(() => {
+                queued = 0;
+                measure();
+            });
+        };
+
         measure();
-        window.addEventListener('resize', measure, { passive: true });
-        return () => window.removeEventListener('resize', measure);
+        // Document height — not just viewport — because the scenes' pins collapse
+        // AFTER mount for reduced-motion users (`pinned` depends on `mounted`, and
+        // React flushes this effect before committing that re-render). That removes
+        // ~1000vh of pin height without firing `resize`, which used to leave the
+        // countdown frozen mid-count. Fonts and next/image settling shift it too.
+        const observer = new ResizeObserver(schedule);
+        observer.observe(document.documentElement);
+        window.addEventListener('resize', schedule, { passive: true });
+        return () => {
+            cancelAnimationFrame(queued);
+            observer.disconnect();
+            window.removeEventListener('resize', schedule);
+        };
     }, [updateCountdown]);
 
     useMotionValueEvent(scrollY, 'change', updateCountdown);
+
+    // Land on the payoff — the point where the ask is legible — not the band's top
+    // edge, which is the rocket in pieces with the copy still at zero opacity.
+    const jumpToLaunch = useCallback(() => {
+        const cta = document.getElementById('cta');
+        if (!cta) return;
+        const pinTravel = Math.max(0, cta.offsetHeight - window.innerHeight);
+        const target = documentTop(cta) + pinTravel * CTA_COPY_POINT;
+        if (!scrollTo(target)) window.scrollTo({ top: target });
+    }, [scrollTo]);
 
     useEffect(() => {
         const heroTopbar = document.getElementById('preview-hero-topbar');
@@ -114,6 +149,33 @@ export function PreviewNav() {
             { threshold: 0 },
         );
         observer.observe(heroTopbar);
+        return () => observer.disconnect();
+    }, []);
+
+    // The CTA band is theme-locked dark in BOTH themes, so the default translucent
+    // light bar composites over it into a mid-grey slab — muted links land at
+    // 2.37:1 and the bottom hairline disappears. Swap to a dark treatment while the
+    // finale owns the screen (which is the page's single longest stretch).
+    useEffect(() => {
+        const cta = document.getElementById('cta');
+        if (!cta) return;
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                setOverBand(entry.isIntersecting);
+                // The suppressed nav CTA must not keep keyboard focus while it is
+                // invisible and aria-hidden.
+                if (entry.isIntersecting && navCtaRef.current?.contains(document.activeElement)) {
+                    (document.activeElement as HTMLElement).blur();
+                }
+            },
+            // Shrink the intersection root to the viewport's top edge: with the
+            // default root, a 170vh section "intersects" the moment its top
+            // crosses the viewport BOTTOM — a full screen before the dark band
+            // actually reaches the bar it is restyling.
+            { threshold: 0, rootMargin: '0px 0px -100% 0px' },
+        );
+        observer.observe(cta);
         return () => observer.disconnect();
     }, []);
 
@@ -158,7 +220,12 @@ export function PreviewNav() {
                 {visible && (
                     <motion.nav
                         aria-label="Page"
-                        className="fixed inset-x-0 top-0 z-40 border-b border-border bg-background/80 shadow-nav backdrop-blur-md supports-[backdrop-filter]:bg-background/70"
+                        className={cn(
+                            'fixed inset-x-0 top-0 z-40 border-b shadow-nav backdrop-blur-md transition-colors duration-500',
+                            overBand
+                                ? 'border-white/10 bg-slate-950/85 supports-[backdrop-filter]:bg-slate-950/75'
+                                : 'border-border bg-background/80 supports-[backdrop-filter]:bg-background/70',
+                        )}
                         initial={{ y: '-110%' }}
                         animate={{ y: 0 }}
                         exit={{ y: '-110%' }}
@@ -190,13 +257,22 @@ export function PreviewNav() {
                                             aria-current={isActive ? 'true' : undefined}
                                             className={cn(
                                                 'relative rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors',
-                                                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
+                                                overBand
+                                                    ? isActive
+                                                        ? 'text-white'
+                                                        : 'text-slate-300 hover:text-white'
+                                                    : isActive
+                                                      ? 'text-primary'
+                                                      : 'text-muted-foreground hover:text-foreground',
                                             )}
                                         >
                                             {isActive && (
                                                 <motion.span
                                                     layoutId="previewnav-pill"
-                                                    className="absolute inset-0 rounded-full bg-primary/10"
+                                                    className={cn(
+                                                        'absolute inset-0 rounded-full',
+                                                        overBand ? 'bg-white/10' : 'bg-primary/10',
+                                                    )}
                                                     transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                                                     aria-hidden
                                                 />
@@ -207,18 +283,27 @@ export function PreviewNav() {
                                 })}
                             </div>
 
-                            {/* T-minus chip — decorative pacing cue, hidden from
-                                assistive tech so the ticking value isn't announced. */}
-                            <span
-                                aria-hidden
+                            {/* T-minus chip — a real control, because a countdown that
+                                promises arrival should be able to take you there. The
+                                ticking value itself stays aria-hidden behind a stable
+                                label so AT isn't read a changing number. */}
+                            <button
+                                type="button"
+                                onClick={jumpToLaunch}
+                                aria-label="Jump to sign-up"
                                 className={cn(
-                                    'hidden shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 font-heading text-xs font-semibold tracking-[0.07em] tabular-nums transition-colors sm:inline-flex',
-                                    launched
-                                        ? 'border-emerald-500/45 text-emerald-600 dark:text-emerald-400'
-                                        : 'border-border text-muted-foreground',
+                                    'hidden shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 font-heading text-xs font-semibold tracking-[0.07em] tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:inline-flex',
+                                    overBand
+                                        ? launched
+                                            ? 'border-emerald-400/50 text-emerald-400'
+                                            : 'border-white/15 text-slate-300 hover:text-white'
+                                        : launched
+                                          ? 'border-emerald-500/45 text-emerald-600 dark:text-emerald-400'
+                                          : 'border-border text-muted-foreground hover:text-foreground',
                                 )}
                             >
                                 <motion.span
+                                    aria-hidden
                                     className={cn(
                                         'h-1.5 w-1.5 rounded-full',
                                         launched ? 'bg-emerald-500' : 'bg-primary',
@@ -230,15 +315,24 @@ export function PreviewNav() {
                                             : { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
                                     }
                                 />
-                                {countdown}
-                            </span>
+                                <span aria-hidden>{countdown}</span>
+                            </button>
 
+                            {/* Suppressed over the finale: the band has its own primary
+                                CTA with the same label, and two competing primaries at
+                                the conversion moment is exactly what the design rules
+                                forbid. */}
                             <Button
                                 asChild
                                 size="sm"
-                                className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_20px_-6px_rgba(99,102,241,0.5)] group"
+                                className={cn(
+                                    'group rounded-full bg-primary text-primary-foreground shadow-[0_0_20px_-6px_rgba(99,102,241,0.5)] transition-opacity hover:bg-primary/90',
+                                    overBand && 'pointer-events-none opacity-0',
+                                )}
+                                tabIndex={overBand ? -1 : undefined}
+                                aria-hidden={overBand || undefined}
                             >
-                                <Link href={launchHref} className="flex items-center gap-1.5">
+                                <Link ref={navCtaRef} href={launchHref} className="flex items-center gap-1.5">
                                     Build your plan
                                     <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
                                 </Link>

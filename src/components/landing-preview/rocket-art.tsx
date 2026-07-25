@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import {
     motion,
     useMotionValue,
@@ -13,10 +14,14 @@ import {
  * assembly choreography needs every part as its own transformable group, and the
  * hull carries three module bays whose LEDs light as the widget cards dock.
  *
- * Two constraints shape the API:
+ * Three constraints shape the implementation:
  *  1. Every group renders DOCKED (its final frame) when no motion style is
  *     passed, so the SSR/reduced-motion payload is the assembled rocket.
- *  2. Gradient/filter ids are `ra-`-prefixed — SVG defs are global to the page.
+ *  2. SVG defs are global to the document, so gradient ids are namespaced per
+ *     instance with useId() — two mounted RocketArts must not collide.
+ *  3. No SVG filters on animated nodes: a `filter` on a node whose scale is
+ *     scrubbed re-rasterises the filter graph every frame. The exhaust puffs use
+ *     pre-blurred radial gradients instead.
  */
 
 export type RocketGroupId = 'gHull' | 'gNose' | 'gFinL' | 'gFinR' | 'gEngine';
@@ -72,6 +77,13 @@ export function RocketArt({
     flicker = false,
     className,
 }: RocketArtProps) {
+    // Per-instance def namespace. useId() can contain characters that are not
+    // valid in CSS selectors, so it is reduced to word chars before going into
+    // an id / url(#…) reference.
+    const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
+    const defId = (name: string) => `ra-${uid}-${name}`;
+    const defUrl = (name: string) => `url(#${defId(name)})`;
+
     // Fallback source so the derived transforms below are unconditional hooks;
     // it stays at 0, which is exactly "no flame, no smoke".
     const rest = useMotionValue(0);
@@ -106,46 +118,53 @@ export function RocketArt({
             focusable="false"
         >
             <defs>
-                <linearGradient id="ra-hull" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={defId('hull')} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#f1f5f9" />
                     <stop offset="52%" stopColor="#cbd5e1" />
                     <stop offset="100%" stopColor="#8f9db1" />
                 </linearGradient>
-                <linearGradient id="ra-nose" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={defId('nose')} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#a5b4fc" />
                     <stop offset="55%" stopColor="#6366f1" />
                     <stop offset="100%" stopColor="#4338ca" />
                 </linearGradient>
-                <linearGradient id="ra-fin" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={defId('fin')} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#dbe2ea" />
                     <stop offset="100%" stopColor="#64748b" />
                 </linearGradient>
-                <linearGradient id="ra-engine" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={defId('engine')} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#94a3b8" />
                     <stop offset="58%" stopColor="#475569" />
                     <stop offset="100%" stopColor="#293548" />
                 </linearGradient>
-                <radialGradient id="ra-glass" cx="35%" cy="30%" r="80%">
+                <radialGradient id={defId('glass')} cx="35%" cy="30%" r="80%">
                     <stop offset="0%" stopColor="#e0e7ff" />
                     <stop offset="55%" stopColor="#6366f1" />
                     <stop offset="100%" stopColor="#312e81" />
                 </radialGradient>
-                <radialGradient id="ra-porthole-glow" cx="50%" cy="50%" r="50%">
+                <radialGradient id={defId('porthole-glow')} cx="50%" cy="50%" r="50%">
                     <stop offset="55%" stopColor="#818cf8" stopOpacity="0.55" />
                     <stop offset="100%" stopColor="#818cf8" stopOpacity="0" />
                 </radialGradient>
-                <linearGradient id="ra-flame" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#fcd34d" />
-                    <stop offset="45%" stopColor="#fb923c" />
-                    <stop offset="100%" stopColor="#ef4444" stopOpacity="0.35" />
-                </linearGradient>
-                <linearGradient id="ra-flame-core" x1="0" y1="0" x2="0" y2="1">
+                {/* Plume runs warm-white into the page accent — the finale carries
+                    one saturated accent (indigo) plus the semantic bay green. */}
+                <linearGradient id={defId('flame')} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#ffffff" />
-                    <stop offset="100%" stopColor="#fde68a" stopOpacity="0.55" />
+                    <stop offset="45%" stopColor="#c7d2fe" />
+                    <stop offset="100%" stopColor="#c7d2fe" stopOpacity="0.35" />
                 </linearGradient>
-                <filter id="ra-smoke-blur" x="-120%" y="-120%" width="340%" height="340%">
-                    <feGaussianBlur stdDeviation="6" />
-                </filter>
+                <linearGradient id={defId('flame-core')} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ffffff" />
+                    <stop offset="100%" stopColor="#e0e7ff" stopOpacity="0.55" />
+                </linearGradient>
+                {/* Soft-edged fill standing in for a Gaussian blur: the puffs are
+                    scale-animated, and a filter would re-rasterise per frame. */}
+                <radialGradient id={defId('smoke')} cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor="#cbd5e1" stopOpacity="0.9" />
+                    <stop offset="42%" stopColor="#cbd5e1" stopOpacity="0.6" />
+                    <stop offset="72%" stopColor="#cbd5e1" stopOpacity="0.24" />
+                    <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0" />
+                </radialGradient>
             </defs>
 
             {/* Exhaust puffs sit behind the vehicle so they read as billowing past it. */}
@@ -153,10 +172,9 @@ export function RocketArt({
                 <motion.circle
                     cx={74}
                     cy={212}
-                    r={13}
-                    fill="#cbd5e1"
+                    r={24}
+                    fill={defUrl('smoke')}
                     fillOpacity={0.5}
-                    filter="url(#ra-smoke-blur)"
                     style={{
                         transformBox: 'fill-box',
                         transformOrigin: 'center',
@@ -168,10 +186,9 @@ export function RocketArt({
                 <motion.circle
                     cx={146}
                     cy={216}
-                    r={15}
-                    fill="#cbd5e1"
+                    r={27}
+                    fill={defUrl('smoke')}
                     fillOpacity={0.42}
-                    filter="url(#ra-smoke-blur)"
                     style={{
                         transformBox: 'fill-box',
                         transformOrigin: 'center',
@@ -186,7 +203,7 @@ export function RocketArt({
             <motion.g id="gEngine" style={groupStyle('gEngine')}>
                 <path
                     d="M88 184 L132 184 L138 206 Q138 212 131 212 L89 212 Q82 212 82 206 Z"
-                    fill="url(#ra-engine)"
+                    fill={defUrl('engine')}
                     stroke="#e2e8f0"
                     strokeOpacity={0.32}
                     strokeWidth={1}
@@ -200,7 +217,7 @@ export function RocketArt({
             <motion.g id="gFinL" style={groupStyle('gFinL')}>
                 <path
                     d="M78 136 C62 152 53 170 51 188 C50.6 192.4 54.6 194.6 58.4 192.6 L78 182 Z"
-                    fill="url(#ra-fin)"
+                    fill={defUrl('fin')}
                     stroke="#e2e8f0"
                     strokeOpacity={0.28}
                     strokeWidth={1}
@@ -210,7 +227,7 @@ export function RocketArt({
             <motion.g id="gFinR" style={groupStyle('gFinR')}>
                 <path
                     d="M142 136 C158 152 167 170 169 188 C169.4 192.4 165.4 194.6 161.6 192.6 L142 182 Z"
-                    fill="url(#ra-fin)"
+                    fill={defUrl('fin')}
                     stroke="#e2e8f0"
                     strokeOpacity={0.28}
                     strokeWidth={1}
@@ -222,7 +239,7 @@ export function RocketArt({
             <motion.g id="gHull" style={groupStyle('gHull')}>
                 <path
                     d="M78 58 L78 176 Q78 184 86 184 L134 184 Q142 184 142 176 L142 58 Z"
-                    fill="url(#ra-hull)"
+                    fill={defUrl('hull')}
                     stroke="#e2e8f0"
                     strokeOpacity={0.45}
                     strokeWidth={1}
@@ -236,9 +253,9 @@ export function RocketArt({
                 <rect x={78} y={101.4} width={64} height={1} fill="#312e81" fillOpacity={0.5} />
 
                 {/* Porthole: glow ring, glass, off-centre catchlight */}
-                <circle cx={110} cy={81} r={15.5} fill="url(#ra-porthole-glow)" />
+                <circle cx={110} cy={81} r={15.5} fill={defUrl('porthole-glow')} />
                 <circle cx={110} cy={81} r={11.5} fill="#1e2334" />
-                <circle cx={110} cy={81} r={10} fill="url(#ra-glass)" />
+                <circle cx={110} cy={81} r={10} fill={defUrl('glass')} />
                 <circle
                     cx={110}
                     cy={81}
@@ -312,7 +329,7 @@ export function RocketArt({
             <motion.g id="gNose" style={groupStyle('gNose')}>
                 <path
                     d="M110 6 C124 26 142 46 142 61 L78 61 C78 46 96 26 110 6 Z"
-                    fill="url(#ra-nose)"
+                    fill={defUrl('nose')}
                     stroke="#c7d2fe"
                     strokeOpacity={0.4}
                     strokeWidth={1}
@@ -326,7 +343,9 @@ export function RocketArt({
                 <path d="M78 59.5 L142 59.5" stroke="#312e81" strokeOpacity={0.55} strokeWidth={1.4} />
             </motion.g>
 
-            {/* Layered plume: outer body + white-hot core. Flicker only while lit. */}
+            {/* Layered plume: outer body + white-hot core. Flicker only while lit —
+                and when it stops, the paths animate back to rest so no residual
+                keyframe transform is left behind on reverse scroll. */}
             <motion.g
                 style={{
                     transformBox: 'fill-box',
@@ -338,21 +357,35 @@ export function RocketArt({
             >
                 <motion.path
                     d="M92 208 C92 222 98 233 110 246 C122 233 128 222 128 208 Z"
-                    fill="url(#ra-flame)"
+                    fill={defUrl('flame')}
                     style={{ transformBox: 'fill-box', transformOrigin: 'center top' }}
-                    animate={flicker ? { scaleY: [1, 1.1, 0.94, 1], opacity: [1, 0.86, 1] } : undefined}
-                    transition={flicker ? { duration: 0.42, repeat: Infinity, ease: 'easeInOut' } : undefined}
+                    animate={
+                        flicker
+                            ? { scaleY: [1, 1.1, 0.94, 1], opacity: [1, 0.86, 1] }
+                            : { scaleY: 1, opacity: 1 }
+                    }
+                    transition={
+                        flicker
+                            ? { duration: 0.42, repeat: Infinity, ease: 'easeInOut' }
+                            : { duration: 0.2, ease: 'easeOut' }
+                    }
                 />
+                {/* Core opacity stays a scrubbed style value — animating it here
+                    would fight `coreOpacity`, so only scaleY has a rest target. */}
                 <motion.path
                     d="M100.5 208 C100.5 218 104 226 110 235 C116 226 119.5 218 119.5 208 Z"
-                    fill="url(#ra-flame-core)"
+                    fill={defUrl('flame-core')}
                     style={{
                         transformBox: 'fill-box',
                         transformOrigin: 'center top',
                         opacity: coreOpacity,
                     }}
-                    animate={flicker ? { scaleY: [1, 0.88, 1.06, 1] } : undefined}
-                    transition={flicker ? { duration: 0.3, repeat: Infinity, ease: 'easeInOut' } : undefined}
+                    animate={flicker ? { scaleY: [1, 0.88, 1.06, 1] } : { scaleY: 1 }}
+                    transition={
+                        flicker
+                            ? { duration: 0.3, repeat: Infinity, ease: 'easeInOut' }
+                            : { duration: 0.2, ease: 'easeOut' }
+                    }
                 />
             </motion.g>
         </svg>

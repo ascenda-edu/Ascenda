@@ -1,6 +1,7 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
+import { motion, useInView } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useMotionReady } from './ascent-scroll';
 
@@ -9,9 +10,19 @@ import { useMotionReady } from './ascent-scroll';
  * ring. The upstream version animates `offset-distance` through a tailwind.config
  * keyframe we don't define, so the travel runs on framer-motion instead.
  *
- * Renders nothing until mounted, and nothing at all for reduced-motion users
- * (useMotionReady) — a perpetual loop has no static "final frame" to fall back to,
- * and the SSR payload must not contain motion markup.
+ * The travelling blob is gated three ways, all post-mount — the SSR payload must
+ * carry no motion markup, and a perpetual loop has no static "final frame":
+ *  1. useMotionReady — mounted, and not reduced-motion.
+ *  2. useInView — `offsetDistance` is off the transform fast-path, so each frame
+ *     costs a style recalc + repaint of the border ring on the main thread. It
+ *     must not run while the host card sits thousands of px off screen.
+ *  3. CSS.supports — `rect()` in `offset-path` is Chrome 116+. Where the
+ *     declaration is dropped there is no path to travel and the gradient square
+ *     parks in a corner as a static glow, so render nothing instead.
+ *
+ * The masked ring wrapper renders unconditionally (identical on server and
+ * client, no motion): useInView attaches its observer on the first commit only,
+ * so the observed element cannot be behind a gate.
  *
  * Parent must be `position: relative` and carry the border radius the beam should
  * follow (`rounded-[inherit]`).
@@ -21,8 +32,8 @@ export function BorderBeam({
     size = 200,
     duration = 8,
     borderWidth = 1.5,
-    colorFrom = '#6366f1',
-    colorTo = '#a5b4fc',
+    colorFrom = 'hsl(var(--primary))',
+    colorTo = 'hsl(var(--primary) / 0.4)',
 }: {
     className?: string;
     /** Beam length in px; also the corner radius of its travel path. */
@@ -34,10 +45,22 @@ export function BorderBeam({
     colorTo?: string;
 }) {
     const ready = useMotionReady();
-    if (!ready) return null;
+    const ref = useRef<HTMLDivElement>(null);
+    // No `once` — the lap must stop again once the hero scrolls away.
+    const inView = useInView(ref, { margin: '200px' });
+    const [supported, setSupported] = useState(false);
+
+    useEffect(() => {
+        setSupported(
+            typeof CSS !== 'undefined' &&
+                typeof CSS.supports === 'function' &&
+                CSS.supports('offset-path', 'rect(0 auto auto 0)'),
+        );
+    }, []);
 
     return (
         <div
+            ref={ref}
             aria-hidden
             className={cn('pointer-events-none absolute inset-0 rounded-[inherit]', className)}
             style={{
@@ -50,17 +73,19 @@ export function BorderBeam({
                 maskComposite: 'intersect',
             }}
         >
-            <motion.div
-                className="absolute aspect-square"
-                style={{
-                    width: size,
-                    background: `linear-gradient(to left, ${colorFrom}, ${colorTo}, transparent)`,
-                    offsetAnchor: '90% 50%',
-                    offsetPath: `rect(0 auto auto 0 round ${size}px)`,
-                }}
-                animate={{ offsetDistance: ['0%', '100%'] }}
-                transition={{ duration, repeat: Infinity, ease: 'linear' }}
-            />
+            {ready && supported && inView && (
+                <motion.div
+                    className="absolute aspect-square"
+                    style={{
+                        width: size,
+                        background: `linear-gradient(to left, ${colorFrom}, ${colorTo}, transparent)`,
+                        offsetAnchor: '90% 50%',
+                        offsetPath: `rect(0 auto auto 0 round ${size}px)`,
+                    }}
+                    animate={{ offsetDistance: ['0%', '100%'] }}
+                    transition={{ duration, repeat: Infinity, ease: 'linear' }}
+                />
+            )}
         </div>
     );
 }

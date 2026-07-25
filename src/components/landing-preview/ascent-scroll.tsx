@@ -1,6 +1,15 @@
 'use client';
 
-import { ReactNode, RefObject, useEffect, useRef, useState } from 'react';
+import {
+    ReactNode,
+    RefObject,
+    createContext,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import {
     MotionValue,
     motion,
@@ -50,10 +59,39 @@ export function useSceneProgress(target: RefObject<HTMLElement | null>): MotionV
     return useSpring(scrollYProgress, SCENE_SPRING);
 }
 
-/** Smoothed 0→1 progress of the whole document (nav countdown, hairline, altitude). */
+const PAGE_SPRING = { stiffness: 80, damping: 24 };
+
+interface PageScroll {
+    /** Smoothed 0→1 progress of the whole document (nav hairline, altitude wash). */
+    progress: MotionValue<number>;
+    /** Raw scroll offset in px (the countdown needs pixels, not normalised progress). */
+    scrollY: MotionValue<number>;
+}
+
+const PageScrollContext = createContext<PageScroll | null>(null);
+
+/**
+ * One document-scroll subscription for the whole page. Every framer scroll handler
+ * re-measures on each scroll event — and Lenis dirties layout every frame — so the
+ * three separate `usePageProgress()` call sites this replaces cost three measure
+ * passes and three springs per frame to compute one identical value.
+ */
+export function PageScrollProvider({ children }: { children: ReactNode }) {
+    const { scrollY, scrollYProgress } = useScroll();
+    const progress = useSpring(scrollYProgress, PAGE_SPRING);
+    const value = useMemo<PageScroll>(() => ({ progress, scrollY }), [progress, scrollY]);
+    return <PageScrollContext.Provider value={value}>{children}</PageScrollContext.Provider>;
+}
+
+export function usePageScroll(): PageScroll {
+    const ctx = useContext(PageScrollContext);
+    if (!ctx) throw new Error('usePageScroll must be used inside <PageScrollProvider>');
+    return ctx;
+}
+
+/** Smoothed 0→1 progress of the whole document. */
 export function usePageProgress(): MotionValue<number> {
-    const { scrollYProgress } = useScroll();
-    return useSpring(scrollYProgress, { stiffness: 80, damping: 24 });
+    return usePageScroll().progress;
 }
 
 export interface SceneChapter {
@@ -122,10 +160,15 @@ export function PinnedScene({
     const copyY = useTransform(p, [0, 0.14], [24, 0]);
     const ghostX = useTransform(p, (v) => `${(v - 0.5) * ghostDrift * 55}vw`);
     // Exit ease — mirror of the entrance: over the last stretch of travel the
-    // stage visibly hands off to the next chapter instead of snapping loose
-    // the instant the pin releases.
+    // chapter's CONTENT (copy, shot and watermark together) visibly hands off to
+    // the next one instead of snapping loose the instant the pin releases.
+    // Deliberately not applied to the sticky stage itself: that carries the `alt`
+    // background slab, and lifting it would expose a 24px strip of page beneath.
     const exitY = useTransform(p, [0.92, 1], [0, -24]);
     const exitOpacity = useTransform(p, [0.92, 1], [1, 0.85]);
+    // The numeral is centred with a -50% translate, so its exit offset has to
+    // compose with that rather than replace it.
+    const ghostY = useTransform(exitY, (v) => `calc(-50% + ${v}px)`);
 
     return (
         <section
@@ -150,7 +193,7 @@ export function PinnedScene({
                         'pointer-events-none absolute top-1/2 z-0 -translate-y-1/2 select-none whitespace-nowrap font-heading text-[clamp(220px,42vw,520px)] font-bold leading-none tracking-tighter text-foreground/[0.04] dark:text-foreground/[0.05]',
                         flip ? 'right-[-4%]' : 'left-[-4%]',
                     )}
-                    style={ready ? { x: ghostX, y: '-50%' } : undefined}
+                    style={ready ? { x: ghostX, y: ghostY, opacity: exitOpacity } : undefined}
                 >
                     {chapter.num}
                 </motion.p>
