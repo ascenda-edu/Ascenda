@@ -89,6 +89,13 @@ const validBody = {
   mode: 'student',
 };
 
+// Model-fallback tests below spy on console.warn (openStreamWithFallback warns
+// per rejected model). Restoring in afterEach keeps the spy from leaking if an
+// assertion throws mid-test.
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe('POST /api/chat', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -194,6 +201,9 @@ describe('POST /api/chat', () => {
   });
 
   it('falls back through the model list when the first model rejects', async () => {
+    // The rejection is the point of the test; assert the warn instead of
+    // letting it print.
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     mockGenerate
       .mockRejectedValueOnce(new Error('quota exceeded'))
       .mockResolvedValueOnce(streamOf([{ text: 'ok' }]));
@@ -207,12 +217,19 @@ describe('POST /api/chat', () => {
     expect(mockGenerate.mock.calls[1][0].model).toBe('gemini-2.0-flash');
     // 2.0 models must NOT receive thinkingConfig (they reject it with a 400)
     expect(mockGenerate.mock.calls[1][0].config.thinkingConfig).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[chat] gemini-2.5-flash failed: quota exceeded')
+    );
   });
 
   it('returns 503 when every model fails to start', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     mockGenerate.mockRejectedValue(new Error('down'));
     const res = await POST(chatRequest(validBody));
     expect(res.status).toBe(503);
+    // Every model in the list is tried, and each failure is logged.
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[chat] gemini-2.5-flash failed: down'));
+    expect(warnSpy.mock.calls.length).toBe(mockGenerate.mock.calls.length);
   });
 
   // ── Surface gating ─────────────────────────────────────────────────────

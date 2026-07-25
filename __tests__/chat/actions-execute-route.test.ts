@@ -115,6 +115,13 @@ const makeWriteTool = () => ({
   ),
 });
 
+// The all-models-fail test spies on console.warn (openStreamWithFallback warns
+// per rejected model). Restoring in afterEach keeps the spy from leaking if an
+// assertion throws mid-test.
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe('POST /api/chat/actions/execute', () => {
   let writeTool: ReturnType<typeof makeWriteTool>;
 
@@ -282,6 +289,9 @@ describe('POST /api/chat/actions/execute', () => {
   });
 
   it('still streams the outcome when every model fails — the write is never masked', async () => {
+    // Each model rejection is warned about on purpose; assert it rather than
+    // letting three stack traces print.
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     mockGenerate.mockRejectedValue(new Error('down'));
     const res = await POST(executeRequest(validBody));
     expect(res.status).toBe(200);
@@ -294,5 +304,7 @@ describe('POST /api/chat/actions/execute', () => {
       role: 'assistant',
       content: 'Task added — see [Tasks](/applications/tasks).',
     });
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[chat] gemini-2.5-flash failed: down'));
+    expect(warnSpy.mock.calls.length).toBe(mockGenerate.mock.calls.length);
   });
 });
