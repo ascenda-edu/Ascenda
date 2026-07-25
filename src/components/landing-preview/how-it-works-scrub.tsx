@@ -350,7 +350,10 @@ export function HowItWorksScrub() {
             // py-14 so `items-center` centres the stage in the space BELOW the fixed
             // nav rather than in the raw viewport.
             stageClassName="py-14"
-            pinVh={300}
+            // 240, not 300: the stage plays forward once and then holds, so every svh
+            // of travel is also svh a visitor has to scroll back through if they turn
+            // around inside it. 140svh of scrub is enough for the three steps.
+            pinVh={240}
             pinQuery="(min-width: 1280px) and (min-height: 768px)"
             settled={({ afterPin }) => <StepGrid p={staticP} afterPin={afterPin} />}
         >

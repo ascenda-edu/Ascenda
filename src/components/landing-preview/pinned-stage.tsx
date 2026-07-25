@@ -8,7 +8,7 @@ import {
     useRef,
     useState,
 } from 'react';
-import { MotionValue, useMotionValueEvent, useScroll, useSpring } from 'framer-motion';
+import { MotionValue, useMotionValue, useMotionValueEvent, useScroll, useSpring } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { SCENE_SPRING, useMotionReady, usePageScroll } from './ascent-scroll';
 import { useSmoothScroll } from './smooth-scroll';
@@ -95,14 +95,21 @@ export function PinnedStage({
 }) {
     const ref = useRef<HTMLElement>(null);
     const { scrollYProgress: raw } = useScroll({ target: ref, offset: ['start start', 'end end'] });
-    // Deliberately NOT latched, unlike every other scrub on this page. The one-way
-    // rule exists so a reveal that has played never un-plays; a pinned stage is not
-    // a reveal, it is a position in a sequence, and a stepper that refuses to step
-    // backwards is just broken — scroll up inside the pin and you would sit on a
-    // frozen last frame for a screen and a half, then have to scroll the same
-    // distance back down before anything moved. What keeps the scroll from being
-    // re-forced is the single-use pin below, not a latch.
-    const p = useSpring(raw, SCENE_SPRING);
+    // One-way, like every other scrub on this page: the stage plays forward as you
+    // scroll down and then HOLDS. Scrolling back up must never re-run the animation
+    // in reverse — the whole point of the pass is that what has played stays played.
+    // The step list is permanently mounted, so a held frame still shows all three
+    // steps; only the visual stops changing.
+    //
+    // Latched locally rather than with useLatchedProgress because this one has to be
+    // resettable: a visitor who turns back before finishing has not seen the stage,
+    // and the next downward pass should play from the start rather than resume from
+    // a high-water mark they never reached.
+    const latched = useMotionValue(0);
+    useMotionValueEvent(raw, 'change', (v) => {
+        if (v > latched.get()) latched.set(v);
+    });
+    const p = useSpring(latched, SCENE_SPRING);
     const ready = useMotionReady();
     const { jumpBy, isGliding } = useSmoothScroll();
     const { scrollY: pageScrollY } = usePageScroll();
@@ -112,6 +119,8 @@ export function PinnedStage({
     const completedRef = useRef(false);
     const settledRef = useRef(false);
     const compensatedRef = useRef(false);
+    /** Whether this settle needs a scroll correction — see trySettle. */
+    const compensateRef = useRef(false);
     /** Pinned height + viewport-relative bottom edge captured at settle time. */
     const heightRef = useRef(0);
     const bottomRef = useRef(0);
@@ -171,11 +180,25 @@ export function PinnedStage({
 
     const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const trySettle = useCallback(() => {
-        if (!pinned || !completedRef.current || settledRef.current) return;
+        if (!pinned || settledRef.current) return;
         const node = ref.current;
         if (!node) return;
-        const bottom = node.getBoundingClientRect().bottom;
-        if (bottom > 0) return;
+        const rect = node.getBoundingClientRect();
+        // Off-screen in EITHER direction. Downward is the usual exit; upward matters
+        // just as much, because a visitor who turns back mid-stage would otherwise
+        // leave the pin armed and have to scroll its whole travel again on the next
+        // way down — the forced-scroll-once rule cuts both ways.
+        const goneAbove = rect.bottom <= 0;
+        const goneBelow = rect.top >= window.innerHeight;
+        if (!goneAbove && !goneBelow) return;
+
+        if (!completedRef.current) {
+            // Turned back before reaching the end: they never saw the stage, so drop
+            // the high-water mark and let the next pass play it from the start rather
+            // than resume at a frame they scrolled past on the way out.
+            if (goneBelow) latched.set(0);
+            return;
+        }
         // Never mid-glide: the compensation below goes through `jumpBy`, which
         // replaces an in-flight Lenis animation and would strand a nav click short
         // of its anchor.
@@ -195,9 +218,14 @@ export function PinnedStage({
         }
         settledRef.current = true;
         heightRef.current = node.offsetHeight;
-        bottomRef.current = bottom;
+        bottomRef.current = rect.bottom;
+        // Only an exit above the viewport moves anything the visitor can see: the
+        // shrink happens over their head, so the page beneath slides up and has to be
+        // corrected. Exiting below, everything that moves is already off-screen under
+        // them, so compensating would itself be the jump.
+        compensateRef.current = goneAbove;
         setPinned(false);
-    }, [pinned, isGliding]);
+    }, [pinned, isGliding, latched]);
 
     // The "gone above the viewport" test cannot ride `raw`: MotionValue only
     // notifies on change, and once the visitor is past the section its progress
@@ -229,7 +257,7 @@ export function PinnedStage({
         compensatedRef.current = true;
 
         const delta = heightRef.current - node.offsetHeight;
-        if (delta > 0 && !jumpBy(-delta)) {
+        if (compensateRef.current && delta > 0 && !jumpBy(-delta)) {
             // Native path only: the browser's own scroll anchoring may already have
             // absorbed this shift, in which case the jump double-counted it. Trust
             // the measurement over the maths — put the bottom edge back where it was.
