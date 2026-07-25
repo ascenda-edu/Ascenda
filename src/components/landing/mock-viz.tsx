@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useInView, useReducedMotion } from 'framer-motion';
 import { AlertCircle, Check, Clock3 } from 'lucide-react';
 import { getFitScoreVisuals } from '@/lib/theme/fit-score';
@@ -13,6 +13,21 @@ import { cn } from '@/lib/utils';
  * theme-aware HTML/SVG — never by importing the real components, which drag
  * Supabase/data deps into the public bundle. Same rule as product-widgets.tsx.
  */
+
+/**
+ * Post-mount reduced-motion flag. `useReducedMotion()` returns the true
+ * preference on the FIRST client render while SSR always computed `false`, so
+ * feeding it straight into rendered `style` props mismatches the server HTML
+ * ("Prop `style` did not match") for every reduced-motion visitor. Gating on
+ * mount keeps render #1 identical to SSR; the effect flush then snaps those
+ * users to the final values with zero-duration transitions, as before.
+ */
+function useMountedReducedMotion(): boolean {
+    const shouldReduceMotion = useReducedMotion();
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    return mounted && !!shouldReduceMotion;
+}
 
 /** Ring stroke class from the real score→tone mapping (fit-score.ts). */
 export const ringToneClass = (score: number): string => {
@@ -64,8 +79,8 @@ export function SpotlightPanel({ className, children }: { className?: string; ch
 export function FactorBars({ factors }: { factors: { label: string; value: number }[] }) {
     const ref = useRef<HTMLDivElement>(null);
     const inView = useInView(ref, { once: true, amount: 0.5 });
-    const shouldReduceMotion = useReducedMotion();
-    const play = inView || shouldReduceMotion;
+    const reduced = useMountedReducedMotion();
+    const play = inView || reduced;
 
     return (
         <div ref={ref} className="rounded-xl border border-border bg-card p-3.5 dark:border-white/10">
@@ -78,8 +93,8 @@ export function FactorBars({ factors }: { factors: { label: string; value: numbe
                                 className="block h-full origin-left rounded-full bg-primary transition-transform duration-700 ease-out"
                                 style={{
                                     transform: `scaleX(${play ? f.value / 100 : 0})`,
-                                    transitionDelay: shouldReduceMotion ? '0ms' : `${i * 90}ms`,
-                                    transitionDuration: shouldReduceMotion ? '0ms' : undefined,
+                                    transitionDelay: reduced ? '0ms' : `${i * 90}ms`,
+                                    transitionDuration: reduced ? '0ms' : undefined,
                                 }}
                             />
                         </span>
@@ -346,8 +361,8 @@ export function HeatmapGrid({
 export function FunnelChart({ stages }: { stages: { label: string; count: number; colorClass: string; width: number }[] }) {
     const ref = useRef<HTMLDivElement>(null);
     const inView = useInView(ref, { once: true, amount: 0.5 });
-    const shouldReduceMotion = useReducedMotion();
-    const play = inView || shouldReduceMotion;
+    const reduced = useMountedReducedMotion();
+    const play = inView || reduced;
 
     return (
         <div ref={ref} className="flex flex-col gap-1.5">
@@ -361,8 +376,8 @@ export function FunnelChart({ stages }: { stages: { label: string; count: number
                         style={{
                             width: `${stage.width}%`,
                             transform: `scaleX(${play ? 1 : 0})`,
-                            transitionDelay: shouldReduceMotion ? '0ms' : `${i * 100}ms`,
-                            transitionDuration: shouldReduceMotion ? '0ms' : undefined,
+                            transitionDelay: reduced ? '0ms' : `${i * 100}ms`,
+                            transitionDuration: reduced ? '0ms' : undefined,
                         }}
                     >
                         {stage.label}

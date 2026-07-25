@@ -23,7 +23,11 @@ export function AltitudeWash() {
         <motion.div
             aria-hidden
             className="pointer-events-none fixed inset-0 z-[5] mix-blend-soft-light bg-[linear-gradient(180deg,transparent_30%,rgba(255,250,240,1))] dark:bg-[linear-gradient(180deg,transparent_30%,rgba(120,130,235,0.35))]"
-            style={{ opacity }}
+            // Own compositor layer: a full-viewport fixed layer with
+            // mix-blend-soft-light and a spring-driven opacity makes WebKit
+            // re-composite (and sometimes re-blend) the whole page on every
+            // frame. translateZ(0) + will-change promote it once instead.
+            style={{ opacity, willChange: 'opacity', transform: 'translateZ(0)' }}
         />
     );
 }

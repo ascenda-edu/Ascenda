@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
     AnimatePresence,
     motion,
+    useInView,
     useReducedMotion,
     useScroll,
     useSpring,
@@ -51,22 +52,30 @@ const topBarVariants: Variants = {
  * Cycles the final headline word (`get into.` → `afford.` → `thrive at.`) with a
  * vertical roll. An invisible sizer reserves the widest phrase's width so the line
  * never reflows, and the whole thing snaps to the first word for reduced-motion users.
+ *
+ * The flip is gated the same way HeroAppTour's rotation is: it must not run while
+ * the headline sits thousands of px off screen, nor in a background tab — each
+ * flip is an AnimatePresence enter+exit pair, and a perpetual loop has no static
+ * final frame to settle on. Off screen the word simply holds its current value.
  */
 function RotatingHeadlineWord() {
     const shouldReduceMotion = useReducedMotion();
+    const ref = useRef<HTMLSpanElement>(null);
+    // No `once` — the roll must stop again once the hero scrolls away.
+    const inView = useInView(ref, { amount: 0.4 });
     const [index, setIndex] = useState(0);
 
     useEffect(() => {
-        if (shouldReduceMotion) return;
-        const id = setInterval(
-            () => setIndex((i) => (i + 1) % ROTATING_WORDS.length),
-            2300,
-        );
+        if (shouldReduceMotion || !inView) return;
+        const id = setInterval(() => {
+            if (document.visibilityState !== 'visible') return;
+            setIndex((i) => (i + 1) % ROTATING_WORDS.length);
+        }, 2300);
         return () => clearInterval(id);
-    }, [shouldReduceMotion]);
+    }, [shouldReduceMotion, inView]);
 
     return (
-        <span className="relative inline-flex overflow-hidden align-bottom pb-[0.16em] -mb-[0.16em]">
+        <span ref={ref} className="relative inline-flex overflow-hidden align-bottom pb-[0.16em] -mb-[0.16em]">
             {/* Reserves the widest phrase's width so surrounding text never shifts. */}
             <span className="invisible whitespace-nowrap" aria-hidden>
                 thrive at.

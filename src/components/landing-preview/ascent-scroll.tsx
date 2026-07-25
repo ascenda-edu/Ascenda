@@ -174,7 +174,8 @@ export function PinnedScene({
         <section
             ref={ref}
             className="relative"
-            style={pinned ? { height: `${pinVh}vh` } : undefined}
+            // svh: toolbar-invariant on mobile, identical to vh on desktop.
+            style={pinned ? { height: `${pinVh}svh` } : undefined}
         >
             <div
                 className={cn(

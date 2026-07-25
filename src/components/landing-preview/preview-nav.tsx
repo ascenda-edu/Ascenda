@@ -7,7 +7,6 @@ import {
     AnimatePresence,
     motion,
     useMotionValueEvent,
-    useReducedMotion,
     useTransform,
 } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
@@ -15,7 +14,9 @@ import { Button } from '@/components/ui/button';
 import { useLaunchHref } from '@/hooks/use-launch-href';
 import { cn } from '@/lib/utils';
 import { useMotionReady, usePageScroll } from './ascent-scroll';
-import { CTA_COPY_POINT, CTA_IGNITION_POINT } from './preview-cta';
+// From the choreography module, never from preview-cta: the finale is lazily
+// imported by the page, and reaching into it for two constants would bundle it here.
+import { CTA_COPY_POINT, CTA_IGNITION_POINT } from './cta-choreography';
 import { useSmoothScroll } from './smooth-scroll';
 
 const NAV_LINKS = [
@@ -61,7 +62,6 @@ export function PreviewNav() {
     const navCtaRef = useRef<HTMLAnchorElement>(null);
     const [countdown, setCountdown] = useState(`T–${T_MINUS_START.toFixed(1)}`);
     const launchHref = useLaunchHref();
-    const shouldReduceMotion = useReducedMotion();
     const ready = useMotionReady();
     const { scrollTo } = useSmoothScroll();
 
@@ -112,7 +112,11 @@ export function PreviewNav() {
             });
         };
 
-        measure();
+        // schedule(), not measure(): the ResizeObserver below fires an initial
+        // callback of its own, so a synchronous call here would force two full
+        // layouts at mount for one result. The pre-measure countdown state (T–10.0)
+        // is the correct seed for the frame in between.
+        schedule();
         // Document height — not just viewport — because the scenes' pins collapse
         // AFTER mount for reduced-motion users (`pinned` depends on `mounted`, and
         // React flushes this effect before committing that re-render). That removes
@@ -169,11 +173,13 @@ export function PreviewNav() {
                     (document.activeElement as HTMLElement).blur();
                 }
             },
-            // Shrink the intersection root to the viewport's top edge: with the
-            // default root, a 170vh section "intersects" the moment its top
-            // crosses the viewport BOTTOM — a full screen before the dark band
-            // actually reaches the bar it is restyling.
-            { threshold: 0, rootMargin: '0px 0px -100% 0px' },
+            // Shrink the intersection root to (nearly) the viewport's top edge:
+            // with the default root, a 170vh section "intersects" the moment its
+            // top crosses the viewport BOTTOM — a full screen before the dark band
+            // reaches the bar it is restyling. -99% not -100%: a zero-height root
+            // is the least interoperable IntersectionObserver corner case, and the
+            // remaining ~1% (≈9px) of early flip is imperceptible.
+            { threshold: 0, rootMargin: '0px 0px -99% 0px' },
         );
         observer.observe(cta);
         return () => observer.disconnect();
@@ -302,18 +308,17 @@ export function PreviewNav() {
                                           : 'border-border text-muted-foreground hover:text-foreground',
                                 )}
                             >
-                                <motion.span
+                                {/* CSS, not framer: an Infinity-repeat JS animation held
+                                    framer's frameloop awake page-wide for a 6px dot.
+                                    globals.css's reduced-motion block already zeroes CSS
+                                    animation durations, so no preference branch here. */}
+                                <span
                                     aria-hidden
                                     className={cn(
                                         'h-1.5 w-1.5 rounded-full',
                                         launched ? 'bg-emerald-500' : 'bg-primary',
                                     )}
-                                    animate={{ opacity: [1, 0.3, 1] }}
-                                    transition={
-                                        shouldReduceMotion
-                                            ? { duration: 0 }
-                                            : { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
-                                    }
+                                    style={{ animation: 'soft-pulse 1.6s ease-in-out infinite' }}
                                 />
                                 <span aria-hidden>{countdown}</span>
                             </button>

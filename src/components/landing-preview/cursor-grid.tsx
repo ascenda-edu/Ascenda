@@ -34,6 +34,12 @@ export type CursorGridFalloff = keyof typeof FALLOFF_CURVES;
  * would blow the per-frame budget — past this the cell size is coarsened instead.
  */
 const MAX_CELLS = 3000;
+/**
+ * Backing-store ceiling in device px. Safari silently blanks a canvas past
+ * ~16.7M, and this band is full-bleed: a 2x 1440p viewport already sits close.
+ * Past this the dpr is scaled down rather than the canvas lost.
+ */
+const MAX_BITMAP_PX = 16_000_000;
 /** Fallback tint (indigo-400) when `color` isn't parseable hex. */
 const FALLBACK_RGB = '129,140,248';
 
@@ -152,6 +158,11 @@ export function CursorGrid({
         let onScreen = true;
         // Rebuild key: skip the work when nothing that affects the lattice moved.
         let lastKey = '';
+        // The bitmap is allocated on first intersection, not at mount: this band sits
+        // ~12,000px down the page, and a full-bleed 2x backing store is ~20MB held
+        // for a scroll the visitor may never finish. Also gates the ResizeObserver's
+        // initial callback, which would otherwise resurrect the eager allocation.
+        let seen = false;
 
         /** Faint always-on lattice, batched into one path: all verticals, then all horizontals. */
         const strokeLattice = () => {
@@ -178,9 +189,15 @@ export function CursorGrid({
         };
 
         const rebuild = () => {
-            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            if (!seen) return;
             const w = container.clientWidth;
             const h = container.clientHeight;
+            let dpr = Math.min(window.devicePixelRatio || 1, 2);
+            // Trade crispness for a canvas that paints at all.
+            const area = w * h;
+            if (area > 0 && area * dpr * dpr > MAX_BITMAP_PX) {
+                dpr = Math.sqrt(MAX_BITMAP_PX / area);
+            }
             const key = `${Math.round(w)}x${Math.round(h)}@${dpr}`;
             if (key === lastKey) return;
             lastKey = key;
@@ -364,21 +381,57 @@ export function CursorGrid({
             }
         };
 
-        const observer = new ResizeObserver(() => {
+        const scheduleRebuild = () => {
             // One rAF of debounce; rebuild() then no-ops if the dimensions held.
             if (resizeRaf) return;
             resizeRaf = requestAnimationFrame(() => {
                 resizeRaf = 0;
                 rebuild();
             });
-        });
+        };
+
+        const observer = new ResizeObserver(scheduleRebuild);
         observer.observe(container);
-        rebuild();
+
+        // A devicePixelRatio change — window dragged between mixed-DPI displays,
+        // browser zoom — resizes neither the element nor the viewport, so the
+        // ResizeObserver never fires and the bitmap keeps the stale scale. The query
+        // only matches the CURRENT ratio, so it has to be re-armed after each fire.
+        let dprQuery: MediaQueryList | null = null;
+        const onDprChange = () => {
+            watchDpr();
+            scheduleRebuild();
+        };
+        function watchDpr() {
+            dprQuery?.removeEventListener('change', onDprChange);
+            dprQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+            dprQuery.addEventListener('change', onDprChange);
+        }
+        watchDpr();
+
+        // First allocation and the static paint happen on the first intersection,
+        // never at mount. Created before any rebuild() call for that reason, and for
+        // non-interactive mounts it is the ONLY thing that ever triggers the paint.
+        const io = new IntersectionObserver(
+            ([entry]) => {
+                onScreen = entry?.isIntersecting ?? true;
+                if (onScreen && !seen) {
+                    seen = true;
+                    rebuild();
+                }
+                if (!onScreen) stop();
+                else if (litSomewhere()) wake();
+            },
+            { threshold: 0 },
+        );
+        io.observe(container);
 
         if (!interactive) {
             return () => {
                 if (resizeRaf) cancelAnimationFrame(resizeRaf);
+                dprQuery?.removeEventListener('change', onDprChange);
                 observer.disconnect();
+                io.disconnect();
             };
         }
 
@@ -414,16 +467,6 @@ export function CursorGrid({
             wake();
         };
 
-        const io = new IntersectionObserver(
-            ([entry]) => {
-                onScreen = entry?.isIntersecting ?? true;
-                if (!onScreen) stop();
-                else if (litSomewhere()) wake();
-            },
-            { threshold: 0 },
-        );
-        io.observe(container);
-
         const onVisibility = () => {
             if (document.hidden) stop();
             else if (litSomewhere()) wake();
@@ -437,6 +480,7 @@ export function CursorGrid({
             stop();
             if (resizeRaf) cancelAnimationFrame(resizeRaf);
             resizeRaf = 0;
+            dprQuery?.removeEventListener('change', onDprChange);
             observer.disconnect();
             io.disconnect();
             document.removeEventListener('visibilitychange', onVisibility);

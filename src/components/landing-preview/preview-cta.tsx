@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { useLaunchHref } from '@/hooks/use-launch-href';
 import { cn } from '@/lib/utils';
 import { useMotionReady, useMounted, useSceneProgress } from './ascent-scroll';
+import { COPY, IGNITION } from './cta-choreography';
 import { CursorGrid } from './cursor-grid';
 import {
     ROCKET_BAYS,
@@ -58,14 +59,12 @@ const DOCK_WINDOWS: [number, number][] = [
     [0.575, 0.665],
     [0.655, 0.75],
 ];
-const IGNITION: [number, number] = [0.7, 0.78];
-/** Ignition as a fraction of the pin travel — preview-nav lands its READY here. */
-export const CTA_IGNITION_POINT = IGNITION[0];
 const LIFTOFF: [number, number] = [0.78, 0.97];
-const COPY: [number, number] = [0.42, 0.58];
-/** Where the ask is legible — the countdown chip's jump target. */
-export const CTA_COPY_POINT = COPY[1];
 const PROOF: [number, number] = [0.5, 0.68];
+// IGNITION and COPY live in cta-choreography.ts — preview-nav needs them without
+// pulling this module into its chunk. Re-exported here so the old import path
+// keeps working.
+export { CTA_COPY_POINT, CTA_IGNITION_POINT } from './cta-choreography';
 
 const T_MINUS_START = 10;
 const LIFTOFF_LABEL = 'Lift-off · your plan is go';
@@ -371,7 +370,9 @@ export function PreviewCta() {
             ref={ref}
             id="cta"
             className="relative w-full scroll-mt-14 bg-slate-950 text-slate-50"
-            style={pinned ? { height: `${PIN_VH}vh` } : undefined}
+            // svh, not vh: mobile toolbars resize vh mid-scroll, which re-measures
+            // the pin travel and visibly jumps the scrub. svh is toolbar-invariant.
+            style={pinned ? { height: `${PIN_VH}svh` } : undefined}
         >
             <div
                 className={cn(

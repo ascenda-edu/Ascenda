@@ -11,6 +11,13 @@ import { ComparisonSettle } from '@/components/landing-preview/comparison-settle
 import { PreviewBanner } from '@/components/landing-preview/preview-banner';
 import { AltitudeWash } from '@/components/landing-preview/altitude-wash';
 import { SectionReveal } from '@/components/landing-preview/section-reveal';
+// Statically imported on purpose. `next/dynamic` with `ssr: true` was measured
+// here and splits NOTHING: from a Server Component the lazy boundary resolves
+// server-side and the client reference still lands in this route's entry chunk
+// (verified: the finale's strings stay in chunks/app/landing-preview/page-*.js),
+// so it only added the dynamic loader's ~0.4 kB. A real split would need the
+// boundary inside a Client Component, which puts the finale behind a hydration
+// suspend — not worth it for the #cta section the nav has to measure.
 import { PreviewCta } from '@/components/landing-preview/preview-cta';
 import { SmoothScroll } from '@/components/landing-preview/smooth-scroll';
 

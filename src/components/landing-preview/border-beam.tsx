@@ -16,9 +16,15 @@ import { useMotionReady } from './ascent-scroll';
  *  2. useInView — `offsetDistance` is off the transform fast-path, so each frame
  *     costs a style recalc + repaint of the border ring on the main thread. It
  *     must not run while the host card sits thousands of px off screen.
- *  3. CSS.supports — `rect()` in `offset-path` is Chrome 116+. Where the
- *     declaration is dropped there is no path to travel and the gradient square
- *     parks in a corner as a static glow, so render nothing instead.
+ *  3. CSS.supports — two independent capabilities, both required:
+ *     - `rect()` in `offset-path` (Chrome 116+): without it there is no path to
+ *       travel and the gradient square parks in a corner as a static glow.
+ *     - unprefixed `mask-composite: intersect` (Chrome 120+): without it the two
+ *       mask layers UNION instead of intersecting, so the ring clip is gone and
+ *       the full 200px gradient square slides across the card. Chromium 116-119
+ *       passes the offset-path test and fails this one, which is exactly the
+ *       window this check closes.
+ *     Either one missing → render nothing.
  *
  * The masked ring wrapper renders unconditionally (identical on server and
  * client, no motion): useInView attaches its observer on the first commit only,
@@ -54,7 +60,8 @@ export function BorderBeam({
         setSupported(
             typeof CSS !== 'undefined' &&
                 typeof CSS.supports === 'function' &&
-                CSS.supports('offset-path', 'rect(0 auto auto 0)'),
+                CSS.supports('offset-path', 'rect(0 auto auto 0)') &&
+                CSS.supports('mask-composite', 'intersect'),
         );
     }, []);
 
