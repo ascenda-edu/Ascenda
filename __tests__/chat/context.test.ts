@@ -96,6 +96,13 @@ const studentSupabase = () => {
   return { from: jest.fn((table: string) => tables[table]) };
 };
 
+// Error-path tests below spy on console.warn so the *expected* warning doesn't
+// dump a stack trace into the run. Restoring here (rather than at the end of a
+// test body) means a failing assertion can't leak the spy into other tests.
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe('frameContext', () => {
   it('wraps the body with the data-not-instructions frame', () => {
     const framed = frameContext('BODY LINE');
@@ -162,10 +169,17 @@ describe('buildContextForMode — counsellor', () => {
   });
 
   it('degrades to the unavailable line when the loader throws', async () => {
+    // The catch block in buildContextForMode is *meant* to warn here, so assert
+    // it fired instead of letting it scream into the test output.
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     (loadCohort as jest.Mock).mockRejectedValue(new Error('db down'));
     const result = await buildContextForMode({} as never, 'counsellor', 'c-1');
     expect(result.context).toContain('unavailable');
     expect(result.signals).toEqual({});
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[chat] context build failed for counsellor'),
+      expect.objectContaining({ message: 'db down' })
+    );
   });
 });
 

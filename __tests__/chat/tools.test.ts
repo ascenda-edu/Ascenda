@@ -30,6 +30,13 @@ const programRow = {
   universities: { name: 'University of Oxford', country: 'United Kingdom', city: 'Oxford' },
 };
 
+// The query-error test spies on console.warn (executeSearchPrograms warns when
+// the catalogue query fails). Restoring in afterEach keeps the spy from leaking
+// if an assertion throws mid-test.
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe('executeSearchPrograms', () => {
   it('AND-chains ilike filters per course word — never .or()', async () => {
     const programs = makeBuilder({ data: [programRow], error: null });
@@ -108,12 +115,18 @@ describe('executeSearchPrograms', () => {
   });
 
   it('degrades to an empty result with a note on query error', async () => {
+    // Warning on a failed catalogue query is intended behaviour — assert it.
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const programs = makeBuilder({ data: null, error: { message: 'boom' } });
     const supabase = { from: jest.fn(() => programs) };
 
     const result = await executeSearchPrograms(supabase as never, { query: 'law' });
     expect(result.results).toEqual([]);
     expect(result.note).toContain('do not invent');
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[chat] search_programs failed'),
+      'boom'
+    );
   });
 });
 

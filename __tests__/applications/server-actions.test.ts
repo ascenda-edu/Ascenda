@@ -22,6 +22,13 @@ const makeSupabase = (queue: Result[]) => {
   return { from: jest.fn(() => builder) };
 };
 
+// The lookup-failure test spies on console.error (trackProgram logs the raw
+// Postgres error). Restoring in afterEach keeps the spy from leaking if an
+// assertion throws mid-test.
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe('trackProgram', () => {
   it('inserts a new application and returns status "created"', async () => {
     const supabase = makeSupabase([
@@ -48,9 +55,16 @@ describe('trackProgram', () => {
   });
 
   it('returns a generic error when the lookup fails', async () => {
+    // The user-facing message is generic, but the real error must still be
+    // logged server-side — assert that rather than printing it.
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const supabase = makeSupabase([{ data: null, error: { message: 'boom' } }]);
     const result = await trackProgram(supabase as never, 'user-1', 'prog-1');
     expect(result).toEqual({ ok: false, error: 'Could not start tracking this programme' });
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[applications/track] lookup failed'),
+      expect.objectContaining({ message: 'boom' })
+    );
   });
 });
 

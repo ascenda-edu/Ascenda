@@ -26,6 +26,13 @@ const feedbackRequest = (body: unknown) =>
     body: JSON.stringify(body),
   }) as never;
 
+// The fails-soft test spies on console.warn (the route warns when the upsert
+// throws). Restoring in afterEach keeps the spy from leaking if an assertion
+// throws mid-test.
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe('POST /api/chat/feedback', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -81,11 +88,18 @@ describe('POST /api/chat/feedback', () => {
   });
 
   it('fails soft (ok:false, HTTP 200) when the table is missing', async () => {
+    // Failing soft must still leave a trace in the logs — assert the warn
+    // instead of letting it dump a stack trace into the test output.
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     (upsertChatFeedback as jest.Mock).mockRejectedValue(new Error('relation does not exist'));
     const res = await POST(
       feedbackRequest({ mode: 'student', messageContent: 'answer', rating: 1 })
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: false });
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[chat] feedback upsert failed'),
+      expect.objectContaining({ message: 'relation does not exist' })
+    );
   });
 });
