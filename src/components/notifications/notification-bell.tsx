@@ -116,7 +116,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
       >
         <Bell className="h-4 w-4" aria-hidden />
         {unreadCount > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-danger px-1 text-label font-semibold text-danger-foreground shadow-e-1">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-danger-fill px-1 text-label font-semibold text-danger-foreground shadow-e-1">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         ) : null}

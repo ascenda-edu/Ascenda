@@ -113,30 +113,38 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Tone tokens. `--{tone}` is safe as text on any neutral surface AND as a
-        // solid fill; `-subtle` is the tinted surface it stays legible on.
+        // Tone tokens, four values each: DEFAULT is the TEXT colour (>=4.5:1 on
+        // neutral surfaces), `fill` is the vivid mark for bars and solid badges
+        // (>=3:1 vs card), `foreground` is text on that fill, `subtle` is the tint.
+        // DEFAULT and fill are different numbers in light mode on purpose — see
+        // globals.css. Using DEFAULT as a fill is what made the charts look muddy.
         success: {
           DEFAULT: "hsl(var(--success))",
+          fill: "hsl(var(--success-fill))",
           foreground: "hsl(var(--success-foreground))",
           subtle: "hsl(var(--success-subtle))",
         },
         warning: {
           DEFAULT: "hsl(var(--warning))",
+          fill: "hsl(var(--warning-fill))",
           foreground: "hsl(var(--warning-foreground))",
           subtle: "hsl(var(--warning-subtle))",
         },
         danger: {
           DEFAULT: "hsl(var(--danger))",
+          fill: "hsl(var(--danger-fill))",
           foreground: "hsl(var(--danger-foreground))",
           subtle: "hsl(var(--danger-subtle))",
         },
         info: {
           DEFAULT: "hsl(var(--info))",
+          fill: "hsl(var(--info-fill))",
           foreground: "hsl(var(--info-foreground))",
           subtle: "hsl(var(--info-subtle))",
         },
         feature: {
           DEFAULT: "hsl(var(--feature))",
+          fill: "hsl(var(--feature-fill))",
           foreground: "hsl(var(--feature-foreground))",
           subtle: "hsl(var(--feature-subtle))",
         },

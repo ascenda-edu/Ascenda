@@ -121,7 +121,7 @@ export const Sidebar = () => {
                 {counsellorInitials}
               </div>
               <span
-                className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-success"
+                className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-success-fill"
                 aria-hidden
               />
               <span className="sr-only">Available today</span>

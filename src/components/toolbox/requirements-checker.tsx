@@ -145,7 +145,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                 </div>
                 <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
                   <motion.div
-                    className={cn('h-full rounded-full', rate >= 80 ? 'bg-success' : rate >= 50 ? 'bg-warning' : 'bg-danger')}
+                    className={cn('h-full rounded-full', rate >= 80 ? 'bg-success-fill' : rate >= 50 ? 'bg-warning-fill' : 'bg-danger-fill')}
                     initial={{ width: 0 }}
                     animate={{ width: `${rate}%` }}
                     transition={{ duration: 0.6 }}

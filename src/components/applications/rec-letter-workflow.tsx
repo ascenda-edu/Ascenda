@@ -168,7 +168,7 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
           </p>
           <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted/60">
             <motion.div
-              className="h-2 rounded-full bg-success"
+              className="h-2 rounded-full bg-success-fill"
               initial={{ width: 0 }}
               animate={{ width: `${(completedCount / letters.length) * 100}%` }}
               transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}

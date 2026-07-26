@@ -98,7 +98,7 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
             </div>
             <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
               <motion.div
-                className={cn('h-full rounded-full', rate >= 50 ? 'bg-success' : rate >= 25 ? 'bg-warning' : 'bg-danger')}
+                className={cn('h-full rounded-full', rate >= 50 ? 'bg-success-fill' : rate >= 25 ? 'bg-warning-fill' : 'bg-danger-fill')}
                 initial={{ width: 0 }} animate={{ width: `${rate}%` }} transition={{ duration: 0.6 }}
               />
             </div>

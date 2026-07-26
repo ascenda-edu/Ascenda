@@ -12,9 +12,9 @@ import type { TimelineDeadline, TimelineDeadlineType } from '@/lib/data/student-
 
 const TYPE_CONFIG: Record<TimelineDeadlineType, { color: string; bg: string; dot: string; label: string }> = {
   submission: { color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/30', dot: 'bg-primary', label: 'Submission' },
-  exam: { color: 'text-warning', bg: 'bg-warning-subtle border-warning/25', dot: 'bg-warning', label: 'Exam' },
-  interview: { color: 'text-danger', bg: 'bg-danger-subtle border-danger/25', dot: 'bg-danger', label: 'Interview' },
-  document: { color: 'text-info', bg: 'bg-info-subtle border-info/25', dot: 'bg-info', label: 'Document' },
+  exam: { color: 'text-warning', bg: 'bg-warning-subtle border-warning/25', dot: 'bg-warning-fill', label: 'Exam' },
+  interview: { color: 'text-danger', bg: 'bg-danger-subtle border-danger/25', dot: 'bg-danger-fill', label: 'Interview' },
+  document: { color: 'text-info', bg: 'bg-info-subtle border-info/25', dot: 'bg-info-fill', label: 'Document' },
 };
 
 const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -157,7 +157,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                   {/* Urgency bar */}
                   <div className="h-1 rounded-full bg-muted/30 overflow-hidden">
                     <motion.div
-                      className={cn('h-full rounded-full', days <= 3 ? 'bg-danger' : days <= 7 ? 'bg-warning' : 'bg-success')}
+                      className={cn('h-full rounded-full', days <= 3 ? 'bg-danger-fill' : days <= 7 ? 'bg-warning-fill' : 'bg-success-fill')}
                       initial={{ width: '100%' }}
                       animate={{ width: `${Math.max(100 - (days / 14) * 100, 5)}%` }}
                       transition={{ duration: 0.5 }}

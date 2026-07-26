@@ -51,7 +51,7 @@ export function CounsellorCard({ counsellor, openThreads, unreadTotal, latestSub
               {initials}
             </div>
             <span
-              className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-success"
+              className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-success-fill"
               aria-label="Available today"
             />
           </div>
@@ -85,7 +85,7 @@ export function CounsellorCard({ counsellor, openThreads, unreadTotal, latestSub
             </p>
           </div>
           {unreadTotal > 0 ? (
-            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-feature px-1.5 text-label font-bold text-feature-foreground">
+            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-feature-fill px-1.5 text-label font-bold text-feature-foreground">
               {unreadTotal}
             </span>
           ) : null}

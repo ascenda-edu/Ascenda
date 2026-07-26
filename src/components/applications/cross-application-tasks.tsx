@@ -358,7 +358,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
                             className={cn(
                               'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition',
                               done
-                                ? 'border-success bg-success text-success-foreground'
+                                ? 'border-success bg-success-fill text-success-foreground'
                                 : 'border-border bg-background hover:border-primary'
                             )}
                           >

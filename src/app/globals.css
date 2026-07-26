@@ -37,18 +37,19 @@
 
     /* ── Tone tokens ────────────────────────────────────────────────────────
        Every value below is solved for WCAG AA and verified in both themes; see
-       the table in the dark block. Each tone carries three values:
+       the table in the dark block. Each tone carries FOUR values:
 
-         --{tone}            the colour itself. Safe BOTH as text on any neutral
-                             surface (card/background/muted) AND as a solid fill.
-         --{tone}-foreground text that sits on the solid fill.
+         --{tone}            text/icon colour. >= 4.5:1 on card, background, muted
+                             and on its own -subtle tint. Use for `text-{tone}`.
+         --{tone}-fill       the vivid mark: chart bars, progress fills, solid
+                             badges. >= 3:1 against the card. Use for `bg-{tone}-fill`.
+         --{tone}-foreground text that sits ON -fill.
          --{tone}-subtle     tinted surface for chips, badges and soft cards.
-                             --{tone} is guaranteed legible on it.
 
-       Asymmetry worth knowing: the tones' base value is text-safe, but --primary's
-       is not — primary must stay white-on-indigo for buttons, which forces it
-       darker than text needs. Hence --primary-ink for `text-primary`-style use.
-       Don't "fix" that by changing --primary; it will break every button.
+       The same split exists on the brand: --primary is the button fill and
+       --primary-ink is the text value. `text-primary` fails AA in dark mode
+       (3.58:1) and always will, because --primary is tuned to carry white button
+       text. Don't "fix" that by changing --primary; it will break every button.
 
        Semantics (mirrored from lib/theme/categories.ts, the tone system of record):
          danger  = urgent / overdue / reach      warning = todo / pending / match
@@ -58,23 +59,39 @@
        not the rose status tone. */
     --primary-ink: 241 65% 55%;
 
+    /* Each tone carries a TEXT value and a FILL value, and they are not the same
+       number. Solving one value for both is what made every chart bar and progress
+       fill in light mode read as mud: text has to be dark enough for 4.5:1 on a white
+       card, and at that lightness a saturated hue turns into brown-gold or forest
+       green. `--{tone}` is the text value; `--{tone}-fill` is the vivid mark.
+       (Dark mode never had the problem — "light enough for a near-black card" and
+       "vivid" happen to be the same place, so there the two values coincide.)
+
+       -fill is the vivid-est lightness that still clears 3:1 against the card, and
+       -foreground is whichever of ink/white clears 4.5:1 ON that fill. Note feature
+       takes white where the other four take ink — that's the hue, not an oversight. */
     --success: 160 84% 26%;
-    --success-foreground: 0 0% 100%;
+    --success-fill: 160 84% 36%;
+    --success-foreground: 224 32% 12%;
     --success-subtle: 160 70% 96%;
 
     --warning: 38 92% 30%;
-    --warning-foreground: 0 0% 100%;
+    --warning-fill: 38 92% 42%;
+    --warning-foreground: 224 32% 12%;
     --warning-subtle: 38 70% 96%;
 
     --danger: 350 80% 45%;
-    --danger-foreground: 0 0% 100%;
+    --danger-fill: 350 80% 60%;
+    --danger-foreground: 224 32% 12%;
     --danger-subtle: 350 70% 96%;
 
     --info: 199 89% 33.5%;
-    --info-foreground: 0 0% 100%;
+    --info-fill: 199 89% 46.5%;
+    --info-foreground: 224 32% 12%;
     --info-subtle: 199 70% 96%;
 
     --feature: 258 80% 45%;
+    --feature-fill: 258 80% 60%;
     --feature-foreground: 0 0% 100%;
     --feature-subtle: 258 70% 96%;
 
@@ -159,23 +176,30 @@
        failed AA, on 10px labels no less. */
     --primary-ink: 241 65% 69%;
 
+    /* In dark mode text and fill coincide, so -fill mirrors the tone value. Kept as
+       an explicit declaration rather than an alias so both themes read the same way. */
     --success: 160 84% 50%;
+    --success-fill: 160 84% 50%;
     --success-foreground: 224 32% 12%;
     --success-subtle: 160 40% 16%;
 
     --warning: 38 92% 50%;
+    --warning-fill: 38 92% 50%;
     --warning-foreground: 224 32% 12%;
     --warning-subtle: 38 40% 16%;
 
     --danger: 350 80% 62.5%;
+    --danger-fill: 350 80% 62.5%;
     --danger-foreground: 224 32% 12%;
     --danger-subtle: 350 40% 16%;
 
     --info: 199 89% 50%;
+    --info-fill: 199 89% 50%;
     --info-foreground: 224 32% 12%;
     --info-subtle: 199 40% 16%;
 
     --feature: 258 80% 69%;
+    --feature-fill: 258 80% 69%;
     --feature-foreground: 224 32% 12%;
     --feature-subtle: 258 40% 16%;
 

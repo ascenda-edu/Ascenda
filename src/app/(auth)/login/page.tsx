@@ -10,7 +10,7 @@ export default function LoginPage() {
     <div className="surface-card space-y-6">
       <div className="space-y-3">
         <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-3 py-1 text-xs font-medium shadow-e-1 backdrop-blur">
-          <span className="h-2 w-2 rounded-full bg-success" aria-hidden />
+          <span className="h-2 w-2 rounded-full bg-success-fill" aria-hidden />
           Invite-only access
         </span>
         <div className="space-y-1">

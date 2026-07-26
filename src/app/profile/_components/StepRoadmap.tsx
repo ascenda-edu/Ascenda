@@ -43,7 +43,7 @@ export const StepRoadmap = ({ steps, stepCompletion, initialStep }: StepRoadmapP
                 isCurrent
                   ? 'bg-primary-foreground/20 text-primary-foreground'
                   : isComplete
-                    ? 'bg-success text-success-foreground'
+                    ? 'bg-success-fill text-success-foreground'
                     : 'bg-border text-muted-foreground'
               )}>
                 {isComplete ? '\u2713' : idx + 1}

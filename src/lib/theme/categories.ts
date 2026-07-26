@@ -113,7 +113,7 @@ const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
       'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-danger-subtle text-danger border border-danger/25',
     swatch:
       'flex h-9 w-9 items-center justify-center rounded-2xl bg-danger-subtle text-danger ring-1 ring-danger/25',
-    bar: 'bg-danger'
+    bar: 'bg-danger-fill'
   },
   amber: {
     text: 'text-warning',
@@ -125,7 +125,7 @@ const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
       'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-warning-subtle text-warning border border-warning/25',
     swatch:
       'flex h-9 w-9 items-center justify-center rounded-2xl bg-warning-subtle text-warning ring-1 ring-warning/25',
-    bar: 'bg-warning'
+    bar: 'bg-warning-fill'
   },
   emerald: {
     text: 'text-success',
@@ -137,7 +137,7 @@ const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
       'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-success-subtle text-success border border-success/25',
     swatch:
       'flex h-9 w-9 items-center justify-center rounded-2xl bg-success-subtle text-success ring-1 ring-success/25',
-    bar: 'bg-success'
+    bar: 'bg-success-fill'
   },
   sky: {
     text: 'text-info',
@@ -149,7 +149,7 @@ const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
       'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-info-subtle text-info border border-info/25',
     swatch:
       'flex h-9 w-9 items-center justify-center rounded-2xl bg-info-subtle text-info ring-1 ring-info/25',
-    bar: 'bg-info'
+    bar: 'bg-info-fill'
   },
   violet: {
     text: 'text-feature',
@@ -161,7 +161,7 @@ const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
       'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-feature-subtle text-feature border border-feature/25',
     swatch:
       'flex h-9 w-9 items-center justify-center rounded-2xl bg-feature-subtle text-feature ring-1 ring-feature/25',
-    bar: 'bg-feature'
+    bar: 'bg-feature-fill'
   },
   primary: {
     // primary-ink, not primary: --primary is tuned to carry white button text and

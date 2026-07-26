@@ -92,7 +92,7 @@ export function TasksWidget({ items, mode }: { items: TaskHit[]; mode: ChatMode 
                   className={cn(
                     'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition',
                     done
-                      ? 'border-success bg-success text-success-foreground'
+                      ? 'border-success bg-success-fill text-success-foreground'
                       : 'border-border bg-background hover:border-primary'
                   )}
                 >
@@ -103,7 +103,7 @@ export function TasksWidget({ items, mode }: { items: TaskHit[]; mode: ChatMode 
                   aria-hidden
                   className={cn(
                     'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2',
-                    done ? 'border-success bg-success text-success-foreground' : 'border-border'
+                    done ? 'border-success bg-success-fill text-success-foreground' : 'border-border'
                   )}
                 >
                   {done ? <Check className="h-3.5 w-3.5" /> : null}

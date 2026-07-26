@@ -133,7 +133,7 @@ export default function RoleSelectPage() {
         className="mb-10 text-center"
       >
         <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-3 py-1 text-xs font-medium shadow-e-1 backdrop-blur">
-          <span className="h-2 w-2 rounded-full bg-success" aria-hidden />
+          <span className="h-2 w-2 rounded-full bg-success-fill" aria-hidden />
           Welcome to Ascenda
         </p>
         <h1 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">

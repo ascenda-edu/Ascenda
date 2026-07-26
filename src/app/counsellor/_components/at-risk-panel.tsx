@@ -18,9 +18,9 @@ const RISK_CONFIG: Record<RiskType, { icon: typeof AlertTriangle; label: string;
 };
 
 const URGENCY_CONFIG: Record<RiskUrgency, { color: string; bg: string; label: string }> = {
-  critical: { color: 'text-danger', bg: 'bg-danger', label: 'Critical' },
-  high: { color: 'text-warning', bg: 'bg-warning', label: 'High' },
-  medium: { color: 'text-info', bg: 'bg-info', label: 'Medium' },
+  critical: { color: 'text-danger', bg: 'bg-danger-fill', label: 'Critical' },
+  high: { color: 'text-warning', bg: 'bg-warning-fill', label: 'High' },
+  medium: { color: 'text-info', bg: 'bg-info-fill', label: 'Medium' },
 };
 
 interface AtRiskPanelProps {

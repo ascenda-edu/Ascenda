@@ -192,9 +192,9 @@ const FUNNEL_STAGES = [
   // Tone mapping matches APPLICATION_STATUS_VISUAL / STAGE_COLORS so the funnel,
   // the kanban and the analytics drill-down can never disagree about a stage.
   { key: 'planning' as const, label: 'Planning', color: 'bg-muted-foreground/40', hoverColor: 'hover:bg-muted-foreground/60', textColor: 'text-muted-foreground' },
-  { key: 'inProgress' as const, label: 'In Progress', color: 'bg-info', hoverColor: 'hover:bg-info/85', textColor: 'text-info' },
-  { key: 'submitted' as const, label: 'Submitted', color: 'bg-success', hoverColor: 'hover:bg-success/85', textColor: 'text-success' },
-  { key: 'decision' as const, label: 'Decision Received', color: 'bg-feature', hoverColor: 'hover:bg-feature/85', textColor: 'text-feature' }
+  { key: 'inProgress' as const, label: 'In Progress', color: 'bg-info-fill', hoverColor: 'hover:bg-info/85', textColor: 'text-info' },
+  { key: 'submitted' as const, label: 'Submitted', color: 'bg-success-fill', hoverColor: 'hover:bg-success/85', textColor: 'text-success' },
+  { key: 'decision' as const, label: 'Decision Received', color: 'bg-feature-fill', hoverColor: 'hover:bg-feature/85', textColor: 'text-feature' }
 ];
 
 // Synthetic "last year" funnel for the year-on-year comparison toggle. Builds
@@ -305,9 +305,9 @@ export const MatchTierSummary = ({ tiers, onSelect }: MatchTierSummaryProps) => 
 
   const tierList = [
     // reach/match/safety is a status scale, matching TIER_VISUAL in lib/theme/categories.
-    { key: 'reach' as const, label: 'Reach', count: tiers.reach, color: 'bg-danger', hoverColor: 'hover:bg-danger/85', card: 'border-danger/25 bg-danger-subtle', hoverCard: 'hover-lift', text: 'text-danger' },
-    { key: 'match' as const, label: 'Match', count: tiers.match, color: 'bg-warning', hoverColor: 'hover:bg-warning/85', card: 'border-warning/25 bg-warning-subtle', hoverCard: 'hover-lift', text: 'text-warning' },
-    { key: 'safe' as const, label: 'Safe', count: tiers.safe, color: 'bg-success', hoverColor: 'hover:bg-success/85', card: 'border-success/25 bg-success-subtle', hoverCard: 'hover-lift', text: 'text-success' }
+    { key: 'reach' as const, label: 'Reach', count: tiers.reach, color: 'bg-danger-fill', hoverColor: 'hover:bg-danger/85', card: 'border-danger/25 bg-danger-subtle', hoverCard: 'hover-lift', text: 'text-danger' },
+    { key: 'match' as const, label: 'Match', count: tiers.match, color: 'bg-warning-fill', hoverColor: 'hover:bg-warning/85', card: 'border-warning/25 bg-warning-subtle', hoverCard: 'hover-lift', text: 'text-warning' },
+    { key: 'safe' as const, label: 'Safe', count: tiers.safe, color: 'bg-success-fill', hoverColor: 'hover:bg-success/85', card: 'border-success/25 bg-success-subtle', hoverCard: 'hover-lift', text: 'text-success' }
   ];
 
   return (
@@ -367,10 +367,10 @@ export const CompletionBreakdown = ({ students, onSelect }: CompletionBreakdownP
   // note `red`, where the rest of the app used `rose`, one of the drifts that made
   // status colour untunable.)
   const buckets = [
-    { label: '100%', count: students.filter((s) => s.pct === 100).length, color: 'bg-success', hoverColor: 'hover:bg-success/85', tooltip: 'Fully complete', min: 100, max: 100 },
-    { label: '75–99%', count: students.filter((s) => s.pct >= 75 && s.pct < 100).length, color: 'bg-info', hoverColor: 'hover:bg-info/85', tooltip: 'Almost complete', min: 75, max: 99 },
-    { label: '50–74%', count: students.filter((s) => s.pct >= 50 && s.pct < 75).length, color: 'bg-warning', hoverColor: 'hover:bg-warning/85', tooltip: 'Partially complete', min: 50, max: 74 },
-    { label: '<50%', count: students.filter((s) => s.pct < 50).length, color: 'bg-danger', hoverColor: 'hover:bg-danger/85', tooltip: 'Needs attention', min: 0, max: 49 }
+    { label: '100%', count: students.filter((s) => s.pct === 100).length, color: 'bg-success-fill', hoverColor: 'hover:bg-success/85', tooltip: 'Fully complete', min: 100, max: 100 },
+    { label: '75–99%', count: students.filter((s) => s.pct >= 75 && s.pct < 100).length, color: 'bg-info-fill', hoverColor: 'hover:bg-info/85', tooltip: 'Almost complete', min: 75, max: 99 },
+    { label: '50–74%', count: students.filter((s) => s.pct >= 50 && s.pct < 75).length, color: 'bg-warning-fill', hoverColor: 'hover:bg-warning/85', tooltip: 'Partially complete', min: 50, max: 74 },
+    { label: '<50%', count: students.filter((s) => s.pct < 50).length, color: 'bg-danger-fill', hoverColor: 'hover:bg-danger/85', tooltip: 'Needs attention', min: 0, max: 49 }
   ];
   const max = Math.max(...buckets.map((b) => b.count), 1);
   const avg = Math.round(students.reduce((a, s) => a + s.pct, 0) / (students.length || 1));

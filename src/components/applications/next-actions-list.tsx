@@ -24,12 +24,12 @@ interface Props {
 
 const urgencyTone = (days: number | null): { dot: string; label: string; labelTone: string } => {
   if (days === null) return { dot: 'bg-muted-foreground/40', label: 'No deadline', labelTone: 'text-muted-foreground' };
-  if (days < 0) return { dot: 'bg-danger', label: `${Math.abs(days)}d overdue`, labelTone: 'text-danger' };
-  if (days === 0) return { dot: 'bg-danger', label: 'Due today', labelTone: 'text-danger' };
-  if (days === 1) return { dot: 'bg-danger', label: 'Due tomorrow', labelTone: 'text-danger' };
-  if (days <= 3) return { dot: 'bg-danger', label: `Due in ${days} days`, labelTone: 'text-danger' };
-  if (days <= 7) return { dot: 'bg-warning', label: `Due in ${days} days`, labelTone: 'text-warning' };
-  return { dot: 'bg-info', label: `Due in ${days} days`, labelTone: 'text-info' };
+  if (days < 0) return { dot: 'bg-danger-fill', label: `${Math.abs(days)}d overdue`, labelTone: 'text-danger' };
+  if (days === 0) return { dot: 'bg-danger-fill', label: 'Due today', labelTone: 'text-danger' };
+  if (days === 1) return { dot: 'bg-danger-fill', label: 'Due tomorrow', labelTone: 'text-danger' };
+  if (days <= 3) return { dot: 'bg-danger-fill', label: `Due in ${days} days`, labelTone: 'text-danger' };
+  if (days <= 7) return { dot: 'bg-warning-fill', label: `Due in ${days} days`, labelTone: 'text-warning' };
+  return { dot: 'bg-info-fill', label: `Due in ${days} days`, labelTone: 'text-info' };
 };
 
 export function NextActionsList({ items }: Props) {

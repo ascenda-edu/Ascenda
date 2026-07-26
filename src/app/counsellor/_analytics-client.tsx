@@ -113,7 +113,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
     setDrilldown({
       title: `${label} Students`,
       subtitle: `${group.length} student${group.length !== 1 ? 's' : ''} enrolled in the ${label} programme`,
-      accentColor: programme === 'IB' ? 'bg-feature' : 'bg-info',
+      accentColor: programme === 'IB' ? 'bg-feature-fill' : 'bg-info-fill',
       summaryStats: [
         { label: 'students', value: String(group.length) },
         { label: 'avg completion', value: `${avgCompletion}%` },
@@ -160,7 +160,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
     setDrilldown({
       title: field.label,
       subtitle: `${group.length} student${group.length !== 1 ? 's' : ''} interested in this field`,
-      accentColor: 'bg-feature',
+      accentColor: 'bg-feature-fill',
       summaryStats: [
         { label: 'students', value: String(group.length) },
         { label: 'IB', value: String(ibCount) },
@@ -279,7 +279,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         setDrilldown({
           title: 'Profile Gaps',
           subtitle: `${group.length} student${group.length !== 1 ? 's' : ''} with incomplete profiles`,
-          accentColor: 'bg-warning',
+          accentColor: 'bg-warning-fill',
           items: group.map((s) => ({
             student: s,
             detail: `${s.profile.completionPct}% complete — missing: ${['personal', 'academic', 'subjects', 'lifestyle'].filter((step) => !s.profile.stepsComplete.includes(step as any)).join(', ') || 'flags only'}`,
@@ -293,7 +293,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         setDrilldown({
           title: 'UK-Bound Students',
           subtitle: `${group.length} student${group.length !== 1 ? 's' : ''} targeting the United Kingdom`,
-          accentColor: 'bg-feature',
+          accentColor: 'bg-feature-fill',
           items: group.map((s) => {
             const ukMatches = s.matches.filter((m) => m.country === 'UK');
             return {
@@ -310,7 +310,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         setDrilldown({
           title: 'Submitted Applications',
           subtitle: `${group.length} student${group.length !== 1 ? 's' : ''} with submitted applications`,
-          accentColor: 'bg-success',
+          accentColor: 'bg-success-fill',
           items: group.map((s) => {
             const submitted = s.applications.filter((a) => a.status === 'submitted');
             return {
@@ -342,7 +342,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         setDrilldown({
           title: 'Deadlines This Week',
           subtitle: `${items.length} student${items.length !== 1 ? 's' : ''} with upcoming deadlines`,
-          accentColor: 'bg-danger',
+          accentColor: 'bg-danger-fill',
           items
         });
         break;
@@ -362,7 +362,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         setDrilldown({
           title: 'Reach-Tier Matches',
           subtitle: `${items.length} student${items.length !== 1 ? 's' : ''} with Reach-tier matches`,
-          accentColor: 'bg-danger',
+          accentColor: 'bg-danger-fill',
           items
         });
         break;
@@ -374,7 +374,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         setDrilldown({
           title: 'Safe-Tier Coverage',
           subtitle: `${withSafe.length} of ${students.length} students have a Safe option`,
-          accentColor: 'bg-info',
+          accentColor: 'bg-info-fill',
           items: all.map((s) => {
             const hasSafe = s.matches.some((m) => m.tier === 'Safe');
             const safeMatches = s.matches.filter((m) => m.tier === 'Safe');

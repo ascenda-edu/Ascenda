@@ -420,7 +420,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
             </div>
             <div className="h-0.5 bg-muted/20">
               <motion.div
-                className={cn('h-full', ratio < 0.8 ? 'bg-success' : ratio < 0.95 ? 'bg-warning' : 'bg-danger')}
+                className={cn('h-full', ratio < 0.8 ? 'bg-success-fill' : ratio < 0.95 ? 'bg-warning-fill' : 'bg-danger-fill')}
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min(ratio * 100, 100)}%` }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}

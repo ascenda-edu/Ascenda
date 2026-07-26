@@ -12,9 +12,9 @@ export interface PipelineStage {
 
 const STAGE_COLOR: Record<string, { bar: string; dot: string }> = {
   planning: { bar: 'bg-muted-foreground/50', dot: 'bg-muted-foreground/50' },
-  in_progress: { bar: 'bg-info', dot: 'bg-info' },
-  submitted: { bar: 'bg-success', dot: 'bg-success' },
-  decision: { bar: 'bg-warning', dot: 'bg-warning' },
+  in_progress: { bar: 'bg-info-fill', dot: 'bg-info-fill' },
+  submitted: { bar: 'bg-success-fill', dot: 'bg-success-fill' },
+  decision: { bar: 'bg-warning-fill', dot: 'bg-warning-fill' },
   enrolled: { bar: 'bg-primary', dot: 'bg-primary' }
 };
 

@@ -23,31 +23,31 @@ const TONE = {
     chip: 'bg-danger-subtle text-danger',
     heroBg: 'border-danger/25 bg-danger/3',
     accent: 'border-l-danger',
-    dot: 'bg-danger'
+    dot: 'bg-danger-fill'
   },
   amber: {
     chip: 'bg-warning-subtle text-warning',
     heroBg: 'border-warning/25 bg-warning/3',
     accent: 'border-l-warning',
-    dot: 'bg-warning'
+    dot: 'bg-warning-fill'
   },
   emerald: {
     chip: 'bg-success-subtle text-success',
     heroBg: 'border-success/25 bg-success/3',
     accent: 'border-l-success',
-    dot: 'bg-success'
+    dot: 'bg-success-fill'
   },
   sky: {
     chip: 'bg-info-subtle text-info',
     heroBg: 'border-info/25 bg-info/3',
     accent: 'border-l-info',
-    dot: 'bg-info'
+    dot: 'bg-info-fill'
   },
   violet: {
     chip: 'bg-feature-subtle text-feature',
     heroBg: 'border-feature/25 bg-feature/3',
     accent: 'border-l-feature',
-    dot: 'bg-feature'
+    dot: 'bg-feature-fill'
   },
   primary: {
     chip: 'bg-primary/10 text-primary-ink',
