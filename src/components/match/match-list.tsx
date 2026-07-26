@@ -102,7 +102,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
     <div className="space-y-8 pb-24">
       <div className="surface-toolbar flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="relative z-10 flex flex-col gap-1">
-          <p className="text-[0.6875rem] uppercase tracking-[0.35em] text-muted-foreground">
+          <p className="eyebrow">
             {MATCHES_TEXT.list.headerEyebrow}
           </p>
           <p className="text-xs sm:text-sm text-muted-foreground">
@@ -110,7 +110,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
           </p>
           <div className="hidden sm:flex items-center gap-1.5 mt-1">
             <Info className="h-3 w-3 text-muted-foreground/60 shrink-0" />
-            <p className="text-[0.6875rem] text-muted-foreground/80">
+            <p className="text-label text-muted-foreground/80">
               <span className={cn('font-semibold', TIER_VISUAL.reach.text)}>Reach</span>
               {' \u00B7 '}
               <span className={cn('font-semibold', TIER_VISUAL.match.text)}>Match</span>
@@ -121,7 +121,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
           </div>
         </div>
         <div className="relative z-10 flex items-center gap-2 overflow-x-auto scrollbar-none">
-          <div className="flex items-center gap-1 rounded-2xl border border-border/70 bg-background/80 p-1.5 shadow-sm">
+          <div className="flex items-center gap-1 rounded-2xl border border-border/70 bg-background/80 p-1.5 shadow-e-1">
             {(['All', ...TIER_ORDER] as const).map((tier) => (
               <button
                 key={tier}
@@ -130,7 +130,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
                 className={cn(
                   'rounded-xl px-3 py-1.5 text-xs font-medium capitalize transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                   selectedTier === tier
-                    ? 'bg-primary text-primary-foreground shadow-[0_12px_24px_-14px_rgba(79,70,229,0.8)]'
+                    ? 'bg-primary text-primary-foreground shadow-e-2'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 )}
               >
@@ -138,14 +138,14 @@ export const MatchList = ({ matches }: MatchListProps) => {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-1 rounded-2xl border border-border/70 bg-background/80 p-1.5 shadow-sm">
+          <div className="flex items-center gap-1 rounded-2xl border border-border/70 bg-background/80 p-1.5 shadow-e-1">
             <button
               onClick={() => setViewMode('grid')}
               aria-pressed={viewMode === 'grid'}
               className={cn(
                 'flex h-8 w-8 items-center justify-center rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                 viewMode === 'grid'
-                  ? 'bg-primary/10 text-primary shadow-sm'
+                  ? 'bg-primary/10 text-primary-ink shadow-e-1'
                   : 'text-muted-foreground hover:text-foreground'
               )}
               aria-label="Grid view"
@@ -158,7 +158,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
               className={cn(
                 'flex h-8 w-8 items-center justify-center rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                 viewMode === 'list'
-                  ? 'bg-primary/10 text-primary shadow-sm'
+                  ? 'bg-primary/10 text-primary-ink shadow-e-1'
                   : 'text-muted-foreground hover:text-foreground'
               )}
               aria-label="List view"
@@ -171,7 +171,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
 
       <section className="space-y-6">
         {matches.length === 0 ? (
-          <div className="rounded-[28px] border border-dashed border-border bg-muted/60 p-10 text-center text-muted-foreground">
+          <div className="rounded-4xl border border-dashed border-border bg-muted/60 p-10 text-center text-muted-foreground">
             {MATCHES_TEXT.list.noResults}
           </div>
         ) : (
@@ -194,7 +194,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
                         <TierIcon className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className={cn('text-xs uppercase tracking-[0.35em]', visual.text)}>Tier</p>
+                        <p className={cn('eyebrow', visual.text)}>Tier</p>
                         <h3 className="text-2xl font-semibold text-foreground">
                           {tier} programs
                           <span className="ml-2 text-base font-normal text-muted-foreground">
@@ -255,7 +255,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
                       <div className="flex justify-center pt-4">
                         <button
                           onClick={() => handleShowMore(tier)}
-                          className="group flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg"
+                          className="group flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-e-2 transition-all hover:-translate-y-0.5 hover:shadow-e-3"
                         >
                           Show {Math.min(EXPAND_STEP, totalDeduped - tierLimits[tier])} more {tier.toLowerCase()} programs
                           <ChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />

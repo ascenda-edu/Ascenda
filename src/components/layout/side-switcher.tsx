@@ -14,19 +14,19 @@ const MODES: Record<Mode, { path: string; label: string; icon: LucideIcon; accen
     path: '/dashboard',
     label: 'Student view',
     icon: GraduationCap,
-    accent: 'text-sky-600 hover:bg-sky-500/10 dark:text-sky-300',
+    accent: 'text-info hover:bg-info-subtle',
   },
   counsellor: {
     path: '/counsellor',
     label: 'Faculty view',
     icon: Briefcase,
-    accent: 'text-violet-600 hover:bg-violet-500/10 dark:text-violet-300',
+    accent: 'text-feature hover:bg-feature-subtle',
   },
   parent: {
     path: '/parent',
     label: 'Parent view',
     icon: HeartHandshake,
-    accent: 'text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-300',
+    accent: 'text-success hover:bg-success-subtle',
   },
 };
 
@@ -79,7 +79,7 @@ export const SideSwitcher = ({ className, collapsed }: { className?: string; col
               title={label}
               aria-label={label}
               className={cn(
-                'flex h-9 w-full items-center justify-center rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                'flex h-9 w-full items-center justify-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 accent
               )}
             >
@@ -94,7 +94,7 @@ export const SideSwitcher = ({ className, collapsed }: { className?: string; col
             onClick={() => handleSwitch(mode)}
             title={label}
             className={cn(
-              'group flex h-9 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+              'group flex h-9 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               accent
             )}
           >

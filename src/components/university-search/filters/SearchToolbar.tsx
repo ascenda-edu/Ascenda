@@ -121,7 +121,7 @@ export function SearchToolbar({
               aria-label="Grid view"
               className={cn(
                 'flex h-11 w-11 items-center justify-center rounded-full transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                viewMode === 'grid' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
+                viewMode === 'grid' ? 'bg-primary/10 text-primary-ink' : 'text-muted-foreground hover:text-foreground'
               )}
             >
               <LayoutGrid className="h-4 w-4" aria-hidden />
@@ -133,7 +133,7 @@ export function SearchToolbar({
               aria-label="List view"
               className={cn(
                 'flex h-11 w-11 items-center justify-center rounded-full transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                viewMode === 'list' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
+                viewMode === 'list' ? 'bg-primary/10 text-primary-ink' : 'text-muted-foreground hover:text-foreground'
               )}
             >
               <LayoutList className="h-4 w-4" aria-hidden />
@@ -143,7 +143,7 @@ export function SearchToolbar({
           <button
             type="button"
             onClick={onOpenMobileFilters}
-            className="relative inline-flex h-11 min-h-[44px] items-center gap-2 rounded-full border border-border bg-background px-4 text-sm font-medium text-foreground transition-[box-shadow,border-color,background-color] duration-200 cursor-pointer hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:hidden dark:border-white/10"
+            className="relative inline-flex h-11 min-h-[44px] items-center gap-2 rounded-full border border-border bg-background px-4 text-sm font-medium text-foreground transition-[box-shadow,border-color,background-color] duration-200 cursor-pointer hover:shadow-e-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:hidden dark:border-white/10"
           >
             <SlidersHorizontal className="h-4 w-4 text-muted-foreground" aria-hidden />
             <span>Filters</span>

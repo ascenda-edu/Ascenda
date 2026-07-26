@@ -248,7 +248,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
   return (
     <div className="space-y-6">
       {/* ── Add task + filters ──────────────────────────────────────── */}
-      <section className="surface-card surface-card--static space-y-4 rounded-[28px] p-5">
+      <section className="surface-card space-y-4 rounded-4xl p-5">
         <div className="flex flex-wrap items-center gap-2">
           {(['open', 'done', 'all'] as const).map((f) => (
             <button
@@ -342,7 +342,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
                           exit={{ opacity: 0, x: 12 }}
                           className={cn(
                             'group flex items-center gap-3 rounded-2xl border bg-card/60 px-4 py-3 transition',
-                            done ? 'border-emerald-200/60 dark:border-emerald-500/20' : 'border-border'
+                            done ? 'border-success/25' : 'border-border'
                           )}
                         >
                           <button
@@ -354,7 +354,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
                             className={cn(
                               'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition',
                               done
-                                ? 'border-emerald-500 bg-emerald-500 text-white'
+                                ? 'border-success bg-success text-success-foreground'
                                 : 'border-border bg-background hover:border-primary'
                             )}
                           >
@@ -369,16 +369,16 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
                             {task.name}
                           </p>
                           {task.status === 'doing' ? (
-                            <span className="shrink-0 rounded-full border border-sky-200/60 bg-sky-500/10 px-2.5 py-0.5 text-[0.6875rem] font-semibold text-sky-600 dark:border-sky-500/20 dark:text-sky-400">
+                            <span className="shrink-0 rounded-full border border-info/25 bg-info-subtle px-2.5 py-0.5 text-label font-semibold text-info">
                               In progress
                             </span>
                           ) : null}
                           {due ? (
                             <span
                               className={cn(
-                                'shrink-0 rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold',
+                                'shrink-0 rounded-full border px-2.5 py-0.5 text-label font-semibold',
                                 due.urgent
-                                  ? 'border-rose-200/60 bg-rose-500/10 text-rose-600 dark:border-rose-500/20 dark:text-rose-400'
+                                  ? 'border-danger/25 bg-danger-subtle text-danger'
                                   : 'border-border bg-muted/50 text-foreground'
                               )}
                             >

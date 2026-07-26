@@ -20,7 +20,7 @@ const sideForPathname = (path: string | null | undefined): HelpDrawerSide =>
 export const HelpDrawerProvider = ({ children }: { children: ReactNode }) => {
   const [currentRequestId, setCurrentRequestId] = useState<string | null>(null);
   // Side is CAPTURED at open time, not derived live from the pathname. The
-  // z-[120] overlay blocks in-app nav, but browser Back still changes the
+  // z-modal overlay blocks in-app nav, but browser Back still changes the
   // route while the drawer stays open on the same thread. If side were
   // derived from the current pathname it would flip 'counsellor' -> 'student'
   // mid-thread, causing useHelpThread's mark-read effect to stamp the wrong

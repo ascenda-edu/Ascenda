@@ -177,7 +177,7 @@ function FacetSections({
         ) : (
           <div className="surface-subcard !p-4 text-xs leading-relaxed text-muted-foreground">
             Fit filters unlock once your profile has match scores.{' '}
-            <Link href="/profile/wizard" className="font-semibold text-primary hover:underline">
+            <Link href="/profile/wizard" className="font-semibold text-primary-ink hover:underline">
               Complete your profile
             </Link>
           </div>
@@ -618,7 +618,7 @@ function UnifiedSearchInner() {
           ) : error ? (
             <div
               role="alert"
-              className="rounded-[28px] border border-dashed border-rose-200/60 bg-rose-500/10 p-6 text-sm text-rose-600 dark:border-rose-500/20 dark:text-rose-400"
+              className="rounded-4xl border border-dashed border-danger/25 bg-danger-subtle p-6 text-sm text-danger"
             >
               {error}
             </div>
@@ -662,7 +662,7 @@ function UnifiedSearchInner() {
                   </div>
                   <button
                     onClick={handleClearAll}
-                    className="text-sm font-medium text-primary hover:underline"
+                    className="text-sm font-medium text-primary-ink hover:underline"
                   >
                     Clear all filters
                   </button>
@@ -707,7 +707,7 @@ function UnifiedSearchInner() {
                 type="button"
                 onClick={loadMore}
                 disabled={isLoadingMore}
-                className="rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold text-primary transition hover:-translate-y-0.5 hover:border-primary disabled:cursor-not-allowed disabled:text-muted-foreground"
+                className="rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold text-primary-ink transition hover:-translate-y-0.5 hover:border-primary disabled:cursor-not-allowed disabled:text-muted-foreground"
               >
                 {isLoadingMore ? 'Loading more results…' : 'Load more results'}
               </button>
@@ -731,7 +731,7 @@ function UnifiedSearchInner() {
 
 export default function UnifiedUniversitySearchPage() {
   return (
-    <Suspense fallback={<div className="surface-card surface-card--static h-72 animate-pulse" aria-hidden />}>
+    <Suspense fallback={<div className="surface-card h-72 animate-pulse" aria-hidden />}>
       <UnifiedSearchInner />
     </Suspense>
   );

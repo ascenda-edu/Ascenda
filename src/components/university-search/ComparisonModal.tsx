@@ -85,7 +85,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                             {value !== null ? `${value}%` : 'N/A'}
                         </span>
                         {uni.tier ? (
-                            <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{uni.tier}</span>
+                            <span className="eyebrow">{uni.tier}</span>
                         ) : null}
                     </div>
                 );
@@ -210,7 +210,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-6xl overflow-hidden p-0 sm:rounded-[28px]">
+            <DialogContent className="max-w-6xl overflow-hidden p-0 sm:rounded-4xl">
                 <div className="flex h-[85vh] flex-col bg-background">
                     {/* Header */}
                     <div className="relative border-b border-border/60 bg-card/80 px-6 py-5 backdrop-blur-xl">
@@ -239,7 +239,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                         role="switch"
                                         aria-checked={highlightDiffs}
                                     >
-                                        <span className="uppercase tracking-[0.2em] text-muted-foreground">Highlight best</span>
+                                        <span className="eyebrow">Highlight best</span>
                                         <span
                                             className={cn(
                                                 'relative h-4 w-7 shrink-0 rounded-full transition-colors duration-200',
@@ -248,7 +248,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                         >
                                             <span
                                                 className={cn(
-                                                    'absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow-sm transition-transform duration-200',
+                                                    'absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow-e-1 transition-transform duration-200',
                                                     highlightDiffs ? 'translate-x-3' : 'translate-x-0'
                                                 )}
                                             />
@@ -266,8 +266,8 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                     <div className="flex-1 overflow-auto">
                         {isEmpty ? (
                             <div className="flex h-full items-center justify-center p-8">
-                                <div className="flex max-w-md flex-col items-center gap-4 rounded-[28px] border border-dashed border-border/70 bg-card/60 p-10 text-center">
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20">
+                                <div className="flex max-w-md flex-col items-center gap-4 rounded-4xl border border-dashed border-border/70 bg-card/60 p-10 text-center">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary-ink ring-1 ring-primary/20">
                                         <LayoutGrid className="h-5 w-5" />
                                     </div>
                                     <div className="space-y-1">
@@ -308,12 +308,12 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                                         identical && 'opacity-50'
                                                     )}
                                                 >
-                                                    <div className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                                                    <div className="eyebrow flex items-center gap-2">
                                                         <Icon className="h-3.5 w-3.5" />
                                                         {row.label}
                                                     </div>
                                                     {row.hint && (
-                                                        <span className="pl-5 text-[0.6875rem] font-normal text-muted-foreground/70">
+                                                        <span className="pl-5 text-label font-normal text-muted-foreground/70">
                                                             {row.hint}
                                                         </span>
                                                     )}
@@ -326,14 +326,14 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                                             className={cn(
                                                                 'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-colors',
                                                                 isBest
-                                                                    ? 'border-emerald-300/70 bg-emerald-50/70 dark:border-emerald-500/30 dark:bg-emerald-500/10'
+                                                                    ? 'border-success/25 bg-success-subtle'
                                                                     : 'border-border/60 bg-card/60',
                                                                 identical && !isBest && 'opacity-60'
                                                             )}
                                                         >
                                                             <div className="min-w-0 flex-1">{row.render(uni)}</div>
                                                             {isBest && (
-                                                                <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                                                                <span className="shrink-0 rounded-full bg-success-subtle px-2 py-0.5 text-label font-bold uppercase tracking-wider text-success">
                                                                     Best
                                                                 </span>
                                                             )}
@@ -345,7 +345,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                     })}
 
                                     {/* Highlights row — full-width chip cluster per column */}
-                                    <div className="flex items-start gap-2 px-2 py-3 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                                    <div className="eyebrow flex items-start gap-2 px-2 py-3">
                                         <Sparkles className="mt-0.5 h-3.5 w-3.5" />
                                         Highlights
                                     </div>
@@ -359,7 +359,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                                     {uni.highlights.slice(0, 4).map((h) => (
                                                         <span
                                                             key={h}
-                                                            className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground/80"
+                                                            className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-2.5 py-0.5 text-label font-medium text-foreground/80"
                                                         >
                                                             {h}
                                                         </span>
@@ -396,7 +396,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
 function ProgramHeaderCard({ uni, onRemove }: { uni: ProgramSearchResult; onRemove: () => void }) {
     const { value: scoreValue, badgeClass } = getFitScoreVisuals(uni.fitScore);
     return (
-        <article className="group relative flex flex-col overflow-hidden rounded-[28px] border border-border bg-card/80 p-5 shadow-[0_22px_50px_-28px_rgba(15,23,42,0.38)] backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:shadow-[0_28px_70px_-30px_rgba(15,23,42,0.42)] dark:bg-muted/20 dark:border-white/10 dark:shadow-none">
+        <article className="group relative flex flex-col overflow-hidden rounded-4xl border border-border bg-card/80 p-5 shadow-e-1 backdrop-blur-xl hover-lift dark:bg-muted/20 dark:border-white/10 dark:shadow-none">
             <span
                 className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(79,70,229,0.14),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.1),transparent_32%)] opacity-80"
                 aria-hidden
@@ -414,11 +414,11 @@ function ProgramHeaderCard({ uni, onRemove }: { uni: ProgramSearchResult; onRemo
             </button>
 
             <div className="relative z-10 flex items-start justify-between gap-3">
-                <div className={cn('flex h-12 w-12 items-center justify-center rounded-[18px] border border-white/50 shadow-[0_16px_30px_-20px_rgba(15,23,42,0.55)] ring-4', badgeClass)}>
+                <div className={cn('flex h-12 w-12 items-center justify-center rounded-2xl border border-white/50 shadow-e-2 ring-4', badgeClass)}>
                     <span className="text-sm font-bold">{scoreValue !== null ? `${scoreValue}%` : 'N/A'}</span>
                 </div>
                 <div className="text-right">
-                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">{uni.location}</p>
+                    <p className="eyebrow">{uni.location}</p>
                     {uni.tier ? (
                         <p className="mt-1 text-xs font-semibold text-foreground/80">{uni.tier} tier</p>
                     ) : null}
@@ -427,7 +427,7 @@ function ProgramHeaderCard({ uni, onRemove }: { uni: ProgramSearchResult; onRemo
 
             <div className="relative z-10 mt-4 flex items-center gap-3">
                 {uni.logoUrl ? (
-                    <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-border bg-black shadow-sm">
+                    <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-border bg-black shadow-e-1">
                         <Image
                             src={uni.logoUrl}
                             alt={`${uni.universityName} logo`}

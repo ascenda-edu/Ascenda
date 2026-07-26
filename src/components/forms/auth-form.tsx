@@ -122,7 +122,7 @@ export const AuthForm = () => {
   return (
     <form className="form-stack" onSubmit={form.handleSubmit(onSubmit)}>
       <div className="form-field">
-        <Label className="form-label" htmlFor="email">
+        <Label htmlFor="email">
           Email
         </Label>
         <Input id="email" type="email" autoComplete="email" spellCheck={false} className="form-input" {...form.register('email')} />
@@ -133,7 +133,7 @@ export const AuthForm = () => {
         ) : null}
       </div>
       <div className="form-field">
-        <Label className="form-label" htmlFor="password">
+        <Label htmlFor="password">
           Password
         </Label>
         <Input

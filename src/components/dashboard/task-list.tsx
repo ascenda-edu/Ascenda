@@ -65,7 +65,7 @@ export const TaskList = ({ title, tasks, onToggle }: TaskListProps) => {
           <p className="text-sm text-muted-foreground">Stay on track with your application milestones.</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="rounded-full bg-muted/60 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+          <div className="eyebrow rounded-full bg-muted/60 px-3 py-1">
             {progress}% ready
           </div>
           <Button asChild size="sm" variant="ghost" className="rounded-full px-3 text-xs uppercase tracking-[0.3em] text-muted-foreground">
@@ -103,8 +103,8 @@ export const TaskList = ({ title, tasks, onToggle }: TaskListProps) => {
                 <motion.article
                   key={task.id}
                   className={cn(
-                    'relative flex items-start gap-3 rounded-2xl border border-l-4 bg-card/60 px-4 py-3 text-foreground transition hover:-translate-y-px hover:shadow-md',
-                    isDone ? 'border-emerald-200/60 border-l-emerald-500 opacity-80' : cn(visual.border, visual.accent)
+                    'hover-lift relative flex items-start gap-3 rounded-2xl border border-l-4 bg-card/60 px-4 py-3 text-foreground',
+                    isDone ? 'border-success/25 border-l-success opacity-80' : cn(visual.border, visual.accent)
                   )}
                   variants={taskVariant}
                   layout
@@ -138,7 +138,7 @@ export const TaskList = ({ title, tasks, onToggle }: TaskListProps) => {
                       {isDone ? 'Undo' : 'Mark done'}
                     </Button>
                   ) : (
-                    <span className="shrink-0 text-xs uppercase tracking-[0.3em] text-muted-foreground">{task.status}</span>
+                    <span className="eyebrow shrink-0">{task.status}</span>
                   )}
                 </motion.article>
               );

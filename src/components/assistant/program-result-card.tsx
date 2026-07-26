@@ -22,15 +22,15 @@ export function ProgramResultCard({ hit, mode }: ProgramResultCardProps) {
 
   const inner = (
     <>
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/10">
-        <GraduationCap className="h-4 w-4 text-primary" />
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+        <GraduationCap className="h-4 w-4 text-primary-ink" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-foreground">{hit.course}</p>
-        <p className="truncate text-[0.6875rem] text-muted-foreground">{meta}</p>
+        <p className="truncate text-label text-muted-foreground">{meta}</p>
       </div>
       {hit.level ? (
-        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[0.625rem] font-medium text-muted-foreground">
+        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-label font-medium text-muted-foreground">
           {hit.level}
         </span>
       ) : null}
@@ -38,7 +38,7 @@ export function ProgramResultCard({ hit, mode }: ProgramResultCardProps) {
   );
 
   const shared =
-    'flex w-full items-center gap-3 rounded-[14px] border border-border bg-background p-2.5 text-left';
+    'flex w-full items-center gap-3 rounded-xl border border-border bg-background p-2.5 text-left';
 
   if (mode === 'student') {
     return (
@@ -46,7 +46,7 @@ export function ProgramResultCard({ hit, mode }: ProgramResultCardProps) {
         href={`/course/${encodeURIComponent(hit.id)}`}
         className={cn(
           shared,
-          'transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-sm'
+          'transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-e-1'
         )}
       >
         {inner}

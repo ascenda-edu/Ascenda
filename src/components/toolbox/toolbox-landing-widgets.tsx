@@ -12,7 +12,7 @@ export function ToolboxProgressRing({ value }: { value: number }) {
         <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" strokeWidth="4" className="text-muted/20" />
         <motion.circle
           cx="32" cy="32" r="28" fill="none" strokeWidth="4" strokeLinecap="round"
-          className={cn(value >= 80 ? 'stroke-emerald-500' : value >= 50 ? 'stroke-amber-500' : 'stroke-rose-500')}
+          className={cn(value >= 80 ? 'stroke-success' : value >= 50 ? 'stroke-warning' : 'stroke-danger')}
           initial={{ strokeDasharray: `0 ${circumference}` }}
           animate={{ strokeDasharray: `${(value / 100) * circumference} ${circumference}` }}
           transition={{ duration: 1, ease: 'easeOut' }}
@@ -22,7 +22,7 @@ export function ToolboxProgressRing({ value }: { value: number }) {
         <motion.span
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className={cn('text-sm font-bold tabular-nums', value >= 80 ? 'text-emerald-600' : value >= 50 ? 'text-amber-600' : 'text-rose-600')}
+          className={cn('text-sm font-bold tabular-nums', value >= 80 ? 'text-success' : value >= 50 ? 'text-warning' : 'text-danger')}
         >
           {value}%
         </motion.span>
@@ -38,16 +38,16 @@ export function ToolboxCountdown({ days }: { days: number }) {
       animate={{ scale: 1, opacity: 1 }}
       className={cn(
         'flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl border',
-        days <= 3 ? 'bg-rose-500/10 border-rose-200/60' : days <= 7 ? 'bg-amber-500/10 border-amber-200/60' : 'bg-primary/10 border-primary/20'
+        days <= 3 ? 'bg-danger-subtle border-danger/25' : days <= 7 ? 'bg-warning-subtle border-warning/25' : 'bg-primary/10 border-primary/20'
       )}
     >
       <span className={cn(
         'text-lg font-bold leading-none tabular-nums',
-        days <= 3 ? 'text-rose-600' : days <= 7 ? 'text-amber-600' : 'text-primary'
+        days <= 3 ? 'text-danger' : days <= 7 ? 'text-warning' : 'text-primary-ink'
       )}>
         {days}
       </span>
-      <span className="text-[0.5625rem] font-semibold text-muted-foreground mt-0.5">
+      <span className="text-label font-semibold text-muted-foreground mt-0.5">
         {days === 1 ? 'day' : 'days'}
       </span>
     </motion.div>

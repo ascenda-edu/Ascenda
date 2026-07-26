@@ -13,11 +13,12 @@ import { ComparisonModal } from '@/components/university-search/ComparisonModal'
 import type { ProgramSearchResult } from '@/components/university-search/types';
 import { cn } from '@/lib/utils';
 import { classifyFitTier, TIER_VISUAL, TIER_LABEL, type FitTier } from '@/lib/theme/categories';
+import { getFitScoreVisuals } from '@/lib/theme/fit-score';
 
 const stageTone = {
-  Researching: 'bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/20',
-  Shortlisted: 'bg-sky-100 text-sky-900 border-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:border-sky-500/20',
-  Active: 'bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20'
+  Researching: 'bg-warning-subtle text-warning border-warning/25',
+  Shortlisted: 'bg-info-subtle text-info border-info/25',
+  Active: 'bg-success-subtle text-success border-success/25'
 };
 
 const classifyFit = classifyFitTier;
@@ -60,7 +61,7 @@ export default function UniversitySearchShortlistPage() {
   if (!ready) {
     return (
       <div className="space-y-8 pb-24">
-        <Skeleton className="h-24 w-full rounded-[24px]" />
+        <Skeleton className="h-24 w-full rounded-3xl" />
         <div className="grid gap-4 md:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <Skeleton key={index} className="h-28 w-full rounded-2xl" />
@@ -103,8 +104,8 @@ export default function UniversitySearchShortlistPage() {
         <div className="grid gap-4 md:grid-cols-4">
           <Card className="border-dashed border-border/70">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <span className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Shortlisted</span>
-              <Sparkles className="h-5 w-5 text-amber-500" aria-hidden />
+              <span className="eyebrow">Shortlisted</span>
+              <Sparkles className="h-5 w-5 text-warning" aria-hidden />
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-semibold text-foreground">{metrics.count}</p>
@@ -113,8 +114,8 @@ export default function UniversitySearchShortlistPage() {
           </Card>
           <Card className="border-dashed border-border/70">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <span className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Reach / Match / Safe</span>
-              <Target className="h-5 w-5 text-emerald-500" aria-hidden />
+              <span className="eyebrow">Reach / Match / Safe</span>
+              <Target className="h-5 w-5 text-success" aria-hidden />
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-semibold text-foreground tabular-nums">
@@ -125,8 +126,8 @@ export default function UniversitySearchShortlistPage() {
           </Card>
           <Card className="border-dashed border-border/70">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <span className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Avg fit</span>
-              <Target className="h-5 w-5 text-emerald-500" aria-hidden />
+              <span className="eyebrow">Avg fit</span>
+              <Target className="h-5 w-5 text-success" aria-hidden />
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-semibold text-foreground">{metrics.avgFit !== null ? `${metrics.avgFit}%` : 'N/A'}</p>
@@ -135,8 +136,8 @@ export default function UniversitySearchShortlistPage() {
           </Card>
           <Card className="border-dashed border-border/70">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <span className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Next steps</span>
-              <Clock className="h-5 w-5 text-violet-500" aria-hidden />
+              <span className="eyebrow">Next steps</span>
+              <Clock className="h-5 w-5 text-feature" aria-hidden />
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-semibold text-foreground">
@@ -155,7 +156,7 @@ export default function UniversitySearchShortlistPage() {
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Saved programs</p>
+            <p className="eyebrow">Saved programs</p>
             <h2 className="text-xl font-semibold text-foreground">Shortlist board</h2>
             <p className="text-sm text-muted-foreground">Refine your picks, open them in results, or remove them here.</p>
           </div>
@@ -164,7 +165,7 @@ export default function UniversitySearchShortlistPage() {
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border bg-muted/40 px-8 py-16 text-center">
             <div className="mb-4 rounded-full bg-muted p-4">
-              <Sparkles className="h-6 w-6 text-primary" aria-hidden />
+              <Sparkles className="h-6 w-6 text-primary-ink" aria-hidden />
             </div>
             <h3 className="text-lg font-semibold text-foreground">No courses saved yet</h3>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -184,7 +185,7 @@ export default function UniversitySearchShortlistPage() {
                 <Card
                   key={item.id}
                   className={cn(
-                    'border border-l-4 bg-card transition hover:-translate-y-px hover:shadow-md',
+                    'border border-l-4 bg-card hover-lift',
                     visual ? cn(visual.border, visual.accent) : 'border-l-border'
                   )}
                 >
@@ -197,14 +198,23 @@ export default function UniversitySearchShortlistPage() {
                           </div>
                         ) : null}
                         <div className="min-w-0">
-                          <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">
+                          <p className="eyebrow">
                             {item.location ?? 'Location TBC'}
                           </p>
                           <CardTitle className="text-xl text-foreground">{item.name}</CardTitle>
                           <p className="text-sm text-muted-foreground">{item.program}</p>
                         </div>
                       </div>
-                      <span className="shrink-0 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-300">
+                      {/* Banded, not always-green. This chip used to be hardcoded to the
+                          success tone, so a 20%-fit programme advertised its score in
+                          "good" green — contradicting the tier chip directly beneath it —
+                          and "Fit TBD" did the same with no score at all. */}
+                      <span
+                        className={cn(
+                          'shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1',
+                          getFitScoreVisuals(item.fitScore).badgeClass
+                        )}
+                      >
                         {typeof item.fitScore === 'number' ? `${Math.round(item.fitScore)}% fit` : 'Fit TBD'}
                       </span>
                     </div>
@@ -242,7 +252,7 @@ export default function UniversitySearchShortlistPage() {
 
                   <CardContent className="space-y-3 pt-0">
                     <div className="rounded-2xl bg-muted/60 p-4">
-                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Next action</p>
+                      <p className="eyebrow">Next action</p>
                       <p className="mt-1 text-sm text-foreground">{item.nextAction ?? 'Add a next action to keep momentum.'}</p>
                     </div>
                   </CardContent>

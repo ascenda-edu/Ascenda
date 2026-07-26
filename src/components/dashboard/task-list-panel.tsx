@@ -89,11 +89,11 @@ export const TaskListPanel = ({ title, tasks }: TaskListPanelProps) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.96 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="pointer-events-none fixed left-1/2 bottom-[calc(env(safe-area-inset-bottom,8px)+80px)] z-[55] -translate-x-1/2 md:bottom-6"
+            className="pointer-events-none fixed left-1/2 bottom-[calc(env(safe-area-inset-bottom,8px)+80px)] z-toast -translate-x-1/2 md:bottom-6"
             role="status"
             aria-live="polite"
           >
-            <div className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 shadow-lg dark:border-emerald-400/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+            <div className="flex items-center gap-2 rounded-full border border-success/25 bg-success-subtle px-4 py-2 text-sm font-semibold text-success shadow-e-3">
               <Sparkles className="h-4 w-4" aria-hidden />
               {celebration.message}
             </div>

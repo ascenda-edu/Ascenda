@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { UniversityCardSkeleton } from '@/components/university-card-skeleton';
 
 const TierBlock = ({ count = 3 }: { count?: number }) => (
-  <div className="space-y-5 rounded-[28px] border border-border bg-card p-6 shadow-[0_24px_50px_rgba(15,23,42,0.08)]">
+  <div className="space-y-5 rounded-4xl border border-border bg-card p-6 shadow-e-3">
     <div className="flex flex-col gap-3 border-b border-border pb-3">
       <div className="flex items-center justify-between gap-4">
         <Skeleton className="h-3 w-16" />
@@ -28,7 +28,7 @@ export default function LoadingMatchesPage() {
   return (
     <DashboardShell>
       <SectionNav items={EXPLORE_SECTION_ITEMS} />
-      <section className="surface-card surface-card--static text-foreground">
+      <section className="surface-card text-foreground">
         <div className="flex flex-col gap-4">
           <Skeleton className="h-3 w-24" />
           <div className="space-y-3">
@@ -50,7 +50,7 @@ export default function LoadingMatchesPage() {
         </div>
       </section>
 
-      <div className="mt-8 space-y-6">
+      <div className="space-y-6">
         <TierBlock />
         <TierBlock count={2} />
       </div>

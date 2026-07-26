@@ -7,7 +7,7 @@ export default function SearchLoading() {
   return (
     <div className="space-y-6">
       {/* PageHero-shaped block */}
-      <div className="surface-card surface-card--static !px-4 !py-3 sm:!px-5 sm:!py-3.5">
+      <div className="surface-card !px-4 !py-3 sm:!px-5 sm:!py-3.5">
         <div className="flex flex-col gap-1.5">
           <Skeleton className="h-3 w-40" />
           <div className="space-y-2">
@@ -21,7 +21,7 @@ export default function SearchLoading() {
       <div className="grid items-start gap-6 lg:grid-cols-[280px,1fr]">
         {/* Facet rail (lg+) */}
         <div className="hidden lg:block">
-          <div className="surface-card surface-card--static !p-0">
+          <div className="surface-card !p-0">
             <div className="border-b border-border px-5 py-4">
               <Skeleton className="h-5 w-20" />
             </div>

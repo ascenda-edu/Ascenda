@@ -68,9 +68,11 @@ export const NavDropdown = ({ label, items }: NavDropdownProps) => {
         aria-expanded={open}
         aria-controls={menuId}
         className={cn(
-          'inline-flex items-center gap-1 rounded-full px-3 py-1 border border-transparent transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          // Matches NavLink exactly (same row, same pill): no hover lift, and
+          // an explicit transition property list rather than transition-all.
+          'inline-flex items-center gap-1 rounded-full px-3 py-1 border border-transparent transition-[color,background-color,border-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
           groupActive
-            ? 'border border-primary bg-primary text-primary-foreground shadow-sm'
+            ? 'border border-primary bg-primary text-primary-foreground shadow-e-1'
             : 'hover:bg-foreground/5 hover:text-foreground'
         )}
       >
@@ -86,7 +88,7 @@ export const NavDropdown = ({ label, items }: NavDropdownProps) => {
           id={menuId}
           role="menu"
           aria-label={label}
-          className="absolute left-1/2 top-full z-50 mt-2 w-48 -translate-x-1/2 rounded-2xl border border-border bg-card/95 p-1.5 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-card/90"
+          className="absolute left-1/2 top-full z-50 mt-2 w-48 -translate-x-1/2 rounded-2xl border border-border bg-card/95 p-1.5 shadow-e-4 backdrop-blur-xl dark:border-white/10 dark:bg-card/90"
         >
           {items.map((item) => {
             const Icon = item.icon;
@@ -96,6 +98,7 @@ export const NavDropdown = ({ label, items }: NavDropdownProps) => {
                 key={item.href}
                 href={item.href}
                 role="menuitem"
+                aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
                   active

@@ -11,6 +11,8 @@ import { SectionNav } from '@/components/layout/section-nav';
 import { EXPLORE_SECTION_ITEMS } from '@/components/layout/navigation';
 import { loadMatchesForProfile } from '@/lib/matching/service';
 import { TrackProgramButton } from '@/components/programs/track-program-button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { AlertTriangle, Compass, Library, UserCircle } from 'lucide-react';
 import { ACTION_TEXT, MATCHES_TEXT } from '@/lib/constants/text';
 
 export const metadata: Metadata = {
@@ -56,10 +58,11 @@ export default async function MatchesPage() {
             </Button>
           }
         />
-        <div className="rounded-[28px] border border-dashed border-border bg-muted/60 p-8 text-center text-muted-foreground">
-          <p className="text-base font-semibold text-foreground">Hit a snag loading your matches</p>
-          <p className="mt-2 text-sm">Try refreshing in a bit, or pop into your profile and tweak something — that often helps.</p>
-        </div>
+        <EmptyState
+          icon={AlertTriangle}
+          title="Hit a snag loading your matches"
+          description="Try refreshing in a bit, or pop into your profile and tweak something — that often helps."
+        />
       </DashboardShell>
     );
   }
@@ -81,9 +84,10 @@ export default async function MatchesPage() {
             </Button>
           }
         />
-        <div className="rounded-[28px] border border-dashed border-border bg-muted/60 p-8 text-center text-muted-foreground">
-          {MATCHES_TEXT.profileIncomplete.emptyMessage}
-        </div>
+        <EmptyState
+          icon={UserCircle}
+          title={MATCHES_TEXT.profileIncomplete.emptyMessage}
+        />
       </DashboardShell>
     );
   }
@@ -91,9 +95,22 @@ export default async function MatchesPage() {
   if (matchResult.catalogSize.programs === 0 || matchResult.catalogSize.universities === 0) {
     return (
       <DashboardShell>
-        <div className="rounded-[28px] border border-dashed border-border bg-muted/60 p-8 text-center text-muted-foreground">
-          {MATCHES_TEXT.catalogUnavailable}
-        </div>
+        <SectionNav items={EXPLORE_SECTION_ITEMS} />
+        <PageHero
+          tone="student"
+          eyebrow={MATCHES_TEXT.hero.eyebrow}
+          title="The program list is unavailable"
+          description={MATCHES_TEXT.catalogUnavailable}
+          highlight="Try again soon"
+          stats={[{ label: 'Matches', value: '—' }, { label: 'Programs', value: '—' }, { label: 'Updates', value: '—' }]}
+          breadcrumbs={<Breadcrumbs />}
+          actions={
+            <Button asChild size="sm" variant="outline">
+              <Link href="/dashboard">{ACTION_TEXT.returnToDashboard}</Link>
+            </Button>
+          }
+        />
+        <EmptyState icon={Library} title={MATCHES_TEXT.catalogUnavailable} />
       </DashboardShell>
     );
   }
@@ -143,20 +160,21 @@ export default async function MatchesPage() {
       {enriched.length ? (
         <MatchList matches={enriched} />
       ) : (
-        <div className="rounded-[28px] border border-dashed border-border bg-muted/60 p-8 text-center text-muted-foreground">
-          <p className="text-base font-semibold text-foreground">{MATCHES_TEXT.emptyState.title}</p>
-          <p className="mt-2 text-sm">
-            {MATCHES_TEXT.emptyState.description}
-          </p>
-          <div className="mt-4 flex flex-wrap justify-center gap-2">
-            <Button asChild size="sm">
-              <Link href="/profile/wizard?step=lifestyle_preferences">{ACTION_TEXT.adjustPreferences}</Link>
-            </Button>
-            <Button asChild size="sm" variant="outline">
-              <Link href="/profile/wizard?step=academic_details">{ACTION_TEXT.updateAcademics}</Link>
-            </Button>
-          </div>
-        </div>
+        <EmptyState
+          icon={Compass}
+          title={MATCHES_TEXT.emptyState.title}
+          description={MATCHES_TEXT.emptyState.description}
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button asChild size="sm">
+                <Link href="/profile/wizard?step=lifestyle_preferences">{ACTION_TEXT.adjustPreferences}</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/profile/wizard?step=academic_details">{ACTION_TEXT.updateAcademics}</Link>
+              </Button>
+            </div>
+          }
+        />
       )}
     </DashboardShell>
   );

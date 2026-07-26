@@ -169,14 +169,14 @@ function PageCard({ snippet, onClick }: { snippet: PageSnippet; onClick: () => v
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-[14px] border border-border bg-background p-2.5 text-left transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-sm"
+      className="flex w-full items-center gap-3 rounded-xl border border-border bg-background p-2.5 text-left transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-e-1"
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/10">
-        <Icon className="h-4 w-4 text-primary" />
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+        <Icon className="h-4 w-4 text-primary-ink" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-foreground">{snippet.name}</p>
-        <p className="truncate text-[0.6875rem] text-muted-foreground">{snippet.description}</p>
+        <p className="truncate text-label text-muted-foreground">{snippet.description}</p>
       </div>
       <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
     </button>
@@ -436,7 +436,7 @@ export function ChatbotWidget() {
             exit={{ scale: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
             onClick={() => setIsOpen(true)}
-            className="fixed right-5 bottom-[calc(env(safe-area-inset-bottom,8px)+72px)] z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30 active:translate-y-0 md:bottom-6 md:right-6 md:z-[60]"
+            className="fixed right-5 bottom-[calc(env(safe-area-inset-bottom,8px)+72px)] z-docked flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-e-3 shadow-primary/25 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-e-4 hover:shadow-primary/30 active:translate-y-0 md:bottom-6 md:right-6 md:z-panel"
             aria-label="Open Ascendi AI assistant"
           >
             <Bot className="h-5 w-5" />
@@ -452,17 +452,17 @@ export function ChatbotWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="fixed right-5 bottom-[calc(env(safe-area-inset-bottom,8px)+72px)] z-[55] flex h-[min(560px,calc(100vh-140px))] w-[min(400px,calc(100vw-40px))] flex-col overflow-hidden rounded-[24px] border border-border bg-card shadow-2xl md:bottom-6 md:right-6 md:z-[60] md:h-[min(560px,calc(100vh-40px))]"
+            className="fixed right-5 bottom-[calc(env(safe-area-inset-bottom,8px)+72px)] z-[55] flex h-[min(560px,calc(100vh-140px))] w-[min(400px,calc(100vw-40px))] flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-e-4 md:bottom-6 md:right-6 md:z-panel md:h-[min(560px,calc(100vh-40px))]"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                  <Bot className="h-4 w-4 text-primary" />
+                  <Bot className="h-4 w-4 text-primary-ink" />
                 </div>
                 <div>
                   <p className="font-heading text-sm font-semibold text-foreground">Ascendi</p>
-                  <p className="text-[0.6875rem] text-muted-foreground">
+                  <p className="text-label text-muted-foreground">
                     {mode === 'counsellor'
                       ? 'Counsellor assistant'
                       : mode === 'parent'
@@ -475,7 +475,7 @@ export function ChatbotWidget() {
                 <button
                   onClick={handoffToAssistant}
                   disabled={handoffBusy}
-                  className="flex h-8 items-center gap-1 rounded-full px-2.5 text-[0.6875rem] font-semibold text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
+                  className="flex h-8 items-center gap-1 rounded-full px-2.5 text-label font-semibold text-primary-ink transition-colors hover:bg-primary/10 disabled:opacity-50"
                   aria-label="Continue in Assistant"
                   title="Continue this conversation in the Assistant"
                 >
@@ -492,7 +492,7 @@ export function ChatbotWidget() {
                     className={cn(
                       'flex h-8 items-center justify-center gap-1 rounded-full transition-colors',
                       confirmClear
-                        ? 'w-auto px-2.5 text-[0.6875rem] font-semibold text-rose-600 dark:text-rose-400'
+                        ? 'w-auto px-2.5 text-label font-semibold text-danger'
                         : 'w-8 text-muted-foreground hover:bg-muted hover:text-foreground'
                     )}
                     aria-label={confirmClear ? 'Confirm clear chat' : 'Clear chat'}
@@ -520,7 +520,7 @@ export function ChatbotWidget() {
               {messages.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center text-center">
                   <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                    <Bot className="h-6 w-6 text-primary" />
+                    <Bot className="h-6 w-6 text-primary-ink" />
                   </div>
                   <p className="font-heading text-sm font-semibold text-foreground">
                     Hey! I&apos;m Ascendi
@@ -544,7 +544,7 @@ export function ChatbotWidget() {
                       <button
                         key={s}
                         onClick={() => sendMessage(s)}
-                        className="rounded-full border border-border bg-background px-3 py-1.5 text-[0.6875rem] text-muted-foreground transition-[transform,border-color,color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:text-foreground hover:shadow-sm"
+                        className="rounded-full border border-border bg-background px-3 py-1.5 text-label text-muted-foreground transition-[transform,border-color,color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:text-foreground hover:shadow-e-1"
                       >
                         {s}
                       </button>
@@ -574,9 +574,9 @@ export function ChatbotWidget() {
                     >
                       <div
                         className={cn(
-                          'max-w-[85%] break-words rounded-[16px] px-3.5 py-2.5 text-[0.8125rem] leading-relaxed',
+                          'max-w-[85%] break-words rounded-2xl px-3.5 py-2.5 text-body-sm leading-relaxed',
                           msg.error
-                            ? 'border border-rose-300/60 bg-rose-500/10 text-rose-700 dark:border-rose-500/30 dark:text-rose-300'
+                            ? 'border border-danger/25 bg-danger-subtle text-danger'
                             : msg.role === 'user'
                               ? 'bg-primary text-primary-foreground'
                               : 'bg-muted/60 text-foreground'
@@ -588,7 +588,7 @@ export function ChatbotWidget() {
                             <button
                               onClick={retryLast}
                               disabled={isStreaming}
-                              className="inline-flex items-center gap-1 rounded-full border border-rose-300/60 px-2.5 py-1 text-[0.6875rem] font-semibold text-rose-700 transition hover:bg-rose-500/10 disabled:opacity-50 dark:border-rose-500/40 dark:text-rose-300"
+                              className="inline-flex items-center gap-1 rounded-full border border-danger/25 px-2.5 py-1 text-label font-semibold text-danger transition hover:bg-danger-subtle disabled:opacity-50"
                             >
                               <RotateCcw className="h-3 w-3" />
                               Retry
@@ -656,7 +656,7 @@ export function ChatbotWidget() {
                             className={cn(
                               'flex h-6 w-6 items-center justify-center rounded-full transition-colors',
                               msg.rating === 1
-                                ? 'text-emerald-600 dark:text-emerald-400'
+                                ? 'text-success'
                                 : 'text-muted-foreground/60 hover:bg-muted hover:text-foreground'
                             )}
                           >
@@ -669,7 +669,7 @@ export function ChatbotWidget() {
                             className={cn(
                               'flex h-6 w-6 items-center justify-center rounded-full transition-colors',
                               msg.rating === -1
-                                ? 'text-rose-600 dark:text-rose-400'
+                                ? 'text-danger'
                                 : 'text-muted-foreground/60 hover:bg-muted hover:text-foreground'
                             )}
                           >
@@ -690,11 +690,11 @@ export function ChatbotWidget() {
               className="border-t border-border bg-card px-3 py-2.5"
             >
               {coolingDown && (
-                <p className="mb-1.5 text-center text-[0.6875rem] text-muted-foreground" role="status">
+                <p className="mb-1.5 text-center text-label text-muted-foreground" role="status">
                   Message limit reached — you can send again in {cooldownRemaining}s
                 </p>
               )}
-              <div className="flex items-end gap-2 rounded-[18px] border border-border bg-background px-3 py-1.5 transition-colors focus-within:border-primary/40">
+              <div className="flex items-end gap-2 rounded-2xl border border-border bg-background px-3 py-1.5 transition-colors focus-within:border-primary/40">
                 <AutoResizeTextarea
                   value={input}
                   onChange={setInput}

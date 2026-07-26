@@ -118,24 +118,24 @@ export default async function ToolboxPage() {
         <div className="grid gap-4 sm:grid-cols-[1fr,auto]">
           {/* Next action card */}
           {nextDeadline && (
-            <Link href="/toolbox/timeline" className="block surface-card border-l-4 border-l-primary hover:border-l-primary hover:shadow-xl transition-[transform,box-shadow] hover:-translate-y-0.5 group overflow-hidden">
+            <Link href="/toolbox/timeline" className="block surface-card hover-lift border-l-4 border-l-primary hover:border-l-primary group overflow-hidden">
               <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-primary/5 blur-2xl group-hover:bg-primary/10 transition-colors" />
               <div className="relative z-10 flex items-center gap-4">
                 <ToolboxCountdown days={daysUntilNext ?? 0} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[0.625rem] font-bold uppercase tracking-[0.3em] text-primary flex items-center gap-1.5">
+                  <p className="eyebrow-accent flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary motion-safe:animate-pulse" />
                     Your next action
                   </p>
-                  <p className="text-lg font-semibold text-foreground mt-0.5 truncate">{nextDeadline.title}</p>
+                  <h2 className="text-lg font-semibold text-foreground mt-0.5 truncate">{nextDeadline.title}</h2>
                   <p className="text-sm text-muted-foreground">
                     {nextDeadline.university} — {daysUntilNext !== null && daysUntilNext <= 7
-                      ? <span className="text-rose-600 font-semibold">{daysUntilNext === 0 ? 'Today' : daysUntilNext === 1 ? 'Tomorrow' : `${daysUntilNext} days left`}</span>
+                      ? <span className="text-danger font-semibold">{daysUntilNext === 0 ? 'Today' : daysUntilNext === 1 ? 'Tomorrow' : `${daysUntilNext} days left`}</span>
                       : parseLocalDate(nextDeadline.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
                     }
                   </p>
                 </div>
-                <ArrowRight className="h-5 w-5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-[color,transform] shrink-0" />
+                <ArrowRight className="h-5 w-5 text-muted-foreground/30 group-hover:text-primary-ink group-hover:translate-x-1 transition-[color,transform] shrink-0" />
               </div>
             </Link>
           )}
@@ -163,7 +163,7 @@ export default async function ToolboxPage() {
               <Link
                 href={tool.href}
                 className={cn(
-                  'surface-card group relative flex h-full flex-col overflow-hidden border-l-4 transition-[transform,box-shadow] hover:-translate-y-1 hover:shadow-xl',
+                  'surface-card hover-lift group relative flex h-full flex-col overflow-hidden border-l-4',
                   visual.border,
                   visual.accent
                 )}
@@ -171,16 +171,16 @@ export default async function ToolboxPage() {
                 <div className="relative z-10 flex flex-1 flex-col gap-4">
                   <div className="flex items-start gap-3">
                     <div className="relative">
-                      <div className={cn(visual.swatch, 'h-12 w-12 shadow-sm')}>
+                      <div className={cn(visual.swatch, 'h-12 w-12 shadow-e-1')}>
                         <Icon className="h-5 w-5" />
                       </div>
-                      <span className="absolute -top-1.5 -left-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-[0.625rem] font-bold text-background shadow-sm">
+                      <span className="absolute -top-1.5 -left-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-label font-bold text-background shadow-e-1">
                         {tool.step}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0 pt-0.5">
                       <div className="flex items-center gap-1.5">
-                        <p className="text-base font-semibold text-foreground">{tool.title}</p>
+                        <h2 className="text-base font-semibold text-foreground">{tool.title}</h2>
                         <ArrowRight className={cn('h-3.5 w-3.5 opacity-0 transition-[transform,opacity] group-hover:translate-x-1 group-hover:opacity-100', visual.text)} />
                       </div>
                       <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">{tool.description}</p>
@@ -191,7 +191,7 @@ export default async function ToolboxPage() {
                     {tool.stats.map((stat) => (
                       <div key={stat.label} className="surface-subcard rounded-xl px-2.5 py-2.5 text-center">
                         <p className="text-sm font-bold text-foreground tabular-nums">{stat.value}</p>
-                        <p className="mt-0.5 text-[0.625rem] text-muted-foreground">{stat.label}</p>
+                        <p className="mt-0.5 text-label text-muted-foreground">{stat.label}</p>
                       </div>
                     ))}
                   </div>

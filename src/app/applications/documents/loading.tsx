@@ -8,7 +8,7 @@ export default function DocumentsLoading() {
         <DashboardShell>
             <SectionNav items={PLANNER_SECTION_ITEMS} />
 
-            <div className="surface-card surface-card--static space-y-4 p-6">
+            <div className="surface-card space-y-4 p-6">
                 <Skeleton className="h-3 w-20" />
                 <Skeleton className="h-8 w-48" />
                 <Skeleton className="h-4 w-72" />
@@ -16,7 +16,7 @@ export default function DocumentsLoading() {
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="space-y-3 rounded-[24px] border border-border bg-card p-5">
+                    <div key={i} className="space-y-3 rounded-3xl border border-border bg-card p-5">
                         <div className="flex items-center gap-3">
                             <Skeleton className="h-10 w-10 rounded-xl" />
                             <div className="space-y-1.5 flex-1">

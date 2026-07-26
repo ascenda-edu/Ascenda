@@ -6,10 +6,10 @@ import { cn } from '@/lib/utils';
 import type { OutcomeRecord } from '@/lib/data/student-demo-data';
 
 const RESULT_CONFIG = {
-  accepted: { icon: Check, label: 'Accepted', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-200/60 dark:border-emerald-500/20' },
-  rejected: { icon: X, label: 'Rejected', color: 'text-rose-500', bg: 'bg-rose-500/10 border-rose-200/60 dark:border-rose-500/20' },
-  waitlisted: { icon: HelpCircle, label: 'Waitlisted', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-200/60 dark:border-amber-500/20' },
-  pending: { icon: Clock, label: 'Pending', color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-500/10 border-sky-200/60 dark:border-sky-500/20' },
+  accepted: { icon: Check, label: 'Accepted', color: 'text-success', bg: 'bg-success-subtle border-success/25' },
+  rejected: { icon: X, label: 'Rejected', color: 'text-danger', bg: 'bg-danger-subtle border-danger/25' },
+  waitlisted: { icon: HelpCircle, label: 'Waitlisted', color: 'text-warning', bg: 'bg-warning-subtle border-warning/25' },
+  pending: { icon: Clock, label: 'Pending', color: 'text-info', bg: 'bg-info-subtle border-info/25' },
   withdrawn: { icon: MinusCircle, label: 'Withdrawn', color: 'text-muted-foreground', bg: 'bg-muted/60 border-border' }
 };
 
@@ -41,13 +41,13 @@ export function OutcomeTracker({ outcomes }: OutcomeTrackerProps) {
       {/* Summary chips */}
       <div className="flex flex-wrap gap-2">
         {[
-          { label: 'Accepted', count: accepted, color: 'bg-emerald-500/10 text-emerald-600 border-emerald-200/60 dark:text-emerald-400 dark:border-emerald-500/20' },
-          { label: 'Pending', count: pending, color: 'bg-sky-500/10 text-sky-600 border-sky-200/60 dark:text-sky-400 dark:border-sky-500/20' },
+          { label: 'Accepted', count: accepted, color: 'bg-success-subtle text-success border-success/25' },
+          { label: 'Pending', count: pending, color: 'bg-info-subtle text-info border-info/25' },
           { label: 'Total', count: total, color: 'bg-muted/60 text-foreground border-border' }
         ].map(({ label, count, color }) => (
           <div key={label} className={cn('rounded-2xl border px-4 py-2 text-center', color)}>
             <p className="text-lg font-bold tabular-nums">{count}</p>
-            <p className="text-[0.6875rem] font-semibold">{label}</p>
+            <p className="text-label font-semibold">{label}</p>
           </div>
         ))}
       </div>
@@ -85,7 +85,7 @@ export function OutcomeTracker({ outcomes }: OutcomeTrackerProps) {
                   {cfg.label}
                 </span>
                 {outcome.responseDate && (
-                  <span className="text-[0.6875rem] text-muted-foreground">{formatDate(outcome.responseDate)}</span>
+                  <span className="text-label text-muted-foreground">{formatDate(outcome.responseDate)}</span>
                 )}
               </div>
             </motion.div>

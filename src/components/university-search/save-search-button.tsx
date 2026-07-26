@@ -80,7 +80,7 @@ export function SaveSearchButton({ query, chips: chipsProp }: Props) {
       >
         {alreadySaved || justSaved ? (
           <>
-            <Check className="h-4 w-4 text-emerald-500" /> Saved
+            <Check className="h-4 w-4 text-success" /> Saved
           </>
         ) : (
           <>
@@ -95,7 +95,7 @@ export function SaveSearchButton({ query, chips: chipsProp }: Props) {
             initial={{ opacity: 0, y: 4, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.98 }}
-            className="absolute right-0 top-11 z-30 w-64 rounded-2xl border border-border bg-card p-3 shadow-lg"
+            className="absolute right-0 top-11 z-30 w-64 rounded-2xl border border-border bg-card p-3 shadow-e-3"
           >
             <label htmlFor="save-search-name" className="mb-1.5 block text-xs font-semibold text-muted-foreground">
               Name this search

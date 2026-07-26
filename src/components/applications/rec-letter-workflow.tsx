@@ -41,18 +41,18 @@ const STATUS_INDEX: Record<RecLetterStatus, number> = {
 
 const STATUS_COLORS: Record<RecLetterStatus, string> = {
   draft: 'text-muted-foreground',
-  requested: 'text-amber-600 dark:text-amber-400',
-  writing: 'text-sky-600 dark:text-sky-400',
-  signed: 'text-violet-600 dark:text-violet-400',
-  uploaded: 'text-emerald-600 dark:text-emerald-400'
+  requested: 'text-warning',
+  writing: 'text-info',
+  signed: 'text-feature',
+  uploaded: 'text-success'
 };
 
 const STATUS_BG: Record<RecLetterStatus, string> = {
   draft: 'bg-muted/60',
-  requested: 'bg-amber-500/10',
-  writing: 'bg-sky-500/10',
-  signed: 'bg-violet-500/10',
-  uploaded: 'bg-emerald-500/10'
+  requested: 'bg-warning-subtle',
+  writing: 'bg-info-subtle',
+  signed: 'bg-feature-subtle',
+  uploaded: 'bg-success-subtle'
 };
 
 // ─── Animation ───────────────────────────────────────────────────────────────
@@ -168,7 +168,7 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
           </p>
           <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted/60">
             <motion.div
-              className="h-2 rounded-full bg-emerald-500"
+              className="h-2 rounded-full bg-success"
               initial={{ width: 0 }}
               animate={{ width: `${(completedCount / letters.length) * 100}%` }}
               transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
@@ -207,10 +207,10 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
                     'shrink-0 rounded-full border px-3 py-1 text-xs font-semibold',
                     STATUS_BG[letter.status],
                     STATUS_COLORS[letter.status],
-                    letter.status === 'uploaded' ? 'border-emerald-200/60 dark:border-emerald-500/20' :
-                    letter.status === 'signed' ? 'border-violet-200/60 dark:border-violet-500/20' :
-                    letter.status === 'writing' ? 'border-sky-200/60 dark:border-sky-500/20' :
-                    letter.status === 'requested' ? 'border-amber-200/60 dark:border-amber-500/20' :
+                    letter.status === 'uploaded' ? 'border-success/25' :
+                    letter.status === 'signed' ? 'border-feature/25' :
+                    letter.status === 'writing' ? 'border-info/25' :
+                    letter.status === 'requested' ? 'border-warning/25' :
                     'border-border'
                   )}
                 >
@@ -242,7 +242,7 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
                         <div
                           className={cn(
                             'h-px flex-1',
-                            i < currentIdx ? 'bg-emerald-400/40' : 'bg-border/40'
+                            i < currentIdx ? 'bg-success/40' : 'bg-border/40'
                           )}
                         />
                       )}
@@ -254,12 +254,12 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
               {/* Universities + dates */}
               <div className="flex flex-wrap items-center gap-2">
                 {letter.universities.map((uni) => (
-                  <span key={uni} className="surface-chip text-[0.6875rem]">
+                  <span key={uni} className="surface-chip text-label">
                     {uni}
                   </span>
                 ))}
                 {letter.requestedDate && (
-                  <span className="ml-auto text-[0.6875rem] text-muted-foreground">
+                  <span className="ml-auto text-label text-muted-foreground">
                     Requested {formatDate(letter.requestedDate)}
                   </span>
                 )}
@@ -269,7 +269,7 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
               {(letter.status === 'requested' || letter.status === 'writing') ? (
                 <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
                   {reminders[letter.id] ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200/60 bg-sky-500/10 px-3 py-1 text-[0.6875rem] font-semibold text-sky-700 dark:text-sky-300">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-info/25 bg-info-subtle px-3 py-1 text-label font-semibold text-info">
                       <Send className="h-3 w-3" aria-hidden />
                       Counsellor notified · {formatReminderAge(reminders[letter.id])}
                     </span>
@@ -278,13 +278,13 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
                       type="button"
                       onClick={() => handleRemind(letter)}
                       disabled={busy === letter.id}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1 text-[0.6875rem] font-semibold text-muted-foreground transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted/60 hover:text-foreground disabled:cursor-wait disabled:opacity-60"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1 text-label font-semibold text-muted-foreground transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted/60 hover:text-foreground disabled:cursor-wait disabled:opacity-60"
                     >
                       <Send className="h-3 w-3" aria-hidden />
                       {busy === letter.id ? 'Sending…' : `Ask your counsellor to chase ${letter.teacherName.split(' ')[0]}`}
                     </button>
                   )}
-                  <span className="ml-auto text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">
+                  <span className="eyebrow ml-auto">
                     Through the platform
                   </span>
                 </div>

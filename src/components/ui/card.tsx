@@ -8,7 +8,13 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-3xl border border-border bg-card/50 backdrop-blur-xl text-card-foreground shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-px hover:shadow-md dark:border-white/10",
+      // Matches `surface-card` (the card system of record, 149 consumers):
+      // opaque, rounded-2xl, resting elevation e-1, static by default. It used
+      // to be a translucent `bg-card/50 backdrop-blur-xl rounded-3xl` glass card
+      // that visibly conflicted with every surface-card on the same page — and
+      // with the config's own "not actual glassmorphism" rule. Cards that are
+      // genuinely clickable opt into motion with `hover-lift`.
+      "rounded-2xl border border-border bg-card text-card-foreground shadow-e-1 transition-[box-shadow,border-color,background-color] duration-200 dark:border-white/10",
       className
     )}
     {...props}
@@ -35,7 +41,8 @@ const CardTitle = React.forwardRef<
   <h3
     ref={ref}
     className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
+      // h3 = 18px on the type scale; text-2xl (24px) collided with the h2 step.
+      "text-lg font-semibold leading-none tracking-tight",
       className
     )}
     {...props}

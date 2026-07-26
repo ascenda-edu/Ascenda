@@ -27,12 +27,12 @@ export const ShortlistMarquee = ({ className, label = 'Shortlist flow', tone = '
         className
       )}
     >
-      <div className={cn('mb-1 text-[0.6rem] uppercase tracking-[0.4em]', labelClasses)}>{label}</div>
+      <div className={cn('eyebrow mb-1', labelClasses)}>{label}</div>
       <div className="flex flex-wrap items-center justify-center gap-4 text-lg font-semibold uppercase tracking-[0.3em] sm:justify-between">
         {marqueeItems.map((text) => (
           <span key={text} className={cn('flex items-center gap-2', textClasses)}>
             {text}
-            <GraduationCap className={cn('h-5 w-5', isLight ? 'text-amber-500' : 'text-amber-300')} aria-hidden />
+            <GraduationCap className={cn('h-5 w-5 text-warning')} aria-hidden />
           </span>
         ))}
       </div>

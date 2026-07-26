@@ -310,8 +310,17 @@
 
 @layer components {
   /* The two type steps the app had grown organically as arbitrary values.
-     text-[0.8125rem] (21 uses) and text-[0.6875rem] (248 uses) are these. */
-  .text-secondary {
+     text-[0.8125rem] (21 uses) and text-[0.6875rem] (248 uses) are these.
+
+     NAMING HAZARD — do not name a size utility after a colour token. This step was
+     briefly `.text-secondary`, which collides with the `secondary` COLOUR: Tailwind
+     then emits a second `.text-secondary{color:hsl(var(--secondary))}` rule in
+     @layer utilities, ~56KB later in the stylesheet than this one, so it wins. Every
+     element using it got near-white text (light `--secondary` is 220 14% 92%) that
+     even an explicit `text-foreground` alongside it could not override. It shipped
+     into the chat and assistant message bubbles before being caught.
+     `label` is not a colour token, so `.text-label` is safe. */
+  .text-body-sm {
     @apply text-[0.8125rem] leading-normal;
   }
 

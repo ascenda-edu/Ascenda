@@ -115,7 +115,7 @@ export function Dialog({ open, onOpenChange, align = 'center', children }: Dialo
                 <DialogContext.Provider value={contextValue}>
                     <div
                         className={cn(
-                            'fixed inset-0 z-[200] flex',
+                            'fixed inset-0 z-modal flex',
                             align === 'left' ? 'items-stretch justify-start' : 'items-center justify-center'
                         )}
                     >
@@ -181,7 +181,8 @@ export const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps
                 // timing-identical to before the slide-over variant landed.
                 transition={isLeft ? { duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] } : { duration: 0.2 }}
                 className={cn(
-                    'relative overflow-hidden border bg-background text-foreground shadow-lg',
+                    // e-4 is the ladder's modal step; a dialog should sit above popovers.
+                    'relative overflow-hidden border bg-background text-foreground shadow-e-4',
                     isLeft
                         ? 'h-full w-[min(88vw,360px)] max-w-full border-y-0 border-l-0'
                         : 'w-full max-w-lg rounded-xl sm:rounded-2xl',

@@ -68,7 +68,7 @@ export const DeadlineTimeline = ({ items }: DeadlineTimelineProps) => {
           <motion.li
             key={item.id}
             className={cn(
-              'group flex items-start gap-3 rounded-2xl border border-l-4 bg-card/60 p-4 shadow-sm backdrop-blur-sm transition hover:-translate-y-px hover:shadow-md',
+              'hover-lift group flex items-start gap-3 rounded-2xl border border-l-4 bg-card/60 p-4 shadow-e-1 backdrop-blur-sm',
               visual.border,
               visual.accent
             )}

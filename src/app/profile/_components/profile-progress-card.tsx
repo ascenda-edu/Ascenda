@@ -51,7 +51,7 @@ export function ProfileProgressCard({
   return (
     <div
       className={cn(
-        'surface-card surface-card--static relative overflow-hidden rounded-[28px] border-l-4 p-6',
+        'surface-card relative overflow-hidden rounded-4xl border-l-4 p-6',
         visual.border,
         visual.accent
       )}
@@ -62,14 +62,14 @@ export function ProfileProgressCard({
             <visual.icon className="h-5 w-5" />
           </div>
           <div>
-            <p className={cn('text-sm font-medium uppercase tracking-[0.2em]', visual.text)}>Profile completion</p>
+            <p className={cn('eyebrow', visual.text)}>Profile completion</p>
             <p className="text-2xl font-semibold text-foreground">{clampedPercent}%</p>
             <p className="mt-1 text-xs text-muted-foreground">
               {completedCount}/{totalSteps} steps done {nextStepTitle ? `• Next: ${nextStepTitle}` : ''}
             </p>
           </div>
         </div>
-        <div className={cn('inline-flex items-center gap-2 rounded-full px-4 py-2 text-[0.6875rem] uppercase tracking-[0.35em]', visual.chip)}>
+        <div className={cn('inline-flex items-center gap-2 rounded-full px-4 py-2 text-label uppercase tracking-[0.35em]', visual.chip)}>
           <Sparkles className="h-4 w-4" />
           Progress
         </div>
@@ -95,7 +95,7 @@ export function ProfileProgressCard({
               className={cn(
                 'group surface-subcard relative overflow-hidden px-4 py-4 transition-all duration-300 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                 complete
-                  ? 'border-emerald-300/60 bg-emerald-500/10 dark:border-emerald-400/40 dark:bg-emerald-500/10'
+                  ? 'border-success/25 bg-success-subtle'
                   : ''
               )}
             >
@@ -103,9 +103,9 @@ export function ProfileProgressCard({
                 <p className="text-sm font-semibold text-foreground">{step.title}</p>
                 <span
                   className={cn(
-                    'inline-flex items-center rounded-full px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.2em]',
+                    'inline-flex items-center rounded-full px-3 py-1 text-label font-semibold uppercase tracking-[0.2em]',
                     complete
-                      ? 'bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-400/40 dark:text-emerald-200'
+                      ? 'bg-success-subtle text-success ring-1 ring-success/25'
                       : 'bg-muted/70 text-muted-foreground ring-1 ring-border'
                   )}
                 >
@@ -113,7 +113,7 @@ export function ProfileProgressCard({
                 </span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{step.description}</p>
-              <span className="mt-3 inline-flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-primary opacity-80 transition group-hover:opacity-100">
+              <span className="eyebrow-accent mt-3 inline-flex items-center gap-2 opacity-80 transition group-hover:opacity-100">
                 Open
               </span>
             </Link>
@@ -125,7 +125,7 @@ export function ProfileProgressCard({
         {celebrate ? (
           <>
             <motion.div
-              className="pointer-events-none absolute inset-0 rounded-[28px] ring-2 ring-primary/40"
+              className="pointer-events-none absolute inset-0 rounded-4xl ring-2 ring-primary/40"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -133,7 +133,7 @@ export function ProfileProgressCard({
               aria-hidden
             />
             <motion.div
-              className="pointer-events-none absolute inset-0 rounded-[28px] shadow-[0_0_80px_rgba(56,189,248,0.35)]"
+              className="pointer-events-none absolute inset-0 rounded-4xl shadow-e-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -144,7 +144,7 @@ export function ProfileProgressCard({
               {confettiPieces.map((piece, index) => (
                 <motion.span
                   key={`${piece.left}-${piece.top}-${index}`}
-                  className="absolute h-2 w-4 rounded-full bg-gradient-to-r from-primary via-sky-400 to-emerald-400 shadow-[0_0_12px_rgba(56,189,248,0.6)]"
+                  className="absolute h-2 w-4 rounded-full bg-gradient-to-r from-primary via-info to-success shadow-e-2"
                   style={{ top: piece.top, left: piece.left }}
                   initial={{ y: -12, opacity: 0, rotate: -12 }}
                   animate={{ y: 12, opacity: [0.9, 1, 0.6, 0], rotate: [0, 8, -6, 12] }}

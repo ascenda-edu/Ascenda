@@ -36,38 +36,40 @@ export function CounsellorCard({ counsellor, openThreads, unreadTotal, latestSub
       eyebrow="Counsellor"
       title={`${counsellor.firstName}'s corner`}
       icon={MessageSquare}
-      iconClassName="bg-violet-500/10 text-violet-600 ring-violet-500/15 dark:text-violet-300"
+      iconClassName="bg-feature-subtle text-feature ring-feature/25"
       action={{ label: 'Open inbox', href: '/inbox' }}
     >
       <div className="flex h-full flex-col gap-3">
         <div className="flex items-center gap-3">
           <div className="relative shrink-0">
+            {/* from-primary to-accent (not violet-400 → primary): both ends carry
+                white at AA in BOTH themes, which a violet-400 stop does not. */}
             <div
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-primary text-xs font-bold text-white shadow-sm"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-bold text-primary-foreground shadow-e-1"
               aria-hidden
             >
               {initials}
             </div>
             <span
-              className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-emerald-500"
+              className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-success"
               aria-label="Available today"
             />
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-foreground">{counsellor.fullName}</p>
-            <p className="text-[0.6875rem] text-muted-foreground">Your counsellor · usually replies same-day</p>
+            <p className="text-label text-muted-foreground">Your counsellor · usually replies same-day</p>
           </div>
         </div>
 
         <Link
           href="/inbox"
           className={cn(
-            'group flex items-center gap-3 rounded-xl border p-3 transition-all hover:-translate-y-px hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            unreadTotal > 0 ? 'border-violet-300/60 bg-violet-500/[0.06]' : 'border-border/70 bg-background/60'
+            'hover-lift group flex items-center gap-3 rounded-xl border p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            unreadTotal > 0 ? 'border-feature/25 bg-feature-subtle' : 'border-border/70 bg-background/60'
           )}
         >
           <MailOpen
-            className={cn('h-4 w-4 shrink-0', unreadTotal > 0 ? 'text-violet-600 dark:text-violet-300' : 'text-muted-foreground/60')}
+            className={cn('h-4 w-4 shrink-0', unreadTotal > 0 ? 'text-feature' : 'text-muted-foreground/60')}
             aria-hidden
           />
           <div className="min-w-0 flex-1">
@@ -83,7 +85,7 @@ export function CounsellorCard({ counsellor, openThreads, unreadTotal, latestSub
             </p>
           </div>
           {unreadTotal > 0 ? (
-            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-violet-500 px-1.5 text-[0.625rem] font-bold text-white">
+            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-feature px-1.5 text-label font-bold text-feature-foreground">
               {unreadTotal}
             </span>
           ) : null}
@@ -92,13 +94,13 @@ export function CounsellorCard({ counsellor, openThreads, unreadTotal, latestSub
         {nextMeeting ? (
           <div className="rounded-xl border border-border/70 bg-background/60 p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[0.625rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">Next meeting</p>
+              <p className="eyebrow">Next meeting</p>
               <span
                 className={cn(
-                  'rounded-full px-2 py-px text-[0.625rem] font-semibold',
+                  'rounded-full px-2 py-px text-label font-semibold',
                   nextMeeting.status === 'confirmed'
-                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                    ? 'bg-success-subtle text-success'
+                    : 'bg-warning-subtle text-warning'
                 )}
               >
                 {nextMeeting.status === 'confirmed' ? 'Confirmed' : 'Proposed'}

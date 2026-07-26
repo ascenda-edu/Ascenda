@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { DeadlinesSkeleton, RecommendedProgramsSkeleton, TaskListSkeleton } from '@/components/dashboard/dashboard-skeletons';
 
 const PanelSkeleton = ({ lines = 4 }: { lines?: number }) => (
-    <div className="surface-card surface-card--static h-full">
+    <div className="surface-card h-full">
         <div className="relative z-10 space-y-4">
             <div className="space-y-2">
                 <Skeleton className="h-3 w-16" />

@@ -21,7 +21,7 @@ export const FilterPill = ({ label, active = false, onClick, onRemove }: FilterP
       'inline-flex items-center rounded-full border text-sm font-medium transition-[transform,box-shadow,border-color,color,background-color] duration-200 whitespace-nowrap',
       onRemove ? 'pl-4 pr-1' : '',
       active
-        ? 'border-primary bg-primary text-primary-foreground shadow-[0_15px_35px_rgba(15,23,42,0.18)]'
+        ? 'border-primary bg-primary text-primary-foreground shadow-e-3'
         : 'border-border bg-card text-muted-foreground'
     )}
   >

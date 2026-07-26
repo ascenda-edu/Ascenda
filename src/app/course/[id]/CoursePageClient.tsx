@@ -448,7 +448,7 @@ const RequirementRenderer = ({ value }: { value: string }) => {
     return (
       <div className="space-y-3">
         {title && (
-          <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary/80">
+          <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary-ink/80">
             <span className="h-px w-4 bg-primary/40"></span>
             {title}
           </h4>
@@ -462,7 +462,7 @@ const RequirementRenderer = ({ value }: { value: string }) => {
           <ul className="grid gap-3 sm:grid-cols-1">
             {items.map((item, i) => (
               <li key={i} className="flex items-start gap-3 rounded-lg border border-border/40 bg-muted/20 p-3 text-sm transition-colors hover:bg-muted/40">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary-ink/70" />
                 <span className="text-foreground/90 leading-relaxed">{emphasize(item)}</span>
               </li>
             ))}
@@ -543,7 +543,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
         href: course.applyUrl.trim(),
         label: 'Apply Now',
         variant: 'default',
-        className: 'h-12 px-8 shadow-lg shadow-primary/20',
+        className: 'h-12 px-8 shadow-e-2',
         priority: 3
       });
     }
@@ -836,7 +836,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
             ) : error ? (
               <div
                 role="alert"
-                className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300"
+                className="rounded-2xl border border-danger/25 bg-danger-subtle px-4 py-3 text-sm text-danger"
               >
                 {error}
               </div>
@@ -846,7 +846,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
                       {course.logoUrl ? (
-                        <div className="relative h-14 w-14 overflow-hidden rounded-xl border border-border bg-black shadow-sm">
+                        <div className="relative h-14 w-14 overflow-hidden rounded-xl border border-border bg-black shadow-e-1">
                           <Image
                             src={course.logoUrl}
                             alt={`${course.university} logo`}
@@ -856,15 +856,15 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                           />
                         </div>
                       ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary-ink">
                           <GraduationCap className="h-6 w-6" />
                         </div>
                       )}
-                      <p className="text-sm font-bold uppercase tracking-widest text-primary">
+                      <p className="text-sm font-bold uppercase tracking-widest text-primary-ink">
                         {course.university}
                       </p>
                     </div>
-                    <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+                    <h1 className="font-bold">
                       {course.title}
                     </h1>
                     <div className="flex flex-wrap items-center gap-6 text-muted-foreground">
@@ -905,7 +905,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                       key={fact.label}
                       className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card/50 p-4 transition-colors hover:bg-card"
                     >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary-ink ring-1 ring-primary/20">
                         <fact.icon className="h-4 w-4" />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -945,7 +945,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                           className={cn(
                             'flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                             isActive
-                              ? 'bg-primary text-primary-foreground shadow-md'
+                              ? 'bg-primary text-primary-foreground shadow-e-2'
                               : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                           )}
                         >
@@ -974,7 +974,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                 <div className="w-full space-y-8 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 duration-500">
 
                   {/* Summary Text */}
-                  <div className="rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
+                  <div className="surface-card">
                     <h2 className="text-2xl font-bold mb-6">Course Overview</h2>
                     <div className="prose prose-lg dark:prose-invert max-w-4xl text-muted-foreground">
                       {renderRichText(course.summary)}
@@ -982,9 +982,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                   </div>
 
                   {course.courseRequirements && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
+                    <div className="surface-card">
                       <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                        <ListChecks className="h-5 w-5 text-primary" />
+                        <ListChecks className="h-5 w-5 text-primary-ink" />
                         Course requirements
                       </h3>
                       <div className="prose prose-lg dark:prose-invert max-w-4xl text-muted-foreground">
@@ -994,9 +994,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                   )}
 
                   {course.careerOutcomesOverview && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                        <GraduationCap className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        <GraduationCap className="h-5 w-5 text-success" />
                         Career snapshot
                       </h3>
                       <div className="prose prose-lg dark:prose-invert max-w-4xl text-muted-foreground">
@@ -1006,9 +1006,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                   )}
 
                   {course.studentLifeOverview && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                        <Landmark className="h-5 w-5 text-primary" />
+                        <Landmark className="h-5 w-5 text-primary-ink" />
                         Student life
                       </h3>
                       <div className="prose prose-lg dark:prose-invert max-w-4xl text-muted-foreground">
@@ -1019,33 +1019,33 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* University at a Glance Stats */}
                   {(course.numberOfStudents || course.studentToStaffRatio || course.nssPct || course.internationalStudentsPct) && (
-                    <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-muted/50 to-muted/5 p-8">
+                    <div className="surface-card bg-gradient-to-br from-muted/50 to-muted/5">
                       <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                        <Landmark className="h-5 w-5 text-primary" />
+                        <Landmark className="h-5 w-5 text-primary-ink" />
                         The University at a Glance
                       </h3>
                       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         {course.numberOfStudents && (
                           <div className="rounded-2xl bg-card/50 border border-border/40 p-4">
-                            <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Student Population</p>
+                            <p className="text-xs font-bold text-primary-ink uppercase tracking-wider mb-2">Student Population</p>
                             <p className="text-2xl font-bold text-foreground">{course.numberOfStudents.toLocaleString()}</p>
                           </div>
                         )}
                         {course.studentToStaffRatio && (
                           <div className="rounded-2xl bg-card/50 border border-border/40 p-4">
-                            <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Staff Ratio</p>
+                            <p className="text-xs font-bold text-primary-ink uppercase tracking-wider mb-2">Staff Ratio</p>
                             <p className="text-2xl font-bold text-foreground">{course.studentToStaffRatio.toFixed(1)}:1</p>
                           </div>
                         )}
                         {course.nssPct && (
                           <div className="rounded-2xl bg-card/50 border border-border/40 p-4">
-                            <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Satisfaction (NSS)</p>
+                            <p className="text-xs font-bold text-primary-ink uppercase tracking-wider mb-2">Satisfaction (NSS)</p>
                             <p className="text-2xl font-bold text-foreground">{course.nssPct.toFixed(1)}%</p>
                           </div>
                         )}
                         {course.internationalStudentsPct && (
                           <div className="rounded-2xl bg-card/50 border border-border/40 p-4">
-                            <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">International</p>
+                            <p className="text-xs font-bold text-primary-ink uppercase tracking-wider mb-2">International</p>
                             <p className="text-2xl font-bold text-foreground">{course.internationalStudentsPct.toFixed(1)}%</p>
                           </div>
                         )}
@@ -1055,16 +1055,16 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Career Outcomes Highlights */}
                   {(course.graduateEmploymentRate || course.averageStartingSalary || course.placementYear) && (
-                    <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-green-500/5 to-green-500/0 p-8">
+                    <div className="surface-card bg-gradient-to-br from-success/5 to-success/0">
                       <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                        <GraduationCap className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        <GraduationCap className="h-5 w-5 text-success" />
                         Career Prospects
                       </h3>
                       <div className="grid gap-4 sm:grid-cols-3">
                         {course.graduateEmploymentRate && (
                           <div className="rounded-2xl bg-card/50 border border-border/40 p-4">
                             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Employment Rate</p>
-                            <p className="text-2xl font-bold text-green-600 dark:text-green-400">{course.graduateEmploymentRate.toFixed(1)}%</p>
+                            <p className="text-2xl font-bold text-success">{course.graduateEmploymentRate.toFixed(1)}%</p>
                             <p className="text-xs text-muted-foreground mt-1">of graduates employed</p>
                           </div>
                         )}
@@ -1088,9 +1088,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Cost & Living Overview */}
                   {hasCostDetails && (
-                    <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-orange-500/5 to-orange-500/0 p-8">
+                    <div className="surface-card bg-gradient-to-br from-warning/5 to-warning/0">
                       <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                        <Wallet className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                        <Wallet className="h-5 w-5 text-warning" />
                         Costs & Living
                       </h3>
                       <div className="grid gap-4 sm:grid-cols-3">
@@ -1128,9 +1128,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                   {(course.universityLife || course.culturalSocialEnvironment || course.cityLife) && (
                     <div className="grid gap-4 md:grid-cols-2">
                       {course.universityLife && (
-                        <div className="rounded-3xl border border-border/60 bg-card p-6">
+                        <div className="surface-card">
                           <h4 className="font-bold text-foreground mb-3 flex items-center gap-2">
-                            <Landmark className="h-4 w-4 text-primary" />
+                            <Landmark className="h-4 w-4 text-primary-ink" />
                             University Life
                           </h4>
                           <p className="text-sm text-muted-foreground line-clamp-3">
@@ -1138,16 +1138,16 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                           </p>
                           <button
                             onClick={() => setActiveTab('campus')}
-                            className="text-xs font-bold text-primary uppercase tracking-wider mt-3 hover:text-primary/80"
+                            className="text-xs font-bold text-primary-ink uppercase tracking-wider mt-3 hover:text-primary-ink/80"
                           >
                             Learn More →
                           </button>
                         </div>
                       )}
                       {course.cityLife && (
-                        <div className="rounded-3xl border border-border/60 bg-card p-6">
+                        <div className="surface-card">
                           <h4 className="font-bold text-foreground mb-3 flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-primary" />
+                            <MapPin className="h-4 w-4 text-primary-ink" />
                             City & Location
                           </h4>
                           <p className="text-sm text-muted-foreground line-clamp-3">
@@ -1155,7 +1155,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                           </p>
                           <button
                             onClick={() => setActiveTab('campus')}
-                            className="text-xs font-bold text-primary uppercase tracking-wider mt-3 hover:text-primary/80"
+                            className="text-xs font-bold text-primary-ink uppercase tracking-wider mt-3 hover:text-primary-ink/80"
                           >
                             Learn More →
                           </button>
@@ -1166,10 +1166,10 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Outcomes */}
                   {hasOutcomes && course.outcomes && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
+                    <div className="surface-card">
                       <div className="flex items-center justify-between mb-6">
                         <h2 className="text-2xl font-bold flex items-center gap-2">
-                          <CheckCircle2 className="h-5 w-5 text-primary" />
+                          <CheckCircle2 className="h-5 w-5 text-primary-ink" />
                           Student Outcomes & Satisfaction
                         </h2>
                       </div>
@@ -1177,7 +1177,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                         {course.outcomes.satisfaction && (
                           <Card className="border-border/60 bg-primary/5 border-primary/20">
                             <CardHeader className="pb-2">
-                              <CardTitle className="text-xs font-bold text-primary uppercase tracking-wider">Student Satisfaction</CardTitle>
+                              <CardTitle className="text-xs font-bold text-primary-ink uppercase tracking-wider">Student Satisfaction</CardTitle>
                             </CardHeader>
                             <CardContent>
                               <p className="text-lg font-semibold text-foreground">{course.outcomes.satisfaction}</p>
@@ -1220,7 +1220,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Open Days / Events */}
                   {course.openDays && course.openDays.length > 0 && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
+                    <div className="surface-card">
                       <h2 className="text-2xl font-bold mb-4">Upcoming Events</h2>
                       <div className="space-y-3">
                         {course.openDays.map((event, idx) => (
@@ -1233,7 +1233,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                                   href={event.url}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="text-xs font-semibold text-primary hover:underline"
+                                  className="text-xs font-semibold text-primary-ink hover:underline"
                                 >
                                   View details
                                 </Link>
@@ -1251,12 +1251,12 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                     {/* Requirements Preview */}
                     <button
                       type="button"
-                      className="group relative block w-full overflow-hidden rounded-3xl border border-border/60 bg-card p-6 text-left transition-all hover:border-primary/50 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      className="surface-card hover-lift group block w-full text-left hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       onClick={() => setActiveTab('requirements')}
                     >
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-bold flex items-center gap-2">
-                          <ListChecks className="h-5 w-5 text-primary" />
+                          <ListChecks className="h-5 w-5 text-primary-ink" />
                           Entry Requirements
                         </h3>
                         <ArrowLeft className="h-4 w-4 rotate-180 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-1" />
@@ -1271,18 +1271,18 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                         ))}
                         {course.requirements.length === 0 && <p className="text-sm text-muted-foreground italic">View requirements details…</p>}
                       </div>
-                      <div className="mt-4 text-xs font-bold text-primary uppercase tracking-wider">View Full Details</div>
+                      <div className="mt-4 text-xs font-bold text-primary-ink uppercase tracking-wider">View Full Details</div>
                     </button>
 
                     {/* Curriculum Preview */}
                     <button
                       type="button"
-                      className="group relative block w-full overflow-hidden rounded-3xl border border-border/60 bg-card p-6 text-left transition-all hover:border-primary/50 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      className="surface-card hover-lift group block w-full text-left hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       onClick={() => setActiveTab('curriculum')}
                     >
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-bold flex items-center gap-2">
-                          <Layers className="h-5 w-5 text-primary" />
+                          <Layers className="h-5 w-5 text-primary-ink" />
                           Curriculum
                         </h3>
                         <ArrowLeft className="h-4 w-4 rotate-180 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-1" />
@@ -1292,7 +1292,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                           {course.modules ? course.modules.slice(0, 150) + "…" : "Explore the modules and subjects you will study."}
                         </p>
                       </div>
-                      <div className="mt-4 text-xs font-bold text-primary uppercase tracking-wider">View Modules</div>
+                      <div className="mt-4 text-xs font-bold text-primary-ink uppercase tracking-wider">View Modules</div>
                     </button>
 
                   </div>
@@ -1317,10 +1317,10 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                   {moduleYearSections.length ? (
                     <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                       {moduleYearSections.map((section, idx) => (
-                        <Card key={idx} className="overflow-hidden border-border/60 bg-card hover:shadow-md transition-all">
+                        <Card key={idx} className="overflow-hidden border-border/60 bg-card transition-shadow hover:shadow-e-2">
                           <CardHeader className="bg-muted/30 pb-4 border-b border-border/40">
                             <CardTitle className="flex items-center gap-3 text-lg">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary text-sm font-bold">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary-ink text-sm font-bold">
                                 {section.yearNum ?? idx + 1}
                               </div>
                               {section.title}
@@ -1349,7 +1349,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                       ))}
                     </div>
                   ) : (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <p className="text-muted-foreground italic">No specific curriculum modules available for this course.</p>
                     </div>
                   )}
@@ -1384,7 +1384,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                           return (
                             <Card key={idx} className="border-border/60 bg-primary/5 border-primary/20">
                               <CardHeader className="pb-2">
-                                <CardTitle className="text-xs font-bold text-primary uppercase tracking-wider">
+                                <CardTitle className="text-xs font-bold text-primary-ink uppercase tracking-wider">
                                   {req.label}
                                 </CardTitle>
                               </CardHeader>
@@ -1427,7 +1427,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Fallback */}
                   {course.requirements.length === 0 && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <p className="text-muted-foreground italic">No specific entry requirements listed.</p>
                     </div>
                   )}
@@ -1437,7 +1437,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
               {/* Assessment Tab */}
               {activeTab === 'assessment' && (
                 <div className="w-full space-y-8 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 duration-500">
-                  <div className="rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
+                  <div className="surface-card">
                     <h2 className="text-2xl font-bold mb-6">Assessment Methods</h2>
                     {course.assessment ? (
                       <div className="prose prose-lg dark:prose-invert max-w-4xl text-muted-foreground">
@@ -1460,7 +1460,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                     {course.numberOfStudents && (
                       <Card className="border-border/60 bg-gradient-to-br from-primary/5 to-transparent">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-xs font-bold text-primary uppercase tracking-wider">Student Population</CardTitle>
+                          <CardTitle className="text-xs font-bold text-primary-ink uppercase tracking-wider">Student Population</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <p className="text-2xl font-bold text-foreground">{course.numberOfStudents.toLocaleString()}</p>
@@ -1469,9 +1469,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                       </Card>
                     )}
                     {course.studentToStaffRatio && (
-                      <Card className="border-border/60 bg-gradient-to-br from-blue-500/5 to-transparent">
+                      <Card className="border-border/60 bg-gradient-to-br from-info/5 to-transparent">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Staff Ratio</CardTitle>
+                          <CardTitle className="text-xs font-bold text-info uppercase tracking-wider">Staff Ratio</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <p className="text-2xl font-bold text-foreground">{course.studentToStaffRatio.toFixed(0)}:1</p>
@@ -1480,9 +1480,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                       </Card>
                     )}
                     {course.nssPct && (
-                      <Card className="border-border/60 bg-gradient-to-br from-green-500/5 to-transparent">
+                      <Card className="border-border/60 bg-gradient-to-br from-success/5 to-transparent">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider">Satisfaction (NSS)</CardTitle>
+                          <CardTitle className="text-xs font-bold text-success uppercase tracking-wider">Satisfaction (NSS)</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <p className="text-2xl font-bold text-foreground">{course.nssPct.toFixed(0)}%</p>
@@ -1491,9 +1491,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                       </Card>
                     )}
                     {course.internationalStudentsPct && (
-                      <Card className="border-border/60 bg-gradient-to-br from-orange-500/5 to-transparent">
+                      <Card className="border-border/60 bg-gradient-to-br from-warning/5 to-transparent">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">International Students</CardTitle>
+                          <CardTitle className="text-xs font-bold text-warning uppercase tracking-wider">International Students</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <p className="text-2xl font-bold text-foreground">{course.internationalStudentsPct.toFixed(0)}%</p>
@@ -1505,15 +1505,15 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Quick-glance campus attributes */}
                   {(course.universityLife || course.cityLife || course.climate || course.safety || course.transportAccessibility) && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                        <Landmark className="h-5 w-5 text-primary" />
+                        <Landmark className="h-5 w-5 text-primary-ink" />
                         Campus at a Glance
                       </h3>
                       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {course.universityLife && (
                           <div className="rounded-2xl bg-muted/30 border border-border/40 p-4">
-                            <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Campus Type</p>
+                            <p className="text-xs font-bold text-primary-ink uppercase tracking-wider mb-2">Campus Type</p>
                             <p className="text-sm font-semibold text-foreground">{course.universityLife}</p>
                           </div>
                         )}
@@ -1553,9 +1553,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Student Life Overview narrative */}
                   {course.studentLifeOverview && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                        <MapPin className="h-5 w-5 text-primary" />
+                        <MapPin className="h-5 w-5 text-primary-ink" />
                         Student Life & City
                       </h3>
                       <div className="prose prose-lg dark:prose-invert max-w-4xl text-muted-foreground">
@@ -1566,11 +1566,11 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Student Life Tags */}
                   {course.studentLifeTags && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <h3 className="text-xl font-bold mb-6">What Students Love</h3>
                       <div className="flex flex-wrap gap-3">
                         {course.studentLifeTags.split(/[,;|]+/).map((tag, idx) => (
-                          <span key={idx} className="inline-flex items-center rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary ring-1 ring-primary/20">
+                          <span key={idx} className="inline-flex items-center rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary-ink ring-1 ring-primary/20">
                             {tag.trim()}
                           </span>
                         ))}
@@ -1580,13 +1580,13 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Breakdown table — same pattern as Cost Breakdown */}
                   {(course.numberOfStudents || course.studentToStaffRatio || course.nssPct || course.internationalStudentsPct) && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <h3 className="text-xl font-bold mb-6">University Stats</h3>
                       <div className="space-y-4">
                         {course.numberOfStudents && (
                           <div className="flex items-center justify-between pb-4 border-b border-border/40">
                             <span className="text-foreground font-medium">Total Students</span>
-                            <span className="text-lg font-bold text-primary">{course.numberOfStudents.toLocaleString()}</span>
+                            <span className="text-lg font-bold text-primary-ink">{course.numberOfStudents.toLocaleString()}</span>
                           </div>
                         )}
                         {course.studentToStaffRatio && (
@@ -1598,7 +1598,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                         {course.nssPct && (
                           <div className="flex items-center justify-between pb-4 border-b border-border/40">
                             <span className="text-foreground font-medium">NSS Student Satisfaction</span>
-                            <span className="text-lg font-bold text-green-600 dark:text-green-400">{course.nssPct.toFixed(0)}%</span>
+                            <span className="text-lg font-bold text-success">{course.nssPct.toFixed(0)}%</span>
                           </div>
                         )}
                         {course.internationalStudentsPct && (
@@ -1618,7 +1618,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                   )}
 
                   {!course.universityLife && !course.studentLifeOverview && !course.culturalSocialEnvironment && !course.cityLife && !course.numberOfStudents && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <p className="text-muted-foreground italic">Campus and student life information coming soon.</p>
                     </div>
                   )}
@@ -1633,9 +1633,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                   {/* Career Stats Grid */}
                   <div className="grid gap-4 md:grid-cols-3">
                     {course.graduateEmploymentRate && (
-                      <Card className="border-border/60 bg-gradient-to-br from-green-500/5 to-transparent">
+                      <Card className="border-border/60 bg-gradient-to-br from-success/5 to-transparent">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider">Graduate Employment</CardTitle>
+                          <CardTitle className="text-xs font-bold text-success uppercase tracking-wider">Graduate Employment</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <p className="text-3xl font-bold text-foreground">{course.graduateEmploymentRate.toFixed(0)}%</p>
@@ -1644,9 +1644,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                       </Card>
                     )}
                     {course.averageStartingSalary && (
-                      <Card className="border-border/60 bg-gradient-to-br from-blue-500/5 to-transparent">
+                      <Card className="border-border/60 bg-gradient-to-br from-info/5 to-transparent">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Avg Starting Salary</CardTitle>
+                          <CardTitle className="text-xs font-bold text-info uppercase tracking-wider">Avg Starting Salary</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <p className="text-2xl font-bold text-foreground">{formatCurrencyString(course.averageStartingSalary, 'GBP')}</p>
@@ -1655,9 +1655,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                       </Card>
                     )}
                     {course.placementYear !== null && course.placementYear !== undefined && (
-                      <Card className={`border-border/60 bg-gradient-to-br ${course.placementYear ? 'from-purple-500/5 to-transparent' : 'from-muted/30 to-transparent'}`}>
+                      <Card className={`border-border/60 bg-gradient-to-br ${course.placementYear ? 'from-feature/5 to-transparent' : 'from-muted/30 to-transparent'}`}>
                         <CardHeader className="pb-2">
-                          <CardTitle className={`text-xs font-bold uppercase tracking-wider ${course.placementYear ? 'text-purple-600 dark:text-purple-400' : 'text-muted-foreground'}`}>Placement Year</CardTitle>
+                          <CardTitle className={`text-xs font-bold uppercase tracking-wider ${course.placementYear ? 'text-feature' : 'text-muted-foreground'}`}>Placement Year</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <p className="text-2xl font-bold text-foreground">{course.placementYear ? '✓ Available' : '✗ Not offered'}</p>
@@ -1669,9 +1669,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Career Overview narrative */}
                   {course.careerOutcomesOverview && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                        <GraduationCap className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        <GraduationCap className="h-5 w-5 text-success" />
                         Career Outcomes Overview
                       </h3>
                       <div className="prose prose-lg dark:prose-invert max-w-4xl text-muted-foreground">
@@ -1682,11 +1682,11 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Top Industries */}
                   {course.topIndustries && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <h3 className="text-xl font-bold mb-6">Top Industries for Graduates</h3>
                       <div className="flex flex-wrap gap-3">
                         {course.topIndustries.split(/[,;|]/).map((industry, idx) => (
-                          <span key={idx} className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary ring-1 ring-primary/20">
+                          <span key={idx} className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary-ink ring-1 ring-primary/20">
                             <Dot className="h-3 w-3 shrink-0" />
                             {industry.trim()}
                           </span>
@@ -1697,7 +1697,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Placement Year Detail */}
                   {course.placementYearDetail && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <h3 className="text-xl font-bold mb-4">Placement Year Detail</h3>
                       <div className="prose dark:prose-invert max-w-4xl text-muted-foreground">
                         {renderRichText(course.placementYearDetail, { forceBullets: true })}
@@ -1707,9 +1707,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Study Abroad */}
                   {course.studyAbroadOption && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                        <MapPin className="h-5 w-5 text-primary" />
+                        <MapPin className="h-5 w-5 text-primary-ink" />
                         Study Abroad Opportunities
                       </h3>
                       <div className="prose dark:prose-invert max-w-4xl text-muted-foreground">
@@ -1720,15 +1720,15 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Outcomes data from legacy fields */}
                   {hasOutcomes && course.outcomes && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                        <CheckCircle2 className="h-5 w-5 text-primary-ink" />
                         Student Outcomes
                       </h3>
                       <div className="grid gap-4 sm:grid-cols-2">
                         {course.outcomes.satisfaction && (
                           <div className="rounded-2xl bg-primary/5 border border-primary/20 p-4">
-                            <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Student Satisfaction</p>
+                            <p className="text-xs font-bold text-primary-ink uppercase tracking-wider mb-2">Student Satisfaction</p>
                             <p className="text-lg font-semibold text-foreground">{course.outcomes.satisfaction}</p>
                           </div>
                         )}
@@ -1755,7 +1755,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                   )}
 
                   {!course.graduateEmploymentRate && !course.averageStartingSalary && course.placementYear === null && !course.topIndustries && !course.studyAbroadOption && !course.careerOutcomesOverview && !hasOutcomes && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <p className="text-muted-foreground italic">Career and outcomes information coming soon.</p>
                     </div>
                   )}
@@ -1770,9 +1770,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                   {/* Cost Overview Cards */}
                   <div className="grid gap-4 md:grid-cols-3">
                     {formattedCostTuition && (
-                      <Card className="border-border/60 bg-gradient-to-br from-orange-500/5 to-transparent">
+                      <Card className="border-border/60 bg-gradient-to-br from-warning/5 to-transparent">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">{formattedDomesticTuition ? 'Intl. Tuition' : 'Annual Tuition'}</CardTitle>
+                          <CardTitle className="text-xs font-bold text-warning uppercase tracking-wider">{formattedDomesticTuition ? 'Intl. Tuition' : 'Annual Tuition'}</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <p className="text-2xl font-bold text-foreground">{formattedCostTuition}</p>
@@ -1781,9 +1781,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                       </Card>
                     )}
                     {formattedDomesticTuition && (
-                      <Card className="border-border/60 bg-gradient-to-br from-green-500/5 to-transparent">
+                      <Card className="border-border/60 bg-gradient-to-br from-success/5 to-transparent">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider">Home Tuition</CardTitle>
+                          <CardTitle className="text-xs font-bold text-success uppercase tracking-wider">Home Tuition</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <p className="text-2xl font-bold text-foreground">{formattedDomesticTuition}</p>
@@ -1792,9 +1792,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                       </Card>
                     )}
                     {totalCost && (
-                      <Card className="border-border/60 bg-gradient-to-br from-red-500/5 to-transparent">
+                      <Card className="border-border/60 bg-gradient-to-br from-danger/5 to-transparent">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Total Programme Cost</CardTitle>
+                          <CardTitle className="text-xs font-bold text-danger uppercase tracking-wider">Total Programme Cost</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <p className="text-2xl font-bold text-foreground">{formatCurrencyString(totalCost, course.currency)}</p>
@@ -1803,9 +1803,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                       </Card>
                     )}
                     {course.studentDormCost && (
-                      <Card className="border-border/60 bg-gradient-to-br from-blue-500/5 to-transparent">
+                      <Card className="border-border/60 bg-gradient-to-br from-info/5 to-transparent">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Halls of Residence</CardTitle>
+                          <CardTitle className="text-xs font-bold text-info uppercase tracking-wider">Halls of Residence</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <p className="text-2xl font-bold text-foreground">{formatCurrencyString(course.studentDormCost, 'GBP')}</p>
@@ -1814,9 +1814,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                       </Card>
                     )}
                     {course.averageRentOutsideCampus && (
-                      <Card className="border-border/60 bg-gradient-to-br from-cyan-500/5 to-transparent">
+                      <Card className="border-border/60 bg-gradient-to-br from-info/5 to-transparent">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">Off-Campus Rent</CardTitle>
+                          <CardTitle className="text-xs font-bold text-info uppercase tracking-wider">Off-Campus Rent</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <p className="text-2xl font-bold text-foreground">{formatCurrencyString(course.averageRentOutsideCampus, 'GBP')}</p>
@@ -1828,14 +1828,14 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Cost of Living Indicator */}
                   {course.costOfLife && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <h3 className="text-xl font-bold mb-4">Overall Cost of Living</h3>
                       <div className="flex items-center gap-4">
                         <div className={cn(
                           "flex h-16 w-16 items-center justify-center rounded-2xl text-lg font-bold",
-                          course.costOfLife === 'HIGH' && "bg-red-500/10 text-red-600 dark:text-red-400",
-                          course.costOfLife === 'MEDIUM' && "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
-                          course.costOfLife === 'LOW' && "bg-green-500/10 text-green-600 dark:text-green-400"
+                          course.costOfLife === 'HIGH' && "bg-danger-subtle text-danger",
+                          course.costOfLife === 'MEDIUM' && "bg-warning-subtle text-warning",
+                          course.costOfLife === 'LOW' && "bg-success-subtle text-success"
                         )}>
                           {course.costOfLife}
                         </div>
@@ -1852,19 +1852,19 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Cost Breakdown */}
                   {(costTuition || course.studentDormCost || course.averageRentOutsideCampus || course.intlTuitionLow || course.intlTuitionHigh) && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <h3 className="text-xl font-bold mb-6">Estimated Annual Costs</h3>
                       <div className="space-y-4">
                         {formattedCostTuition && (
                           <div className="flex items-center justify-between pb-4 border-b border-border/40">
                             <span className="text-foreground font-medium">{formattedDomesticTuition ? 'Tuition (International)' : 'Tuition Fees'}</span>
-                            <span className="text-lg font-bold text-primary">{formattedCostTuition}</span>
+                            <span className="text-lg font-bold text-primary-ink">{formattedCostTuition}</span>
                           </div>
                         )}
                         {formattedDomesticTuition && (
                           <div className="flex items-center justify-between pb-4 border-b border-border/40">
                             <span className="text-foreground font-medium">Tuition (Home/EU)</span>
-                            <span className="text-lg font-bold text-green-600 dark:text-green-400">{formattedDomesticTuition}</span>
+                            <span className="text-lg font-bold text-success">{formattedDomesticTuition}</span>
                           </div>
                         )}
                         {course.studentDormCost && (
@@ -1882,7 +1882,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                         {(course.intlTuitionLow || course.intlTuitionHigh) && (
                           <div className="flex items-center justify-between pb-4 border-b border-border/40">
                             <span className="text-foreground font-medium">University Estimate</span>
-                            <span className="text-lg font-bold text-primary">
+                            <span className="text-lg font-bold text-primary-ink">
                               {course.intlTuitionLow && course.intlTuitionHigh
                                 ? `${formatCurrencyString(course.intlTuitionLow, course.currency)} – ${formatCurrencyString(course.intlTuitionHigh, course.currency)}`
                                 : course.intlTuitionLow
@@ -1894,7 +1894,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                         {(course.tuition || course.studentDormCost || course.averageRentOutsideCampus) && (
                           <div className="flex items-center justify-between pt-4 border-t-2 border-border/60">
                             <span className="text-foreground font-bold text-lg">Estimated Total (per year)</span>
-                            <span className="text-2xl font-bold text-primary">
+                            <span className="text-2xl font-bold text-primary-ink">
                               {formatCurrencyString(
                                 numericCostTuition +
                                 (course.studentDormCost ?? 0) +
@@ -1910,7 +1910,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Monthly Living Cost Breakdown */}
                   {(course.monthlyHousingGbp || course.monthlyFoodGbp || course.monthlyTransportGbp) && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <h3 className="text-xl font-bold mb-6">Monthly Student Budget</h3>
                       <div className="space-y-4">
                         {course.monthlyHousingGbp && (
@@ -1934,7 +1934,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                         {course.monthlyTotalGbp && (
                           <div className="flex items-center justify-between pt-4 border-t-2 border-border/60">
                             <span className="text-foreground font-bold text-lg">Estimated Monthly Total</span>
-                            <span className="text-2xl font-bold text-primary">{formatCurrencyString(course.monthlyTotalGbp, 'GBP')}</span>
+                            <span className="text-2xl font-bold text-primary-ink">{formatCurrencyString(course.monthlyTotalGbp, 'GBP')}</span>
                           </div>
                         )}
                         {course.annualLivingCostGbp && (
@@ -1949,9 +1949,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
                   {/* Cost Overview narrative */}
                   {course.costOverview && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                        <Wallet className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                        <Wallet className="h-5 w-5 text-warning" />
                         Cost Overview
                       </h3>
                       <div className="prose prose-lg dark:prose-invert max-w-4xl text-muted-foreground">
@@ -1961,7 +1961,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                   )}
 
                   {!course.tuition && !course.studentDormCost && !course.averageRentOutsideCampus && !course.costOfLife && !course.monthlyTotalGbp && (
-                    <div className="rounded-3xl border border-border/60 bg-card p-8">
+                    <div className="surface-card">
                       <p className="text-muted-foreground italic">Cost and living expense information coming soon.</p>
                     </div>
                   )}

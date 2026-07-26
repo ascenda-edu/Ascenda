@@ -118,7 +118,7 @@ export function SortMenu({ value, onChange }: SortMenuProps) {
             aria-label="Sort results by"
             tabIndex={-1}
             onKeyDown={onListKeyDown}
-            className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-border bg-popover p-1.5 shadow-xl dark:border-white/10"
+            className="absolute right-0 z-panel mt-2 w-64 overflow-hidden rounded-2xl border border-border bg-popover p-1.5 shadow-e-3 dark:border-white/10"
           >
             {SORT_OPTIONS.map((option, index) => {
               const selected = option === value;
@@ -137,7 +137,7 @@ export function SortMenu({ value, onChange }: SortMenuProps) {
                   className={cn(
                     'flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm transition-colors cursor-pointer focus-visible:outline-none',
                     index === activeIndex ? 'bg-muted' : 'hover:bg-muted/60',
-                    selected ? 'font-semibold text-primary' : 'text-foreground'
+                    selected ? 'font-semibold text-primary-ink' : 'text-foreground'
                   )}
                 >
                   <span>{SORT_LABELS[option]}</span>

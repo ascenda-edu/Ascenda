@@ -17,7 +17,7 @@ export const StatsCardSkeleton = () => (
 );
 
 export const TaskListSkeleton = () => (
-  <div className="surface-card surface-card--static">
+  <div className="surface-card">
     <div className="relative z-10 space-y-4">
       <div className="space-y-2">
         <Skeleton className="h-3 w-16" />
@@ -40,7 +40,7 @@ export const TaskListSkeleton = () => (
 );
 
 export const DeadlinesSkeleton = () => (
-  <div className="surface-card surface-card--static">
+  <div className="surface-card">
     <div className="relative z-10 space-y-4">
       <div className="space-y-2">
         <Skeleton className="h-3 w-16" />
@@ -65,7 +65,7 @@ export const DeadlinesSkeleton = () => (
 );
 
 export const RecommendedProgramsSkeleton = () => (
-  <div className="surface-card surface-card--static">
+  <div className="surface-card">
     <div className="relative z-10 space-y-4">
       <div className="space-y-2">
         <Skeleton className="h-3 w-16" />

@@ -28,7 +28,7 @@ export function FacetGroup({ title, activeCount = 0, defaultOpen = true, childre
         <span className="flex items-center gap-2">
           <span className="text-sm font-semibold text-foreground">{title}</span>
           {activeCount > 0 ? (
-            <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 text-[11px] font-semibold text-primary tabular-nums">
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 text-label font-semibold text-primary-ink tabular-nums">
               {activeCount}
             </span>
           ) : null}

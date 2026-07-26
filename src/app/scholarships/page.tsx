@@ -102,7 +102,7 @@ export default async function ScholarshipsPage() {
         breadcrumbs={<Breadcrumbs />}
       />
       {!usingLiveData ? (
-        <div className="mt-6 rounded-2xl border border-amber-200/60 bg-amber-500/10 px-5 py-4 text-sm text-amber-700 dark:border-amber-500/20 dark:text-amber-300">
+        <div className="rounded-2xl border border-warning/25 bg-warning-subtle px-5 py-4 text-sm text-warning">
           <span className="font-semibold">Sample data.</span> We haven&apos;t connected a live scholarships feed
           yet, so these are illustrative examples to explore the search and filters — not real awards. Real listings
           will appear here automatically once the feed is live.

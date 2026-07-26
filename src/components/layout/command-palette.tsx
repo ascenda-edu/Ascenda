@@ -281,7 +281,7 @@ export function CommandPalette() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-[100] flex items-start justify-center bg-background/70 backdrop-blur-sm px-4 pt-24"
+          className="fixed inset-0 z-overlay flex items-start justify-center bg-background/70 backdrop-blur-sm px-4 pt-24"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setOpen(false);
           }}
@@ -296,7 +296,7 @@ export function CommandPalette() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+            className="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-card shadow-e-4"
           >
             <div className="flex items-center gap-3 border-b border-border px-4">
               <Search className="h-4 w-4 text-muted-foreground" aria-hidden />
@@ -312,7 +312,7 @@ export function CommandPalette() {
                 autoComplete="off"
                 spellCheck={false}
               />
-              <kbd className="hidden text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:inline">
+              <kbd className="eyebrow hidden sm:inline">
                 Esc
               </kbd>
             </div>
@@ -328,7 +328,7 @@ export function CommandPalette() {
                   if (items.length === 0) return null;
                   return (
                     <div key={groupKey} className="px-1 pb-2">
-                      <p className="px-2 pb-1 pt-2 text-[0.625rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+                      <p className="eyebrow px-2 pb-1 pt-2">
                         {groupKey}
                       </p>
                       <div className="space-y-0.5">
@@ -350,7 +350,7 @@ export function CommandPalette() {
                               <span
                                 className={cn(
                                   'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
-                                  isActive ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
+                                  isActive ? 'bg-primary/15 text-primary-ink' : 'bg-muted text-muted-foreground'
                                 )}
                               >
                                 <Icon className="h-3.5 w-3.5" aria-hidden />
@@ -362,7 +362,7 @@ export function CommandPalette() {
                                 ) : null}
                               </span>
                               {isActive ? (
-                                <kbd className="text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                                <kbd className="eyebrow">
                                   ↵
                                 </kbd>
                               ) : null}
@@ -376,7 +376,7 @@ export function CommandPalette() {
               )}
             </div>
 
-            <div className="flex items-center justify-between gap-3 border-t border-border bg-muted/30 px-4 py-2 text-[0.6875rem] text-muted-foreground">
+            <div className="flex items-center justify-between gap-3 border-t border-border bg-muted/30 px-4 py-2 text-label text-muted-foreground">
               <div className="flex items-center gap-3">
                 <span className="inline-flex items-center gap-1">
                   <kbd className="rounded border border-border bg-background px-1 py-0.5 font-mono">↑↓</kbd>
@@ -432,12 +432,12 @@ export function CommandPaletteTrigger() {
     <button
       type="button"
       onClick={dispatchOpen}
-      className="hidden h-9 items-center gap-2 rounded-full border border-border bg-card/80 px-3 text-xs font-medium text-muted-foreground shadow-sm transition hover:bg-muted/60 hover:text-foreground sm:inline-flex"
+      className="hidden h-9 items-center gap-2 rounded-full border border-border bg-card/80 px-3 text-xs font-medium text-muted-foreground shadow-e-1 transition hover:bg-muted/60 hover:text-foreground sm:inline-flex"
       aria-label="Open command palette"
     >
       <Search className="h-3.5 w-3.5" aria-hidden />
       <span>Quick search</span>
-      <kbd className="ml-1 rounded border border-border bg-background px-1 py-0.5 font-mono text-[0.625rem] uppercase tracking-wider text-muted-foreground">
+      <kbd className="ml-1 rounded border border-border bg-background px-1 py-0.5 font-mono text-label uppercase tracking-wider text-muted-foreground">
         {isMac ? '⌘K' : 'Ctrl K'}
       </kbd>
     </button>
@@ -471,7 +471,7 @@ export function CommandPaletteIconTrigger() {
     <button
       type="button"
       onClick={dispatchOpen}
-      className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card/80 text-muted-foreground shadow-sm transition hover:bg-muted/60 hover:text-foreground sm:hidden"
+      className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card/80 text-muted-foreground shadow-e-1 transition hover:bg-muted/60 hover:text-foreground sm:hidden"
       aria-label="Open command palette"
     >
       <Search className="h-4 w-4" aria-hidden />

@@ -18,7 +18,7 @@ export function StatsCard({ label, value, detail, icon, trend, className }: Stat
     return (
         <motion.div
             className={cn(
-                'group surface-card transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-border/80 dark:hover:border-primary/30',
+                'group surface-card hover-lift hover:border-border/80 dark:hover:border-primary/30',
                 className
             )}
             initial={{ opacity: 0, y: 16 }}
@@ -31,7 +31,7 @@ export function StatsCard({ label, value, detail, icon, trend, className }: Stat
 
             <div className="relative z-10 flex items-start justify-between">
                 <div className="space-y-1">
-                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+                    <p className="eyebrow">
                         {label}
                     </p>
                     <motion.h3
@@ -45,7 +45,7 @@ export function StatsCard({ label, value, detail, icon, trend, className }: Stat
                     </motion.h3>
                 </div>
                 {icon && (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/5 text-primary ring-1 ring-primary/10 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/10">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/5 text-primary-ink ring-1 ring-primary/10 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/10">
                         {icon}
                     </div>
                 )}
@@ -53,13 +53,13 @@ export function StatsCard({ label, value, detail, icon, trend, className }: Stat
 
             <div className="relative z-10 mt-4 flex items-center gap-2">
                 {trend === 'up' && (
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/10">
-                        <ArrowUpRight className="h-3 w-3 text-emerald-500" />
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-success-subtle">
+                        <ArrowUpRight className="h-3 w-3 text-success" />
                     </div>
                 )}
                 {trend === 'down' && (
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-500/10">
-                        <ArrowDownRight className="h-3 w-3 text-rose-500" />
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-danger-subtle">
+                        <ArrowDownRight className="h-3 w-3 text-danger" />
                     </div>
                 )}
                 {trend === 'neutral' && (

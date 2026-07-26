@@ -328,7 +328,7 @@ function SectionTitle({ label, hint, why }: { label: string; hint?: string; why?
           aria-expanded={open}
           aria-haspopup="true"
           onClick={() => setOpen((v) => !v)}
-          className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-0.5"
+          className="flex items-center gap-1 text-label text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-0.5"
         >
           <Info className="w-3.5 h-3.5" />
           Why we ask
@@ -336,7 +336,7 @@ function SectionTitle({ label, hint, why }: { label: string; hint?: string; why?
         </button>
       ) : null}
       {open && why ? (
-        <div className="absolute right-0 mt-6 w-56 text-xs bg-popover border border-border rounded-xl p-3 shadow-lg z-10 text-muted-foreground leading-relaxed">
+        <div className="absolute right-0 mt-6 w-56 text-xs bg-popover border border-border rounded-xl p-3 shadow-e-3 z-raised text-muted-foreground leading-relaxed">
           {why}
         </div>
       ) : null}
@@ -429,7 +429,7 @@ function CountryCombobox({
         <ul
           id={listboxId}
           role="listbox"
-          className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-background shadow-lg overflow-hidden max-h-52 overflow-y-auto"
+          className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-background shadow-e-3 overflow-hidden max-h-52 overflow-y-auto"
         >
           {filtered.map((c, index) => (
             <li key={c} id={optionId(index)} role="option" aria-selected={index === highlight}>
@@ -470,7 +470,7 @@ function Chip({
       className={cn(
         'group flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-150',
         selected
-          ? 'bg-primary/8 border-primary text-primary shadow-sm'
+          ? 'bg-primary/8 border-primary text-primary-ink shadow-e-1'
           : 'bg-background border-border text-foreground hover:border-primary/40 hover:bg-muted/50',
         disabled && !selected && 'opacity-40 cursor-not-allowed hover:border-border hover:bg-background'
       )}
@@ -480,9 +480,9 @@ function Chip({
           {emoji ? <span>{emoji}</span> : null}
           {label}
         </span>
-        {selected && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+        {selected && <Check className="w-3.5 h-3.5 text-primary-ink shrink-0" />}
       </span>
-      {description ? <span className="text-[0.6875rem] text-muted-foreground font-normal leading-snug">{description}</span> : null}
+      {description ? <span className="text-label text-muted-foreground font-normal leading-snug">{description}</span> : null}
     </button>
   );
 }
@@ -568,7 +568,7 @@ function SubjectCombobox({
         <ul
           id={listboxId}
           role="listbox"
-          className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-background shadow-lg overflow-hidden max-h-52 overflow-y-auto"
+          className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-background shadow-e-3 overflow-hidden max-h-52 overflow-y-auto"
         >
           {filtered.map((s, index) => (
             <li key={s} id={optionId(index)} role="option" aria-selected={index === highlight}>
@@ -1357,12 +1357,12 @@ export const StudentIntakeForm = ({
 
         {/* ── Sidebar ── */}
         <aside className="w-full lg:w-64 lg:sticky lg:top-24 h-fit shrink-0">
-          <div className="rounded-2xl border border-border/60 bg-background p-4 space-y-1 shadow-sm">
+          <div className="rounded-2xl border border-border/60 bg-background p-4 space-y-1 shadow-e-1">
             {/* Progress bar */}
             <div className="mb-4 px-1">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[0.625rem] font-semibold uppercase tracking-widest text-muted-foreground">Progress</span>
-                <span className="text-[0.625rem] font-bold text-primary">{progressPct}%</span>
+                <span className="eyebrow">Progress</span>
+                <span className="text-label font-bold text-primary-ink">{progressPct}%</span>
               </div>
               <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                 <motion.div
@@ -1386,16 +1386,16 @@ export const StudentIntakeForm = ({
                   className={cn(
                     'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 text-sm',
                     isCurrent
-                      ? 'bg-primary/8 text-primary font-semibold'
+                      ? 'bg-primary/8 text-primary-ink font-semibold'
                       : isDone
-                        ? 'text-emerald-600 hover:bg-muted/50'
+                        ? 'text-success hover:bg-muted/50'
                         : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                   )}
                 >
                   <span className={cn(
-                    'flex h-6 w-6 items-center justify-center rounded-lg text-[0.6875rem] font-bold shrink-0',
+                    'flex h-6 w-6 items-center justify-center rounded-lg text-label font-bold shrink-0',
                     isCurrent ? 'bg-primary text-primary-foreground'
-                      : isDone ? 'bg-emerald-500/15 text-emerald-600'
+                      : isDone ? 'bg-success-subtle text-success'
                         : 'bg-muted text-muted-foreground'
                   )}>
                     {isDone && !isCurrent ? <Check className="w-3 h-3" /> : stepNum}
@@ -1412,12 +1412,12 @@ export const StudentIntakeForm = ({
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 text-sm',
                 currentStep === TOTAL_STEPS
-                  ? 'bg-primary/8 text-primary font-semibold'
+                  ? 'bg-primary/8 text-primary-ink font-semibold'
                   : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
               )}
             >
               <span className={cn(
-                'flex h-6 w-6 items-center justify-center rounded-lg text-[0.6875rem] font-bold shrink-0',
+                'flex h-6 w-6 items-center justify-center rounded-lg text-label font-bold shrink-0',
                 currentStep === TOTAL_STEPS ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
               )}>
                 <Check className="w-3 h-3" />
@@ -1551,7 +1551,7 @@ export const StudentIntakeForm = ({
                         <p className="text-xs text-muted-foreground mt-0.5">Add more than one if applicable.</p>
                       </div>
                       <button type="button" onClick={addNationality}
-                        className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors">
+                        className="text-xs font-semibold text-primary-ink hover:text-primary-ink/80 transition-colors">
                         + Add another
                       </button>
                     </div>
@@ -1773,7 +1773,7 @@ export const StudentIntakeForm = ({
                         type="button"
                         disabled={subjects.length >= getMaxSubjects(programmeType)}
                         onClick={addSubject}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/8 text-primary text-xs font-semibold hover:bg-primary/15 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/8 text-primary-ink text-xs font-semibold hover:bg-primary/15 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <PlusCircle className="w-3.5 h-3.5" />
                         Add
@@ -1782,9 +1782,9 @@ export const StudentIntakeForm = ({
 
                     {/* Column headers */}
                     <div className="hidden md:grid md:grid-cols-12 gap-3 px-1 pb-1">
-                      <div className="md:col-span-5 text-[0.625rem] uppercase tracking-widest font-semibold text-muted-foreground">Subject</div>
-                      <div className="md:col-span-3 text-[0.625rem] uppercase tracking-widest font-semibold text-muted-foreground">Level</div>
-                      <div className="md:col-span-3 text-[0.625rem] uppercase tracking-widest font-semibold text-muted-foreground">Grade</div>
+                      <div className="md:col-span-5 eyebrow">Subject</div>
+                      <div className="md:col-span-3 eyebrow">Level</div>
+                      <div className="md:col-span-3 eyebrow">Grade</div>
                     </div>
 
                     <div className="space-y-3" data-field="academic_input.subject_list">
@@ -1845,7 +1845,7 @@ export const StudentIntakeForm = ({
                         <span className="text-xs text-muted-foreground font-medium">Predicted from subjects:</span>
                         <span className={cn(
                           'text-sm font-bold',
-                          ibSubjectSum >= 35 ? 'text-emerald-600' : ibSubjectSum >= 28 ? 'text-amber-600' : 'text-foreground'
+                          ibSubjectSum >= 35 ? 'text-success' : ibSubjectSum >= 28 ? 'text-warning' : 'text-foreground'
                         )}>
                           {ibSubjectSum}/42
                         </span>
@@ -2202,7 +2202,7 @@ export const StudentIntakeForm = ({
 
                     {activityRows.length < 10 && (
                       <button type="button"
-                        className="mt-1 flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                        className="mt-1 flex items-center gap-1.5 text-sm font-medium text-primary-ink hover:text-primary-ink/80 transition-colors"
                         onClick={addActivityRow}>
                         <PlusCircle className="w-4 h-4" aria-hidden />
                         Add activity
@@ -2331,7 +2331,7 @@ export const StudentIntakeForm = ({
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">Personal information</p>
                       <button type="button" onClick={() => setCurrentStep(1)}
-                        className="text-xs text-primary hover:text-primary/80 transition-colors font-medium">Edit</button>
+                        className="text-xs text-primary-ink hover:text-primary-ink/80 transition-colors font-medium">Edit</button>
                     </div>
                     <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
                       <div><span className="text-muted-foreground">Name</span><br />{[personalInfo.first_name, personalInfo.last_name].filter(Boolean).join(' ') || '—'}</div>
@@ -2346,7 +2346,7 @@ export const StudentIntakeForm = ({
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">Studies</p>
                       <button type="button" onClick={() => setCurrentStep(2)}
-                        className="text-xs text-primary hover:text-primary/80 transition-colors font-medium">Edit</button>
+                        className="text-xs text-primary-ink hover:text-primary-ink/80 transition-colors font-medium">Edit</button>
                     </div>
                     <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
                       <div><span className="text-muted-foreground">Programme</span><br />{programmeType || '—'}</div>
@@ -2361,7 +2361,7 @@ export const StudentIntakeForm = ({
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">Grades & tests</p>
                       <button type="button" onClick={() => setCurrentStep(3)}
-                        className="text-xs text-primary hover:text-primary/80 transition-colors font-medium">Edit</button>
+                        className="text-xs text-primary-ink hover:text-primary-ink/80 transition-colors font-medium">Edit</button>
                     </div>
                     <div className="text-sm space-y-1">
                       <p><span className="text-muted-foreground">Subjects:</span> {subjects.filter((s) => s.subject_name.trim()).length}</p>
@@ -2376,7 +2376,7 @@ export const StudentIntakeForm = ({
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">Activities</p>
                       <button type="button" onClick={() => setCurrentStep(4)}
-                        className="text-xs text-primary hover:text-primary/80 transition-colors font-medium">Edit</button>
+                        className="text-xs text-primary-ink hover:text-primary-ink/80 transition-colors font-medium">Edit</button>
                     </div>
                     <div className="text-sm space-y-1">
                       {activities.commitment_level ? <p><span className="text-muted-foreground">Commitment:</span> {COMMITMENT_OPTIONS.find((o) => o.value === activities.commitment_level)?.label}</p> : null}
@@ -2392,7 +2392,7 @@ export const StudentIntakeForm = ({
                       className={cn(
                         'rounded-xl px-4 py-3 text-sm font-medium',
                         submitted
-                          ? 'bg-emerald-500/10 text-emerald-600'
+                          ? 'bg-success-subtle text-success'
                           : statusIsError
                             ? 'bg-destructive/10 text-destructive border border-destructive/30'
                             : 'bg-muted text-muted-foreground'
@@ -2405,7 +2405,7 @@ export const StudentIntakeForm = ({
                     <div className="flex justify-center pt-2">
                       <a
                         href="/matches"
-                        className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all"
+                        className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-e-1 hover:bg-primary/90 transition-all"
                       >
                         Get me to my matches →
                       </a>

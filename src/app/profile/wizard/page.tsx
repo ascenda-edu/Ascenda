@@ -65,7 +65,7 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-16 pt-20 sm:px-6 lg:px-10">
-        <div className="flex flex-wrap items-center justify-between gap-4 relative z-[100] pointer-events-auto">
+        <div className="flex flex-wrap items-center justify-between gap-4 relative z-overlay pointer-events-auto">
           <div className="flex items-center gap-2">
             <Link
               href="/dashboard"
@@ -83,7 +83,7 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
               Back to profile
             </Link>
           </div>
-          <Button asChild size="sm" variant="secondary" className="gap-2 rounded-xl shadow-sm">
+          <Button asChild size="sm" variant="secondary" className="gap-2 rounded-xl shadow-e-1">
             <a href="/api/profile/export" download>
               <Download className="w-4 h-4" />
               Download CSV
@@ -103,7 +103,7 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
           ]}
         />
 
-        <div className="surface-card surface-card--static rounded-[28px] p-6">
+        <div className="surface-card rounded-4xl p-6">
           <StudentIntakeForm initialStep={initialStep} initialPayload={initialPayload} />
         </div>
       </div>

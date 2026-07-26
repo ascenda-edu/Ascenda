@@ -5,7 +5,7 @@ export default function ProfileLoading() {
   return (
     <DashboardShell>
       {/* Hero skeleton */}
-      <div className="surface-card surface-card--static space-y-4 p-6">
+      <div className="surface-card space-y-4 p-6">
         <Skeleton className="h-3 w-20" />
         <Skeleton className="h-9 w-72" />
         <Skeleton className="h-4 w-96" />
@@ -18,7 +18,7 @@ export default function ProfileLoading() {
 
       {/* Two-column card skeletons */}
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
-        <div className="surface-card surface-card--static space-y-4">
+        <div className="surface-card space-y-4">
           <Skeleton className="h-3 w-16" />
           <Skeleton className="h-6 w-48" />
           <Skeleton className="h-4 w-40" />
@@ -52,8 +52,8 @@ export default function ProfileLoading() {
 
       {/* Progress card skeleton */}
       <div className="mt-8 grid gap-8 lg:grid-cols-[2fr,1fr]">
-        <Skeleton className="h-48 rounded-[24px]" />
-        <Skeleton className="h-48 rounded-[24px]" />
+        <Skeleton className="h-48 rounded-3xl" />
+        <Skeleton className="h-48 rounded-3xl" />
       </div>
     </DashboardShell>
   );

@@ -104,7 +104,13 @@ export const PageHero = ({
   return (
     <motion.section
       className={cn(
-        'surface-card surface-card--static text-foreground overflow-hidden !py-3 !px-4 sm:!py-3.5 sm:!px-5',
+        // No `!important` needed: Tailwind emits @layer utilities after
+        // @layer components, so these px/py utilities already outrank
+        // surface-card's own `p-6 sm:p-7` at every breakpoint. (Verified against
+        // the compiled stylesheet — the sm: variants land after
+        // surface-card's sm: block too.) `surface-card--static` dropped: static
+        // is now the default and the modifier is an empty no-op.
+        'surface-card text-foreground overflow-hidden py-3 px-4 sm:py-3.5 sm:px-5',
         className
       )}
       variants={containerVariants}
@@ -122,7 +128,7 @@ export const PageHero = ({
           <motion.div className="space-y-1" variants={containerVariants}>
             {showEyebrowRow ? (
               <motion.div
-                className="flex flex-wrap items-baseline gap-1.5 text-[0.625rem] text-muted-foreground"
+                className="flex flex-wrap items-baseline gap-1.5 text-label text-muted-foreground"
                 variants={fadeUp}
               >
                 {eyebrow ? <span className="font-medium">{eyebrow}</span> : null}
@@ -143,7 +149,7 @@ export const PageHero = ({
               >
                 {title}
               </h1>
-              <p className="mt-0.5 max-w-xl text-[0.6875rem] text-muted-foreground leading-snug">
+              <p className="mt-0.5 max-w-xl text-label text-muted-foreground leading-snug">
                 {description}
               </p>
             </motion.div>
@@ -169,7 +175,7 @@ export const PageHero = ({
                   return (
                   <motion.div
                     key={stat.label}
-                    className="min-w-0 rounded-lg border border-border bg-background px-3 py-1.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-primary/20"
+                    className="min-w-0 rounded-lg border border-border bg-background px-3 py-1.5 shadow-e-1 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:shadow-e-2 hover:border-primary/20"
                     variants={statVariants}
                   >
                     <p
@@ -181,11 +187,11 @@ export const PageHero = ({
                     >
                       <AnimatedNumber value={stat.value} />
                     </p>
-                    <p className="text-[0.625rem] text-muted-foreground font-medium truncate" title={stat.label}>
+                    <p className="text-label text-muted-foreground font-medium truncate" title={stat.label}>
                       {stat.label}
                     </p>
                     {stat.detail ? (
-                      <p className="text-[0.625rem] text-muted-foreground truncate" title={stat.detail}>
+                      <p className="text-label text-muted-foreground truncate" title={stat.detail}>
                         {stat.detail}
                       </p>
                     ) : null}

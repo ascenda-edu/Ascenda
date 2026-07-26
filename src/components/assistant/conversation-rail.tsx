@@ -102,7 +102,7 @@ export function ConversationRail({
   const showActionHistory = actionHistory.length > 0;
 
   return (
-    <div className="flex h-[calc(100vh-220px)] min-h-[480px] flex-col overflow-hidden rounded-[24px] border border-border bg-card">
+    <div className="flex h-[calc(100vh-220px)] min-h-[480px] flex-col overflow-hidden rounded-3xl border border-border bg-card">
       {/* New chat + search */}
       <div className="space-y-2 border-b border-border p-3">
         <button
@@ -128,7 +128,7 @@ export function ConversationRail({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search conversations…"
-            className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-3 text-xs focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-3 text-xs transition-[border-color,box-shadow] hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           />
         </div>
       </div>
@@ -155,7 +155,7 @@ export function ConversationRail({
                     exit={{ opacity: 0, x: 12 }}
                     transition={{ duration: 0.16 }}
                     className={cn(
-                      'group relative rounded-[14px] border px-2.5 py-2 transition',
+                      'group relative rounded-xl border px-2.5 py-2 transition',
                       isActive ? 'border-primary/30 bg-primary/5' : 'border-transparent hover:bg-muted/50'
                     )}
                   >
@@ -174,7 +174,7 @@ export function ConversationRail({
                           }
                         }}
                         aria-label="Conversation title"
-                        className="w-full rounded-[10px] border border-primary/40 bg-background px-2 py-1 text-xs text-foreground focus:outline-none"
+                        className="w-full rounded-lg border border-primary/40 bg-background px-2 py-1 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                       />
                     ) : (
                       <button
@@ -183,7 +183,7 @@ export function ConversationRail({
                         className="flex w-full items-start gap-2 text-left"
                       >
                         {conv.pinned ? (
-                          <Pin className="mt-0.5 h-3 w-3 shrink-0 fill-current text-primary" aria-hidden />
+                          <Pin className="mt-0.5 h-3 w-3 shrink-0 fill-current text-primary-ink" aria-hidden />
                         ) : (
                           <MessageSquare
                             className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground"
@@ -199,7 +199,7 @@ export function ConversationRail({
                           >
                             {conv.title?.trim() || 'New conversation'}
                           </span>
-                          <span className="block text-[0.625rem] text-muted-foreground">
+                          <span className="block text-label text-muted-foreground">
                             {formatRelativeTime(conv.last_message_at)}
                           </span>
                         </span>
@@ -240,7 +240,7 @@ export function ConversationRail({
                           className={cn(
                             'flex h-6 items-center justify-center gap-1 rounded-full transition-colors',
                             isConfirmingDelete
-                              ? 'w-auto px-2 text-[0.625rem] font-semibold text-rose-600 dark:text-rose-400'
+                              ? 'w-auto px-2 text-label font-semibold text-danger'
                               : 'w-6 text-muted-foreground hover:bg-muted hover:text-foreground'
                           )}
                         >
@@ -264,7 +264,7 @@ export function ConversationRail({
             type="button"
             onClick={() => setHistoryOpen((v) => !v)}
             aria-expanded={historyOpen}
-            className="flex w-full items-center justify-between px-3 py-2.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+            className="flex w-full items-center justify-between px-3 py-2.5 text-label font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
           >
             Sent actions
             <ChevronDown
@@ -326,10 +326,10 @@ function ActionHistoryItem({ row }: { row: ChatMessageRow }) {
 
   const inner = (
     <>
-      <ArrowUpRight className="mt-0.5 h-3 w-3 shrink-0 text-primary" aria-hidden />
+      <ArrowUpRight className="mt-0.5 h-3 w-3 shrink-0 text-primary-ink" aria-hidden />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[0.6875rem] font-medium text-foreground">{label}</span>
-        <span className="block truncate text-[0.625rem] text-muted-foreground">{secondary}</span>
+        <span className="block truncate text-label font-medium text-foreground">{label}</span>
+        <span className="block truncate text-label text-muted-foreground">{secondary}</span>
       </span>
     </>
   );
@@ -339,12 +339,12 @@ function ActionHistoryItem({ row }: { row: ChatMessageRow }) {
       {href ? (
         <Link
           href={href}
-          className="flex items-start gap-2 rounded-[12px] px-2 py-1.5 transition-colors hover:bg-muted/60"
+          className="flex items-start gap-2 rounded-xl px-2 py-1.5 transition-colors hover:bg-muted/60"
         >
           {inner}
         </Link>
       ) : (
-        <div className="flex items-start gap-2 rounded-[12px] px-2 py-1.5">{inner}</div>
+        <div className="flex items-start gap-2 rounded-xl px-2 py-1.5">{inner}</div>
       )}
     </li>
   );

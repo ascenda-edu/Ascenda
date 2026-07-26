@@ -20,8 +20,8 @@ interface EssayAIPanelProps {
 }
 
 const ACTIONS: { key: Action; label: string; icon: typeof Sparkles; description: string; color: string }[] = [
-  { key: 'feedback', label: 'Get Feedback', icon: MessageSquare, description: 'AI reviews your draft with specific rewrites', color: 'text-violet-500 bg-violet-500/10' },
-  { key: 'outline', label: 'Suggest Outline', icon: ListTree, description: 'Generate essay structure from your blocks', color: 'text-emerald-500 bg-emerald-500/10' },
+  { key: 'feedback', label: 'Get Feedback', icon: MessageSquare, description: 'AI reviews your draft with specific rewrites', color: 'text-feature bg-feature-subtle' },
+  { key: 'outline', label: 'Suggest Outline', icon: ListTree, description: 'Generate essay structure from your blocks', color: 'text-success bg-success-subtle' },
 ];
 
 export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: EssayAIPanelProps) {
@@ -163,14 +163,14 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
       {/* Header */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.15em] w-full"
+        className="eyebrow-accent flex items-center gap-2 w-full"
       >
         <div className="flex h-5 w-5 items-center justify-center rounded-md bg-primary/10">
-          <Sparkles className="h-3 w-3 text-primary" />
+          <Sparkles className="h-3 w-3 text-primary-ink" />
         </div>
-        <span className="text-primary">AI Essay Assistant</span>
-        <span className="text-[0.5625rem] font-bold text-primary/60 bg-primary/5 px-1.5 py-0.5 rounded-full">LIVE</span>
-        <ChevronDown className={cn('h-3 w-3 text-primary/60 ml-auto transition-transform', isOpen && 'rotate-180')} />
+        <span>AI Essay Assistant</span>
+        <span className="text-label font-bold text-primary-ink/80 bg-primary/5 px-1.5 py-0.5 rounded-full">LIVE</span>
+        <ChevronDown className={cn('h-3 w-3 text-primary-ink/80 ml-auto transition-transform', isOpen && 'rotate-180')} />
       </button>
 
       <AnimatePresence>
@@ -183,7 +183,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
           >
             <div className="space-y-3">
               {/* Status indicator */}
-              <div className="rounded-lg bg-muted/30 px-3 py-2 text-[0.6875rem] text-muted-foreground space-y-0.5">
+              <div className="rounded-lg bg-muted/30 px-3 py-2 text-label text-muted-foreground space-y-0.5">
                 <p>
                   <span className="font-semibold text-foreground">{essayWordCount}</span> words in editor
                   {essayWordCount < 5 && ' — start writing to enable feedback'}
@@ -221,7 +221,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[0.8125rem] font-semibold text-foreground">{label}</p>
-                        <p className="text-[0.6875rem] text-muted-foreground leading-snug">{description}</p>
+                        <p className="text-label text-muted-foreground leading-snug">{description}</p>
                       </div>
                     </div>
                   </button>
@@ -230,7 +230,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
 
               {/* Loading indicator */}
               {loading && (
-                <div className="flex items-center gap-2 text-xs text-primary">
+                <div className="flex items-center gap-2 text-xs text-primary-ink">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   <span className="font-medium">
                     {activeAction === 'feedback' ? 'Reading your essay...' : 'Building outline...'}
@@ -243,13 +243,13 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
                 <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-xl border border-rose-200/50 bg-rose-500/5 p-3 space-y-2"
+                  className="rounded-xl border border-danger/25 bg-danger-subtle p-3 space-y-2"
                 >
-                  <p className="text-xs text-rose-600">{error}</p>
+                  <p className="text-xs text-danger">{error}</p>
                   {activeAction && (
                     <button
                       onClick={() => runAction(activeAction)}
-                      className="flex items-center gap-1 text-[0.6875rem] font-medium text-rose-600 hover:text-rose-700 transition-colors"
+                      className="flex items-center gap-1 text-label font-medium text-danger hover:text-danger/80 transition-colors"
                     >
                       <RefreshCw className="h-3 w-3" /> Retry
                     </button>
@@ -267,9 +267,9 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       {done && !loading && (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                       )}
-                      <p className="text-[0.6875rem] font-semibold text-muted-foreground uppercase tracking-wider">
+                      <p className="eyebrow">
                         {activeAction === 'feedback' ? 'Feedback' : 'Outline'}
                       </p>
                     </div>
@@ -277,7 +277,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
                       {done && !loading && activeAction && (
                         <button
                           onClick={() => runAction(activeAction)}
-                          className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-[0.625rem] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+                          className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-label font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
                           title="Run again"
                         >
                           <RefreshCw className="h-3 w-3" />
@@ -286,15 +286,15 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
                       )}
                       <button
                         onClick={handleCopy}
-                        className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-[0.625rem] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+                        className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-label font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
                       >
-                        {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                        {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
                         {copied ? 'Copied' : 'Copy'}
                       </button>
                       {activeAction === 'outline' && onInsertText && (
                         <button
                           onClick={handleInsert}
-                          className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-0.5 text-[0.625rem] font-medium text-primary hover:bg-primary/20 transition-colors"
+                          className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-0.5 text-label font-medium text-primary-ink hover:bg-primary/20 transition-colors"
                         >
                           <Wand2 className="h-3 w-3" />
                           Insert

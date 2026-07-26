@@ -46,7 +46,7 @@ export function ToggleSwitch({ checked, onChange, label, description }: ToggleSw
           layout
           transition={{ type: 'spring', stiffness: 500, damping: 34 }}
           className={cn(
-            'block h-5 w-5 rounded-full bg-background shadow-sm',
+            'block h-5 w-5 rounded-full bg-background shadow-e-1',
             checked ? 'ml-auto' : 'ml-0'
           )}
         />

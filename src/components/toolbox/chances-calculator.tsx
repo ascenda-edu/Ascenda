@@ -3,8 +3,9 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, GraduationCap, Calendar, ClipboardList, TrendingUp, Target, Shield, ExternalLink } from 'lucide-react';
+import { ChevronDown, GraduationCap, Calendar, ClipboardList, ExternalLink, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { TIER_LABEL, TIER_VISUAL, type FitTier } from '@/lib/theme/categories';
 import { parseLocalDate } from '@/lib/utils/dates';
 import { stagger, cardFade } from '@/lib/motion';
 import type { DemoStudentGrades, UniversityChance } from '@/lib/data/student-demo-data';
@@ -16,7 +17,7 @@ function isLinkableCourseId(id: string): boolean {
   return !/^ch-\d+$/.test(id) && !id.endsWith('-shortlist');
 }
 
-function classify(predicted: number, min: number): 'reach' | 'match' | 'safety' {
+function classify(predicted: number, min: number): FitTier {
   const diff = predicted - min;
   if (diff >= 5) return 'safety';
   if (diff >= 1) return 'match';
@@ -33,11 +34,43 @@ function chancePercent(predicted: number, min: number): number {
   return 10;
 }
 
-const CLASS_CONFIG = {
-  reach: { label: 'Reach', color: 'text-rose-600', bg: 'bg-rose-500/10 border-rose-200/60', barColor: 'bg-rose-500', icon: TrendingUp, ringColor: 'stroke-rose-500' },
-  match: { label: 'Match', color: 'text-amber-600', bg: 'bg-amber-500/10 border-amber-200/60', barColor: 'bg-amber-500', icon: Target, ringColor: 'stroke-amber-500' },
-  safety: { label: 'Safety', color: 'text-emerald-600', bg: 'bg-emerald-500/10 border-emerald-200/60', barColor: 'bg-emerald-500', icon: Shield, ringColor: 'stroke-emerald-500' },
-} as const;
+// Derived from TIER_VISUAL / TIER_LABEL (lib/theme/categories — the tone system of
+// record) rather than re-deriving reach/match/safety colours by hand. Only
+// `ringColor` is local: the shared bundle carries no SVG `stroke-*` variant.
+type TierStyle = {
+  label: string;
+  color: string;
+  bg: string;
+  barColor: string;
+  icon: LucideIcon;
+  ringColor: string;
+};
+const CLASS_CONFIG: Record<FitTier, TierStyle> = {
+  reach: {
+    label: TIER_LABEL.reach,
+    color: TIER_VISUAL.reach.text,
+    bg: cn(TIER_VISUAL.reach.bg, TIER_VISUAL.reach.border),
+    barColor: TIER_VISUAL.reach.bar,
+    icon: TIER_VISUAL.reach.icon,
+    ringColor: 'stroke-danger'
+  },
+  match: {
+    label: TIER_LABEL.match,
+    color: TIER_VISUAL.match.text,
+    bg: cn(TIER_VISUAL.match.bg, TIER_VISUAL.match.border),
+    barColor: TIER_VISUAL.match.bar,
+    icon: TIER_VISUAL.match.icon,
+    ringColor: 'stroke-warning'
+  },
+  safety: {
+    label: TIER_LABEL.safety,
+    color: TIER_VISUAL.safety.text,
+    bg: cn(TIER_VISUAL.safety.bg, TIER_VISUAL.safety.border),
+    barColor: TIER_VISUAL.safety.bar,
+    icon: TIER_VISUAL.safety.icon,
+    ringColor: 'stroke-success'
+  }
+};
 
 interface ChancesCalculatorProps {
   grades: DemoStudentGrades;
@@ -75,7 +108,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
       <div className="surface-subcard p-5 space-y-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{grades.system} Predicted Score</p>
+            <p className="eyebrow">{grades.system} Predicted Score</p>
             <div className="flex items-baseline gap-2 mt-1">
               <motion.span
                 key={sliderScore}
@@ -89,12 +122,12 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
             </div>
           </div>
           <div className="text-right">
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Base prediction</p>
+            <p className="eyebrow">Base prediction</p>
             <p className="text-sm text-muted-foreground">{grades.predicted} points</p>
             {sliderScore !== grades.predicted && (
               <button
                 onClick={() => setSliderScore(grades.predicted)}
-                className="text-xs text-primary hover:underline mt-0.5"
+                className="text-xs text-primary-ink hover:underline mt-0.5"
               >
                 Reset
               </button>
@@ -104,7 +137,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
 
         {/* Slider */}
         <div className="space-y-2">
-          <p className="text-[0.6875rem] font-semibold text-muted-foreground">What if I score...</p>
+          <p className="text-label font-semibold text-muted-foreground">What if I score...</p>
           <div className="relative">
             <input
               type="range"
@@ -119,16 +152,16 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
               aria-valuetext={`${sliderScore} out of 45 points`}
               className="w-full h-2 rounded-full appearance-none cursor-pointer bg-muted/50 accent-primary
                 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5
-                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-md
+                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-e-2
                 [&::-webkit-slider-thumb]:shadow-primary/30 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background
                 [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110"
             />
             <div className="flex justify-between mt-1 px-0.5">
-              <span className="text-[0.625rem] text-muted-foreground/50">24</span>
-              <span className="text-[0.625rem] text-muted-foreground/50">30</span>
-              <span className="text-[0.625rem] text-muted-foreground/50">35</span>
-              <span className="text-[0.625rem] text-muted-foreground/50">40</span>
-              <span className="text-[0.625rem] text-muted-foreground/50">45</span>
+              <span className="text-label text-muted-foreground/50">24</span>
+              <span className="text-label text-muted-foreground/50">30</span>
+              <span className="text-label text-muted-foreground/50">35</span>
+              <span className="text-label text-muted-foreground/50">40</span>
+              <span className="text-label text-muted-foreground/50">45</span>
             </div>
           </div>
         </div>
@@ -172,7 +205,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
 
       {/* Sort controls */}
       <div className="flex items-center gap-2">
-        <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Sort by</span>
+        <span className="eyebrow">Sort by</span>
         {([
           { key: 'classification', label: 'Tier' },
           { key: 'chance', label: 'Chance %' },
@@ -194,7 +227,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
       </div>
 
       {/* Disclaimer */}
-      <p className="text-[0.6875rem] text-muted-foreground/60 italic">
+      <p className="text-label text-muted-foreground/60 italic">
         Chance percentages are illustrative estimates based on score thresholds, not real admissions probabilities. Actual outcomes depend on many factors beyond grades.
       </p>
 
@@ -209,7 +242,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
           return (
             <motion.div key={uni.id} variants={cardFade} layout>
               <div
-                className={cn('relative w-full text-left rounded-2xl border p-4 transition-shadow hover:shadow-md', cfg.bg)}
+                className={cn('relative w-full text-left rounded-2xl border p-4 transition-shadow hover:shadow-e-2', cfg.bg)}
               >
                 {/* Stretched toggle: a real button covering the card, kept as a
                     SIBLING of the course Link (interactive elements must not nest). */}
@@ -258,7 +291,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
                       <Link
                         href={`/course/${uni.id}`}
                         onClick={(event) => event.stopPropagation()}
-                        className="relative z-10 inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-[0.6875rem] font-semibold text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
+                        className="relative z-raised inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-label font-semibold text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
                         aria-label={`View ${uni.university} course details`}
                       >
                         View course
@@ -271,11 +304,11 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
 
                 {/* Score comparison bar */}
                 <div className="mt-3 flex items-center gap-3">
-                  <span className="text-[0.625rem] text-muted-foreground w-12 shrink-0">Min {uni.minimumScore}</span>
+                  <span className="text-label text-muted-foreground w-12 shrink-0">Min {uni.minimumScore}</span>
                   <div className="flex-1 h-2 rounded-full bg-muted/30 overflow-hidden relative">
                     {/* Minimum score marker */}
                     <div
-                      className="absolute top-0 h-full w-0.5 bg-foreground/20 z-10"
+                      className="absolute top-0 h-full w-0.5 bg-foreground/20 z-raised"
                       style={{ left: `${(uni.minimumScore / 45) * 100}%` }}
                     />
                     <motion.div
@@ -285,7 +318,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
                       transition={{ duration: 0.6, ease: 'easeOut' }}
                     />
                   </div>
-                  <span className="text-[0.625rem] font-semibold text-foreground w-12 text-right shrink-0">You: {sliderScore}</span>
+                  <span className="text-label font-semibold text-foreground w-12 text-right shrink-0">You: {sliderScore}</span>
                 </div>
 
                 <AnimatePresence>
@@ -325,7 +358,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
                             {parseLocalDate(uni.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </p>
                           {uni.interviewRequired && (
-                            <p className="text-xs font-medium text-amber-600">Interview required</p>
+                            <p className="text-xs font-medium text-warning">Interview required</p>
                           )}
                         </div>
                       </div>

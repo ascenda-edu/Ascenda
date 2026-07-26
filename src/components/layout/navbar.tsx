@@ -63,8 +63,8 @@ export const Navbar = () => {
       <div className="shell-gutter pb-2 pt-2 sm:pb-3 sm:pt-3">
         <div
           className={cn(
-            'flex w-full items-center justify-between rounded-2xl border border-border bg-card/95 px-3 py-1.5 sm:px-4 sm:py-2 text-foreground backdrop-blur-lg transition-all dark:border-white/10 dark:bg-card/90',
-            scrolled ? 'shadow-md' : 'shadow-sm'
+            'flex w-full items-center justify-between rounded-2xl border border-border bg-card/95 px-3 py-1.5 sm:px-4 sm:py-2 text-foreground backdrop-blur-lg transition-[box-shadow,background-color,border-color] duration-200 dark:border-white/10 dark:bg-card/90',
+            scrolled ? 'shadow-e-2' : 'shadow-e-1'
           )}
         >
           <Link href="/dashboard" className="flex items-center gap-2 sm:gap-3 text-lg font-semibold text-foreground">

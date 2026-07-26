@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Sparkles, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { TIER_VISUAL } from '@/lib/theme/categories';
 import { HelpRequestModal, type HelpRequestModalApp } from './help-request-modal';
 
 export interface ApplicationRow {
@@ -39,10 +40,13 @@ const STATUS_ORDER: Record<string, number> = {
   enrolled: 4
 };
 
+// Built from TIER_VISUAL (lib/theme/categories) rather than re-deriving status
+// colours by hand. The bundles are used piecewise instead of `.chip` because
+// this badge keeps its own smaller, uppercase geometry.
 const TIER_TONE: Record<string, string> = {
-  Reach: 'border-rose-200/60 bg-rose-500/10 text-rose-700 dark:text-rose-300',
-  Match: 'border-amber-200/60 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-  Safe: 'border-emerald-200/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+  Reach: cn(TIER_VISUAL.reach.border, TIER_VISUAL.reach.bg, TIER_VISUAL.reach.text),
+  Match: cn(TIER_VISUAL.match.border, TIER_VISUAL.match.bg, TIER_VISUAL.match.text),
+  Safe: cn(TIER_VISUAL.safety.border, TIER_VISUAL.safety.bg, TIER_VISUAL.safety.text)
 };
 
 const formatDeadline = (days: number | null): string => {
@@ -95,7 +99,7 @@ export function ApplicationList({ rows }: Props) {
               transition={{ duration: 0.25, delay: index * 0.03 }}
               className={cn(
                 'rounded-2xl border bg-card/60 px-4 py-3 transition',
-                isClosed ? 'border-border/40 opacity-80' : 'border-border/60 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm'
+                isClosed ? 'border-border/40 opacity-80' : 'hover-lift border-border/60 hover:border-primary/40'
               )}
             >
               <div className="flex items-center gap-4">
@@ -107,7 +111,7 @@ export function ApplicationList({ rows }: Props) {
                     {row.tier ? (
                       <span
                         className={cn(
-                          'shrink-0 rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.15em]',
+                          'shrink-0 rounded-full border px-2 py-0.5 text-label font-semibold uppercase tracking-[0.15em]',
                           TIER_TONE[row.tier]
                         )}
                       >
@@ -120,13 +124,13 @@ export function ApplicationList({ rows }: Props) {
 
                 <div className="hidden shrink-0 text-right sm:block">
                   <p className="text-xs font-semibold text-foreground">{statusLabel}</p>
-                  <p className="text-[0.6875rem] text-muted-foreground">
+                  <p className="text-label text-muted-foreground">
                     {isClosed ? 'Awaiting decision' : formatDeadline(row.daysUntilDeadline)}
                   </p>
                 </div>
 
                 {isClosed ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[0.6875rem] font-semibold text-emerald-700 dark:text-emerald-300">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-success-subtle px-2.5 py-1 text-label font-semibold text-success">
                     <CheckCircle2 className="h-3 w-3" aria-hidden />
                     {statusLabel}
                   </span>
@@ -143,7 +147,7 @@ export function ApplicationList({ rows }: Props) {
                         tasksRemaining: row.tasksOpen
                       })
                     }
-                    className="shrink-0 border-violet-300/60 bg-violet-500/5 text-violet-700 transition hover:bg-violet-500/10 dark:text-violet-300"
+                    className="shrink-0 border-feature/25 bg-feature-subtle text-feature transition hover:bg-feature/15"
                   >
                     <Sparkles className="mr-1.5 h-3.5 w-3.5" aria-hidden />
                     Need help
@@ -157,12 +161,12 @@ export function ApplicationList({ rows }: Props) {
                     <div
                       className={cn(
                         'h-full rounded-full transition-[width,background-color]',
-                        progress >= 75 ? 'bg-emerald-500' : progress >= 40 ? 'bg-sky-500' : 'bg-amber-500'
+                        progress >= 75 ? 'bg-success' : progress >= 40 ? 'bg-info' : 'bg-warning'
                       )}
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <p className="shrink-0 text-[0.6875rem] font-medium text-muted-foreground tabular-nums">
+                  <p className="shrink-0 text-label font-medium text-muted-foreground tabular-nums">
                     {row.tasksOpen} of {row.tasksTotal} tasks open
                   </p>
                 </div>

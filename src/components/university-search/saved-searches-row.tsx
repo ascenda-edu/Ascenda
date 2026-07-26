@@ -16,9 +16,9 @@ export function SavedSearchesRow() {
   if (!isHydrated || items.length === 0) return null;
 
   return (
-    <section className="surface-card surface-card--static space-y-3" aria-label="Saved searches">
+    <section className="surface-card space-y-3" aria-label="Saved searches">
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/15 dark:text-emerald-300">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-success-subtle text-success ring-1 ring-success/25">
           <Bookmark className="h-4 w-4" />
         </div>
         <div>
@@ -46,7 +46,7 @@ export function SavedSearchesRow() {
               >
                 {item.name}
                 {item.filters.length > 0 && (
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[0.6875rem] tabular-nums text-muted-foreground">
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-label tabular-nums text-muted-foreground">
                     {item.filters.length} filter{item.filters.length === 1 ? '' : 's'}
                   </span>
                 )}
@@ -55,7 +55,7 @@ export function SavedSearchesRow() {
                 type="button"
                 onClick={() => void removeSearch(item.id)}
                 aria-label={`Delete saved search ${item.name}`}
-                className="mr-1.5 rounded-full p-1.5 text-muted-foreground transition hover:bg-rose-500/10 hover:text-rose-600"
+                className="mr-1.5 rounded-full p-1.5 text-muted-foreground transition hover:bg-danger-subtle hover:text-danger"
               >
                 <X className="h-3.5 w-3.5" />
               </button>

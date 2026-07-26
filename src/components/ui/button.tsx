@@ -3,21 +3,27 @@ import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
+// The hover lift belongs to the SOLID CTA variants only. It used to sit in the
+// base class, so every button in the app rose on hover — including icon buttons,
+// toolbar ghosts and inline links, where a 2px jump reads as a glitch rather
+// than an affordance. `active:translate-y-0` travels with it.
+const lift = "hover:-translate-y-0.5 hover:shadow-e-2 active:translate-y-0";
+
 const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-full text-sm font-medium ring-offset-background transition-[transform,box-shadow,background-color,border-color,color] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:pointer-events-none disabled:opacity-50 max-w-full whitespace-normal text-center leading-snug shadow-sm",
+  "inline-flex items-center justify-center rounded-full text-sm font-medium ring-offset-background transition-[transform,box-shadow,background-color,border-color,color] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 max-w-full whitespace-normal text-center leading-snug shadow-e-1",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow-md shadow-primary/20",
-        destructive: "bg-destructive text-destructive-foreground shadow-md shadow-destructive/15",
+        default: `bg-primary text-primary-foreground shadow-e-2 shadow-primary/20 ${lift}`,
+        destructive: `bg-destructive text-destructive-foreground shadow-e-2 shadow-destructive/15 ${lift}`,
         outline:
           "border border-input bg-background text-foreground",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-md shadow-secondary/15",
+          `bg-secondary text-secondary-foreground shadow-e-2 shadow-secondary/15 ${lift}`,
         ghost: "text-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        link: "text-primary-ink underline-offset-4 hover:underline",
         soft:
-          "bg-accent/15 text-foreground border border-accent/30 shadow-sm",
+          "bg-accent/15 text-foreground border border-accent/30 shadow-e-1",
       },
       size: {
         default: "h-10 px-4 py-2",

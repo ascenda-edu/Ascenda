@@ -37,7 +37,7 @@ export function ProfileProgressCard({ percent, steps, nextStepTitle }: ProfilePr
       title={complete ? 'Profile complete' : 'Finish your profile'}
       icon={UserCircle}
       iconClassName={
-        complete ? 'bg-emerald-500/10 text-emerald-600 ring-emerald-500/15 dark:text-emerald-300' : undefined
+        complete ? 'bg-success-subtle text-success ring-success/25' : undefined
       }
     >
       <div className="flex h-full flex-col gap-4">
@@ -53,7 +53,7 @@ export function ProfileProgressCard({ percent, steps, nextStepTitle }: ProfilePr
                 strokeWidth="7"
                 strokeLinecap="round"
                 strokeDasharray={CIRCUMFERENCE}
-                className={complete ? 'stroke-emerald-500' : 'stroke-primary'}
+                className={complete ? 'stroke-success' : 'stroke-primary'}
                 initial={{ strokeDashoffset: reduced ? dashTarget : CIRCUMFERENCE }}
                 whileInView={{ strokeDashoffset: dashTarget }}
                 viewport={{ once: true }}
@@ -80,7 +80,7 @@ export function ProfileProgressCard({ percent, steps, nextStepTitle }: ProfilePr
                 className={cn(
                   'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border',
                   step.done
-                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
+                    ? 'border-success/40 bg-success-subtle text-success'
                     : 'border-border bg-muted/40 text-transparent'
                 )}
                 aria-hidden

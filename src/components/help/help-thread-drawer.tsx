@@ -40,13 +40,13 @@ const formatMeetingTime = (iso: string): string =>
 const meetingToneClass = (status: HelpMeetingStatus): string => {
   switch (status) {
     case 'confirmed':
-      return 'border-emerald-200/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
+      return 'border-success/25 bg-success-subtle text-success';
     case 'cancelled':
       return 'border-border/60 bg-muted/40 text-muted-foreground line-through';
     case 'completed':
-      return 'border-violet-200/60 bg-violet-500/10 text-violet-700 dark:text-violet-300';
+      return 'border-feature/25 bg-feature-subtle text-feature';
     default:
-      return 'border-sky-200/60 bg-sky-500/10 text-sky-700 dark:text-sky-300';
+      return 'border-info/25 bg-info-subtle text-info';
   }
 };
 
@@ -282,7 +282,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
     <AnimatePresence>
       {open && requestId ? (
         <motion.div
-          className="fixed inset-0 z-[120] flex justify-end"
+          className="fixed inset-0 z-modal flex justify-end"
           initial={{ pointerEvents: 'none' }}
           animate={{ pointerEvents: 'auto' }}
           exit={{ pointerEvents: 'none' }}
@@ -305,11 +305,11 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 280, damping: 32 }}
-            className="relative z-10 flex h-full w-full max-w-xl flex-col bg-background shadow-2xl outline-none"
+            className="relative z-10 flex h-full w-full max-w-xl flex-col bg-background shadow-e-4 outline-none"
           >
             <header className="flex items-start justify-between gap-3 border-b border-border/60 px-5 py-4">
               <div className="min-w-0 flex-1">
-                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+                <p className="eyebrow">
                   {isCounsellor
                     ? 'Inbox · conversation'
                     : request?.initiated_by === 'counsellor'
@@ -375,7 +375,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
                     className={cn(
                       'rounded-full px-3 py-1.5 transition',
                       isActive
-                        ? 'bg-primary font-semibold text-primary-foreground shadow-sm'
+                        ? 'bg-primary font-semibold text-primary-foreground shadow-e-1'
                         : 'font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                     )}
                   >
@@ -454,7 +454,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
                       isCounsellor ? `Reply to ${studentName}…` : 'Reply to your counsellor…'
                     }
                     rows={2}
-                    className="min-h-[44px] flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className="min-h-[44px] flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                   <Button
                     size="sm"
@@ -466,21 +466,21 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="mt-1.5 px-1 text-[0.625rem] text-muted-foreground">
+                <p className="mt-1.5 px-1 text-label text-muted-foreground">
                   <kbd className="rounded border border-border/60 bg-muted/60 px-1 font-sans">Enter</kbd> to send ·{' '}
                   <kbd className="rounded border border-border/60 bg-muted/60 px-1 font-sans">Shift</kbd>+
                   <kbd className="rounded border border-border/60 bg-muted/60 px-1 font-sans">Enter</kbd> for a new line
                 </p>
 
                 {isCounsellor ? (
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-[0.6875rem]">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-label">
                     {request.status === 'open' ? (
                       <Button
                         size="xs"
                         variant="outline"
                         onClick={handleAccept}
                         disabled={busy}
-                        className="border-violet-300/60 text-violet-700 dark:text-violet-300"
+                        className="border-feature/25 text-feature"
                       >
                         <Check className="mr-1 h-3 w-3" />
                         Accept request
@@ -492,13 +492,13 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
                         variant="outline"
                         onClick={handleResolve}
                         disabled={busy}
-                        className="border-emerald-300/60 text-emerald-700 dark:text-emerald-300"
+                        className="border-success/25 text-success"
                       >
                         <Check className="mr-1 h-3 w-3" />
                         Mark resolved
                       </Button>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-success-subtle px-2 py-1 text-label font-semibold uppercase tracking-[0.2em] text-success">
                         <Check className="h-3 w-3" />
                         Resolved
                       </span>
@@ -593,7 +593,7 @@ function ThreadView({
 
   return (
     <div className="space-y-0.5" aria-live="polite" aria-relevant="additions">
-      <p className="pb-1 text-center text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+      <p className="eyebrow pb-1 text-center">
         {request.subject}
       </p>
       {entries.map((entry, index) => {
@@ -615,7 +615,7 @@ function ThreadView({
             {showDay ? (
               <div className="flex items-center gap-3 py-2" role="separator" aria-label={dayLabel(entry.at)}>
                 <span className="h-px flex-1 bg-border/50" />
-                <span className="text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                <span className="eyebrow">
                   {dayLabel(entry.at)}
                 </span>
                 <span className="h-px flex-1 bg-border/50" />
@@ -629,10 +629,10 @@ function ThreadView({
                 ) : (
                   <span
                     className={cn(
-                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[0.625rem] font-semibold',
+                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-label font-semibold',
                       entry.role === 'counsellor'
-                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-violet-500/15 text-violet-700 dark:text-violet-300'
+                        ? 'bg-success-subtle text-success'
+                        : 'bg-feature-subtle text-feature'
                     )}
                     aria-hidden
                   >
@@ -642,11 +642,11 @@ function ThreadView({
               ) : null}
               <div className={cn('flex max-w-[78%] flex-col', isOwn ? 'items-end' : 'items-start')}>
                 {!isOwn && !groupedWithPrev ? (
-                  <span className="mb-0.5 px-1 text-[0.6875rem] font-semibold text-muted-foreground">{name}</span>
+                  <span className="mb-0.5 px-1 text-label font-semibold text-muted-foreground">{name}</span>
                 ) : null}
                 <div
                   className={cn(
-                    'rounded-2xl px-3.5 py-2 text-sm leading-relaxed shadow-sm',
+                    'rounded-2xl px-3.5 py-2 text-sm leading-relaxed shadow-e-1',
                     isOwn
                       ? 'rounded-br-md bg-primary text-primary-foreground'
                       : 'rounded-bl-md border border-border/60 bg-muted/60 text-foreground',
@@ -657,8 +657,8 @@ function ThreadView({
                   {entry.isOpening && entry.role === 'student' ? (
                     <p
                       className={cn(
-                        'mt-1.5 inline-flex items-center gap-1 text-[0.625rem] uppercase tracking-[0.15em]',
-                        isOwn ? 'text-primary-foreground/70' : 'text-violet-600 dark:text-violet-400'
+                        'mt-1.5 inline-flex items-center gap-1 text-label uppercase tracking-[0.15em]',
+                        isOwn ? 'text-primary-foreground/70' : 'text-feature'
                       )}
                     >
                       <Sparkles className="h-3 w-3" />
@@ -667,7 +667,7 @@ function ThreadView({
                   ) : null}
                 </div>
                 {showMeta ? (
-                  <span className="mt-0.5 flex items-center gap-1 px-1 text-[0.625rem] tabular-nums text-muted-foreground">
+                  <span className="mt-0.5 flex items-center gap-1 px-1 text-label tabular-nums text-muted-foreground">
                     {isPending ? 'Sending…' : timeLabel(entry.at)}
                     {seenEntryId === entry.id ? (
                       <span className="inline-flex items-center gap-0.5">
@@ -710,7 +710,7 @@ function NotesView({
       {isCounsellor ? (
         <div className="rounded-2xl border border-border bg-card/40 p-3">
           <div className="flex items-center gap-2">
-            <NotebookPen className="h-4 w-4 text-primary" aria-hidden />
+            <NotebookPen className="h-4 w-4 text-primary-ink" aria-hidden />
             <p className="text-sm font-semibold text-foreground">Private note</p>
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -725,7 +725,7 @@ function NotesView({
             onChange={(event) => setNoteText(event.target.value)}
             placeholder="e.g. PS is strong on the quant side, weak on the 'why this university' question. Send the Cambridge sample for reference."
             rows={3}
-            className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
           <div className="mt-2 flex items-center justify-end gap-2">
             <Button size="sm" onClick={onAdd} disabled={busy || !noteText.trim()}>
@@ -751,10 +751,10 @@ function NotesView({
                 className="rounded-2xl border border-border/60 bg-card/40 p-3 text-sm text-foreground/90"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">
+                  <span className="eyebrow">
                     Counsellor note
                   </span>
-                  <span className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">
+                  <span className="eyebrow">
                     {formatRelativeTime(n.created_at)}
                   </span>
                 </div>
@@ -801,7 +801,7 @@ function MeetingView({
       {isCounsellor ? (
         <div className="rounded-2xl border border-border bg-card/40 p-3">
           <div className="flex items-center gap-2">
-            <CalendarPlus className="h-4 w-4 text-primary" aria-hidden />
+            <CalendarPlus className="h-4 w-4 text-primary-ink" aria-hidden />
             <p className="text-sm font-semibold text-foreground">Propose a meeting</p>
           </div>
           <div className="mt-2 space-y-2">
@@ -815,7 +815,7 @@ function MeetingView({
                 value={meetingTitle}
                 onChange={(event) => setMeetingTitle(event.target.value)}
                 placeholder="Meeting title"
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
             <div>
@@ -827,7 +827,7 @@ function MeetingView({
                 type="datetime-local"
                 value={meetingTime}
                 onChange={(event) => setMeetingTime(event.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
             <div>
@@ -840,7 +840,7 @@ function MeetingView({
                 value={meetingLocation}
                 onChange={(event) => setMeetingLocation(event.target.value)}
                 placeholder="Location or video link"
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
             <div className="flex items-center justify-end">
@@ -892,7 +892,7 @@ function MeetingView({
                     {formatMeetingTime(m.scheduled_for)} · {m.duration_minutes} min
                     {m.location ? ` · ${m.location}` : null}
                   </p>
-                  <p className="mt-0.5 text-[0.625rem] uppercase tracking-[0.2em]">{m.status}</p>
+                  <p className="mt-0.5 text-label uppercase tracking-[0.2em]">{m.status}</p>
                   {actions.length ? (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {actions.map((action) => (

@@ -39,7 +39,7 @@ export function PulseCards({ cards }: PulseCardsProps) {
         return (
           <motion.div
             key={card.label}
-            className="group relative overflow-hidden surface-stat flex items-center gap-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+            className="group relative overflow-hidden surface-stat hover-lift flex items-center gap-4"
             variants={cardVariant}
             whileHover={{ scale: 1.02 }}
           >
@@ -62,7 +62,7 @@ export function PulseCards({ cards }: PulseCardsProps) {
               >
                 {card.value}
               </motion.p>
-              <p className="text-[0.6875rem] uppercase tracking-[0.2em] text-muted-foreground font-semibold">{card.label}</p>
+              <p className="eyebrow">{card.label}</p>
               <p className="text-xs text-muted-foreground truncate">{card.detail}</p>
             </div>
           </motion.div>

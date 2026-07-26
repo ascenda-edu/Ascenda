@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Globe, GraduationCap, DollarSign, Calendar, ExternalLink, Bookmark, BookmarkCheck, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useToast } from '@/components/ui/toast';
 import { trackEvent } from '@/lib/analytics';
 import type { Scholarship } from './types';
@@ -124,7 +125,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
   return (
     <div className="relative space-y-5">
       {/* Search + filter bar */}
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-4">
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-e-1 space-y-4">
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -147,14 +148,14 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
             className={cn(
               'flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all hover:-translate-y-0.5',
               showFilters || hasFilters
-                ? 'border-primary/30 bg-primary/5 text-primary'
+                ? 'border-primary/30 bg-primary/5 text-primary-ink'
                 : 'border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50'
             )}
           >
             <Filter className="h-4 w-4" />
             {showFilters ? 'Hide filters' : 'Filters'}
             {activeFilterCount > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[0.625rem] font-bold text-primary-foreground">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-label font-bold text-primary-foreground">
                 {activeFilterCount}
               </span>
             )}
@@ -172,7 +173,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
             >
               <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3 pt-2 border-t border-border/50">
                 <div className="space-y-1.5">
-                  <label htmlFor="scholarship-filter-country" className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1.5">
+                  <label htmlFor="scholarship-filter-country" className="eyebrow flex items-center gap-1.5">
                     <Globe className="h-3 w-3" /> Country
                   </label>
                   <select
@@ -186,7 +187,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="scholarship-filter-level" className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1.5">
+                  <label htmlFor="scholarship-filter-level" className="eyebrow flex items-center gap-1.5">
                     <GraduationCap className="h-3 w-3" /> Level
                   </label>
                   <select
@@ -200,7 +201,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="scholarship-filter-max-award" className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1.5">
+                  <label htmlFor="scholarship-filter-max-award" className="eyebrow flex items-center gap-1.5">
                     <DollarSign className="h-3 w-3" /> Max award (USD)
                   </label>
                   <input
@@ -219,12 +220,12 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
 
         {/* Status row */}
         <div className="flex items-center justify-between">
-          <p className="text-[0.6875rem] text-muted-foreground">
+          <p className="text-label text-muted-foreground">
             <span className="font-semibold text-foreground">{filtered.length}</span> of {scholarships.length} scholarships
-            {saved.size > 0 && <span className="ml-2 text-emerald-600">· {saved.size} saved</span>}
+            {saved.size > 0 && <span className="ml-2 text-success">· {saved.size} saved</span>}
           </p>
           {hasFilters && (
-            <button onClick={resetFilters} className="text-[0.6875rem] font-medium text-muted-foreground hover:text-rose-500 transition-colors flex items-center gap-1">
+            <button onClick={resetFilters} className="text-label font-medium text-muted-foreground hover:text-danger transition-colors flex items-center gap-1">
               <X className="h-3 w-3" /> Clear filters
             </button>
           )}
@@ -234,18 +235,17 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
       {/* Results */}
       <AnimatePresence mode="wait">
         {filtered.length === 0 ? (
-          <motion.div
+          <EmptyState
             key="empty"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="rounded-2xl border border-dashed border-border bg-muted/20 p-12 text-center"
-          >
-            <Search className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="text-sm font-medium text-muted-foreground">No scholarships match these filters</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">Try widening your search or clearing filters</p>
-            <button onClick={resetFilters} className="mt-4 text-xs font-semibold text-primary hover:underline">Clear all filters</button>
-          </motion.div>
+            icon={Search}
+            title="No scholarships match these filters"
+            hint="Try widening your search or clearing filters"
+            action={
+              <button onClick={resetFilters} className="text-xs font-semibold text-primary-ink hover:underline">
+                Clear all filters
+              </button>
+            }
+          />
         ) : (
           <motion.div
             key="list"
@@ -267,7 +267,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                   variants={cardVariants}
                   layout
                   className={cn(
-                    'group relative overflow-hidden rounded-2xl border border-l-4 bg-card p-4 sm:p-5 shadow-sm transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-md',
+                    'hover-lift group relative overflow-hidden rounded-2xl border border-l-4 bg-card p-4 sm:p-5 shadow-e-1',
                     visual.border,
                     visual.accent
                   )}
@@ -281,7 +281,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                         <div className="flex flex-wrap items-center gap-2">
                           <span className={cn(visual.chip, 'uppercase tracking-[0.15em]')}>{category}</span>
                           {urgent && (
-                            <span className="rounded-full bg-rose-500/10 border border-rose-200/50 px-2.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-rose-600 motion-safe:animate-pulse dark:text-rose-400 dark:border-rose-500/20">
+                            <span className="rounded-full bg-danger-subtle border border-danger/25 px-2.5 py-0.5 text-label font-bold uppercase tracking-[0.15em] text-danger motion-safe:animate-pulse">
                               Closing soon
                             </span>
                           )}
@@ -296,7 +296,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                             <GraduationCap className="h-3 w-3" />
                             {scholarship.level ?? 'Any level'}
                           </span>
-                          <span className={cn('flex items-center gap-1', urgent && 'text-rose-500 font-medium dark:text-rose-400')}>
+                          <span className={cn('flex items-center gap-1', urgent && 'text-danger font-medium')}>
                             <Calendar className="h-3 w-3" />
                             {formatDeadline(scholarship.deadline)}
                           </span>
@@ -310,7 +310,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                         <p className="text-xl font-bold text-foreground tabular-nums">
                           {scholarship.amount ? `${scholarship.currency ?? 'USD'} ${scholarship.amount.toLocaleString()}` : '—'}
                         </p>
-                        <p className="text-[0.625rem] text-muted-foreground">per award</p>
+                        <p className="text-label text-muted-foreground">per award</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
@@ -318,8 +318,8 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                           className={cn(
                             'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-[transform,color,background-color,border-color] hover:-translate-y-0.5',
                             isSaved
-                              ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-200/50'
-                              : 'border border-border text-muted-foreground hover:border-primary/20 hover:text-primary hover:bg-primary/5'
+                              ? 'bg-success-subtle text-success border border-success/25'
+                              : 'border border-border text-muted-foreground hover:border-primary/20 hover:text-primary-ink hover:bg-primary/5'
                           )}
                         >
                           {isSaved ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}

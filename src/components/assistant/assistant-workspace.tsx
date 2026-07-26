@@ -680,7 +680,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
   const starterPanel = (
     <div className="flex h-full flex-col items-center justify-center px-6 text-center">
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-        <Sparkles className="h-6 w-6 text-primary" />
+        <Sparkles className="h-6 w-6 text-primary-ink" />
       </div>
       <h2 className="font-heading text-lg font-semibold text-foreground">Start a conversation</h2>
       <p className="mt-1 max-w-sm text-sm text-muted-foreground">{SUBTITLES[mode]}</p>
@@ -691,7 +691,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
             type="button"
             onClick={() => void sendMessage(chip)}
             disabled={coolingDown}
-            className="rounded-full border border-border bg-background px-3 py-1.5 text-[0.6875rem] text-muted-foreground transition-[transform,border-color,color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:text-foreground hover:shadow-sm disabled:opacity-50"
+            className="rounded-full border border-border bg-background px-3 py-1.5 text-label text-muted-foreground transition-[transform,border-color,color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:text-foreground hover:shadow-e-1 disabled:opacity-50"
           >
             {chip}
           </button>
@@ -729,7 +729,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
             <PanelLeft className="h-4 w-4" />
           </button>
           <div>
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-primary">Ascendi</p>
+            <p className="eyebrow-accent">Ascendi</p>
             <h1 className="font-heading text-2xl font-semibold text-foreground">Assistant</h1>
             <p className="mt-0.5 max-w-xl text-sm text-muted-foreground">{SUBTITLES[mode]}</p>
           </div>
@@ -779,7 +779,7 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 lg:hidden"
+            className="fixed inset-0 z-modal lg:hidden"
           >
             <div
               className="absolute inset-0 bg-background/60 backdrop-blur-sm"
