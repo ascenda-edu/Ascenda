@@ -22,7 +22,15 @@ interface PageHeroProps {
   actions?: ReactNode;
   breadcrumbs?: ReactNode;
   className?: string;
-  /** Tone still controls subtle copy weight in downstream slots. */
+  /**
+   * Surface register. `'student'` (the default) accents the eyebrow with the brand
+   * ink for a warmer read; `'counsellor'` keeps it neutral and operational.
+   *
+   * It does NOT change the heading size — it used to, which is why the previous
+   * doc comment ("subtle copy weight in downstream slots") described nothing that
+   * existed. The default was also `'counsellor'` while CLAUDE.md documented
+   * `'student'`; 33 call sites pass `'student'` explicitly, so that is now the default.
+   */
   tone?: 'student' | 'counsellor';
 }
 
@@ -86,9 +94,8 @@ export const PageHero = ({
   actions,
   breadcrumbs,
   className,
-  tone = 'counsellor'
+  tone = 'student'
 }: PageHeroProps) => {
-  const isStudent = tone === 'student';
   const reduced = useReducedMotion();
   const initial = reduced ? false : 'hidden';
   // Only render the small eyebrow row when the caller actually provided
@@ -98,62 +105,69 @@ export const PageHero = ({
     <motion.section
       className={cn(
         // No `!important` needed: Tailwind emits @layer utilities after
-        // @layer components, so these px/py utilities already outrank
-        // surface-card's own `p-6 sm:p-7` at every breakpoint. (Verified against
-        // the compiled stylesheet — the sm: variants land after
-        // surface-card's sm: block too.) `surface-card--static` dropped: static
-        // is now the default and the modifier is an empty no-op.
-        'surface-card text-foreground overflow-hidden py-3 px-4 sm:py-3.5 sm:px-5',
+        // @layer components, so these utilities already outrank surface-card's own
+        // `p-6 sm:p-7` at every breakpoint. (Verified against the compiled
+        // stylesheet — the sm: variants land after surface-card's sm: block too.)
+        // `surface-card--static` dropped: static is now the default.
+        'surface-card text-foreground overflow-hidden p-5 sm:p-6',
         className
       )}
       variants={containerVariants}
       initial={initial}
       animate="show"
     >
-      <div className="relative flex flex-col gap-1.5">
+      <div className="relative flex flex-col gap-2">
         {breadcrumbs ? (
           <motion.div variants={fadeUp}>
             {breadcrumbs}
           </motion.div>
         ) : null}
 
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <motion.div className="space-y-1" variants={containerVariants}>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <motion.div className="space-y-1.5" variants={containerVariants}>
             {showEyebrowRow ? (
               <motion.div
-                className="flex flex-wrap items-baseline gap-1.5 text-label text-muted-foreground"
+                className="flex flex-wrap items-baseline gap-1.5"
                 variants={fadeUp}
               >
-                {eyebrow ? <span className="font-medium">{eyebrow}</span> : null}
-                {eyebrow && highlight ? <span className="text-muted-foreground/40">·</span> : null}
+                {/* This is what `tone` is for. It used to shrink the page title by
+                    2px, which is not a tone — it's just a smaller heading. The
+                    documented intent is 'student' = warm, 'counsellor' =
+                    operational, so it now picks the eyebrow's accent: the student
+                    surface gets the brand ink, the staff surfaces stay neutral. */}
+                {eyebrow ? (
+                  <span className={tone === 'student' ? 'eyebrow-accent' : 'eyebrow'}>{eyebrow}</span>
+                ) : null}
+                {eyebrow && highlight ? <span className="text-label text-muted-foreground/40">·</span> : null}
                 {highlight ? (
-                  <span className="font-semibold text-foreground">
+                  <span className="text-label font-semibold text-foreground">
                     {highlight}
                   </span>
                 ) : null}
               </motion.div>
             ) : null}
             <motion.div variants={fadeUp}>
-              <h1
-                className={cn(
-                  'font-semibold text-foreground leading-snug',
-                  isStudent ? 'text-[1.0625rem] md:text-[1.1875rem]' : 'text-[0.9375rem] md:text-[1.0625rem]'
-                )}
-              >
+              {/* On the type scale, at the h2 step (22px -> 24px at md).
+                  This was `text-[1.0625rem] md:text-[1.1875rem]` for students and
+                  `text-[0.9375rem] md:text-[1.0625rem]` for staff — 15-19px, which
+                  made the H1 of every page in the app SMALLER than its own card
+                  titles (h3 is 18px). A page title has to outrank the content
+                  under it. Both tones get the same size; a heading is not a tone. */}
+              <h1 className="text-[1.375rem] font-semibold leading-snug text-foreground md:text-2xl">
                 {title}
               </h1>
-              <p className="mt-0.5 max-w-xl text-label text-muted-foreground leading-snug">
+              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
                 {description}
               </p>
             </motion.div>
             {actions ? (
-              <motion.div className="flex flex-wrap gap-1.5 pt-0.5" variants={fadeUp}>
+              <motion.div className="flex flex-wrap gap-2 pt-1" variants={fadeUp}>
                 {actions}
               </motion.div>
             ) : null}
           </motion.div>
           {stats && stats.length > 0 ? (
-            <div className="border-t border-border/60 pt-2 md:border-l md:border-t-0 md:pl-4 md:shrink-0">
+            <div className="border-t border-border/60 pt-3 md:border-l md:border-t-0 md:pl-5 md:pt-0 md:shrink-0">
               <motion.div
                 className={cn(
                   'flex gap-2',
@@ -168,23 +182,26 @@ export const PageHero = ({
                   return (
                   <motion.div
                     key={stat.label}
-                    className="min-w-0 rounded-lg border border-border bg-background px-3 py-1.5 shadow-e-1 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:shadow-e-2 hover:border-primary/20"
+                    // surface-stat + hover-lift, not a hand-rolled copy of both.
+                    // surface-stat existed with a single consumer app-wide while this
+                    // component inlined its own near-identical treatment.
+                    className="surface-stat hover-lift min-w-0 !p-3"
                     variants={statVariants}
                   >
                     <p
                       className={cn(
-                        'font-semibold text-foreground leading-tight',
-                        isNumeric ? 'tabular-nums truncate text-sm' : 'text-xs break-words'
+                        'font-semibold leading-tight text-foreground',
+                        isNumeric ? 'truncate text-base tabular-nums' : 'break-words text-sm'
                       )}
                       title={stat.value}
                     >
                       <AnimatedNumber value={stat.value} />
                     </p>
-                    <p className="text-label text-muted-foreground font-medium truncate" title={stat.label}>
+                    <p className="truncate text-label font-medium text-muted-foreground" title={stat.label}>
                       {stat.label}
                     </p>
                     {stat.detail ? (
-                      <p className="text-label text-muted-foreground truncate" title={stat.detail}>
+                      <p className="truncate text-label text-muted-foreground/70" title={stat.detail}>
                         {stat.detail}
                       </p>
                     ) : null}
