@@ -24,15 +24,20 @@ Default scroll-triggered reveal:
   initial={{ opacity: 0, y: 24 }}
   whileInView={{ opacity: 1, y: 0 }}
   viewport={{ once: true, margin: "-100px" }}
-  transition={{ duration: 0.7, ease: "easeOut" }}
+  transition={{ duration: 0.45, ease: "easeOut" }}
 >
 ```
 
 Rules:
-- Subtle over loud. 24px translation max, 0.6–0.8s duration.
+- Subtle over loud. 24px translation max, **0.4–0.5s duration** (was 0.6–0.8 — the page reads as sluggish at that length now that every section reveals; the polish pass tightened the whole reveal band).
 - Always `viewport={{ once: true }}` — no replay on scroll-back.
 - Animate `transform` and `opacity` only, never layout properties.
-- If motion feels fast or jerky: raise duration to 1–1.2s, soften easing to `ease: [0.22, 1, 0.36, 1]` (cinematic).
+- Stagger siblings at ~0.08s, not 0.12 — the group should land together, not queue up.
+- Scroll-driven scrubs are **one-way**. Pipe the raw `useScroll` progress through `useLatchedProgress` (`landing-preview/ascent-scroll.tsx`) before springing or transforming it: the value only ever climbs, so nothing un-reveals when the visitor scrolls back. This is the scrub-side equivalent of `once: true`.
+- Pinned bands release their pin once completed — `PinnedStage` (`landing-preview/pinned-stage.tsx`) handles it, so anything built on it inherits the behaviour. Never hand-roll a band that re-scrubs (or rewinds) on the way back up.
+- A pinned band whose settled frame differs from its final scrubbed frame must supply a `settled` tree. `PinnedStage`'s default re-renders the scrubbed tree un-gated, which is right only when the resting frame IS the last frame of the scrub — a stepper or a swapper ends on a frame that hides most of the section, and leaving a visitor on it loses content.
+- A pin must never arm on a section the visitor has already reached. Arming grows the document; doing that under someone, or swapping the presentation in front of them, is a visible jump. `PinnedStage` samples this once at mount (still below the fold, `pinQuery` matches) and otherwise keeps the settled tree for the session.
+- If motion feels jerky rather than fast: soften easing to `ease: [0.22, 1, 0.36, 1]` (cinematic) and cut the travel distance. Reach for a longer duration only for a deliberate hero moment, never for a section reveal.
 
 Patterns to reach for: word-by-word headline reveal on first paint, parallax on hero background (`useScroll` + `useTransform`), slow push-in baked into the video file (not CSS).
 

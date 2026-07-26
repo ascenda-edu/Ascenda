@@ -88,7 +88,9 @@ export function FactorBars({ factors }: { factors: { label: string; value: numbe
                 {factors.map((f, i) => (
                     <div key={f.label} className="grid grid-cols-[92px_1fr_32px] items-center gap-2.5">
                         <span className="truncate text-[0.6875rem] font-semibold text-muted-foreground">{f.label}</span>
-                        <span className="h-1.5 overflow-hidden rounded-full bg-muted">
+                        {/* dark:bg-white/10 — this track sits on bg-card, and on dark
+                            --muted is close enough to --card to disappear entirely. */}
+                        <span className="h-1.5 overflow-hidden rounded-full bg-muted dark:bg-white/10">
                             <span
                                 className="block h-full origin-left rounded-full bg-primary transition-transform duration-700 ease-out"
                                 style={{
@@ -165,7 +167,8 @@ export function ChanceMeter({
                 <p className="truncate text-[0.8125rem] font-semibold text-foreground">
                     {name} <span className="font-normal text-muted-foreground">· {sub}</span>
                 </p>
-                <div className="relative mt-2 h-1.5 rounded-full bg-muted">
+                {/* dark:bg-white/10 — see FactorBars: --muted is invisible on bg-card in dark. */}
+                <div className="relative mt-2 h-1.5 rounded-full bg-muted dark:bg-white/10">
                     <span
                         className={cn('absolute inset-y-0 left-0 rounded-full transition-all duration-300', tier.bar)}
                         style={{ width: `${pct(score)}%` }}
@@ -409,43 +412,6 @@ export function TierTiles({ counts }: { counts: { safety: number; match: number;
                     </p>
                 </div>
             ))}
-        </div>
-    );
-}
-
-/**
- * Horizontal connected wizard steps — mirrors the real profile StepRoadmap
- * (done = emerald check dots, current = primary-ringed dot, primary connectors).
- */
-export function WizardSteps({ steps, currentIndex }: { steps: string[]; currentIndex: number }) {
-    return (
-        <div>
-            <div className="flex items-center" role="img" aria-label={`Profile step ${currentIndex + 1} of ${steps.length}: ${steps[currentIndex]}`}>
-                {steps.map((step, i) => (
-                    <Fragment key={step}>
-                        {i > 0 && (
-                            <span
-                                className={cn('h-0.5 min-w-[8px] flex-1', i <= currentIndex ? 'bg-primary' : 'bg-muted')}
-                                aria-hidden
-                            />
-                        )}
-                        <span
-                            className={cn(
-                                'grid h-6 w-6 shrink-0 place-items-center rounded-full text-[0.625rem] font-extrabold',
-                                i < currentIndex && 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-                                i === currentIndex && 'bg-primary/10 text-primary ring-[1.5px] ring-inset ring-primary',
-                                i > currentIndex && 'bg-muted text-muted-foreground',
-                            )}
-                            aria-hidden
-                        >
-                            {i < currentIndex ? <Check className="h-3 w-3" strokeWidth={3.4} /> : i + 1}
-                        </span>
-                    </Fragment>
-                ))}
-            </div>
-            <p className="mt-2 text-[0.6875rem] text-muted-foreground" aria-hidden>
-                Next up: <span className="font-semibold text-primary">{steps[currentIndex]}</span> · step {currentIndex + 1} of {steps.length}
-            </p>
         </div>
     );
 }

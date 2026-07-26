@@ -1,19 +1,28 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
     MotionValue,
     motion,
-    useMotionValueEvent,
     useReducedMotion,
+    useScroll,
+    useSpring,
     useTransform,
     type MotionStyle,
 } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useLaunchHref } from '@/hooks/use-launch-href';
 import { cn } from '@/lib/utils';
-import { useMotionReady, useMounted, useSceneProgress } from './ascent-scroll';
+import {
+    SCENE_SPRING,
+    clamp01,
+    easeOut,
+    seg,
+    useMotionReady,
+    useMounted,
+    useScrubbed,
+} from './ascent-scroll';
 import { COPY, IGNITION } from './cta-choreography';
 import { CursorGrid } from './cursor-grid';
 import {
@@ -34,14 +43,9 @@ import {
  *    flame, copy visible), so SSR and reduced-motion users get the payoff; every
  *    scroll-driven style sits behind `useMotionReady()`;
  *  - the pin collapses entirely after mount for reduced-motion users, as
- *    PinnedScene does, so there is no dead scroll;
+ *    PinnedStage does, so there is no dead scroll;
  *  - transform/opacity/canvas only — no layout animation.
  */
-
-const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
-/** Normalised 0→1 progress of the [a, b] slice of the scene's travel. */
-const seg = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
-const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
 const PIN_VH = 170;
 
@@ -67,40 +71,13 @@ const PROOF: [number, number] = [0.5, 0.68];
 export { CTA_COPY_POINT, CTA_IGNITION_POINT } from './cta-choreography';
 
 const T_MINUS_START = 10;
-const LIFTOFF_LABEL = 'Lift-off · your plan is go';
+const LIFTOFF_LABEL = 'Lift-off, your plan is ready to go';
 /**
  * The static frame's caption. SSR, no-JS and reduced-motion users see the rocket
  * assembled on the pad with a cold engine, so the readout must say "fuelled and
  * waiting" — seeding it with LIFTOFF_LABEL captioned a grounded rocket "Lift-off".
  */
 const STANDBY_LABEL = 'Cleared for launch';
-
-/**
- * Derive React state from the scrub. Mirrors the private helper in scenes.tsx:
- * `final` is what SSR and reduced-motion users see, so the static frame is the
- * end of the story, and the callback is stable because this component
- * re-renders on every scroll frame.
- */
-function useScrubbed<T>(p: MotionValue<number>, ready: boolean, final: T, compute: (v: number) => T): T {
-    const [value, setValue] = useState<T>(final);
-    const computeRef = useRef(compute);
-    computeRef.current = compute;
-    const readyRef = useRef(ready);
-    readyRef.current = ready;
-
-    const update = useCallback((v: number) => {
-        if (readyRef.current) setValue(computeRef.current(v));
-    }, []);
-
-    useMotionValueEvent(p, 'change', update);
-    // `change` only fires on movement — seed from the current position so a band
-    // entered without scrolling (deep link, restored position) is correct.
-    useEffect(() => {
-        if (ready) update(p.get());
-    }, [p, ready, update]);
-
-    return ready ? value : final;
-}
 
 /* --------------------------------------------------------- module cards */
 
@@ -251,7 +228,14 @@ function LaunchReadout({ p, ready }: { p: MotionValue<number>; ready: boolean })
 
 export function PreviewCta() {
     const ref = useRef<HTMLElement>(null);
-    const p = useSceneProgress(ref);
+    // The pin's scroll subscription inlined (same offsets PinnedStage uses), and
+    // deliberately NOT latched. The rest of the page holds what it has played, but
+    // the finale is a vehicle on a pad: latching left an empty dark band behind once
+    // the rocket had gone, so scrolling back up into the last screen of the site
+    // showed nothing but copy. Tracking both ways keeps the rocket there — it flies
+    // out as you leave and settles back onto the pad as you return.
+    const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] });
+    const p = useSpring(scrollYProgress, SCENE_SPRING);
     const ready = useMotionReady();
     const mounted = useMounted();
     const shouldReduceMotion = useReducedMotion();
@@ -354,6 +338,8 @@ export function PreviewCta() {
     // Pointer gate for the copy block: until the reveal, the primary CTA is at
     // opacity 0 and must not be a phantom click target. Threshold is the middle
     // of the rise so the cursor can't land on a ~4%-opacity button either.
+    // Driven by the same latched `p` as `copyOpacity`, so interactivity tracks
+    // visibility exactly — and both stay on once the reveal has happened.
     const revealed = useScrubbed(p, scrub, true, (v) => v > (COPY[0] + COPY[1]) / 2);
     // Keyboard/AT stay welcome the whole time: the block is never inert (an inert
     // finale would remove the page's primary CTA from the tab order and the
@@ -389,16 +375,23 @@ export function PreviewCta() {
                     className="absolute inset-0"
                     style={scrub ? { y: fieldY } : undefined}
                 >
+                    {/* Turned up from the original settings: at gridOpacity 0.05 the
+                        lattice was barely there on a slate-950 band, so the one
+                        interactive surface on the page read as flat black unless you
+                        happened to sweep the cursor across it. A brighter resting
+                        lattice, a wider and stronger pointer bloom and a faint cell
+                        fill make it visible while scrolling past, not only on hover. */}
                     <CursorGrid
                         interactive={ready}
                         cellSize={64}
-                        radius={150}
+                        radius={210}
                         falloff="smooth"
-                        holdTime={350}
-                        fadeDuration={900}
+                        holdTime={450}
+                        fadeDuration={1100}
                         lineWidth={1}
-                        maxOpacity={0.42}
-                        gridOpacity={0.05}
+                        maxOpacity={0.72}
+                        fillOpacity={0.12}
+                        gridOpacity={0.14}
                         pulseSpeed={520}
                     />
                 </motion.div>
@@ -533,7 +526,7 @@ export function PreviewCta() {
                                 className="group h-12 bg-slate-50 px-8 text-base text-slate-900 shadow-xl transition-all hover:bg-slate-100 hover:shadow-2xl"
                             >
                                 <Link href={launchHref} className="flex items-center gap-2">
-                                    {launchHref === '/dashboard' ? 'Go to dashboard' : 'Build your plan'}
+                                    Launch Ascenda
                                     <svg
                                         viewBox="0 0 16 16"
                                         className="h-4 w-4 transition-transform group-hover:translate-x-1"

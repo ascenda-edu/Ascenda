@@ -17,10 +17,11 @@ import { useMotionReady, usePageScroll } from './ascent-scroll';
 // From the choreography module, never from preview-cta: the finale is lazily
 // imported by the page, and reaching into it for two constants would bundle it here.
 import { CTA_COPY_POINT, CTA_IGNITION_POINT } from './cta-choreography';
+import { LAYOUT_SHIFT_EVENT } from './pinned-stage';
 import { useSmoothScroll } from './smooth-scroll';
 
 const NAV_LINKS = [
-    { label: 'Inside Ascenda', href: '#features', id: 'features' },
+    { label: 'The reality', href: '#proof', id: 'proof' },
     { label: 'How it works', href: '#how-it-works', id: 'how-it-works' },
     { label: 'FAQ', href: '#faq', id: 'faq' },
 ];
@@ -117,18 +118,25 @@ export function PreviewNav() {
         // layouts at mount for one result. The pre-measure countdown state (T–10.0)
         // is the correct seed for the frame in between.
         schedule();
-        // Document height — not just viewport — because the scenes' pins collapse
-        // AFTER mount for reduced-motion users (`pinned` depends on `mounted`, and
-        // React flushes this effect before committing that re-render). That removes
-        // ~1000vh of pin height without firing `resize`, which used to leave the
-        // countdown frozen mid-count. Fonts and next/image settling shift it too.
+        // Document height — not just viewport — because the CTA band unpins AFTER
+        // mount on short viewports and for reduced-motion users, removing pin height
+        // without firing `resize`, which used to leave the countdown frozen
+        // mid-count. Fonts and next/image settling shift it too.
         const observer = new ResizeObserver(schedule);
         observer.observe(document.documentElement);
         window.addEventListener('resize', schedule, { passive: true });
+        // A PinnedStage also changes the document height mid-session — once when it
+        // arms its pin and once when it settles, each time by ~2 screens, and the
+        // settle compensates the scroll position to match. The ResizeObserver above
+        // would eventually catch both, but the stage announces the shift in the same
+        // commit, so the countdown re-maps against the new geometry rather than
+        // reading a stale ready point for a frame.
+        window.addEventListener(LAYOUT_SHIFT_EVENT, schedule);
         return () => {
             cancelAnimationFrame(queued);
             observer.disconnect();
             window.removeEventListener('resize', schedule);
+            window.removeEventListener(LAYOUT_SHIFT_EVENT, schedule);
         };
     }, [updateCountdown]);
 
@@ -289,59 +297,65 @@ export function PreviewNav() {
                                 })}
                             </div>
 
-                            {/* T-minus chip — a real control, because a countdown that
-                                promises arrival should be able to take you there. The
-                                ticking value itself stays aria-hidden behind a stable
-                                label so AT isn't read a changing number. */}
-                            <button
-                                type="button"
-                                onClick={jumpToLaunch}
-                                aria-label="Jump to sign-up"
-                                className={cn(
-                                    'hidden shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 font-heading text-xs font-semibold tracking-[0.07em] tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:inline-flex',
-                                    overBand
-                                        ? launched
-                                            ? 'border-emerald-400/50 text-emerald-400'
-                                            : 'border-white/15 text-slate-300 hover:text-white'
-                                        : launched
-                                          ? 'border-emerald-500/45 text-emerald-600 dark:text-emerald-400'
-                                          : 'border-border text-muted-foreground hover:text-foreground',
-                                )}
-                            >
-                                {/* CSS, not framer: an Infinity-repeat JS animation held
-                                    framer's frameloop awake page-wide for a 6px dot.
-                                    globals.css's reduced-motion block already zeroes CSS
-                                    animation durations, so no preference branch here. */}
-                                <span
-                                    aria-hidden
+                            {/* One right-hand cluster: the countdown belongs TO the CTA
+                                (it counts down to it, and clicking it goes there), so it
+                                hugs the button instead of floating mid-bar between the
+                                links and the edge. */}
+                            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                                {/* T-minus chip — a real control, because a countdown that
+                                    promises arrival should be able to take you there. The
+                                    ticking value itself stays aria-hidden behind a stable
+                                    label so AT isn't read a changing number. */}
+                                <button
+                                    type="button"
+                                    onClick={jumpToLaunch}
+                                    aria-label="Jump to sign-up"
                                     className={cn(
-                                        'h-1.5 w-1.5 rounded-full',
-                                        launched ? 'bg-emerald-500' : 'bg-primary',
+                                        'hidden shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 font-heading text-xs font-semibold tracking-[0.07em] tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:inline-flex',
+                                        overBand
+                                            ? launched
+                                                ? 'border-emerald-400/50 text-emerald-400'
+                                                : 'border-white/15 text-slate-300 hover:text-white'
+                                            : launched
+                                              ? 'border-emerald-500/45 text-emerald-600 dark:text-emerald-400'
+                                              : 'border-border text-muted-foreground hover:text-foreground',
                                     )}
-                                    style={{ animation: 'soft-pulse 1.6s ease-in-out infinite' }}
-                                />
-                                <span aria-hidden>{countdown}</span>
-                            </button>
+                                >
+                                    {/* CSS, not framer: an Infinity-repeat JS animation held
+                                        framer's frameloop awake page-wide for a 6px dot.
+                                        globals.css's reduced-motion block already zeroes CSS
+                                        animation durations, so no preference branch here. */}
+                                    <span
+                                        aria-hidden
+                                        className={cn(
+                                            'h-1.5 w-1.5 rounded-full',
+                                            launched ? 'bg-emerald-500' : 'bg-primary',
+                                        )}
+                                        style={{ animation: 'soft-pulse 1.6s ease-in-out infinite' }}
+                                    />
+                                    <span aria-hidden>{countdown}</span>
+                                </button>
 
-                            {/* Suppressed over the finale: the band has its own primary
-                                CTA with the same label, and two competing primaries at
-                                the conversion moment is exactly what the design rules
-                                forbid. */}
-                            <Button
-                                asChild
-                                size="sm"
-                                className={cn(
-                                    'group rounded-full bg-primary text-primary-foreground shadow-[0_0_20px_-6px_rgba(99,102,241,0.5)] transition-opacity hover:bg-primary/90',
-                                    overBand && 'pointer-events-none opacity-0',
-                                )}
-                                tabIndex={overBand ? -1 : undefined}
-                                aria-hidden={overBand || undefined}
-                            >
-                                <Link ref={navCtaRef} href={launchHref} className="flex items-center gap-1.5">
-                                    Build your plan
-                                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
-                                </Link>
-                            </Button>
+                                {/* Suppressed over the finale: the band has its own primary
+                                    CTA with the same label, and two competing primaries at
+                                    the conversion moment is exactly what the design rules
+                                    forbid. */}
+                                <Button
+                                    asChild
+                                    size="sm"
+                                    className={cn(
+                                        'group rounded-full bg-primary text-primary-foreground shadow-[0_0_20px_-6px_rgba(99,102,241,0.5)] transition-opacity hover:bg-primary/90',
+                                        overBand && 'pointer-events-none opacity-0',
+                                    )}
+                                    tabIndex={overBand ? -1 : undefined}
+                                    aria-hidden={overBand || undefined}
+                                >
+                                    <Link ref={navCtaRef} href={launchHref} className="flex items-center gap-1.5">
+                                        Build your plan
+                                        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                                    </Link>
+                                </Button>
+                            </div>
                         </div>
                     </motion.nav>
                 )}
