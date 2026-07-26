@@ -2,12 +2,12 @@
 
 import { ErrorState } from '@/components/ui/error-state';
 
-export default function MatchesError({
+export default function CourseError({
   error,
   reset
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return <ErrorState scope="Matches" title="Unable to load your matches." error={error} reset={reset} />;
+  return <ErrorState scope="Programme" title="Unable to load this programme." error={error} reset={reset} />;
 }

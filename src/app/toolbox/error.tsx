@@ -2,12 +2,12 @@
 
 import { ErrorState } from '@/components/ui/error-state';
 
-export default function MatchesError({
+export default function ToolboxError({
   error,
   reset
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return <ErrorState scope="Matches" title="Unable to load your matches." error={error} reset={reset} />;
+  return <ErrorState scope="Toolbox" title="Unable to load your toolbox." error={error} reset={reset} />;
 }
