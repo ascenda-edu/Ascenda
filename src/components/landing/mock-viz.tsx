@@ -76,15 +76,26 @@ export function SpotlightPanel({ className, children }: { className?: string; ch
  * rendering of EnrichedMatch.breakdown (eligibility / academicFit /
  * preferenceFit / outcomes). Bars grow on scroll-in; snap under reduced motion.
  */
-export function FactorBars({ factors }: { factors: { label: string; value: number }[] }) {
+/**
+ * `className` on this and the two mocks below exists for one reason: the hero
+ * tour's card is sized by its TALLEST tab, so on every other tab a mock is handed
+ * extra height. Passing `flex-1` lets it claim that height, and the internal
+ * `flex-1`/`justify-between` below spread the content into it rather than leaving
+ * a gap under the last row. Both are inert when the box already fits — with no
+ * free space, `justify-between` is `justify-start`.
+ */
+export function FactorBars({ factors, className }: { factors: { label: string; value: number }[]; className?: string }) {
     const ref = useRef<HTMLDivElement>(null);
     const inView = useInView(ref, { once: true, amount: 0.5 });
     const reduced = useMountedReducedMotion();
     const play = inView || reduced;
 
     return (
-        <div ref={ref} className="rounded-xl border border-border bg-card p-3.5 dark:border-white/10">
-            <div className="flex flex-col gap-2.5">
+        <div
+            ref={ref}
+            className={cn('flex flex-col rounded-xl border border-border bg-card p-3.5 dark:border-white/10', className)}
+        >
+            <div className="flex flex-1 flex-col justify-between gap-2.5">
                 {factors.map((f, i) => (
                     <div key={f.label} className="grid grid-cols-[92px_1fr_32px] items-center gap-2.5">
                         <span className="truncate text-[0.6875rem] font-semibold text-muted-foreground">{f.label}</span>
@@ -228,7 +239,9 @@ export function MiniCalendar({
     today,
     chips,
     legend,
+    className,
 }: {
+    className?: string;
     month: string;
     /** Blank leading cells before day 1 (Mon-start). */
     startPad: number;
@@ -241,7 +254,7 @@ export function MiniCalendar({
     const LEGEND_DOTS: Record<string, string> = { rose: 'bg-rose-500', amber: 'bg-amber-500', sky: 'bg-sky-500' };
 
     return (
-        <div className="rounded-xl border border-border bg-card p-3.5 dark:border-white/10">
+        <div className={cn('flex flex-col rounded-xl border border-border bg-card p-3.5 dark:border-white/10', className)}>
             <div className="mb-2 flex items-center justify-between gap-2">
                 <p className="text-[0.8125rem] font-bold tracking-tight text-foreground">{month}</p>
                 <div className="flex items-center gap-2.5 text-[0.5625rem] text-muted-foreground">
@@ -253,7 +266,12 @@ export function MiniCalendar({
                     ))}
                 </div>
             </div>
-            <div className="grid grid-cols-7 gap-[3px]">
+            {/* flex-1 with auto rows: a grid whose height exceeds its rows stretches
+                those rows (align-content is `normal`, i.e. stretch), and the day cells
+                are align-self: stretch inside them — so spare height goes into taller
+                day cells, which is what the real month view does, rather than into a
+                band of nothing under the last week. */}
+            <div className="grid flex-1 grid-cols-7 gap-[3px]">
                 {dows.map((d) => (
                     <span key={d} className="pb-1 text-center text-[0.5625rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                         {d}
@@ -307,7 +325,11 @@ function HeatCell({ status }: { status: HeatCellStatus }) {
     return (
         <span
             className={cn(
-                'grid h-9 w-full place-items-center rounded-lg transition-transform duration-150 hover:scale-105',
+                // Grows with its row (see HeatmapGrid) between a 36px floor — the size
+                // it was drawn at — and a 4rem ceiling, centred in whatever is left.
+                // A fixed h-9 left the matrix floating in a stretched card; uncapped,
+                // three rows sharing 330px turned 14px icons into 105px slabs.
+                'grid h-full max-h-16 min-h-[2.25rem] w-full self-center place-items-center rounded-lg transition-transform duration-150 hover:scale-105',
                 meta.cls,
             )}
             role="img"
@@ -325,26 +347,42 @@ function HeatCell({ status }: { status: HeatCellStatus }) {
 export function HeatmapGrid({
     columns,
     rows,
+    className,
 }: {
     columns: string[];
     rows: { label: string; cells: HeatCellStatus[] }[];
+    className?: string;
 }) {
     return (
-        <div className="rounded-xl border border-border bg-card p-3 dark:border-white/10">
+        <div className={cn('flex flex-col rounded-xl border border-border bg-card p-3 dark:border-white/10', className)}>
+            {/* flex-1, and no items-center: the rows stretch into any spare height and
+                the tiles stretch with them (HeatCell is h-full), so a taller card gets
+                a taller matrix instead of a small one pinned to the top. The two text
+                columns opt back out with self-center / self-end.
+                The row template is explicit because it has to be: with auto rows, the
+                COLUMN-HEADER row stretched along with the data rows, which parked the
+                labels ~90px below the top of the card behind a band of nothing. `auto`
+                pins that row to its text; the 1fr data rows take all the slack. */}
             <div
-                className="grid items-center gap-1"
-                style={{ gridTemplateColumns: `minmax(0,auto) repeat(${columns.length}, minmax(0,1fr))` }}
+                className="grid flex-1 gap-1"
+                style={{
+                    gridTemplateColumns: `minmax(0,auto) repeat(${columns.length}, minmax(0,1fr))`,
+                    gridTemplateRows: `auto repeat(${rows.length}, minmax(0,1fr))`,
+                }}
             >
                 <span aria-hidden />
                 {columns.map((c) => (
-                    <span key={c} className="pb-1 text-center text-[0.5625rem] font-bold uppercase tracking-[0.06em] text-muted-foreground">
+                    <span
+                        key={c}
+                        className="self-end pb-1 text-center text-[0.5625rem] font-bold uppercase tracking-[0.06em] text-muted-foreground"
+                    >
                         {c}
                     </span>
                 ))}
                 {rows.map((row) => (
                     // Fragments add no DOM node, so label + cells flow into the shared grid.
                     <Fragment key={row.label}>
-                        <span className="whitespace-nowrap pr-2 text-[0.6875rem] font-semibold text-foreground">
+                        <span className="self-center whitespace-nowrap pr-2 text-[0.6875rem] font-semibold text-foreground">
                             {row.label}
                         </span>
                         {row.cells.map((cell, i) => (

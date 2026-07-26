@@ -42,7 +42,12 @@ interface TourTab {
 
 function MatchesPanel() {
     return (
-        <div className="flex flex-col gap-2.5">
+        // h-full + a flex-1 on the one child that can absorb slack: the card is sized
+        // by the tallest tab, and every panel is expected to FILL it rather than sit
+        // in the top of it. The factor bars are the right sink here — spreading four
+        // labelled rows over extra height reads as a designed column; growing the
+        // match card or the footer would just inflate one element.
+        <div className="flex h-full flex-col gap-2.5">
             <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-muted-foreground">Top match</p>
             <MatchCard
                 name="TU Delft"
@@ -53,6 +58,7 @@ function MatchesPanel() {
                 meta="€18,750/yr · 2 yrs · Master's"
             />
             <FactorBars
+                className="flex-1"
                 factors={[
                     { label: 'Eligibility', value: 100 },
                     { label: 'Academic fit', value: 88 },
@@ -91,7 +97,10 @@ function ChancesPanel({ onInteract }: { onInteract: () => void }) {
     for (const p of CHANCE_PROGRAMMES) counts[chanceTierFor(score, p.minScore)]++;
 
     return (
-        <div className="flex flex-col gap-2">
+        // Currently the tallest tab, so justify-between has no slack to distribute —
+        // it is here because "tallest" is a function of viewport width, and whichever
+        // tab loses that role must fill the card rather than leave a gap.
+        <div className="flex h-full flex-col justify-between gap-2">
             <div className="rounded-xl border border-border bg-card p-3 dark:border-white/10">
                 <div className="mb-2 flex items-baseline justify-between gap-2">
                     <label htmlFor="hero-ib-slider" className="text-[0.8125rem] font-semibold text-foreground">
@@ -157,8 +166,9 @@ function ChancesPanel({ onInteract }: { onInteract: () => void }) {
 
 function DeadlinesPanel() {
     return (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex h-full flex-col gap-2.5">
             <MiniCalendar
+                className="flex-1"
                 month="October"
                 startPad={3}
                 daysInMonth={31}
@@ -195,12 +205,25 @@ function DeadlinesPanel() {
 
 function RequirementsPanel() {
     return (
-        <div className="grid gap-2.5 sm:grid-cols-[auto_1fr]">
-            <div className="flex min-w-[128px] flex-col items-center justify-center gap-2.5 rounded-xl border border-border bg-card p-3.5 dark:border-white/10">
-                <ProgressRing value={78} size={76} stroke={7} colorClass="stroke-emerald-500" label="78% ready to apply" />
-                <p className="text-[0.625rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">Ready to apply</p>
+        // This was the emptiest tab by far — 195px of content in a 383px card, i.e.
+        // half of it blank. Filling it took three things: h-full so both columns get
+        // the card's height (grid items stretch by default), the ring floated in a
+        // flex-1 region with the meters pinned to the bottom of the column, and one
+        // meter per heatmap column instead of two — the matrix already promises four
+        // requirement types, so showing four is the honest version, not padding.
+        <div className="grid h-full gap-2.5 sm:grid-cols-[auto_1fr]">
+            <div className="flex min-w-[128px] flex-col items-center gap-2.5 rounded-xl border border-border bg-card p-3.5 dark:border-white/10">
+                <div className="flex flex-1 flex-col items-center justify-center gap-2.5">
+                    <ProgressRing value={78} size={76} stroke={7} colorClass="stroke-emerald-500" label="78% ready to apply" />
+                    <p className="text-[0.625rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">Ready to apply</p>
+                </div>
                 <div className="w-full space-y-2">
                     {[
+                        // Same four requirement types as the heatmap's columns, in the
+                        // same order. Tones follow the project's status palette:
+                        // emerald done, sky in progress, amber still to do.
+                        { label: 'Subjects', done: 6, total: 6, colorClass: 'bg-emerald-500' },
+                        { label: 'Exams', done: 1, total: 2, colorClass: 'bg-amber-500' },
                         { label: 'Documents', done: 3, total: 4, colorClass: 'bg-sky-500' },
                         { label: 'Essays', done: 1, total: 2, colorClass: 'bg-amber-500' },
                     ].map((bar) => (
@@ -399,7 +422,12 @@ export function HeroAppTour({ className }: { className?: string }) {
                                 aria-labelledby={`tour-tab-${tab.id}`}
                                 aria-hidden={!selected}
                                 className={cn(
-                                    'col-start-1 row-start-1 min-w-0 self-start transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none',
+                                    // self-stretch, not self-start: the row is as tall
+                                    // as the tallest tab, and every panel is handed
+                                    // that full height so its own `h-full` can fill it.
+                                    // Content-sized panels would sit in the top of the
+                                    // card with the slack showing underneath.
+                                    'col-start-1 row-start-1 min-w-0 self-stretch transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none',
                                     selected
                                         ? 'translate-y-0 scale-100 opacity-100'
                                         : 'pointer-events-none invisible translate-y-2 scale-[0.985] opacity-0',
