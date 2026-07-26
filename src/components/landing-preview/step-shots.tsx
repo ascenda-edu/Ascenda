@@ -337,11 +337,13 @@ export function PlanShot({ p, scrub }: ShotProps) {
                     )}
                     style={{ width: 'calc((100% - 16px) / 3)', x: scrub ? x : MOVER_END_X }}
                 >
-                    {/* line-clamp-2: the card is a third of its lane, so in the settled
-                        grid's narrower columns this title wrapped to four lines and
-                        spilled out of the fixed-height track onto the tasks below. */}
-                    <span className="line-clamp-2 font-heading text-xs font-semibold leading-snug text-foreground">
-                        Motivation letter — TU Delft
+                    {/* No programme title on the mover any more: at a third of a lane
+                        it only ever fitted by wrapping to two clamped lines, and the
+                        card's job is to show a piece of work CROSSING the pipeline —
+                        the status line says that on its own. The two named items live
+                        in the task rows below. */}
+                    <span className="font-heading text-xs font-semibold leading-snug text-foreground">
+                        TU Delft
                     </span>
                     <span
                         className={cn(
