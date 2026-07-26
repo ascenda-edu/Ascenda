@@ -6,6 +6,7 @@ import { ArrowUpDown, Check, ChevronDown } from 'lucide-react';
 import type { SortOption } from '@/lib/university-search/search-params';
 import { SORT_OPTIONS } from '@/lib/university-search/search-params';
 import { cn } from '@/lib/utils';
+import { DURATION, EASE } from '@/lib/motion';
 
 export const SORT_LABELS: Record<SortOption, string> = {
   fit: 'Best match',
@@ -111,9 +112,8 @@ export function SortMenu({ value, onChange }: SortMenuProps) {
         {open ? (
           <motion.div
             initial={{ opacity: 0, y: -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.98 }}
-            transition={{ duration: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
+            animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: DURATION.fast, ease: EASE } }}
+            exit={{ opacity: 0, y: -6, scale: 0.98, transition: { duration: DURATION.exit, ease: EASE } }}
             role="listbox"
             aria-label="Sort results by"
             tabIndex={-1}

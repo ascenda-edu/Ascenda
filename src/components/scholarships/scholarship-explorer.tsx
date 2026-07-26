@@ -13,6 +13,7 @@ import { filterScholarships } from './utils';
 import { SCHOLARSHIP_VISUAL, type ScholarshipCategory } from '@/lib/theme/categories';
 import { parseLocalDate, daysUntil } from '@/lib/utils/dates';
 import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
+import { EASE, DURATION, stagger } from '@/lib/motion';
 
 interface ScholarshipExplorerProps {
   scholarships: Scholarship[];
@@ -23,15 +24,16 @@ const resolveCategory = (raw: string | null | undefined): ScholarshipCategory =>
   return key in SCHOLARSHIP_VISUAL ? key : 'General';
 };
 
+// Kept local rather than importing `cardFade`: these cards animate out of an
+// AnimatePresence list on filter change, and the exit scales without translating so a
+// removed card doesn't appear to travel. Curve and durations are the shared tokens.
 const cardVariants = {
   hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] as const } },
-  exit: { opacity: 0, scale: 0.97, transition: { duration: 0.15 } },
+  show: { opacity: 1, y: 0, transition: { duration: DURATION.fast, ease: EASE } },
+  exit: { opacity: 0, scale: 0.97, transition: { duration: DURATION.exit, ease: EASE } },
 };
 
-const listVariants = {
-  show: { transition: { staggerChildren: 0.06 } },
-};
+const listVariants = stagger;
 
 function formatDeadline(dateStr: string | null | undefined): string {
   if (!dateStr) return 'Rolling';

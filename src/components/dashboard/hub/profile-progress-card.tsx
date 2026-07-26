@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Check, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { EASE } from '@/lib/motion';
 import { HubCard } from './hub-card';
 
 export interface ProfileStepStatus {
@@ -57,7 +58,9 @@ export function ProfileProgressCard({ percent, steps, nextStepTitle }: ProfilePr
                 initial={{ strokeDashoffset: reduced ? dashTarget : CIRCUMFERENCE }}
                 whileInView={{ strokeDashoffset: dashTarget }}
                 viewport={{ once: true }}
-                transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94] }}
+                // Off the DURATION scale deliberately: the ring is drawing a value, and
+                // the second-long sweep is what makes the percentage readable as it fills.
+                transition={{ duration: 1, ease: EASE }}
               />
             </svg>
             <span className="absolute inset-0 flex items-center justify-center text-lg font-semibold tabular-nums text-foreground">

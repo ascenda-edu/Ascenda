@@ -28,6 +28,7 @@ import {
   updateMessageAction,
 } from '@/lib/chat/history';
 import { insertHelpRequest } from '@/lib/demo/help-request-client';
+import { DURATION, EASE } from '@/lib/motion';
 import { isChatAction, type ChatAction } from '@/lib/chat/actions';
 import { mergeWidgets, wrapLegacyToolResults } from '@/lib/chat/widgets';
 import type { ChatMode } from '@/lib/chat/prompts';
@@ -776,9 +777,8 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
         {railOpen && (
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            animate={{ opacity: 1, transition: { duration: DURATION.fast, ease: EASE } }}
+            exit={{ opacity: 0, transition: { duration: DURATION.exit, ease: EASE } }}
             className="fixed inset-0 z-modal lg:hidden"
           >
             <div
@@ -788,9 +788,8 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
             />
             <motion.div
               initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+              animate={{ x: 0, transition: { duration: DURATION.fast, ease: EASE } }}
+              exit={{ x: '-100%', transition: { duration: DURATION.exit, ease: EASE } }}
               className="absolute inset-y-0 left-0 flex w-[300px] max-w-[85vw] flex-col p-3"
             >
               <div className="mb-2 flex justify-end">

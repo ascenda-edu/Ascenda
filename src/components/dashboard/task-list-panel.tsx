@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import { TaskList } from './task-list';
+import { DURATION, EASE } from '@/lib/motion';
 import { type ChecklistStatus, toggleDoneStatus } from '@/lib/applications/checklist-status-queue';
 import { useChecklistStatusQueue } from '@/lib/applications/use-checklist-status-queue';
 
@@ -86,9 +87,8 @@ export const TaskListPanel = ({ title, tasks }: TaskListPanelProps) => {
           <motion.div
             key={celebration.id}
             initial={{ opacity: 0, y: 12, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 12, scale: 0.96 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: DURATION.fast, ease: EASE } }}
+            exit={{ opacity: 0, y: 12, scale: 0.96, transition: { duration: DURATION.exit, ease: EASE } }}
             className="pointer-events-none fixed left-1/2 bottom-[calc(env(safe-area-inset-bottom,8px)+80px)] z-toast -translate-x-1/2 md:bottom-6"
             role="status"
             aria-live="polite"

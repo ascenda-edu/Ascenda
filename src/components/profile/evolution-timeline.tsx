@@ -72,7 +72,7 @@ export function EvolutionTimeline({ entries, studentName }: EvolutionTimelinePro
         variants={listStagger}
         initial="hidden"
         whileInView="show"
-        viewport={{ once: true, margin: '-60px' }}
+        viewport={{ once: true, margin: '-40px' }}
       >
         {/* Timeline spine */}
         <div className="absolute left-[19px] top-2 bottom-2 w-px bg-border/60" />

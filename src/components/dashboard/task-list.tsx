@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { childFade, stagger, DURATION, EASE } from '@/lib/motion';
 import { inferTaskType, TASK_VISUAL } from '@/lib/theme/categories';
 import { parseLocalDate } from '@/lib/utils/dates';
 
@@ -22,15 +23,11 @@ interface TaskListProps {
   onToggle?: (id: string) => void;
 }
 
-const listStagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.06 } }
-};
-
-const taskVariant = {
-  hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' as const } },
-  exit: { opacity: 0, x: 20, transition: { duration: 0.2 } }
+// The shared child entrance plus a bespoke exit: a task leaves sideways, which reads
+// as "filed away" rather than "deleted" — the row is usually being marked done.
+const taskVariant: Variants = {
+  ...childFade,
+  exit: { opacity: 0, x: 20, transition: { duration: DURATION.exit, ease: EASE } }
 };
 
 function AnimatedProgress({ value }: { value: number }) {
@@ -46,7 +43,10 @@ function AnimatedProgress({ value }: { value: number }) {
         className="h-1.5 rounded-full bg-primary"
         initial={{ width: 0 }}
         animate={{ width: `${width}%` }}
-        transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] as const }}
+        // Off the DURATION scale deliberately: this is a value sweeping to a data
+        // position, not a UI element arriving, and the length is what makes the
+        // progress legible as it fills.
+        transition={{ duration: 0.8, ease: EASE }}
       />
     </div>
   );
@@ -76,7 +76,7 @@ export const TaskList = ({ title, tasks, onToggle }: TaskListProps) => {
       <AnimatedProgress value={progress} />
       <motion.div
         className="space-y-3"
-        variants={listStagger}
+        variants={stagger}
         initial="hidden"
         animate="show"
       >

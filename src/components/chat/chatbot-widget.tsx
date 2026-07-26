@@ -20,6 +20,7 @@ import {
   Square, ThumbsUp, ThumbsDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DURATION, EASE, EASE_POP } from '@/lib/motion';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { createConversation, appendMessages } from '@/lib/chat/history';
@@ -432,9 +433,10 @@ export function ChatbotWidget() {
         {!isOpen && (
           <motion.button
             initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
+            // The button pops in with overshoot so it announces itself; on the way out
+            // it just goes, and on EASE — EASE_POP would drive scale below 0.
+            animate={{ scale: 1, opacity: 1, transition: { duration: DURATION.fast, ease: EASE_POP } }}
+            exit={{ scale: 0, opacity: 0, transition: { duration: DURATION.exit, ease: EASE } }}
             onClick={() => setIsOpen(true)}
             className="fixed right-5 bottom-[calc(env(safe-area-inset-bottom,8px)+72px)] z-docked flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-e-3 shadow-primary/25 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-e-4 hover:shadow-primary/30 active:translate-y-0 md:bottom-6 md:right-6 md:z-panel"
             aria-label="Open Ascendi AI assistant"
@@ -449,9 +451,8 @@ export function ChatbotWidget() {
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+            animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: DURATION.base, ease: EASE } }}
+            exit={{ opacity: 0, y: 20, scale: 0.95, transition: { duration: DURATION.exit, ease: EASE } }}
             className="fixed right-5 bottom-[calc(env(safe-area-inset-bottom,8px)+72px)] z-[55] flex h-[min(560px,calc(100vh-140px))] w-[min(400px,calc(100vw-40px))] flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-e-4 md:bottom-6 md:right-6 md:z-panel md:h-[min(560px,calc(100vh-40px))]"
           >
             {/* Header */}
@@ -566,7 +567,7 @@ export function ChatbotWidget() {
                       key={msg.id}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.25 }}
+                      transition={{ duration: DURATION.fast, ease: EASE }}
                       className={cn(
                         'flex flex-col',
                         msg.role === 'user' ? 'items-end' : 'items-start'

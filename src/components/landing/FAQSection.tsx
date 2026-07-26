@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fadeIn } from '@/lib/motion';
+import { fadeIn, DURATION, EASE } from '@/lib/motion';
 import { Plus, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -69,9 +69,13 @@ export function FAQSection() {
                                 initial="hidden"
                                 whileInView="visible"
                                 viewport={{ once: true, amount: 0.3 }}
+                                // Local rather than `childFade` because this file's other
+                                // reveal is `fadeIn`, which uses `visible` — mixing state
+                                // names inside one section is how you get a card that
+                                // never animates. Same curve and duration either way.
                                 variants={{
                                     hidden: { opacity: 0, y: 12 },
-                                    visible: { opacity: 1, y: 0, transition: { duration: 0.4, delay: index * 0.05 } }
+                                    visible: { opacity: 1, y: 0, transition: { duration: DURATION.base, delay: index * 0.05, ease: EASE } }
                                 }}
                             >
                                 <button
@@ -101,7 +105,7 @@ export function FAQSection() {
                                             initial={{ height: 0, opacity: 0 }}
                                             animate={{ height: 'auto', opacity: 1 }}
                                             exit={{ height: 0, opacity: 0 }}
-                                            transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+                                            transition={{ duration: DURATION.fast, ease: EASE }}
                                             className="overflow-hidden"
                                         >
                                             <div className="px-5 pb-5 pt-0">

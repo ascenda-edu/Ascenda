@@ -7,6 +7,7 @@ import { PageHero } from '@/components/layout/page-hero';
 import { Button } from '@/components/ui/button';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { SectionNav } from '@/components/layout/section-nav';
+import { AnimatedSection } from '@/components/layout/animated-section';
 import { PLANNER_SECTION_ITEMS } from '@/components/layout/navigation';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ClipboardCheck } from 'lucide-react';
@@ -258,7 +259,7 @@ export default async function ApplicationsPage() {
 
       <div className="space-y-6 sm:space-y-8">
         {/* ── What's next ───────────────────────────────────────── */}
-        <section className="space-y-3">
+        <AnimatedSection className="space-y-3" as="section">
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="eyebrow">
@@ -271,10 +272,10 @@ export default async function ApplicationsPage() {
             </Button>
           </div>
           <NextActionsList items={nextActionItems} />
-        </section>
+        </AnimatedSection>
 
         {/* ── All applications ──────────────────────────────────── */}
-        <section className="space-y-3">
+        <AnimatedSection className="space-y-3" as="section" delay={0.06}>
           <div>
             <p className="eyebrow">
               All applications
@@ -284,7 +285,7 @@ export default async function ApplicationsPage() {
             </h2>
           </div>
           <ApplicationList rows={applicationRows} />
-        </section>
+        </AnimatedSection>
       </div>
     </DashboardShell>
   );

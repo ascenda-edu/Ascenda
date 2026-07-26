@@ -185,7 +185,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
                 variants={tierCardVariants}
                 initial="hidden"
                 whileInView="show"
-                viewport={{ once: true, margin: '-80px' }}
+                viewport={{ once: true, margin: '-40px' }}
               >
                 <div className="flex flex-col gap-3 border-b border-border pb-4">
                   <div className="flex items-start justify-between gap-4">

@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import { PROFILE_STEPS, type StepCompletionMap } from '@/lib/profile/steps';
 import { cn } from '@/lib/utils';
+import { DURATION, EASE } from '@/lib/motion';
 import { classifyCompletion, COMPLETION_VISUAL } from '@/lib/theme/categories';
 
 interface ProfileProgressCardProps {
@@ -129,7 +130,7 @@ export function ProfileProgressCard({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
+              transition={{ duration: DURATION.base, ease: EASE }}
               aria-hidden
             />
             <motion.div
@@ -137,7 +138,10 @@ export function ProfileProgressCard({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.8 }}
+              // Twice the ring's duration on purpose — the two layers are staged, so the
+              // glow keeps blooming after the ring has landed. Snapping both to the same
+              // step would collapse the celebration into a single flat fade.
+              transition={{ duration: 0.8, ease: EASE }}
               aria-hidden
             />
             <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>

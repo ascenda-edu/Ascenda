@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, useMotionValue, useSpring, useInView, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { stagger, childFade } from '@/lib/motion';
 
 interface HeroStat {
   label: string;
@@ -25,24 +26,16 @@ interface PageHeroProps {
   tone?: 'student' | 'counsellor';
 }
 
-const containerVariants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.04, delayChildren: 0 } }
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 6 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] as const } }
-};
-
-const statVariants = {
-  hidden: { opacity: 0, y: 6 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] as const } }
-};
-
+// The shared vocabulary from lib/motion, not a private fourth one. This component
+// used to run its own 6px travel over 180ms on a different easing curve — below the
+// threshold where movement reads as motion at all, so the hero on every page
+// flickered rather than arrived.
+const containerVariants = stagger;
+const fadeUp = childFade;
+const statVariants = childFade;
 const statsContainerVariants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.04, delayChildren: 0.06 } }
+  show: { transition: { staggerChildren: 0.05, delayChildren: 0.08 } }
 };
 
 function AnimatedNumber({ value }: { value: string }) {
