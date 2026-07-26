@@ -44,14 +44,14 @@ export default async function AdminPage() {
       </section>
       <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
         <ImportPanel />
-        <aside className="surface-card surface-card--static space-y-4">
+        <aside className="surface-card space-y-4">
           <h2 className="font-heading text-xl font-semibold tracking-tight text-foreground">Data sources</h2>
           <ul className="space-y-3 text-sm text-muted-foreground">
             {sources.map((source) => (
               <li key={source.id}>
                 <p className="font-semibold text-foreground">{source.name}</p>
                 <p>{source.url ?? 'No URL provided'}</p>
-                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Last scraped: {source.last_scraped_at ? dateTimeFormatter.format(new Date(source.last_scraped_at)) : 'Never'}</p>
+                <p className="eyebrow">Last scraped: {source.last_scraped_at ? dateTimeFormatter.format(new Date(source.last_scraped_at)) : 'Never'}</p>
               </li>
             ))}
             {sources.length === 0 ? <li>No sources yet.</li> : null}

@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { TIER_VISUAL } from '@/lib/theme/categories';
 import type { CohortStats } from './types';
 
 interface MatchDistributionProps {
@@ -8,10 +9,12 @@ interface MatchDistributionProps {
   onNavigateTier?: (tier: 'reach' | 'match' | 'safe') => void;
 }
 
+// Reach / Match / Safe styling is TIER_VISUAL's — same tones as the tier pills on
+// student cards and the student-detail match summary.
 const TIERS = [
-  { key: 'reach' as const, label: 'Reach', color: 'bg-rose-500/80', text: 'text-rose-600 dark:text-rose-400', light: 'bg-rose-500/10' },
-  { key: 'match' as const, label: 'Match', color: 'bg-amber-500/80', text: 'text-amber-600 dark:text-amber-400', light: 'bg-amber-500/10' },
-  { key: 'safe' as const, label: 'Safe', color: 'bg-emerald-500/80', text: 'text-emerald-600 dark:text-emerald-400', light: 'bg-emerald-500/10' }
+  { key: 'reach' as const, label: 'Reach', color: TIER_VISUAL.reach.bar, text: TIER_VISUAL.reach.text, light: TIER_VISUAL.reach.bg },
+  { key: 'match' as const, label: 'Match', color: TIER_VISUAL.match.bar, text: TIER_VISUAL.match.text, light: TIER_VISUAL.match.bg },
+  { key: 'safe' as const, label: 'Safe', color: TIER_VISUAL.safety.bar, text: TIER_VISUAL.safety.text, light: TIER_VISUAL.safety.bg }
 ];
 
 export const MatchDistribution = ({ tiers, activeTier, onSelectTier, onNavigateTier }: MatchDistributionProps) => {
@@ -60,7 +63,7 @@ export const MatchDistribution = ({ tiers, activeTier, onSelectTier, onNavigateT
               className={cn(
                 "relative rounded-2xl border transition-all",
                 onSelectTier && "hover:scale-[1.02]",
-                isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border/50",
+                isSelected ? "border-primary bg-primary/5 shadow-e-1" : "border-border/50",
                 light,
                 isAnythingSelected && !isSelected && "opacity-40 grayscale-[0.5]"
               )}
@@ -79,13 +82,13 @@ export const MatchDistribution = ({ tiers, activeTier, onSelectTier, onNavigateT
               <div className="px-4 py-3 text-center">
                 <p className={`text-xl font-bold tabular-nums ${text}`}>{tiers[key]}</p>
                 <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-                <p className="text-[0.6875rem] text-muted-foreground">{pct}%</p>
+                <p className="text-label text-muted-foreground">{pct}%</p>
                 {onNavigateTier && tiers[key] > 0 && (
                   <button
                     type="button"
                     onClick={() => onNavigateTier(key)}
                     aria-label={`View ${label} tier students`}
-                    className="relative z-10 mt-1 text-[0.625rem] text-primary hover:underline underline-offset-2 font-medium"
+                    className="relative z-raised mt-1 text-label text-primary-ink hover:underline underline-offset-2 font-medium"
                   >
                     View →
                   </button>

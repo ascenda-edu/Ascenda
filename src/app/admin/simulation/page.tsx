@@ -36,21 +36,23 @@ type BatchSummary = {
 
 function tierColor(result: string | null) {
   if (!result) return 'bg-muted text-muted-foreground';
-  if (result === 'Safety') return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400';
-  if (result === 'Target') return 'bg-sky-500/10 text-sky-700 dark:text-sky-300';
-  if (result === 'Reach') return 'bg-amber-500/10 text-amber-700 dark:text-amber-400';
-  if (result.startsWith('Best:')) return 'bg-violet-500/10 text-violet-700 dark:text-violet-300';
-  return 'bg-rose-500/10 text-rose-600 dark:text-rose-400';
+  if (result === 'Safety') return 'bg-success-subtle text-success';
+  if (result === 'Target') return 'bg-info-subtle text-info';
+  if (result === 'Reach') return 'bg-warning-subtle text-warning';
+  if (result.startsWith('Best:')) return 'bg-feature-subtle text-feature';
+  return 'bg-danger-subtle text-danger';
 }
 
+// The tone system has five steps, so the old orange 'Borderline' step folds onto
+// danger — the band name is printed next to the colour, so no information is lost.
 function bandColor(band: string | null) {
   if (!band) return 'text-muted-foreground';
-  if (band === 'Exceptional') return 'text-violet-600 dark:text-violet-400 font-semibold';
-  if (band === 'Very strong') return 'text-sky-600 dark:text-sky-400 font-semibold';
-  if (band === 'Strong') return 'text-emerald-600 dark:text-emerald-400';
-  if (band === 'Solid') return 'text-amber-600 dark:text-amber-400';
-  if (band === 'Borderline') return 'text-orange-600 dark:text-orange-400';
-  return 'text-rose-600 dark:text-rose-400';
+  if (band === 'Exceptional') return 'text-feature font-semibold';
+  if (band === 'Very strong') return 'text-info font-semibold';
+  if (band === 'Strong') return 'text-success';
+  if (band === 'Solid') return 'text-warning';
+  if (band === 'Borderline') return 'text-danger';
+  return 'text-danger';
 }
 
 export default async function SimulationPage() {
@@ -99,7 +101,7 @@ export default async function SimulationPage() {
     <DashboardShell>
       <div className="py-8 space-y-10">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Algorithm Simulation</h1>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground">Algorithm Simulation</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Validates scoring + matching against real-world admission outcomes. A PASS means the algorithm
             classified the student&apos;s actual school as Safety, Target, or Reach.
@@ -119,21 +121,21 @@ export default async function SimulationPage() {
           <div key={batch.run_id} className="space-y-4">
             {/* Batch header */}
             <div className="flex items-center gap-4">
-              <h2 className="text-lg font-semibold text-foreground capitalize">
+              <h2 className="font-heading text-lg font-semibold tracking-tight text-foreground capitalize">
                 {batch.batch_label.replace('_', ' ')}
               </h2>
               <span className="text-sm text-muted-foreground">
                 {new Date(batch.created_at).toLocaleString()} · run {batch.run_id.slice(0, 8)}
               </span>
               <div className={`ml-auto flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold tabular-nums
-                ${batch.passRate >= 80 ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' :
-                  batch.passRate >= 60 ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                ${batch.passRate >= 80 ? 'bg-success-subtle text-success' :
+                  batch.passRate >= 60 ? 'bg-warning-subtle text-warning' : 'bg-danger-subtle text-danger'}`}>
                 {batch.passed}/{batch.total} pass · {batch.passRate}%
               </div>
             </div>
 
             {/* Summary stats */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
                 { label: 'Total profiles', value: batch.total },
                 { label: 'Pass rate', value: `${batch.passRate}%` },
@@ -149,12 +151,12 @@ export default async function SimulationPage() {
 
             {/* Findings */}
             {batch.rows.filter(r => !r.validation_pass).length > 0 && (
-              <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-4 py-3">
-                <p className="text-sm font-medium text-amber-700 dark:text-amber-300 mb-1">
+              <div className="rounded-lg bg-warning-subtle border border-warning/25 px-4 py-3">
+                <p className="text-sm font-medium text-warning mb-1">
                   ⚠ Failures ({batch.rows.filter(r => !r.validation_pass).length}) — Algorithm calibration findings:
                 </p>
                 {batch.rows.filter(r => !r.validation_pass).map(r => (
-                  <p key={r.id} className="text-xs text-amber-700 dark:text-amber-400">
+                  <p key={r.id} className="text-xs text-warning">
                     • <strong>{r.profile_name}</strong> (IB equiv {r.student_ib_equivalent}) →{' '}
                     {r.actual_university}: result was <em>{r.algorithm_result ?? 'Not found'}</em>
                   </p>
@@ -181,7 +183,7 @@ export default async function SimulationPage() {
                 </thead>
                 <tbody className="divide-y divide-border/60 bg-card">
                   {batch.rows.map(row => (
-                    <tr key={row.id} className={row.validation_pass ? '' : 'bg-rose-500/5'}>
+                    <tr key={row.id} className={row.validation_pass ? '' : 'bg-danger/5'}>
                       <td className="px-4 py-3 font-medium text-foreground">{row.profile_name}</td>
                       <td className="px-4 py-3 text-muted-foreground">{row.programme_type}</td>
                       <td className="px-4 py-3 text-foreground tabular-nums">{row.student_ib_equivalent ?? '—'}</td>
@@ -207,9 +209,9 @@ export default async function SimulationPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         {row.validation_pass ? (
-                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
+                          <span className="text-success font-bold">✓</span>
                         ) : (
-                          <span className="text-rose-500 font-bold">✗</span>
+                          <span className="text-danger font-bold">✗</span>
                         )}
                       </td>
                     </tr>

@@ -15,7 +15,9 @@ import { PARENT_SECTION_ITEMS } from '@/components/layout/navigation';
 import { AnimatedSection } from '@/components/layout/animated-section';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { APPLICATION_STATUS_VISUAL } from '@/lib/theme/categories';
 import { loadChildOverview } from '@/lib/parent/data';
+import type { ChildApplicationStatus } from '@/lib/parent/types';
 import { parseLocalDate, formatRelativeTime } from '@/lib/utils/dates';
 import { resolveParentContext } from './_lib/context';
 import { ChildSwitcher } from './_components/child-switcher';
@@ -32,6 +34,12 @@ const formatDateOnly = (value?: string | null) => {
   const parsed = parseLocalDate(value);
   return Number.isNaN(parsed.getTime()) ? 'TBD' : shortDateFormatter.format(parsed);
 };
+
+// Pipeline bar fill, from APPLICATION_STATUS_VISUAL (lib/theme/categories) rather
+// than a hand-rolled palette. 'enrolled' has no tone of its own app-wide; it reads
+// as settled/positive, the same as submitted.
+const pipelineBar = (key: ChildApplicationStatus): string =>
+  (key === 'enrolled' ? APPLICATION_STATUS_VISUAL.submitted : APPLICATION_STATUS_VISUAL[key]).bar;
 
 export default async function ParentOverviewPage() {
   const { supabase, linkedChildren, activeChild } = await resolveParentContext();
@@ -113,9 +121,9 @@ export default async function ParentOverviewPage() {
       {/* Row 1 — pipeline, deadlines, counsellor update */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <AnimatedSection>
-          <div className="surface-card surface-card--static h-full">
+          <div className="surface-card h-full">
             <div className="relative z-10">
-              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Pipeline</p>
+              <p className="eyebrow">Pipeline</p>
               <p className="mb-4 text-lg font-semibold text-foreground">Where the applications stand</p>
               <ul className="space-y-3">
                 {overview.pipeline.map((stage) => (
@@ -126,14 +134,7 @@ export default async function ParentOverviewPage() {
                     </div>
                     <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
                       <div
-                        className={cn(
-                          'h-full rounded-full',
-                          stage.key === 'submitted' || stage.key === 'enrolled'
-                            ? 'bg-emerald-500/70'
-                            : stage.key === 'in_progress'
-                              ? 'bg-sky-500/70'
-                              : 'bg-amber-500/60'
-                        )}
+                        className={cn('h-full rounded-full', pipelineBar(stage.key))}
                         style={{ width: `${(stage.count / pipelineMax) * 100}%` }}
                       />
                     </div>
@@ -142,7 +143,7 @@ export default async function ParentOverviewPage() {
               </ul>
               <Link
                 href="/parent/progress"
-                className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary-ink hover:underline"
               >
                 Full progress view <ArrowRight className="h-3.5 w-3.5" aria-hidden />
               </Link>
@@ -151,9 +152,9 @@ export default async function ParentOverviewPage() {
         </AnimatedSection>
 
         <AnimatedSection delay={0.05}>
-          <div className="surface-card surface-card--static h-full">
+          <div className="surface-card h-full">
             <div className="relative z-10">
-              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Timeline</p>
+              <p className="eyebrow">Timeline</p>
               <p className="mb-4 text-lg font-semibold text-foreground">Upcoming deadlines</p>
               {overview.upcomingDeadlines.length > 0 ? (
                 <ul className="space-y-3">
@@ -163,8 +164,8 @@ export default async function ParentOverviewPage() {
                         className={cn(
                           'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
                           deadline.daysUntil <= 7
-                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-300'
-                            : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                            ? 'bg-danger-subtle text-danger'
+                            : 'bg-warning-subtle text-warning'
                         )}
                       >
                         <CalendarClock className="h-4 w-4" aria-hidden />
@@ -186,7 +187,7 @@ export default async function ParentOverviewPage() {
               )}
               <Link
                 href="/parent/deadlines"
-                className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary-ink hover:underline"
               >
                 All deadlines <ArrowRight className="h-3.5 w-3.5" aria-hidden />
               </Link>
@@ -195,12 +196,12 @@ export default async function ParentOverviewPage() {
         </AnimatedSection>
 
         <AnimatedSection className="md:col-span-2 lg:col-span-1" delay={0.08}>
-          <div className="surface-card surface-card--static h-full">
+          <div className="surface-card h-full">
             <div className="relative z-10">
-              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Counsellor</p>
+              <p className="eyebrow">Counsellor</p>
               <p className="mb-4 text-lg font-semibold text-foreground">Latest update</p>
               {overview.latestCounsellorNote ? (
-                <blockquote className="rounded-xl border border-violet-400/20 bg-violet-500/5 p-3 text-sm text-foreground">
+                <blockquote className="rounded-xl border border-feature/25 bg-feature-subtle p-3 text-sm text-foreground">
                   <p className="line-clamp-4">{overview.latestCounsellorNote.body}</p>
                   <footer className="mt-2 text-xs text-muted-foreground">
                     {formatRelativeTime(overview.latestCounsellorNote.date)}
@@ -213,7 +214,7 @@ export default async function ParentOverviewPage() {
               )}
               <Link
                 href="/parent/messages"
-                className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary-ink hover:underline"
               >
                 <MessageSquare className="h-3.5 w-3.5" aria-hidden /> Open messages
               </Link>
@@ -225,9 +226,9 @@ export default async function ParentOverviewPage() {
       {/* Row 2 — profile completion + tasks snapshot */}
       <div className="grid gap-6 lg:grid-cols-12">
         <AnimatedSection className="lg:col-span-7" delay={0.05}>
-          <div className="surface-card surface-card--static h-full">
+          <div className="surface-card h-full">
             <div className="relative z-10">
-              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Profile</p>
+              <p className="eyebrow">Profile</p>
               <p className="mb-1 text-lg font-semibold text-foreground">
                 {child.firstName}&apos;s profile is {overview.completionPercent}% complete
               </p>
@@ -241,14 +242,14 @@ export default async function ParentOverviewPage() {
                     className={cn(
                       'flex items-center gap-2 rounded-xl border px-3 py-2 text-sm',
                       step.done
-                        ? 'border-emerald-500/20 bg-emerald-500/5 text-foreground'
+                        ? 'border-success/25 bg-success-subtle text-foreground'
                         : 'border-border bg-muted/20 text-muted-foreground'
                     )}
                   >
                     {step.done ? (
-                      <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-300" aria-hidden />
+                      <Check className="h-3.5 w-3.5 shrink-0 text-success" aria-hidden />
                     ) : (
-                      <Circle className="h-3.5 w-3.5 shrink-0 text-amber-500/70" aria-hidden />
+                      <Circle className="h-3.5 w-3.5 shrink-0 text-warning" aria-hidden />
                     )}
                     <span className="flex-1">{step.title}</span>
                     <span className="sr-only">{step.done ? '— complete' : '— not complete yet'}</span>
@@ -260,9 +261,9 @@ export default async function ParentOverviewPage() {
         </AnimatedSection>
 
         <AnimatedSection className="lg:col-span-5" delay={0.08}>
-          <div className="surface-card surface-card--static h-full">
+          <div className="surface-card h-full">
             <div className="relative z-10">
-              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Tasks</p>
+              <p className="eyebrow">Tasks</p>
               <p className="mb-4 text-lg font-semibold text-foreground">Workload at a glance</p>
               <div className="grid grid-cols-3 gap-3">
                 {[
@@ -270,13 +271,13 @@ export default async function ParentOverviewPage() {
                     label: 'Open',
                     value: overview.openTasks,
                     icon: ClipboardCheck,
-                    tone: 'bg-sky-500/10 text-sky-700 dark:text-sky-300',
+                    tone: 'bg-info-subtle text-info',
                   },
                   {
                     label: 'This week',
                     value: overview.dueThisWeek,
                     icon: CalendarClock,
-                    tone: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+                    tone: 'bg-warning-subtle text-warning',
                   },
                   {
                     label: 'Overdue',
@@ -284,8 +285,8 @@ export default async function ParentOverviewPage() {
                     icon: UserCircle,
                     tone:
                       overview.overdueTasks > 0
-                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-300'
-                        : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+                        ? 'bg-danger-subtle text-danger'
+                        : 'bg-success-subtle text-success',
                   },
                 ].map(({ label, value, icon: Icon, tone }) => (
                   <div key={label} className="rounded-xl border border-border bg-background p-3 text-center">
@@ -293,7 +294,7 @@ export default async function ParentOverviewPage() {
                       <Icon className="h-4 w-4" aria-hidden />
                     </div>
                     <p className="text-xl font-semibold text-foreground">{value}</p>
-                    <p className="text-[0.6875rem] text-muted-foreground">{label}</p>
+                    <p className="text-label text-muted-foreground">{label}</p>
                   </div>
                 ))}
               </div>

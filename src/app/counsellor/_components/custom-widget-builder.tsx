@@ -91,14 +91,14 @@ export function CustomWidgetBuilder({ open, onOpenChange, students, onCreate }: 
           type="button"
           onClick={() => onOpenChange(false)}
           aria-label="Close"
-          className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          className="absolute right-4 top-4 z-raised flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
         >
           <X className="h-4 w-4" />
         </button>
 
         {/* Header */}
         <div className="border-b border-border px-7 py-5">
-          <div className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-primary">
+          <div className="eyebrow-accent flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
             Custom widget
           </div>
@@ -166,16 +166,16 @@ export function CustomWidgetBuilder({ open, onOpenChange, students, onCreate }: 
                     className={cn(
                       'flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-0.5',
                       active
-                        ? 'border-primary/40 bg-primary/8 text-foreground shadow-sm'
+                        ? 'border-primary/40 bg-primary/10 text-foreground shadow-e-1'
                         : 'border-border/60 bg-background/60 text-muted-foreground hover:bg-muted/40'
                     )}
                   >
-                    <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', active ? 'bg-primary/15' : 'bg-muted/50')}>
-                      <Icon className={cn('h-4 w-4', active ? 'text-primary' : 'text-muted-foreground')} />
+                    <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', active ? 'bg-primary/20' : 'bg-muted/50')}>
+                      <Icon className={cn('h-4 w-4', active ? 'text-primary-ink' : 'text-muted-foreground')} />
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold">{option.label}</p>
-                      <p className="truncate text-[0.6875rem] opacity-70">{option.description}</p>
+                      <p className="truncate text-label opacity-70">{option.description}</p>
                     </div>
                   </button>
                 );
@@ -195,7 +195,7 @@ export function CustomWidgetBuilder({ open, onOpenChange, students, onCreate }: 
                 setTitle(event.target.value);
                 setTitleTouched(true);
               }}
-              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="form-input rounded-xl py-2.5"
             />
           </div>
 
@@ -204,7 +204,7 @@ export function CustomWidgetBuilder({ open, onOpenChange, students, onCreate }: 
             <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
               <div className="mb-3 flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-primary/10">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <Sparkles className="h-3.5 w-3.5 text-primary-ink" />
                 </div>
                 <p className="truncate text-sm font-semibold text-foreground">
                   {title.trim() || suggestCustomWidgetTitle(source, dimension)}

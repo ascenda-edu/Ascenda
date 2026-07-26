@@ -3,6 +3,7 @@
 import { AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CounsellorStudent, MatchTier } from '@/lib/counsellor/types';
+import { TIER_VISUAL } from '@/lib/theme/categories';
 import { MessageStudentButton } from './message-student-button';
 
 interface PortfolioBalanceProps {
@@ -72,33 +73,19 @@ const VERDICT_COPY: Record<Verdict, { headline: string; detail: string; tone: 'g
 };
 
 const TONE_STYLES = {
-  good: {
-    card: 'border-emerald-200/60 bg-emerald-500/5',
-    icon: 'text-emerald-600 dark:text-emerald-400',
-    headline: 'text-emerald-700 dark:text-emerald-300'
-  },
-  warn: {
-    card: 'border-amber-200/60 bg-amber-500/5',
-    icon: 'text-amber-600 dark:text-amber-400',
-    headline: 'text-amber-700 dark:text-amber-300'
-  },
-  crit: {
-    card: 'border-rose-200/60 bg-rose-500/5',
-    icon: 'text-rose-600 dark:text-rose-400',
-    headline: 'text-rose-700 dark:text-rose-300'
-  },
-  info: {
-    card: 'border-sky-200/60 bg-sky-500/5',
-    icon: 'text-sky-600 dark:text-sky-400',
-    headline: 'text-sky-700 dark:text-sky-300'
-  }
+  good: { card: 'border-success/25 bg-success-subtle', icon: 'text-success', headline: 'text-success' },
+  warn: { card: 'border-warning/25 bg-warning-subtle', icon: 'text-warning', headline: 'text-warning' },
+  crit: { card: 'border-danger/25 bg-danger-subtle', icon: 'text-danger', headline: 'text-danger' },
+  info: { card: 'border-info/25 bg-info-subtle', icon: 'text-info', headline: 'text-info' }
 } as const;
 
+// Tier segments are TIER_VISUAL's; `untracked` is genuinely neutral (no tier has
+// been assessed), so it wears the muted ink rather than a fifth hue.
 const SEGMENTS: { key: keyof Composition; label: MatchTier | 'Other'; bar: string; pill: string }[] = [
-  { key: 'reach', label: 'Reach', bar: 'bg-rose-500', pill: 'border-rose-200/60 bg-rose-500/10 text-rose-600 dark:text-rose-400' },
-  { key: 'match', label: 'Match', bar: 'bg-amber-500', pill: 'border-amber-200/60 bg-amber-500/10 text-amber-600 dark:text-amber-400' },
-  { key: 'safe', label: 'Safe', bar: 'bg-emerald-500', pill: 'border-emerald-200/60 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
-  { key: 'untracked', label: 'Other', bar: 'bg-slate-400', pill: 'border-slate-200/60 bg-slate-500/10 text-slate-600 dark:text-slate-300' }
+  { key: 'reach', label: 'Reach', bar: TIER_VISUAL.reach.bar, pill: `${TIER_VISUAL.reach.border} ${TIER_VISUAL.reach.bg} ${TIER_VISUAL.reach.text}` },
+  { key: 'match', label: 'Match', bar: TIER_VISUAL.match.bar, pill: `${TIER_VISUAL.match.border} ${TIER_VISUAL.match.bg} ${TIER_VISUAL.match.text}` },
+  { key: 'safe', label: 'Safe', bar: TIER_VISUAL.safety.bar, pill: `${TIER_VISUAL.safety.border} ${TIER_VISUAL.safety.bg} ${TIER_VISUAL.safety.text}` },
+  { key: 'untracked', label: 'Other', bar: 'bg-muted-foreground/40', pill: 'border-border bg-muted/60 text-muted-foreground' }
 ];
 
 export const PortfolioBalance = ({ student }: PortfolioBalanceProps) => {
@@ -112,7 +99,7 @@ export const PortfolioBalance = ({ student }: PortfolioBalanceProps) => {
   const showNudge = copy.tone === 'warn' || copy.tone === 'crit';
 
   return (
-    <div className={cn('rounded-[24px] border p-5 sm:p-6', tone.card)}>
+    <div className={cn('rounded-3xl border p-5 sm:p-6', tone.card)}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <div className={cn('mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background/80', tone.icon)}>
@@ -152,12 +139,12 @@ export const PortfolioBalance = ({ student }: PortfolioBalanceProps) => {
             const value = composition[key] as number;
             if (value === 0) return null;
             return (
-              <span key={key} className={cn('rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold tabular-nums', pill)}>
+              <span key={key} className={cn('rounded-full border px-2.5 py-0.5 text-label font-semibold tabular-nums', pill)}>
                 {value} {label}
               </span>
             );
           })}
-          <span className="ml-auto text-[0.6875rem] text-muted-foreground">
+          <span className="ml-auto text-label text-muted-foreground">
             {composition.total} application{composition.total !== 1 ? 's' : ''}
           </span>
         </div>

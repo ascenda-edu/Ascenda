@@ -143,10 +143,10 @@ export function DashboardClient({
           when there are alerts; the help widget renders full-width otherwise. */}
       <div className={atRiskAlerts.length > 0 ? 'grid gap-6 lg:grid-cols-2 [&>*]:min-w-0' : undefined}>
         {atRiskAlerts.length > 0 && (
-          <div className="surface-card surface-card--static">
+          <div className="surface-card">
             <div className="relative z-10 space-y-4">
               <div>
-                <p className="text-[0.6875rem] font-semibold uppercase tracking-widest text-muted-foreground">Proactive</p>
+                <p className="eyebrow">Proactive</p>
                 <h2 className="text-lg font-semibold text-foreground">At-risk students</h2>
                 <p className="text-xs text-muted-foreground">Students who may need your attention based on activity and deadline patterns.</p>
               </div>
@@ -175,7 +175,7 @@ export function DashboardClient({
             <div className="pt-4">
               <div className="mb-6 flex items-center justify-between pb-4">
                 <div>
-                  <p className="text-[0.6875rem] font-semibold uppercase tracking-widest text-muted-foreground">Cohort</p>
+                  <p className="eyebrow">Cohort</p>
                   <h2 className="text-lg font-semibold text-foreground">Student Roster</h2>
                   <p className="text-xs text-muted-foreground">Manage your cohort and track progress</p>
                 </div>

@@ -5,7 +5,7 @@ export default function InboxLoading() {
   return (
     <DashboardShell>
       {/* Mirrors the compact PageHero (eyebrow · title · description). */}
-      <div className="surface-card surface-card--static !px-4 !py-3 sm:!px-5 sm:!py-3.5">
+      <div className="surface-card !px-4 !py-3 sm:!px-5 sm:!py-3.5">
         <div className="space-y-1.5">
           <Skeleton className="h-2.5 w-24" />
           <Skeleton className="h-5 w-32" />

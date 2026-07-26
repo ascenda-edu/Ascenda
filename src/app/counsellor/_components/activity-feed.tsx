@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { MessageSquare, Flag, RefreshCw, Pin, PinOff, EyeOff, Eye, Settings2, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
+import { NOTE_VISUAL } from '@/lib/theme/categories';
 
 interface ActivityItem {
   id: string;
@@ -20,10 +21,12 @@ interface ActivityFeedProps {
   activity: ActivityItem[];
 }
 
+// Colours from NOTE_VISUAL (the note/signal tone system of record); the icons stay
+// local because this feed uses RefreshCw for updates rather than the shared arrow.
 const TYPE_CONFIG = {
-  session: { icon: MessageSquare, color: 'text-violet-600', bg: 'bg-violet-500/10', label: 'Session' },
-  flag: { icon: Flag, color: 'text-amber-600', bg: 'bg-amber-500/10', label: 'Flag' },
-  update: { icon: RefreshCw, color: 'text-sky-600', bg: 'bg-sky-500/10', label: 'Update' }
+  session: { icon: MessageSquare, color: NOTE_VISUAL.session.text, bg: NOTE_VISUAL.session.bg, label: 'Session' },
+  flag: { icon: Flag, color: NOTE_VISUAL.flag.text, bg: NOTE_VISUAL.flag.bg, label: 'Flag' },
+  update: { icon: RefreshCw, color: NOTE_VISUAL.update.text, bg: NOTE_VISUAL.update.bg, label: 'Update' }
 };
 
 function formatRelative(iso: string) {
@@ -93,9 +96,9 @@ export const ActivityFeed = ({ activity }: ActivityFeedProps) => {
         <button
           onClick={() => setManageOpen((o) => !o)}
           className={cn(
-            'flex items-center gap-1.5 rounded-full border px-3 py-1 text-[0.6875rem] font-medium transition hover:-translate-y-0.5',
+            'flex items-center gap-1.5 rounded-full border px-3 py-1 text-label font-medium transition hover:-translate-y-0.5',
             manageOpen
-              ? 'border-primary/40 bg-primary/10 text-primary'
+              ? 'border-primary/40 bg-primary/10 text-primary-ink'
               : 'border-border/60 bg-background/60 text-muted-foreground hover:text-foreground'
           )}
         >
@@ -116,7 +119,7 @@ export const ActivityFeed = ({ activity }: ActivityFeedProps) => {
             className="overflow-hidden"
           >
             <div className="rounded-2xl border border-border/60 bg-muted/30 p-3 space-y-1.5">
-              <p className="text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground px-1 pb-0.5">
+              <p className="eyebrow px-1 pb-0.5">
                 Students in feed
               </p>
               {students.map(({ id, name, flag }) => {
@@ -138,8 +141,8 @@ export const ActivityFeed = ({ activity }: ActivityFeedProps) => {
                       className={cn(
                         'flex h-6 w-6 items-center justify-center rounded-lg border transition',
                         isPinned
-                          ? 'border-primary/40 bg-primary/10 text-primary'
-                          : 'border-border/60 text-muted-foreground hover:text-primary hover:border-primary/40'
+                          ? 'border-primary/40 bg-primary/10 text-primary-ink'
+                          : 'border-border/60 text-muted-foreground hover:text-primary-ink hover:border-primary/40'
                       )}
                     >
                       {isPinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
@@ -150,7 +153,7 @@ export const ActivityFeed = ({ activity }: ActivityFeedProps) => {
                       className={cn(
                         'flex h-6 w-6 items-center justify-center rounded-lg border transition',
                         isHidden
-                          ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-600'
+                          ? 'border-success/25 bg-success-subtle text-success'
                           : 'border-border/60 text-muted-foreground hover:text-destructive hover:border-destructive/40'
                       )}
                     >
@@ -162,7 +165,7 @@ export const ActivityFeed = ({ activity }: ActivityFeedProps) => {
               {(pinnedIds.size > 0 || hiddenIds.size > 0) && (
                 <button
                   onClick={() => { setPinnedIds(new Set()); setHiddenIds(new Set()); }}
-                  className="mt-1 w-full text-center text-[0.6875rem] text-muted-foreground hover:text-foreground transition"
+                  className="mt-1 w-full text-center text-label text-muted-foreground hover:text-foreground transition"
                 >
                   Reset all
                 </button>
@@ -191,7 +194,7 @@ export const ActivityFeed = ({ activity }: ActivityFeedProps) => {
                 className={cn('flex gap-3', isPinned && 'rounded-xl bg-primary/5 px-2 py-1 -mx-2')}
               >
                 {isPinned && (
-                  <Pin className="mt-1 h-3 w-3 shrink-0 text-primary/50" />
+                  <Pin className="mt-1 h-3 w-3 shrink-0 text-primary-ink/50" />
                 )}
                 <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl ${cfg.bg}`}>
                   <Icon className={`h-3.5 w-3.5 ${cfg.color}`} />
@@ -200,11 +203,11 @@ export const ActivityFeed = ({ activity }: ActivityFeedProps) => {
                   <div className="flex items-center justify-between gap-2">
                     <Link
                       href={`/counsellor/students/${item.studentId}`}
-                      className="truncate text-xs font-semibold text-foreground hover:text-primary"
+                      className="truncate text-xs font-semibold text-foreground hover:text-primary-ink"
                     >
                       {item.studentFlag} {item.studentName}
                     </Link>
-                    <span className="shrink-0 text-[0.6875rem] text-muted-foreground">{formatRelative(item.date)}</span>
+                    <span className="shrink-0 text-label text-muted-foreground">{formatRelative(item.date)}</span>
                   </div>
                   <p className="line-clamp-2 text-xs text-muted-foreground">{item.content}</p>
                 </div>

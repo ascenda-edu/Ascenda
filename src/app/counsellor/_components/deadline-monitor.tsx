@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Clock, CalendarDays, AlertTriangle, CheckCircle2, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { parseLocalDate } from '@/lib/utils/dates';
+import { DEADLINE_VISUAL } from '@/lib/theme/categories';
 
 interface DeadlineEntry {
   id: string;
@@ -30,10 +31,10 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  early_decision: 'border-violet-200/60 bg-violet-500/10 text-violet-700 dark:text-violet-400',
-  regular: 'border-sky-200/60 bg-sky-500/10 text-sky-700 dark:text-sky-400',
-  scholarship: 'border-amber-200/60 bg-amber-500/10 text-amber-700 dark:text-amber-400',
-  interview: 'border-emerald-200/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+  early_decision: 'border-feature/25 bg-feature-subtle text-feature',
+  regular: 'border-info/25 bg-info-subtle text-info',
+  scholarship: 'border-warning/25 bg-warning-subtle text-warning',
+  interview: 'border-success/25 bg-success-subtle text-success'
 };
 
 type UrgencyGroup = 'overdue' | 'this-week' | 'this-month' | 'future';
@@ -46,11 +47,13 @@ function getUrgency(days: number): UrgencyGroup {
   return 'future';
 }
 
+// Colours come from DEADLINE_VISUAL (the urgency tone system of record); the icons
+// stay local because this monitor's set differs from the shared one.
 const URGENCY_CONFIG: Record<UrgencyGroup, { label: string; icon: typeof AlertTriangle; headerColor: string; dotColor: string }> = {
-  overdue: { label: 'Overdue', icon: AlertTriangle, headerColor: 'text-red-600', dotColor: 'bg-red-500' },
-  'this-week': { label: 'This Week', icon: Clock, headerColor: 'text-amber-600', dotColor: 'bg-amber-500' },
-  'this-month': { label: 'This Month', icon: CalendarDays, headerColor: 'text-sky-600', dotColor: 'bg-sky-500' },
-  future: { label: 'Upcoming', icon: CalendarDays, headerColor: 'text-muted-foreground', dotColor: 'bg-muted-foreground' }
+  overdue: { label: 'Overdue', icon: AlertTriangle, headerColor: DEADLINE_VISUAL.overdue.text, dotColor: DEADLINE_VISUAL.overdue.bar },
+  'this-week': { label: 'This Week', icon: Clock, headerColor: DEADLINE_VISUAL['this-week'].text, dotColor: DEADLINE_VISUAL['this-week'].bar },
+  'this-month': { label: 'This Month', icon: CalendarDays, headerColor: DEADLINE_VISUAL['this-month'].text, dotColor: DEADLINE_VISUAL['this-month'].bar },
+  future: { label: 'Upcoming', icon: CalendarDays, headerColor: DEADLINE_VISUAL.unknown.text, dotColor: 'bg-muted-foreground' }
 };
 
 function formatDate(iso: string) {
@@ -58,10 +61,10 @@ function formatDate(iso: string) {
 }
 
 function urgencyBadge(days: number) {
-  if (days < 0) return { text: `${Math.abs(days)}d overdue`, cls: 'text-red-600 bg-red-500/10 border-red-200/50' };
-  if (days === 0) return { text: 'Due today', cls: 'text-red-600 bg-red-500/10 border-red-200/50' };
-  if (days <= 3) return { text: `${days}d left`, cls: 'text-red-500 bg-red-500/10 border-red-200/50' };
-  if (days <= 7) return { text: `${days}d left`, cls: 'text-amber-600 bg-amber-500/10 border-amber-200/50' };
+  if (days < 0) return { text: `${Math.abs(days)}d overdue`, cls: 'text-danger bg-danger-subtle border-danger/25' };
+  if (days === 0) return { text: 'Due today', cls: 'text-danger bg-danger-subtle border-danger/25' };
+  if (days <= 3) return { text: `${days}d left`, cls: 'text-danger bg-danger-subtle border-danger/25' };
+  if (days <= 7) return { text: `${days}d left`, cls: 'text-warning bg-warning-subtle border-warning/25' };
   return { text: `${days}d`, cls: 'text-muted-foreground bg-muted/40 border-border' };
 }
 
@@ -95,7 +98,7 @@ export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
   return (
     <div className="space-y-5">
       {/* Filter bar */}
-      <div className="panel flex flex-col gap-3 rounded-2xl px-4 py-3 sm:flex-row sm:items-center">
+      <div className="surface-toolbar flex flex-col gap-3 sm:flex-row sm:items-center">
         <label htmlFor="deadline-monitor-search" className="sr-only">
           Filter by student name
         </label>
@@ -105,9 +108,9 @@ export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
           placeholder="Filter by student name…"
           value={studentFilter}
           onChange={(e) => setStudentFilter(e.target.value)}
-          className="flex-1 rounded-full border border-border bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className="form-input flex-1 rounded-full py-2"
         />
-        <div className="flex items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-sm">
+        <div className="flex items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-e-1">
           {(['all', 'early_decision', 'regular', 'scholarship', 'interview'] as TypeFilter[]).map((t) => (
             <button
               key={t}
@@ -116,7 +119,7 @@ export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
               className={cn(
                 'rounded-lg px-3 py-1.5 text-xs font-medium transition',
                 typeFilter === t
-                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  ? 'bg-primary text-primary-foreground shadow-e-1'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
@@ -129,8 +132,8 @@ export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
 
       {/* Groups */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-[28px] border border-dashed border-border bg-muted/40 py-16 text-center">
-          <CheckCircle2 className="mb-3 h-8 w-8 text-emerald-500" />
+        <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border bg-muted/40 py-16 text-center">
+          <CheckCircle2 className="mb-3 h-8 w-8 text-success" />
           <p className="font-semibold text-foreground">No deadlines match your filters</p>
           <p className="mt-1 text-sm text-muted-foreground">Try adjusting your filter criteria.</p>
         </div>
@@ -143,11 +146,11 @@ export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
           const collapsed = collapsedGroups.has(group);
 
           return (
-            <div key={group} className="surface-card surface-card--static space-y-3">
+            <div key={group} className="surface-card space-y-3">
               {/* Group header */}
               <button
                 onClick={() => toggleGroup(group)}
-                className="sticky top-0 z-10 flex w-full items-center justify-between gap-3 rounded-t-[20px] bg-card/90 px-5 py-2 backdrop-blur-sm -mx-5"
+                className="sticky top-0 z-raised flex w-full items-center justify-between gap-3 rounded-t-2xl bg-card/90 px-5 py-2 backdrop-blur-sm -mx-5"
               >
                 <div className="flex items-center gap-2">
                   <span className={cn('h-2.5 w-2.5 rounded-full', cfg.dotColor)} />
@@ -191,7 +194,7 @@ export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
 
                         {/* Type + date */}
                         <div className="flex flex-col items-end gap-1">
-                          <span className={cn('rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold', typeCfg)}>
+                          <span className={cn('rounded-full border px-2.5 py-0.5 text-label font-semibold', typeCfg)}>
                             {TYPE_LABELS[d.type] ?? d.type}
                           </span>
                           <span className="text-xs text-muted-foreground">{formatDate(d.date)}</span>

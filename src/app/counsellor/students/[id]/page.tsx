@@ -6,6 +6,7 @@ import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { loadStudentById, loadStudentEvolution } from '@/lib/counsellor/data';
+import { avatarColor } from '../../_components/avatar-palette';
 import { StudentDetailTabs } from '../../_components/student-detail-tabs';
 import { MessageStudentButton } from '../../_components/message-student-button';
 
@@ -15,26 +16,14 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
+// `stalled` was the app's only orange; there is no orange tone, and "stalled" is
+// the same "needs a nudge" state as an incomplete profile, so both wear `warning`.
 const FLAG_LABELS: Record<string, { label: string; color: string }> = {
-  profile_incomplete: { label: 'Profile incomplete', color: 'border-amber-200/60 bg-amber-500/10 text-amber-700 dark:text-amber-400' },
-  deadline_urgent: { label: 'Deadline urgent', color: 'border-red-200/60 bg-red-500/10 text-red-600' },
-  no_matches: { label: 'No matches', color: 'border-sky-200/60 bg-sky-500/10 text-sky-600' },
-  stalled: { label: 'Stalled', color: 'border-orange-200/60 bg-orange-500/10 text-orange-600' }
+  profile_incomplete: { label: 'Profile incomplete', color: 'border-warning/25 bg-warning-subtle text-warning' },
+  deadline_urgent: { label: 'Deadline urgent', color: 'border-danger/25 bg-danger-subtle text-danger' },
+  no_matches: { label: 'No matches', color: 'border-info/25 bg-info-subtle text-info' },
+  stalled: { label: 'Stalled', color: 'border-warning/25 bg-warning-subtle text-warning' }
 };
-
-const AVATAR_PALETTE = [
-  'bg-violet-500/20 text-violet-700 dark:text-violet-300',
-  'bg-sky-500/20 text-sky-700 dark:text-sky-300',
-  'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',
-  'bg-amber-500/20 text-amber-700 dark:text-amber-300',
-  'bg-rose-500/20 text-rose-700 dark:text-rose-300',
-  'bg-indigo-500/20 text-indigo-700 dark:text-indigo-300'
-];
-
-function avatarColor(id: string) {
-  const hash = id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
-}
 
 function getAvgMatchScore(matches: { score: number }[]) {
   if (matches.length === 0) return null;
@@ -82,7 +71,7 @@ export default async function StudentDetailPage(props: Props) {
         </span>
       </nav>
       {/* Header card */}
-      <div className="surface-card surface-card--static">
+      <div className="surface-card">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
           {/* Avatar */}
           <div className={cn('flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl text-xl font-bold', avColor)}>
@@ -113,8 +102,8 @@ export default async function StudentDetailPage(props: Props) {
               <span className={cn(
                 'rounded-full border px-3 py-1 text-xs font-semibold',
                 student.academic.programmeType === 'IB'
-                  ? 'border-violet-200/60 bg-violet-500/10 text-violet-700 dark:text-violet-300'
-                  : 'border-sky-200/60 bg-sky-500/10 text-sky-700 dark:text-sky-300'
+                  ? 'border-feature/25 bg-feature-subtle text-feature'
+                  : 'border-info/25 bg-info-subtle text-info'
               )}>
                 {student.academic.programmeType === 'IB'
                   ? student.academic.ibPoints ? `IB · ${student.academic.ibPoints} pts` : 'IB'
@@ -148,31 +137,31 @@ export default async function StudentDetailPage(props: Props) {
                   label: 'Profile',
                   value: `${student.profile.completionPct}%`,
                   icon: CheckCircle2,
-                  color: student.profile.completionPct === 100 ? 'text-emerald-600' : 'text-amber-600'
+                  color: student.profile.completionPct === 100 ? 'text-success' : 'text-warning'
                 },
                 {
                   label: 'Matches',
                   value: String(student.matches.length),
                   icon: BookOpen,
-                  color: 'text-primary'
+                  color: 'text-primary-ink'
                 },
                 {
                   label: 'Applications',
                   value: String(student.applications.length),
                   icon: FileText,
-                  color: 'text-violet-600'
+                  color: 'text-feature'
                 },
                 {
                   label: nextDeadlineDays != null ? (nextDeadlineDays <= 7 ? 'Urgent' : 'Next due') : 'Deadlines',
                   value: nextDeadlineDays != null ? `${nextDeadlineDays}d` : '—',
                   icon: Clock,
-                  color: nextDeadlineDays != null && nextDeadlineDays <= 7 ? 'text-red-500' : 'text-muted-foreground'
+                  color: nextDeadlineDays != null && nextDeadlineDays <= 7 ? 'text-danger' : 'text-muted-foreground'
                 }
               ].map(({ label, value, icon: Icon, color }) => (
                 <div key={label} className="flex flex-col items-center gap-1 rounded-2xl border border-border/60 bg-background/60 px-4 py-3 text-center">
                   <Icon className={cn('h-4 w-4', color)} />
                   <p className={cn('text-lg font-bold tabular-nums', color)}>{value}</p>
-                  <p className="text-[0.6875rem] text-muted-foreground">{label}</p>
+                  <p className="text-label text-muted-foreground">{label}</p>
                 </div>
               ))}
             </div>
@@ -184,11 +173,11 @@ export default async function StudentDetailPage(props: Props) {
           <div className="mt-4 space-y-1.5 border-t border-border/60 pt-4">
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">Profile completion</span>
-              <span className="font-semibold text-amber-600">{student.profile.completionPct}%</span>
+              <span className="font-semibold text-warning">{student.profile.completionPct}%</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
               <div
-                className="h-1.5 rounded-full bg-amber-500 transition-all"
+                className="h-1.5 rounded-full bg-warning transition-all"
                 style={{ width: `${student.profile.completionPct}%` }}
               />
             </div>

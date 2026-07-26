@@ -22,6 +22,7 @@ import { useToast } from '@/components/ui/toast';
 import { useSupabase } from '@/hooks/useSupabase';
 import { insertNotification } from '@/lib/demo/help-request-client';
 import { parseLocalDate } from '@/lib/utils/dates';
+import { DOC_STATUS_VISUAL } from '@/lib/theme/categories';
 
 type NudgeTarget = 'student' | 'teacher' | 'registrar';
 
@@ -45,10 +46,12 @@ const formatNudgeAge = (at: number): string => {
   return `${Math.round(hr / 24)}d ago`;
 };
 
+// Colours from DOC_STATUS_VISUAL (the document-status tone system of record); the
+// icons stay local because this board uses a bare Check for "received".
 const STATUS_CONFIG: Record<CounsellorDocStatus, { icon: typeof Check; label: string; color: string; bg: string }> = {
-  received: { icon: Check, label: 'Received', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-200/60 dark:border-emerald-500/20' },
-  pending: { icon: Clock, label: 'Pending', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-200/60 dark:border-amber-500/20' },
-  overdue: { icon: AlertTriangle, label: 'Overdue', color: 'text-red-500', bg: 'bg-red-500/10 border-red-200/60 dark:border-red-500/20' }
+  received: { icon: Check, label: 'Received', color: DOC_STATUS_VISUAL.received.text, bg: `${DOC_STATUS_VISUAL.received.bg} ${DOC_STATUS_VISUAL.received.border}` },
+  pending: { icon: Clock, label: 'Pending', color: DOC_STATUS_VISUAL.pending.text, bg: `${DOC_STATUS_VISUAL.pending.bg} ${DOC_STATUS_VISUAL.pending.border}` },
+  overdue: { icon: AlertTriangle, label: 'Overdue', color: DOC_STATUS_VISUAL.overdue.text, bg: `${DOC_STATUS_VISUAL.overdue.bg} ${DOC_STATUS_VISUAL.overdue.border}` }
 };
 
 const TYPE_ICON: Record<string, typeof FileText> = {
@@ -184,7 +187,7 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
             onChange={(e) => setSearchQuery(e.target.value)}
             aria-label="Search documents by student or document name"
             placeholder="Search by student or document..."
-            className="w-full rounded-full border border-border/60 bg-background/80 pl-9 pr-4 py-2 text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
+            className="form-input rounded-full py-2 pl-9 pr-4"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -215,16 +218,16 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
       {[...grouped.entries()].map(([studentId, docs]) => {
         const studentName = docs[0].studentName;
         return (
-          <div key={studentId} className="surface-card surface-card--static space-y-3">
+          <div key={studentId} className="surface-card space-y-3">
             <div className="flex items-center justify-between gap-3">
               <Link
                 href={`/counsellor/students/${studentId}`}
-                className="group inline-flex items-center gap-2 text-sm font-semibold text-foreground transition hover:text-primary"
+                className="group inline-flex items-center gap-2 text-sm font-semibold text-foreground transition hover:text-primary-ink"
               >
                 {studentName}
-                <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground transition group-hover:text-primary" aria-hidden />
+                <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground transition group-hover:text-primary-ink" aria-hidden />
               </Link>
-              <span className="text-[0.6875rem] uppercase tracking-[0.2em] text-muted-foreground">
+              <span className="eyebrow">
                 {docs.length} doc{docs.length === 1 ? '' : 's'}
               </span>
             </div>
@@ -240,8 +243,8 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
                   <div
                     key={doc.id}
                     className={cn(
-                      'rounded-2xl border px-4 py-3 transition hover:-translate-y-px hover:shadow-sm',
-                      doc.status === 'overdue' ? 'border-red-200/40 bg-red-500/5 dark:border-red-500/15' : 'border-border/60 bg-background/60'
+                      'rounded-2xl border px-4 py-3 hover-lift',
+                      doc.status === 'overdue' ? 'border-danger/25 bg-danger-subtle' : 'border-border/60 bg-background/60'
                     )}
                   >
                     <div className="flex items-center gap-4">
@@ -252,7 +255,7 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
                         href={`/counsellor/students/${studentId}?tab=applications`}
                         className="flex-1 min-w-0 group"
                       >
-                        <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary">
+                        <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary-ink">
                           {doc.documentName}
                         </p>
                         <p className="text-xs text-muted-foreground capitalize">{doc.type}</p>
@@ -262,17 +265,17 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
                           <span className="text-xs text-muted-foreground">Uploaded {formatDate(doc.uploadedDate)}</span>
                         )}
                         {doc.status !== 'received' && doc.dueDate && (
-                          <span className={cn('text-xs', doc.status === 'overdue' ? 'text-red-500 font-semibold' : 'text-muted-foreground')}>
+                          <span className={cn('text-xs', doc.status === 'overdue' ? 'text-danger font-semibold' : 'text-muted-foreground')}>
                             Due {formatDate(doc.dueDate)}
                           </span>
                         )}
                         {nudge ? (
-                          <span className="flex items-center gap-1 rounded-full border border-sky-200/60 bg-sky-500/10 px-2.5 py-1 text-[0.6875rem] font-semibold text-sky-700 dark:text-sky-300">
+                          <span className="flex items-center gap-1 rounded-full border border-info/25 bg-info-subtle px-2.5 py-1 text-label font-semibold text-info">
                             <Send className="h-3 w-3" />
                             Nudge sent · {formatNudgeAge(nudge.at)}
                           </span>
                         ) : (
-                          <span className={cn('flex items-center gap-1 rounded-full border px-2.5 py-1 text-[0.6875rem] font-semibold', cfg.bg, cfg.color)}>
+                          <span className={cn('flex items-center gap-1 rounded-full border px-2.5 py-1 text-label font-semibold', cfg.bg, cfg.color)}>
                             <Icon className="h-3 w-3" />
                             {cfg.label}
                           </span>
@@ -280,13 +283,13 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
                       </div>
                     </div>
                     {doc.notes && (
-                      <p className="mt-2 text-[0.6875rem] italic text-muted-foreground/70" title={doc.notes}>
+                      <p className="mt-2 text-label italic text-muted-foreground/70" title={doc.notes}>
                         {doc.notes}
                       </p>
                     )}
                     {canNudge ? (
                       <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border/40 pt-2">
-                        <span className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">
+                        <span className="eyebrow">
                           Chase
                         </span>
                         {(['student', 'teacher', 'registrar'] as const).map((target) => {
@@ -300,9 +303,9 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
                               onClick={() => handleNudge(doc, target)}
                               disabled={busy === doc.id}
                               className={cn(
-                                'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.6875rem] font-medium transition disabled:cursor-wait disabled:opacity-60',
+                                'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-label font-medium transition disabled:cursor-wait disabled:opacity-60',
                                 isActive
-                                  ? 'border-sky-300/70 bg-sky-500/15 text-sky-700 dark:text-sky-300'
+                                  ? 'border-info/25 bg-info-subtle text-info'
                                   : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:bg-muted/60 hover:text-foreground'
                               )}
                             >
@@ -322,7 +325,7 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
       })}
 
       {filtered.length === 0 && (
-        <div className="rounded-[28px] border border-dashed border-border bg-muted/40 p-12 text-center">
+        <div className="rounded-4xl border border-dashed border-border bg-muted/40 p-12 text-center">
           <FileText className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
           <p className="font-semibold text-foreground">No documents found</p>
           <p className="mt-1 text-sm text-muted-foreground">Try adjusting your filters or search query.</p>

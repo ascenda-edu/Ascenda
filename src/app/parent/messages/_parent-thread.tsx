@@ -136,7 +136,7 @@ export function ParentThreadPanel({
                 >
                   <p>{msg.content}</p>
                   <div className={cn('mt-1 flex items-center gap-1', isParent ? 'justify-end' : 'justify-start')}>
-                    <span className={cn('text-[0.625rem]', isParent ? 'text-primary-foreground/60' : 'text-muted-foreground')}>
+                    <span className={cn('text-label', isParent ? 'text-primary-foreground/60' : 'text-muted-foreground')}>
                       {fullDateFormatter.format(new Date(msg.date))}
                     </span>
                     {isParent && msg.read ? (
@@ -158,7 +158,7 @@ export function ParentThreadPanel({
             key={t.id}
             type="button"
             onClick={() => applyTemplate(t)}
-            className="rounded-full bg-muted/50 px-3 py-1 text-[0.625rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="rounded-full bg-muted/50 px-3 py-1 text-label font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             {t.label}
           </button>

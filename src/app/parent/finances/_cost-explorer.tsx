@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Briefcase, Home, TrendingUp, Wallet } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
+import { TIER_VISUAL, type FitTier } from '@/lib/theme/categories';
 import {
   DEFAULT_HOME_CURRENCY,
   HOME_CURRENCIES,
@@ -20,10 +20,18 @@ import type { ProgrammeCostLine } from '@/lib/parent/types';
 // convertible to the parent's home currency. Amounts are GBP-native; the
 // conversion is a static-rate approximation (see lib/parent/currency.ts).
 
-const TIER_STYLES: Record<string, string> = {
-  Reach: 'bg-rose-500/10 text-rose-600 dark:text-rose-300',
-  Match: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
-  Safe: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+// Tier tone comes from TIER_VISUAL (lib/theme/categories) — the single source of
+// truth for Reach/Match/Safety. Only the label→key mapping lives here, because the
+// parent payload spells the safety tier 'Safe'.
+const TIER_KEY: Record<string, FitTier> = {
+  Reach: 'reach',
+  Match: 'match',
+  Safe: 'safety',
+};
+
+const tierChip = (label: string): string | undefined => {
+  const key = TIER_KEY[label];
+  return key ? TIER_VISUAL[key].chip : undefined;
 };
 
 /** Estimated yearly cost of attendance: tuition + housing (dorm, else rent×12). */
@@ -81,9 +89,7 @@ export function CostExplorer({
       {/* Home-currency selector */}
       <div className="surface-toolbar flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-            Home currency
-          </p>
+          <p className="eyebrow">Home currency</p>
           <p className="text-xs text-muted-foreground">
             Approximate conversion for budgeting — universities bill in their local currency.
           </p>
@@ -91,11 +97,14 @@ export function CostExplorer({
         <label className="sr-only" htmlFor="parent-home-currency">
           Home currency
         </label>
+        {/* `form-input` is THE input treatment (tailwind.config.ts). `w-auto` keeps the
+            toolbar layout — utilities are emitted after components, so it beats the
+            component class's own `w-full`. */}
         <select
           id="parent-home-currency"
           value={hydrated ? currency : DEFAULT_HOME_CURRENCY}
           onChange={(e) => changeCurrency(e.target.value as HomeCurrencyCode)}
-          className="rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          className="form-input w-auto"
         >
           {HOME_CURRENCIES.map((c) => (
             <option key={c.code} value={c.code}>
@@ -107,11 +116,9 @@ export function CostExplorer({
 
       {/* Yearly cost-of-attendance summary */}
       {cheapest !== null && priciest !== null ? (
-        <div className="surface-card surface-card--static">
+        <div className="surface-card">
           <div className="relative z-10">
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-              Yearly cost of attendance
-            </p>
+            <p className="eyebrow">Yearly cost of attendance</p>
             <p className="mb-1 text-lg font-semibold text-foreground">
               {cheapest === priciest
                 ? formatHomeOnly(cheapest, currency)
@@ -136,7 +143,7 @@ export function CostExplorer({
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: index * 0.04 }}
-              className="surface-card surface-card--static"
+              className="surface-card"
             >
               <div className="relative z-10">
                 <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
@@ -147,9 +154,7 @@ export function CostExplorer({
                     </p>
                   </div>
                   {line.tier ? (
-                    <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-semibold', TIER_STYLES[line.tier])}>
-                      {line.tier}
-                    </span>
+                    <span className={tierChip(line.tier)}>{line.tier}</span>
                   ) : null}
                 </div>
 

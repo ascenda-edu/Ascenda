@@ -262,7 +262,7 @@ export const AnalyticsWidgetGrid = ({
           {onCreateWidget && (
             <button
               onClick={onCreateWidget}
-              className="flex items-center gap-2 rounded-full border border-dashed border-primary/50 bg-primary/5 px-4 py-2 text-sm font-medium text-primary transition hover:-translate-y-0.5 hover:bg-primary/10 hover:shadow-sm"
+              className="flex items-center gap-2 rounded-full border border-dashed border-primary/50 bg-primary/5 px-4 py-2 text-sm font-medium text-primary-ink hover-lift hover:bg-primary/10"
             >
               <Plus className="h-4 w-4" />
               New widget
@@ -271,7 +271,7 @@ export const AnalyticsWidgetGrid = ({
           <button
             onClick={() => setPanelOpen((o) => !o)}
             className={cn(
-              'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition hover:-translate-y-0.5 hover:shadow-sm',
+              'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover-lift',
               panelOpen
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-background text-foreground hover:bg-muted/60'
@@ -291,7 +291,7 @@ export const AnalyticsWidgetGrid = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
-            className="rounded-2xl border border-border bg-card p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)]"
+            className="rounded-2xl border border-border bg-card p-5 shadow-e-3"
           >
             <div className="mb-4 flex items-center justify-between">
               <div>
@@ -317,16 +317,16 @@ export const AnalyticsWidgetGrid = ({
                     className={cn(
                       'flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-0.5',
                       active
-                        ? 'border-primary/40 bg-primary/8 text-foreground shadow-sm'
+                        ? 'border-primary/40 bg-primary/10 text-foreground shadow-e-1'
                         : 'border-border/60 bg-background/60 text-muted-foreground hover:bg-muted/40'
                     )}
                   >
-                    <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', active ? 'bg-primary/15' : 'bg-muted/50')}>
-                      <Icon className={cn('h-4 w-4', active ? 'text-primary' : 'text-muted-foreground')} />
+                    <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', active ? 'bg-primary/20' : 'bg-muted/50')}>
+                      <Icon className={cn('h-4 w-4', active ? 'text-primary-ink' : 'text-muted-foreground')} />
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-xs font-semibold">{cfg.label}</p>
-                      <p className="truncate text-[0.6875rem] opacity-70">{cfg.description}</p>
+                      <p className="truncate text-label opacity-70">{cfg.description}</p>
                     </div>
                     <div className={cn(
                       'ml-auto h-4 w-4 shrink-0 rounded-full border-2 transition',
@@ -344,16 +344,16 @@ export const AnalyticsWidgetGrid = ({
                       className={cn(
                         'flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-0.5',
                         active
-                          ? 'border-primary/40 bg-primary/8 text-foreground shadow-sm'
+                          ? 'border-primary/40 bg-primary/10 text-foreground shadow-e-1'
                           : 'border-border/60 bg-background/60 text-muted-foreground hover:bg-muted/40'
                       )}
                     >
-                      <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', active ? 'bg-primary/15' : 'bg-muted/50')}>
-                        <Sparkles className={cn('h-4 w-4', active ? 'text-primary' : 'text-muted-foreground')} />
+                      <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', active ? 'bg-primary/20' : 'bg-muted/50')}>
+                        <Sparkles className={cn('h-4 w-4', active ? 'text-primary-ink' : 'text-muted-foreground')} />
                       </div>
                       <div className="min-w-0">
                         <p className="truncate text-xs font-semibold">{entry.label}</p>
-                        <p className="truncate text-[0.6875rem] opacity-70">{entry.description}</p>
+                        <p className="truncate text-label opacity-70">{entry.description}</p>
                       </div>
                       <div className={cn(
                         'ml-auto h-4 w-4 shrink-0 rounded-full border-2 transition',
@@ -365,7 +365,7 @@ export const AnalyticsWidgetGrid = ({
                         onClick={() => onDeleteCustomWidget(entry.id)}
                         aria-label={`Delete ${entry.label} widget`}
                         title="Delete custom widget"
-                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition hover:border-destructive/40 hover:text-destructive"
+                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-e-1 transition hover:border-destructive/40 hover:text-destructive"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
@@ -376,14 +376,14 @@ export const AnalyticsWidgetGrid = ({
               {onCreateWidget && (
                 <button
                   onClick={onCreateWidget}
-                  className="flex items-center gap-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 px-4 py-3 text-left text-primary transition hover:-translate-y-0.5 hover:bg-primary/10"
+                  className="flex items-center gap-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 px-4 py-3 text-left text-primary-ink transition hover:-translate-y-0.5 hover:bg-primary/10"
                 >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/15">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/20">
                     <Plus className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold">Create custom widget</p>
-                    <p className="truncate text-[0.6875rem] opacity-70">Count anything, your way</p>
+                    <p className="truncate text-label opacity-70">Count anything, your way</p>
                   </div>
                 </button>
               )}
@@ -450,8 +450,8 @@ export const AnalyticsWidget = ({
       onDrop={() => dragHandlers?.onDrop(id)}
       onDragEnd={() => dragHandlers?.onDragEnd()}
       className={cn(
-        'surface-card surface-card--static flex flex-col gap-4 transition-shadow duration-200',
-        isDragOver && 'ring-2 ring-primary ring-offset-2 shadow-lg scale-[1.01]',
+        'surface-card flex flex-col gap-4 transition-shadow duration-200',
+        isDragOver && 'ring-2 ring-primary ring-offset-2 shadow-e-3 scale-[1.01]',
         size === 'wide' && 'md:col-span-2',
         className
       )}
@@ -465,7 +465,7 @@ export const AnalyticsWidget = ({
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10">
-            <Icon className="h-4 w-4 text-primary" />
+            <Icon className="h-4 w-4 text-primary-ink" />
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">{title}</p>

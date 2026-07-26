@@ -17,10 +17,10 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
     <div className="space-y-5">
       {/* Programme type */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Programme Type</p>
+        <p className="eyebrow">Programme Type</p>
         <div className="flex h-6 overflow-hidden rounded-xl border border-border/50">
           <button
-            className="flex h-full items-center justify-center bg-violet-500/70 text-[0.6875rem] font-bold text-white transition-all duration-700 hover:bg-violet-500/90 hover:brightness-110"
+            className="flex h-full items-center justify-center bg-feature text-label font-bold text-feature-foreground transition-all duration-700 hover:bg-feature/90 hover:brightness-110"
             style={{ width: `${ibPct}%` }}
             onClick={() => onNavigateProgramme?.('IB')}
             title={`View IB students (${programmeBreakdown.ib})`}
@@ -28,7 +28,7 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
             {ibPct > 10 ? `IB ${ibPct}%` : ''}
           </button>
           <button
-            className="flex h-full items-center justify-center bg-sky-500/70 text-[0.6875rem] font-bold text-white transition-all duration-700 hover:bg-sky-500/90 hover:brightness-110"
+            className="flex h-full items-center justify-center bg-info text-label font-bold text-info-foreground transition-all duration-700 hover:bg-info/90 hover:brightness-110"
             style={{ width: `${aLevelPct}%` }}
             onClick={() => onNavigateProgramme?.('A_LEVEL')}
             title={`View A-Level students (${programmeBreakdown.aLevel})`}
@@ -41,14 +41,14 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
             onClick={() => onNavigateProgramme?.('IB')}
             className="flex items-center gap-1.5 hover:text-foreground transition"
           >
-            <span className="h-2.5 w-2.5 rounded-sm bg-violet-500/70" />
+            <span className="h-2.5 w-2.5 rounded-sm bg-feature" />
             IB — {programmeBreakdown.ib} students
           </button>
           <button
             onClick={() => onNavigateProgramme?.('A_LEVEL')}
             className="flex items-center gap-1.5 hover:text-foreground transition"
           >
-            <span className="h-2.5 w-2.5 rounded-sm bg-sky-500/70" />
+            <span className="h-2.5 w-2.5 rounded-sm bg-info" />
             A-Level — {programmeBreakdown.aLevel} students
           </button>
         </div>
@@ -56,7 +56,7 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
 
       {/* Field distribution */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Fields of Interest</p>
+        <p className="eyebrow">Fields of Interest</p>
         <div className="space-y-1.5">
           {fieldDistribution.slice(0, 6).map(({ key, label, count }) => (
             <button
@@ -75,7 +75,7 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
                 <span className="text-xs text-muted-foreground group-hover:text-foreground group-focus-within:text-foreground transition">{label}</span>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-semibold text-foreground">{count}</span>
-                  <span className="text-[0.625rem] text-primary opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition font-medium">View →</span>
+                  <span className="text-label text-primary-ink opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition font-medium">View →</span>
                 </div>
               </div>
             </button>

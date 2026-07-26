@@ -171,6 +171,23 @@ const config: Config = {
         "3xl": "calc(var(--radius) + 14px)", /* 24px */
         "4xl": "calc(var(--radius) + 18px)", /* 28px */
       },
+      // Colour opacity modifiers (`bg-primary/15`) are generated from THIS scale, and
+      // Tailwind emits nothing at all for a value that isn't in it — no error, no
+      // warning, just a class that does nothing. The default scale is
+      // 0/5/10/20/25/30/40/50/60/70/75/80/90/95/100, and the app had accumulated 68
+      // uses of /3, /8, /15, /45 and /85 across 26 files — including ui/button.tsx,
+      // navbar.tsx and the landing hero — every one of them silently dead.
+      //
+      // Declaring them here fixes all 68 at once and preserves what each author
+      // actually intended, which snapping them to the nearest legal step would not.
+      // If you reach for a new fractional step, add it here or it won't render.
+      opacity: {
+        3: '0.03',
+        8: '0.08',
+        15: '0.15',
+        45: '0.45',
+        85: '0.85',
+      },
       // Named layers, so "which z-index?" stops being a guess. The chat panel used
       // to sit at z-[60] and paint over modals pinned at z-50.
       zIndex: {

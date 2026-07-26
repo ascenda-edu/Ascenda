@@ -10,12 +10,15 @@ import { stagger, cardFade } from '@/lib/motion';
 import type { ApplicationStatus, ApplicationPlatform, EnrichedApplication } from '@/lib/counsellor/types';
 import { STAGE_COLORS } from '@/lib/counsellor/stage-colors';
 
+// Platform is CATEGORICAL, not status — an OUAC application isn't "urgent" because
+// it used to be rose. These are the five categorical series slots (see
+// _components/chart-palette.ts): the tint carries identity, the label wears ink.
 const PLATFORM_COLORS: Record<string, string> = {
-  UCAS: 'bg-primary/10 text-primary',
-  'Common App': 'bg-emerald-500/10 text-emerald-600',
-  Direct: 'bg-amber-500/10 text-amber-600',
-  Coalition: 'bg-sky-500/10 text-sky-600',
-  OUAC: 'bg-rose-500/10 text-rose-600',
+  UCAS: 'bg-series-1/20 text-foreground',
+  'Common App': 'bg-series-2/20 text-foreground',
+  Direct: 'bg-series-3/20 text-foreground',
+  Coalition: 'bg-series-4/20 text-foreground',
+  OUAC: 'bg-series-5/20 text-foreground',
 };
 
 const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
@@ -105,7 +108,7 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
           placeholder="Search student..."
           value={searchStudent}
           onChange={(e) => setSearchStudent(e.target.value)}
-          className="rounded-full border border-border bg-background px-3 py-1.5 text-xs placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring w-40"
+          className="form-input w-40 rounded-full px-3 py-1.5 text-xs"
         />
 
         {platforms.map((p) => (
@@ -128,7 +131,7 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
               <div key={status} className="space-y-3">
                 <div className="flex items-center gap-2">
                   <h3 className={cn('text-sm font-semibold', cfg.text)}>{cfg.label}</h3>
-                  <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-bold', cfg.bg, cfg.text)}>
+                  <span className={cn('rounded-full px-2 py-0.5 text-label font-bold', cfg.bg, cfg.text)}>
                     {studentGroups.length} student{studentGroups.length !== 1 ? 's' : ''}
                   </span>
                 </div>
@@ -147,9 +150,9 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
                             </div>
                             <div className="mt-1.5 space-y-0.5">
                               {apps.map((app) => (
-                                <div key={`${app.university}-${app.program}`} className="flex items-center gap-1.5 text-[0.6875rem]">
+                                <div key={`${app.university}-${app.program}`} className="flex items-center gap-1.5 text-label">
                                   <span className="truncate text-muted-foreground">{app.university}</span>
-                                  <span className={cn('shrink-0 rounded-full px-1.5 py-0 text-[0.5625rem] font-semibold', PLATFORM_COLORS[app.platform] ?? 'bg-muted/50 text-muted-foreground')}>{app.platform}</span>
+                                  <span className={cn('shrink-0 rounded-full px-1.5 py-0 text-label font-semibold', PLATFORM_COLORS[app.platform] ?? 'bg-muted/50 text-muted-foreground')}>{app.platform}</span>
                                 </div>
                               ))}
                             </div>
@@ -157,7 +160,7 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
                           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground shrink-0 mt-1 ml-2" />
                         </div>
                         {apps.length > 1 && (
-                          <p className="mt-1.5 text-[0.625rem] text-muted-foreground">{apps.length} applications</p>
+                          <p className="mt-1.5 text-label text-muted-foreground">{apps.length} applications</p>
                         )}
                       </Link>
                     </motion.div>
@@ -178,12 +181,12 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th scope="col" className="text-left py-2 pr-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Student</th>
-                <th scope="col" className="text-left py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">University</th>
-                <th scope="col" className="text-left py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Programme</th>
-                <th scope="col" className="text-center py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Platform</th>
-                <th scope="col" className="text-center py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Status</th>
-                <th scope="col" className="text-left py-2 pl-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Deadline</th>
+                <th scope="col" className="eyebrow text-left py-2 pr-3">Student</th>
+                <th scope="col" className="eyebrow text-left py-2 px-3">University</th>
+                <th scope="col" className="eyebrow text-left py-2 px-3">Programme</th>
+                <th scope="col" className="eyebrow text-center py-2 px-3">Platform</th>
+                <th scope="col" className="eyebrow text-center py-2 px-3">Status</th>
+                <th scope="col" className="eyebrow text-left py-2 pl-3">Deadline</th>
               </tr>
             </thead>
             <tbody>
@@ -192,14 +195,14 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
                 return (
                   <tr key={`${app.studentId}-${app.university}-${app.program}`} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                     <td className="py-2.5 pr-3">
-                      <Link href={`/counsellor/students/${app.studentId}`} className="font-medium text-foreground hover:text-primary">
+                      <Link href={`/counsellor/students/${app.studentId}`} className="font-medium text-foreground hover:text-primary-ink">
                         <span role="img" aria-label={`${app.studentName}'s flag`}>{app.flagEmoji}</span> {app.studentName}
                       </Link>
                     </td>
                     <td className="py-2.5 px-3 text-muted-foreground">{app.university}</td>
                     <td className="py-2.5 px-3 text-xs text-muted-foreground">{app.program}</td>
                     <td className="py-2.5 px-3 text-center">
-                      <span className={cn('rounded-full px-2.5 py-0.5 text-[0.625rem] font-semibold', PLATFORM_COLORS[app.platform] ?? 'bg-muted/50 text-muted-foreground')}>{app.platform}</span>
+                      <span className={cn('rounded-full px-2.5 py-0.5 text-label font-semibold', PLATFORM_COLORS[app.platform] ?? 'bg-muted/50 text-muted-foreground')}>{app.platform}</span>
                     </td>
                     <td className="py-2.5 px-3 text-center">
                       <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold', cfg.bg, cfg.text)}>{cfg.label}</span>

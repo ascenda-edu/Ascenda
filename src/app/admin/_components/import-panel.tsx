@@ -78,9 +78,9 @@ export const ImportPanel = () => {
   };
 
   return (
-    <div className="space-y-4 rounded-[28px] border border-border bg-card p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-colors">
+    <div className="space-y-4 rounded-4xl border border-border bg-card p-6 shadow-e-3 transition-colors">
       <div className="space-y-2">
-        <h2 className="text-2xl font-semibold">Import catalog data</h2>
+        <h2 className="font-heading text-2xl font-semibold tracking-tight text-foreground">Import catalog data</h2>
         <p className="text-sm text-muted-foreground">
           Upload CSV exports to refresh the universities, programs, requirements, or deadlines catalog.
         </p>
@@ -123,7 +123,7 @@ export const ImportPanel = () => {
         </div>
       )}
       {error ? (
-        <p className="text-xs text-red-500" role="alert">
+        <p className="text-xs text-destructive" role="alert">
           {error}
         </p>
       ) : null}

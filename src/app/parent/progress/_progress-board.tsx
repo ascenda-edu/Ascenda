@@ -4,16 +4,30 @@ import { motion } from 'framer-motion';
 import { ClipboardCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
+import {
+  APPLICATION_STATUS_VISUAL,
+  TIER_VISUAL,
+  type CategoryVisual,
+  type FitTier,
+} from '@/lib/theme/categories';
 import type { ChildApplication } from '@/lib/parent/types';
 
 // Read-only mirror of the student applications board — same tier/status tone
 // families as components/applications/application-list.tsx, minus every
 // action affordance.
+//
+// Tone comes from lib/theme/categories (TIER_VISUAL / APPLICATION_STATUS_VISUAL),
+// the single source of truth; only the label→key mappings live here, because the
+// parent payload spells the safety tier 'Safe' and adds an 'enrolled' status.
+const TIER_KEY: Record<string, FitTier> = {
+  Reach: 'reach',
+  Match: 'match',
+  Safe: 'safety',
+};
 
-const TIER_STYLES: Record<string, string> = {
-  Reach: 'bg-rose-500/10 text-rose-600 dark:text-rose-300',
-  Match: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
-  Safe: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+const tierChip = (label: string): string | undefined => {
+  const key = TIER_KEY[label];
+  return key ? TIER_VISUAL[key].chip : undefined;
 };
 
 const STATUS_LABELS: Record<ChildApplication['status'], string> = {
@@ -24,12 +38,11 @@ const STATUS_LABELS: Record<ChildApplication['status'], string> = {
   enrolled: 'Enrolled',
 };
 
-const STATUS_STYLES: Record<ChildApplication['status'], string> = {
-  planning: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
-  in_progress: 'bg-sky-500/10 text-sky-700 dark:text-sky-300',
-  submitted: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-  decision: 'bg-violet-500/10 text-violet-700 dark:text-violet-300',
-  enrolled: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+const STATUS_VISUAL: Record<ChildApplication['status'], CategoryVisual> = {
+  ...APPLICATION_STATUS_VISUAL,
+  // No 'enrolled' tone exists app-wide; it reads as a settled/positive state, the
+  // same as submitted.
+  enrolled: APPLICATION_STATUS_VISUAL.submitted,
 };
 
 // Sort working applications first, settled ones last (student board order).
@@ -77,11 +90,7 @@ export function ProgressBoard({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="truncate text-sm font-semibold text-foreground">{app.university}</p>
-                  {app.tier ? (
-                    <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-semibold', TIER_STYLES[app.tier])}>
-                      {app.tier}
-                    </span>
-                  ) : null}
+                  {app.tier ? <span className={tierChip(app.tier)}>{app.tier}</span> : null}
                 </div>
                 <p className="truncate text-xs text-muted-foreground">
                   {app.program} · {app.country}
@@ -93,9 +102,9 @@ export function ProgressBoard({
                     className={cn(
                       'text-xs font-medium',
                       app.daysUntilDeadline < 0
-                        ? 'text-rose-600 dark:text-rose-300'
+                        ? 'text-danger'
                         : app.daysUntilDeadline <= 7
-                          ? 'text-amber-700 dark:text-amber-300'
+                          ? 'text-warning'
                           : 'text-muted-foreground'
                     )}
                   >
@@ -106,9 +115,7 @@ export function ProgressBoard({
                         : `${app.daysUntilDeadline}d to deadline`}
                   </span>
                 ) : null}
-                <span className={cn('rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold', STATUS_STYLES[app.status])}>
-                  {STATUS_LABELS[app.status]}
-                </span>
+                <span className={STATUS_VISUAL[app.status].chip}>{STATUS_LABELS[app.status]}</span>
               </div>
             </div>
 
@@ -118,12 +125,12 @@ export function ProgressBoard({
                   <div
                     className={cn(
                       'h-full rounded-full transition-all',
-                      progress >= 75 ? 'bg-emerald-500/80' : progress >= 40 ? 'bg-sky-500/80' : 'bg-amber-500/70'
+                      progress >= 75 ? 'bg-success' : progress >= 40 ? 'bg-info' : 'bg-warning'
                     )}
                     style={{ width: `${progress}%` }}
                   />
                 </div>
-                <span className="shrink-0 text-[0.6875rem] text-muted-foreground">
+                <span className="shrink-0 text-label text-muted-foreground">
                   {app.tasksTotal - app.tasksOpen}/{app.tasksTotal} tasks done
                 </span>
               </div>

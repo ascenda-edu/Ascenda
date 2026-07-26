@@ -16,7 +16,7 @@ export default function ParentError({
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center text-foreground">
-      <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Parent error</p>
+      <p className="eyebrow">Parent error</p>
       <h1 className="text-2xl font-semibold text-foreground">Unable to load this view.</h1>
       <p className="max-w-md text-sm text-muted-foreground">
         This is usually temporary. Try refreshing or click below.
