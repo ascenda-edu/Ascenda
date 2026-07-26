@@ -111,7 +111,7 @@ export function PinnedStage({
     });
     const p = useSpring(latched, SCENE_SPRING);
     const ready = useMotionReady();
-    const { jumpBy, isGliding } = useSmoothScroll();
+    const { shiftBy, canShiftSmoothly, isGliding } = useSmoothScroll();
     const { scrollY: pageScrollY } = usePageScroll();
 
     const [pinned, setPinned] = useState(false);
@@ -121,8 +121,11 @@ export function PinnedStage({
     const compensatedRef = useRef(false);
     /** Whether this settle needs a scroll correction — see trySettle. */
     const compensateRef = useRef(false);
-    /** Where the section's bottom edge sat the frame before the swap. */
+    /** Where the section's bottom edge sat the frame before the swap... */
     const bottomRef = useRef(0);
+    /** ...and the scroll position it was measured at, so real scrolling that happens
+     * between the measurement and the swap can be subtracted back out. */
+    const bottomAtScrollRef = useRef(0);
 
     // `ready` is false on the server and on the first client render, so the settled
     // tree is the SSR HTML and hydration cannot mismatch. Reduced-motion users
@@ -183,13 +186,13 @@ export function PinnedStage({
         const node = ref.current;
         if (!node) return;
         const rect = node.getBoundingClientRect();
-        // Off-screen in EITHER direction, with half a screen of margin. Downward is
-        // the usual exit; upward matters just as much, because a visitor who turns
-        // back mid-stage would otherwise leave the pin armed and have to scroll its
-        // whole travel again on the next way down — the forced-scroll-once rule cuts
-        // both ways. The margin means a small nudge back the way they came doesn't
-        // immediately reveal the swapped-in tree.
-        const margin = window.innerHeight * 0.5;
+        // Off-screen in EITHER direction, with a margin. Downward is the usual exit;
+        // upward matters just as much, because a visitor who turns back mid-stage
+        // would otherwise leave the pin armed and have to scroll its whole travel
+        // again on the next way down — the forced-scroll-once rule cuts both ways.
+        // The margin means a small nudge back the way they came doesn't immediately
+        // reveal the swapped-in tree.
+        const margin = window.innerHeight * 0.25;
         const goneAbove = rect.bottom <= -margin;
         const goneBelow = rect.top >= window.innerHeight + margin;
         if (!goneAbove && !goneBelow) return;
@@ -201,10 +204,10 @@ export function PinnedStage({
             if (goneBelow) latched.set(0);
             return;
         }
-        // Never mid-glide: the compensation below goes through `jumpBy`, which
-        // replaces an in-flight Lenis animation and would strand a nav click short
-        // of its anchor.
-        if (isGliding()) {
+        // Only a concern on the fallback path. `shiftBy` moves a glide's endpoints
+        // along with everything else, so the glide still lands where it was aimed;
+        // `jumpBy` replaces it outright and strands the nav click short of its anchor.
+        if (isGliding() && !canShiftSmoothly()) {
             // A timer, not just "wait for the next scroll event". A wheel can abandon
             // a Lenis glide without completing it, and if the page then comes to rest
             // no further scroll event ever arrives — leaving the pin armed and two
@@ -220,37 +223,45 @@ export function PinnedStage({
         }
         settledRef.current = true;
         bottomRef.current = rect.bottom;
+        bottomAtScrollRef.current = window.scrollY;
         // Only an exit above the viewport moves anything the visitor can see: the
         // shrink happens over their head, so the page beneath slides up and has to be
         // corrected. Exiting below, everything that moves is already off-screen under
         // them, so compensating would itself be the jump.
         compensateRef.current = goneAbove;
         setPinned(false);
-    }, [pinned, isGliding, latched]);
+    }, [pinned, isGliding, canShiftSmoothly, latched]);
 
-    // Debounced, and this is the whole difference between a settle you never notice
-    // and one that feels like the page hitting a wall. The swap removes ~1.5 screens
-    // of document and corrects the scroll position to match; that correction goes
-    // through Lenis's `immediate` mode, which resets its animation state and throws
-    // away whatever momentum a fling still had. Doing that mid-scroll reads as a hard
-    // stop and a stutter back up to speed, even though the content never moves.
+    // Settle the moment the section is out of the way — the pin's whole extra height
+    // goes with it, so the second time anyone passes this section it is an ordinary
+    // short one. Waiting is what made it feel endless: the height stays in the
+    // document until the swap happens, so any delay is scrolling the visitor has to
+    // do through a section they have already watched.
     //
-    // So: only settle once scrolling has actually stopped. Nothing is waiting on it —
-    // the section is half a screen off-screen by then — and at rest there is no
-    // momentum to destroy and no velocity to interrupt.
+    // Doing it mid-scroll is only safe because `shiftBy` moves Lenis's whole frame of
+    // reference instead of commanding a new scroll — position, target and in-flight
+    // animation all by the same delta — so the fling keeps its momentum and a glide
+    // keeps its destination. On the fallback path (no Lenis, or internals this build
+    // cannot reach) the correction still resets the animation, so there the settle
+    // waits for the scroll to stop rather than snatching it away mid-fling.
     //
-    // It also rides page scrollY rather than `raw`: MotionValue only notifies on
-    // change, and once the visitor is past the section its progress sits clamped at
-    // 1, so the stretch where the section finally clears the viewport is silent.
+    // It rides page scrollY rather than `raw`: MotionValue only notifies on change,
+    // and once the visitor is past the section its progress sits clamped at 1, so the
+    // stretch where the section finally clears the viewport is silent.
     const idleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     useMotionValueEvent(pageScrollY, 'change', () => {
         if (settledRef.current) return;
+        if (canShiftSmoothly()) {
+            trySettle();
+            return;
+        }
         if (idleRef.current) clearTimeout(idleRef.current);
         idleRef.current = setTimeout(trySettle, 180);
     });
     useEffect(
         () => () => {
             if (retryRef.current) clearTimeout(retryRef.current);
+            if (idleRef.current) clearTimeout(idleRef.current);
         },
         [],
     );
@@ -280,11 +291,21 @@ export function PinnedStage({
         // same on the native path. Measuring the section's own edge against where it
         // sat a frame ago covers every one of those cases with one number.
         if (compensateRef.current) {
-            const residual = node.getBoundingClientRect().bottom - bottomRef.current;
-            if (Math.abs(residual) > 0.5) jumpBy(residual);
+            // Where the edge WOULD be now if only the visitor's own scrolling had
+            // moved it. React commits a frame or two after the scroll event that
+            // triggered the settle, and mid-glide that gap is ~100px of real
+            // scrolling — charging it to the layout change dragged every nav click
+            // that crossed this section about that far short of its anchor.
+            const scrolled = window.scrollY - bottomAtScrollRef.current;
+            const expected = bottomRef.current - scrolled;
+            const residual = node.getBoundingClientRect().bottom - expected;
+            // shiftBy, not jumpBy: this now runs mid-scroll, and the whole point is
+            // that the visitor's fling survives the correction. It falls back to a
+            // plain jump on its own where it has to.
+            if (Math.abs(residual) > 0.5) shiftBy(residual);
         }
         window.dispatchEvent(new Event(LAYOUT_SHIFT_EVENT));
-    }, [pinned, jumpBy]);
+    }, [pinned, shiftBy]);
 
     return (
         <section

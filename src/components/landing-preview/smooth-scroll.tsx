@@ -39,7 +39,39 @@ interface SmoothScrollApi {
      * + focus) never runs.
      */
     isGliding: () => boolean;
+    /**
+     * Like `jumpBy`, but shifts Lenis's whole frame of reference instead of
+     * commanding a new scroll: the rendered position, the target it is lerping
+     * toward and any animation in flight all move together. Nothing is reset, so a
+     * fling keeps coasting and a glide keeps its destination — which is what makes
+     * it safe to correct a layout change WHILE the visitor is scrolling.
+     *
+     * Returns false if it had to fall back (no Lenis, or a build whose internals
+     * this cannot reach), in which case the caller got `jumpBy` behaviour.
+     */
+    shiftBy: (delta: number) => boolean;
+    /** Whether `shiftBy` can do the momentum-preserving thing right now. */
+    canShiftSmoothly: () => boolean;
 }
+
+/**
+ * The bits of Lenis's instance state a frame shift has to move together. All are
+ * plain public fields on the instance (lenis 1.3.25, pinned exactly in
+ * package.json), but they are not part of its documented API, so every use is
+ * feature-detected and falls back to a plain jump.
+ */
+interface LenisFrame {
+    animatedScroll: number;
+    targetScroll: number;
+    animate?: { isRunning?: boolean; from?: number; to?: number; value?: number };
+}
+
+const lenisFrame = (lenis: Lenis | null): LenisFrame | null => {
+    const frame = lenis as unknown as LenisFrame | null;
+    if (!frame) return null;
+    if (typeof frame.animatedScroll !== 'number' || typeof frame.targetScroll !== 'number') return null;
+    return frame;
+};
 
 const SmoothScrollContext = createContext<SmoothScrollApi>({
     scrollTo: () => false,
@@ -52,6 +84,11 @@ const SmoothScrollContext = createContext<SmoothScrollApi>({
     // No Lenis, so no glide to collide with: native anchor scrolling is not
     // something `jumpBy` can interrupt.
     isGliding: () => false,
+    shiftBy: (delta) => {
+        window.scrollBy(0, delta);
+        return false;
+    },
+    canShiftSmoothly: () => false,
 });
 
 export function useSmoothScroll(): SmoothScrollApi {
@@ -294,6 +331,36 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
                 // where it is instead of coasting on. Unavoidable while the fix has
                 // to land in one frame, and only ever felt on the frame a pin settles.
                 lenis.scrollTo(lenis.actualScroll + delta, { immediate: true, force: true });
+                return true;
+            },
+            canShiftSmoothly: () => lenisFrame(lenisRef.current) !== null,
+            shiftBy: (delta) => {
+                const lenis = lenisRef.current;
+                const frame = lenisFrame(lenis);
+                if (!lenis || !frame) {
+                    window.scrollBy(0, delta);
+                    return false;
+                }
+
+                // Move the whole frame of reference rather than issuing a new scroll.
+                // `jumpBy` goes through scrollTo({immediate}), which calls Lenis's
+                // reset() — that stops the animation and zeroes velocity, so a fling
+                // dies on the spot. Here the rendered position, the target it is
+                // lerping toward and the in-flight animation's endpoints all move by
+                // the same delta, which leaves every one of their DIFFERENCES intact:
+                // momentum, direction and a glide's remaining distance all survive.
+                frame.animatedScroll += delta;
+                frame.targetScroll += delta;
+                const anim = frame.animate;
+                if (anim?.isRunning) {
+                    if (typeof anim.from === 'number') anim.from += delta;
+                    if (typeof anim.to === 'number') anim.to += delta;
+                    if (typeof anim.value === 'number') anim.value += delta;
+                }
+                // Write the DOM in the same frame. Lenis would otherwise not paint the
+                // new position until its next rAF, which is one frame of the old
+                // scroll against the new layout — exactly the flash being avoided.
+                window.scrollTo(0, frame.animatedScroll);
                 return true;
             },
             isGliding: () => glidingRef.current,
