@@ -115,7 +115,7 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
         <input
           id="outcome-dashboard-search"
           type="text"
-          placeholder="Search student..."
+          placeholder="Search student…"
           value={filterStudent}
           onChange={(e) => setFilterStudent(e.target.value)}
           className="form-input w-44 rounded-full px-3 py-1.5 text-xs"

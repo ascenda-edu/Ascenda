@@ -183,7 +183,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
                 <circle cx="14" cy="14" r="11" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted/20" />
                 <circle cx="14" cy="14" r="11" fill="none" strokeWidth="2" strokeLinecap="round"
                   strokeDasharray={`${Math.min(ratio, 1) * 69.12} 69.12`}
-                  className={cn('transition-all duration-500', ratio < 0.8 ? 'stroke-success' : ratio < 0.95 ? 'stroke-warning' : 'stroke-danger')}
+                  className={cn('transition-[stroke-dasharray,stroke] duration-500', ratio < 0.8 ? 'stroke-success' : ratio < 0.95 ? 'stroke-warning' : 'stroke-danger')}
                 />
               </svg>
             </div>

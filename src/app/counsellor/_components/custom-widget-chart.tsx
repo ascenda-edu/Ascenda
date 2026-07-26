@@ -75,7 +75,7 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
               <div className="flex-1 rounded-xl bg-muted/50">
                 <div
                   className={cn(
-                    'group relative h-7 rounded-xl transition-all duration-700',
+                    'group relative h-7 rounded-xl transition-[width,background-color] duration-700',
                     colors.bar,
                     clickable && colors.barHover
                   )}
@@ -112,7 +112,7 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
                   // ring-2 ring-card is the 2px surface gap between segments. Adjacent
                   // ramp steps are only ~1.4:1 apart, so the gap — not the colour
                   // delta — is what keeps a monochrome stack readable. Don't remove it.
-                  'group relative flex min-w-0 items-center justify-center transition-all duration-700 first:rounded-l-2xl last:rounded-r-2xl ring-2 ring-card',
+                  'group relative flex min-w-0 items-center justify-center transition-[width,background-color] duration-700 first:rounded-l-2xl last:rounded-r-2xl ring-2 ring-card',
                   colors.bar,
                   interactive ? cn(colors.barHover, 'cursor-pointer') : 'cursor-default'
                 )}

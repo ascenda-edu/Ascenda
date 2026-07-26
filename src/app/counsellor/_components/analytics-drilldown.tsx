@@ -196,7 +196,7 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search students..."
+                    placeholder="Search students…"
                     className="form-input rounded-xl py-2.5 pl-9 pr-4"
                   />
                   {search && (

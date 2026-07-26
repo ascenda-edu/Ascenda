@@ -1396,7 +1396,7 @@ export const StudentIntakeForm = ({
                   type="button"
                   onClick={() => goToStep(stepNum)}
                   className={cn(
-                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 text-sm',
+                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors duration-150 text-sm',
                     isCurrent
                       ? 'bg-primary/8 text-primary-ink font-semibold'
                       : isDone
@@ -1422,7 +1422,7 @@ export const StudentIntakeForm = ({
               type="button"
               onClick={() => goToStep(TOTAL_STEPS)}
               className={cn(
-                'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 text-sm',
+                'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors duration-150 text-sm',
                 currentStep === TOTAL_STEPS
                   ? 'bg-primary/8 text-primary-ink font-semibold'
                   : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
@@ -1441,7 +1441,7 @@ export const StudentIntakeForm = ({
               <button
                 type="button"
                 onClick={restoreSavedProfile}
-                className="w-full mt-2 py-2 px-3 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
+                className="w-full mt-2 py-2 px-3 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
               >
                 Restore last save
               </button>
@@ -1799,7 +1799,7 @@ export const StudentIntakeForm = ({
                         type="button"
                         disabled={subjects.length >= getMaxSubjects(programmeType)}
                         onClick={addSubject}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/8 text-primary-ink text-xs font-semibold hover:bg-primary/15 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/8 text-primary-ink text-xs font-semibold hover:bg-primary/15 transition-[background-color,opacity] disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <PlusCircle className="w-3.5 h-3.5" />
                         Add
@@ -1866,7 +1866,7 @@ export const StudentIntakeForm = ({
                           </div>
                           <div className="md:col-span-1 flex items-end justify-end md:justify-center pb-0.5">
                             <button type="button" onClick={() => removeSubject(i)}
-                              className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all">
+                              className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -2458,7 +2458,7 @@ export const StudentIntakeForm = ({
                     <div className="flex justify-center pt-2">
                       <a
                         href="/matches"
-                        className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-e-1 hover:bg-primary/90 transition-all"
+                        className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-e-1 hover:bg-primary/90 transition-colors"
                       >
                         Get me to my matches →
                       </a>

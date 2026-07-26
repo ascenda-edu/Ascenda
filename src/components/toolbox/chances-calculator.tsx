@@ -137,7 +137,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
 
         {/* Slider */}
         <div className="space-y-2">
-          <p className="text-label font-semibold text-muted-foreground">What if I score...</p>
+          <p className="text-label font-semibold text-muted-foreground">What if I score…</p>
           <div className="relative">
             <input
               type="range"

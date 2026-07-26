@@ -149,7 +149,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
           <button
             onClick={() => setShowFilters((f) => !f)}
             className={cn(
-              'flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all hover:-translate-y-0.5',
+              'flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-[transform,color,background-color,border-color] hover:-translate-y-0.5',
               showFilters || hasFilters
                 ? 'border-primary/30 bg-primary/5 text-primary-ink'
                 : 'border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50'

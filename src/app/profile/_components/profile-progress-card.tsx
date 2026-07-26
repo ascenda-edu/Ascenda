@@ -94,7 +94,7 @@ export function ProfileProgressCard({
               key={step.key}
               href={`/profile/wizard?step=${step.key}`}
               className={cn(
-                'group surface-subcard relative overflow-hidden px-4 py-4 transition-all duration-300 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                'group surface-subcard relative overflow-hidden px-4 py-4 transition-transform duration-300 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                 complete
                   ? 'border-success/25 bg-success-subtle'
                   : ''

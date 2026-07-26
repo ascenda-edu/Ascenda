@@ -23,7 +23,7 @@ export const MatchDistribution = ({ tiers, activeTier, onSelectTier, onNavigateT
   return (
     <div className="space-y-4">
       {/* Stacked bar */}
-      <div className="flex h-8 overflow-hidden rounded-2xl border border-border/50 transition-all">
+      <div className="flex h-8 overflow-hidden rounded-2xl border border-border/50">
         {TIERS.map(({ key, color }) => {
           const pct = (tiers[key] / total) * 100;
           const isSelected = activeTier === key;
@@ -38,7 +38,7 @@ export const MatchDistribution = ({ tiers, activeTier, onSelectTier, onNavigateT
               aria-label={`${TIERS.find(t => t.key === key)?.label}: ${tiers[key]} students${onSelectTier ? ' — filter by this tier' : ''}`}
               className={cn(
                 color,
-                "transition-all duration-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+                "transition-[width,opacity,filter] duration-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                 onSelectTier && "cursor-pointer",
                 isAnythingSelected && !isSelected && "opacity-20 grayscale-[0.8]"
               )}
@@ -61,7 +61,7 @@ export const MatchDistribution = ({ tiers, activeTier, onSelectTier, onNavigateT
             <div
               key={key}
               className={cn(
-                "relative rounded-2xl border transition-all",
+                "relative rounded-2xl border transition-[transform,background-color,border-color,box-shadow,opacity,filter]",
                 onSelectTier && "hover:scale-[1.02]",
                 isSelected ? "border-primary bg-primary/5 shadow-e-1" : "border-border/50",
                 light,

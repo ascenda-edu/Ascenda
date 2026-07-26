@@ -186,7 +186,7 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             aria-label="Search documents by student or document name"
-            placeholder="Search by student or document..."
+            placeholder="Search by student or document…"
             className="form-input rounded-full py-2 pl-9 pr-4"
           />
         </div>

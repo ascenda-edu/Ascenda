@@ -122,7 +122,7 @@ export function NextUpCard({ items }: { items: HubFocusItem[] }) {
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">{item.detail}</p>
                   </div>
                   <ArrowRight
-                    className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30 transition-all group-hover:translate-x-0.5 group-hover:text-primary-ink/60"
+                    className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-primary-ink/60"
                     aria-hidden
                   />
                 </Link>

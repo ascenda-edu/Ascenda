@@ -115,7 +115,7 @@ export const TaskList = ({ title, tasks, onToggle }: TaskListProps) => {
                   <div className="min-w-0 flex-1">
                     <p
                       className={cn(
-                        'text-sm font-semibold text-foreground transition-all',
+                        'text-sm font-semibold text-foreground transition-opacity',
                         isDone && 'line-through opacity-60'
                       )}
                     >

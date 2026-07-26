@@ -296,7 +296,7 @@ export function CommandPalette() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-card shadow-e-4"
+            className="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-card shadow-e-4 focus-within:border-primary"
           >
             <div className="flex items-center gap-3 border-b border-border px-4">
               <Search className="h-4 w-4 text-muted-foreground" aria-hidden />

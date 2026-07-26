@@ -128,7 +128,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
                 onClick={() => setSelectedTier(tier)}
                 aria-pressed={selectedTier === tier}
                 className={cn(
-                  'rounded-xl px-3 py-1.5 text-xs font-medium capitalize transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                  'rounded-xl px-3 py-1.5 text-xs font-medium capitalize transition-[color,background-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                   selectedTier === tier
                     ? 'bg-primary text-primary-foreground shadow-e-2'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -143,7 +143,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
               onClick={() => setViewMode('grid')}
               aria-pressed={viewMode === 'grid'}
               className={cn(
-                'flex h-8 w-8 items-center justify-center rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                'flex h-8 w-8 items-center justify-center rounded-xl transition-[color,background-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                 viewMode === 'grid'
                   ? 'bg-primary/10 text-primary-ink shadow-e-1'
                   : 'text-muted-foreground hover:text-foreground'
@@ -156,7 +156,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
               onClick={() => setViewMode('list')}
               aria-pressed={viewMode === 'list'}
               className={cn(
-                'flex h-8 w-8 items-center justify-center rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                'flex h-8 w-8 items-center justify-center rounded-xl transition-[color,background-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                 viewMode === 'list'
                   ? 'bg-primary/10 text-primary-ink shadow-e-1'
                   : 'text-muted-foreground hover:text-foreground'
@@ -255,7 +255,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
                       <div className="flex justify-center pt-4">
                         <button
                           onClick={() => handleShowMore(tier)}
-                          className="group flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-e-2 transition-all hover:-translate-y-0.5 hover:shadow-e-3"
+                          className="group flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-e-2 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-e-3"
                         >
                           Show {Math.min(EXPAND_STEP, totalDeduped - tierLimits[tier])} more {tier.toLowerCase()} programs
                           <ChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />

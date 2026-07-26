@@ -33,7 +33,7 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
         <button
           onClick={() => onSelect?.('IB')}
           aria-label={`IB: ${breakdown.ib} students, ${ibPct}% of the cohort. Click to explore.`}
-          className="group relative flex h-full items-center justify-center rounded-l-2xl bg-series-1 transition-all hover:bg-series-1/85 cursor-pointer"
+          className="group relative flex h-full items-center justify-center rounded-l-2xl bg-series-1 transition-[width,background-color] hover:bg-series-1/85 cursor-pointer"
           style={{ width: `${ibPct}%` }}
         >
           <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
@@ -43,7 +43,7 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
         <button
           onClick={() => onSelect?.('A_LEVEL')}
           aria-label={`A-Level: ${breakdown.aLevel} students, ${aLevelPct}% of the cohort. Click to explore.`}
-          className="group relative z-raised flex h-full items-center justify-center rounded-r-2xl bg-series-4 ring-2 ring-card transition-all hover:bg-series-4/85 cursor-pointer"
+          className="group relative z-raised flex h-full items-center justify-center rounded-r-2xl bg-series-4 ring-2 ring-card transition-[width,background-color] hover:bg-series-4/85 cursor-pointer"
           style={{ width: `${aLevelPct}%` }}
         >
           <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
@@ -108,7 +108,7 @@ export const IbDistribution = ({ buckets, onSelect }: IbDistributionProps) => {
             <div className="flex-1 rounded-xl bg-muted/50">
               <div
                 className={cn(
-                  'group relative h-7 rounded-xl bg-primary transition-all duration-700',
+                  'group relative h-7 rounded-xl bg-primary transition-[width,background-color] duration-700',
                   count > 0 && 'hover:bg-primary/85'
                 )}
                 style={{ width: `${(count / maxCount) * 100}%`, minWidth: count > 0 ? '0.5rem' : '0' }}
@@ -160,7 +160,7 @@ export const FieldChart = ({ fields, onSelect }: FieldChartProps) => {
             <div className="flex-1 rounded-xl bg-muted/50">
               <div
                 className={cn(
-                  'group relative h-7 rounded-xl transition-all duration-700',
+                  'group relative h-7 rounded-xl transition-[width,background-color] duration-700',
                   CHART_ACCENT.bar,
                   count > 0 && CHART_ACCENT.barHover
                 )}
@@ -270,7 +270,7 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
               </div>
               <div className="flex justify-center">
                 <div
-                  className={cn('group relative flex h-8 items-center justify-center rounded-xl text-xs font-bold text-foreground transition-all', color, count > 0 && hoverColor)}
+                  className={cn('group relative flex h-8 items-center justify-center rounded-xl text-xs font-bold text-foreground transition-[width,background-color]', color, count > 0 && hoverColor)}
                   style={{ width: `${width}%` }}
                 >
                   {count}
@@ -325,7 +325,7 @@ export const MatchTierSummary = ({ tiers, onSelect }: MatchTierSummaryProps) => 
               // These three are tone tokens (danger/warning/success), so they're
               // separated by hue rather than lightness — but the 2px surface gap is
               // the house rule for every segmented bar, so it applies here too.
-              className={cn(color, hoverColor, 'group relative flex items-center justify-center transition-all duration-700 cursor-pointer first:rounded-l-2xl last:rounded-r-2xl ring-2 ring-card')}
+              className={cn(color, hoverColor, 'group relative flex items-center justify-center transition-[width,background-color] duration-700 cursor-pointer first:rounded-l-2xl last:rounded-r-2xl ring-2 ring-card')}
               style={{ width: `${pct}%` }}
             >
               {/* Identity comes from the labelled cards below, not in-bar text. */}
@@ -394,7 +394,7 @@ export const CompletionBreakdown = ({ students, onSelect }: CompletionBreakdownP
             <div className="flex-1 rounded-xl bg-muted/50">
               <div
                 className={cn(
-                  'group relative h-7 rounded-xl transition-all duration-700',
+                  'group relative h-7 rounded-xl transition-[width,background-color] duration-700',
                   color,
                   count > 0 && hoverColor
                 )}

@@ -111,7 +111,7 @@ export function AtRiskPanel({ alerts }: AtRiskPanelProps) {
                     <p className="text-label text-muted-foreground/70 mt-0.5">{alert.suggestedAction}</p>
                   </div>
 
-                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-[color,transform] shrink-0" />
                 </Link>
               </motion.div>
             );

@@ -173,7 +173,7 @@ export function ParentThreadPanel({
         <input
           id="parent-thread-compose"
           type="text"
-          placeholder="Type a message to the counsellor..."
+          placeholder="Type a message to the counsellor…"
           value={composeText}
           onChange={(e) => setComposeText(e.target.value)}
           onKeyDown={(e) => {

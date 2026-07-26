@@ -69,7 +69,7 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
           <div className="flex items-center gap-2">
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-200 cursor-pointer"
             >
               <Home className="w-4 h-4" />
               Dashboard
@@ -77,7 +77,7 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
             <div className="w-px h-4 bg-border/50" />
             <Link
               href="/profile"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-200 cursor-pointer"
             >
               <User className="w-4 h-4" />
               Back to profile

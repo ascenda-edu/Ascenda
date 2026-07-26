@@ -153,7 +153,9 @@ export const PageHero = ({
                   made the H1 of every page in the app SMALLER than its own card
                   titles (h3 is 18px). A page title has to outrank the content
                   under it. Both tones get the same size; a heading is not a tone. */}
-              <h1 className="text-[1.375rem] font-semibold leading-snug text-foreground md:text-2xl">
+              {/* text-balance so a long page title doesn't leave a one-word widow
+                  on the second line. The landing hero does the same. */}
+              <h1 className="text-balance text-[1.375rem] font-semibold leading-snug text-foreground md:text-2xl">
                 {title}
               </h1>
               <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">

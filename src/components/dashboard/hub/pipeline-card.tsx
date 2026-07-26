@@ -50,7 +50,7 @@ export function PipelineCard({ stages }: { stages: PipelineStage[] }) {
             {active.map((stage) => (
               <div
                 key={stage.key}
-                className={cn('h-full rounded-full transition-all', STAGE_COLOR[stage.key]?.bar ?? 'bg-primary')}
+                className={cn('h-full rounded-full transition-[width]', STAGE_COLOR[stage.key]?.bar ?? 'bg-primary')}
                 style={{ width: `${Math.max((stage.count / total) * 100, 6)}%` }}
               />
             ))}

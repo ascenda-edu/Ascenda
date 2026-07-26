@@ -101,7 +101,7 @@ export function DeadlineNudges({ nudges }: DeadlineNudgesProps) {
                 animate="show"
                 exit="exit"
                 className={cn(
-                  'relative rounded-2xl border p-4 transition-all',
+                  'relative rounded-2xl border p-4 transition-colors',
                   cfg.border, cfg.bg
                 )}
               >

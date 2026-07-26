@@ -272,7 +272,7 @@ export function ThreadPane({
             Message limit reached — you can send again in {cooldownRemaining}s
           </p>
         )}
-        <div className="flex items-end gap-2 rounded-2xl border border-border bg-background px-3 py-1.5 transition-colors focus-within:border-primary/40">
+        <div className="flex items-end gap-2 rounded-2xl border border-border bg-background px-3 py-1.5 transition-[border-color,box-shadow] focus-within:border-primary focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background">
           <AutoResizeTextarea
             value={input}
             onChange={onInputChange}

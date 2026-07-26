@@ -156,7 +156,7 @@ export default async function StudentDetailPage(props: Props) {
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
                 <div
-                  className="h-1.5 rounded-full bg-warning transition-all"
+                  className="h-1.5 rounded-full bg-warning transition-[width]"
                   style={{ width: `${completionPct}%` }}
                 />
               </div>

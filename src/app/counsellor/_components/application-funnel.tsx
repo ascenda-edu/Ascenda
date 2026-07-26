@@ -42,7 +42,7 @@ export const ApplicationFunnel = ({ funnel, totalStudents, activeStage, onSelect
           <div
             key={key}
             className={cn(
-              "relative space-y-1 transition-all",
+              "relative space-y-1 transition-[transform,opacity,filter]",
               onSelectStage && "hover:opacity-80",
               isSelected ? "scale-[1.02]" : "opacity-60 grayscale-[0.5]"
             )}
@@ -75,11 +75,11 @@ export const ApplicationFunnel = ({ funnel, totalStudents, activeStage, onSelect
               </div>
             </div>
             <div className={cn(
-              "h-7 overflow-hidden rounded-xl border border-border/50 bg-muted/40 transition-all",
+              "h-7 overflow-hidden rounded-xl border border-border/50 bg-muted/40 transition-shadow",
               isSelected && active
             )}>
               <div
-                className={`flex h-full items-center rounded-xl border px-3 text-xs font-semibold transition-all duration-700 ${color} ${border} ${text}`}
+                className={`flex h-full items-center rounded-xl border px-3 text-xs font-semibold transition-[width] duration-700 ${color} ${border} ${text}`}
                 style={{ width: `${Math.max(barWidth, count > 0 ? 8 : 0)}%` }}
               >
                 {count > 0 && count}

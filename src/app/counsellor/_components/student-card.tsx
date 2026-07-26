@@ -172,7 +172,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
           <div
-            className={cn('h-1.5 rounded-full transition-all', completionColor)}
+            className={cn('h-1.5 rounded-full transition-[width]', completionColor)}
             style={{ width: `${student.profile.completionPct}%` }}
           />
         </div>

@@ -106,7 +106,7 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
         <input
           id="application-overview-search"
           type="text"
-          placeholder="Search student..."
+          placeholder="Search student…"
           value={searchStudent}
           onChange={(e) => setSearchStudent(e.target.value)}
           className="form-input w-40 rounded-full px-3 py-1.5 text-xs"

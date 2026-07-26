@@ -20,7 +20,7 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
         <p className="eyebrow">Programme Type</p>
         <div className="flex h-6 overflow-hidden rounded-xl border border-border/50">
           <button
-            className="flex h-full items-center justify-center bg-feature text-label font-bold text-feature-foreground transition-all duration-700 hover:bg-feature/90 hover:brightness-110"
+            className="flex h-full items-center justify-center bg-feature text-label font-bold text-feature-foreground transition-[width,background-color,filter] duration-700 hover:bg-feature/90 hover:brightness-110"
             style={{ width: `${ibPct}%` }}
             onClick={() => onNavigateProgramme?.('IB')}
             title={`View IB students (${programmeBreakdown.ib})`}
@@ -28,7 +28,7 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
             {ibPct > 10 ? `IB ${ibPct}%` : ''}
           </button>
           <button
-            className="flex h-full items-center justify-center bg-info text-label font-bold text-info-foreground transition-all duration-700 hover:bg-info/90 hover:brightness-110"
+            className="flex h-full items-center justify-center bg-info text-label font-bold text-info-foreground transition-[width,background-color,filter] duration-700 hover:bg-info/90 hover:brightness-110"
             style={{ width: `${aLevelPct}%` }}
             onClick={() => onNavigateProgramme?.('A_LEVEL')}
             title={`View A-Level students (${programmeBreakdown.aLevel})`}
@@ -67,7 +67,7 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
             >
               <div className="h-5 flex-1 overflow-hidden rounded-lg bg-muted/50">
                 <div
-                  className="h-full rounded-lg bg-primary/60 transition-all duration-700 group-hover:bg-primary/80 group-focus-within:bg-primary/80"
+                  className="h-full rounded-lg bg-primary/60 transition-[width,background-color] duration-700 group-hover:bg-primary/80 group-focus-within:bg-primary/80"
                   style={{ width: `${(count / maxField) * 100}%` }}
                 />
               </div>

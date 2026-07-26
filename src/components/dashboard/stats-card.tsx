@@ -45,7 +45,7 @@ export function StatsCard({ label, value, detail, icon, trend, className }: Stat
                     </motion.h3>
                 </div>
                 {icon && (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/5 text-primary-ink ring-1 ring-primary/10 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/10">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/5 text-primary-ink ring-1 ring-primary/10 transition-[transform,background-color] duration-300 group-hover:scale-110 group-hover:bg-primary/10">
                         {icon}
                     </div>
                 )}
