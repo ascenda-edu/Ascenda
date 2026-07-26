@@ -2,13 +2,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { DashboardShell } from '@/components/layout/shell';
 import { PageHero } from '@/components/layout/page-hero';
 import { Button } from '@/components/ui/button';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
-import { SectionNav } from '@/components/layout/section-nav';
 import { AnimatedSection } from '@/components/layout/animated-section';
-import { PLANNER_SECTION_ITEMS } from '@/components/layout/navigation';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ClipboardCheck } from 'lucide-react';
 import { NextActionsList, type NextActionItem } from '@/components/applications/next-actions-list';
@@ -94,8 +91,7 @@ export default async function ApplicationsPage() {
 
   if (appRecords.length === 0) {
     return (
-      <DashboardShell>
-        <SectionNav items={PLANNER_SECTION_ITEMS} />
+      <>
         <PageHero
           tone="student"
           eyebrow="Your applications"
@@ -125,7 +121,7 @@ export default async function ApplicationsPage() {
           }
           hint="Don't have a shortlist yet? Browse your matches instead."
         />
-      </DashboardShell>
+      </>
     );
   }
 
@@ -230,8 +226,7 @@ export default async function ApplicationsPage() {
     : 'Nothing urgent right now';
 
   return (
-    <DashboardShell>
-      <SectionNav items={PLANNER_SECTION_ITEMS} />
+    <>
 
       <PageHero
         tone="student"
@@ -287,6 +282,6 @@ export default async function ApplicationsPage() {
           <ApplicationList rows={applicationRows} />
         </AnimatedSection>
       </div>
-    </DashboardShell>
+    </>
   );
 }

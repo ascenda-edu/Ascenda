@@ -25,6 +25,16 @@ const TIER_COLORS: Record<MatchTier, string> = {
 
 const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
+// `Intl.DateTimeFormat.format` throws `RangeError: Invalid time value` rather
+// than returning a placeholder, and an unparseable date would take this whole
+// route into the error boundary — which is exactly what happened to the
+// Applications list view. A truthiness check alone doesn't cover it.
+const formatResponseDate = (iso: string | null | undefined) => {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? '—' : dateFormatter.format(date);
+};
+
 export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutcome[]; stats: OutcomeStats }) {
   const [filterResult, setFilterResult] = useState<OutcomeResult | null>(null);
   const [filterStudent, setFilterStudent] = useState('');
@@ -173,7 +183,7 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
                     <span className={cn('rounded-full px-2 py-0.5 text-label font-semibold', TIER_COLORS[o.tier])}>{o.tier}</span>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {o.responseDate ? dateFormatter.format(new Date(o.responseDate)) : '—'}
+                    {formatResponseDate(o.responseDate)}
                   </TableCell>
                 </TableRow>
               );

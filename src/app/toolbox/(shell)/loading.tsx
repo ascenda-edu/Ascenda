@@ -1,4 +1,3 @@
-import { DashboardShell } from '@/components/layout/shell';
 import { PageHeroSkeleton } from '@/components/layout/page-hero-skeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -13,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
  */
 export default function ToolboxLoading() {
   return (
-    <DashboardShell>
+    <>
       <PageHeroSkeleton stats={3} />
 
       {/* Next action + requirements ring */}
@@ -57,6 +56,6 @@ export default function ToolboxLoading() {
           </div>
         ))}
       </div>
-    </DashboardShell>
+    </>
   );
 }

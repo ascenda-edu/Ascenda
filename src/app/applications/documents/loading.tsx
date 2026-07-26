@@ -1,13 +1,13 @@
-import { DashboardShell } from '@/components/layout/shell';
-import { SectionNav } from '@/components/layout/section-nav';
-import { PLANNER_SECTION_ITEMS } from '@/components/layout/navigation';
 import { PageHeroSkeleton } from '@/components/layout/page-hero-skeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 
 /**
- * Mirrors `applications/documents/page.tsx`: SectionNav, a 2-stat hero, then TWO
- * full-width cards (letter tracker, then uploaded documents). This used to draw
- * a three-column grid of four small cards, which the page never renders.
+ * Mirrors `applications/documents/page.tsx`: a 2-stat hero, then TWO full-width
+ * cards (letter tracker, then uploaded documents). This used to draw a three-column
+ * grid of four small cards, which the page never renders.
+ *
+ * No SectionNav here: `applications/layout.tsx` owns it, and a loading file renders
+ * INSIDE its layout, so drawing one would paint two nav rows on every load.
  */
 const DocRow = () => (
   <div className="flex items-center gap-4 rounded-2xl border border-border/60 bg-background/60 px-5 py-4">
@@ -22,8 +22,7 @@ const DocRow = () => (
 
 export default function DocumentsLoading() {
   return (
-    <DashboardShell>
-      <SectionNav items={PLANNER_SECTION_ITEMS} />
+    <>
       <PageHeroSkeleton stats={2} />
 
       {/* Letter tracker */}
@@ -50,6 +49,6 @@ export default function DocumentsLoading() {
           ))}
         </div>
       </div>
-    </DashboardShell>
+    </>
   );
 }

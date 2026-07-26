@@ -1,5 +1,3 @@
-import { SectionNav } from '@/components/layout/section-nav';
-import { COUNSELLOR_SECTION_ITEMS } from '@/components/layout/navigation';
 import { PageHeroSkeleton } from '@/components/layout/page-hero-skeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -8,7 +6,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function CounsellorApplicationsLoading() {
   return (
     <div className="space-y-6">
-      <SectionNav items={COUNSELLOR_SECTION_ITEMS} />
       <PageHeroSkeleton stats={3} />
       {/* Platform summary chips */}
       <div className="flex flex-wrap gap-3">

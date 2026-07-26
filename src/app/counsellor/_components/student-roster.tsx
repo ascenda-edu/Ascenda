@@ -52,10 +52,17 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
   const [filtersOpen, setFiltersOpen] = useState(!!(initialProgramme || initialField || initialFlagFilter));
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // Bail when the param already says what we would write. Two reasons, both real:
+  // on mount `query` is seeded FROM `qParam`, so a deep link like `?q=ahmed` used to
+  // fire a redundant router.replace immediately; and on "Reset all filters" this
+  // debounce fired 250ms AFTER the batched reset, re-read the pre-reset URL, and put
+  // every cleared param back (measured: the URL ended one param different from where
+  // it started). A component must not have two independent writers for its params.
   useEffect(() => {
+    if (query === qParam) return;
     const t = setTimeout(() => setQueryParam(query), 250);
     return () => clearTimeout(t);
-  }, [query, setQueryParam]);
+  }, [query, qParam, setQueryParam]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -317,6 +324,10 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
               onClick={() => {
                 onClearExternalFilter?.();
                 setQuery('');
+                // Clear the param in THIS tick alongside the others so all five
+                // batch into one navigation. Leaving it to the debounce meant a
+                // second navigation 250ms later that undid this one.
+                setQueryParam('');
                 setProgramme('all');
                 setFlagFilter('all');
                 setFieldFilter('');

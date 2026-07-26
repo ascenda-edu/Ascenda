@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
 import { PageHero } from '@/components/layout/page-hero';
-import { SectionNav } from '@/components/layout/section-nav';
-import { COUNSELLOR_SECTION_ITEMS } from '@/components/layout/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { loadCohort, deriveCohortStats } from '@/lib/counsellor/data';
 import { StudentsPageClient } from './_students-page-client';
@@ -29,7 +27,6 @@ export default async function CounsellorStudentsPage(props: Props) {
 
   return (
     <div className="space-y-6">
-      <SectionNav items={COUNSELLOR_SECTION_ITEMS} />
       <PageHero
           tone="counsellor"
         eyebrow="Counsellor"

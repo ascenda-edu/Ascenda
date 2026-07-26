@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { DashboardShell } from '@/components/layout/shell';
 import { PageHero } from '@/components/layout/page-hero';
 import { AnimatedSection, AnimatedGrid, AnimatedGridItem } from '@/components/layout/animated-section';
 import { ArrowRight } from 'lucide-react';
@@ -100,7 +99,7 @@ export default async function ToolboxPage() {
   const daysUntilNext = nextDeadline ? daysUntil(nextDeadline.date) : null;
 
   return (
-    <DashboardShell>
+    <>
       <PageHero
         tone="student"
         eyebrow="Toolbox"
@@ -201,6 +200,6 @@ export default async function ToolboxPage() {
           );
         })}
       </AnimatedGrid>
-    </DashboardShell>
+    </>
   );
 }

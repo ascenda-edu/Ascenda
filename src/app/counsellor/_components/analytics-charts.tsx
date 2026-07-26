@@ -201,13 +201,15 @@ interface FullFunnelProps {
 // funnel, the kanban and the drill-down can't disagree about a stage: planning=info,
 // inProgress=warning, submitted=success, decision=feature. It previously used grey
 // for planning and info for inProgress, which meant clicking the blue "In Progress"
-// bar opened a drill-down with an amber accent one click later.
+// bar opened a drill-down with an amber accent one click later — and clicking the
+// GREY "Planning" bar opened a blue-accented drill-down (that half survived the
+// first pass and was fixed only after driving all four bars).
 //
 // `textOnFill` is the tone's own -foreground, NOT `text-foreground`. This is the one
 // chart that still prints its value inside the mark, and near-white ink on a bright
 // fill measured 1.43:1 on "Submitted" in dark mode — the value was invisible.
 const FUNNEL_STAGES = [
-  { key: 'planning' as const, label: 'Planning', color: 'bg-muted-foreground/40', hoverColor: 'hover:bg-muted-foreground/60', textColor: 'text-muted-foreground', textOnFill: 'text-foreground' },
+  { key: 'planning' as const, label: 'Planning', color: 'bg-info-fill', hoverColor: 'hover:bg-info-fill/85', textColor: 'text-info', textOnFill: 'text-info-foreground' },
   { key: 'inProgress' as const, label: 'In Progress', color: 'bg-warning-fill', hoverColor: 'hover:bg-warning-fill/85', textColor: 'text-warning', textOnFill: 'text-warning-foreground' },
   { key: 'submitted' as const, label: 'Submitted', color: 'bg-success-fill', hoverColor: 'hover:bg-success-fill/85', textColor: 'text-success', textOnFill: 'text-success-foreground' },
   { key: 'decision' as const, label: 'Decision Received', color: 'bg-feature-fill', hoverColor: 'hover:bg-feature-fill/85', textColor: 'text-feature', textOnFill: 'text-feature-foreground' }
@@ -244,8 +246,14 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end">
+        {/* A pressed-state toggle, not a label that swaps: it used to read
+            "Hiding last year" while last year's bars were on screen, which was
+            simply untrue, and with no `aria-pressed` the on/off state reached a
+            screen reader only through that misleading label. Static name +
+            aria-pressed is the same pattern as the inbox filter chips. */}
         <button
           type="button"
+          aria-pressed={compareYoY}
           onClick={() => setCompareYoY((prev) => !prev)}
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-label font-semibold transition',
@@ -254,7 +262,7 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
               : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:bg-muted/60 hover:text-foreground'
           )}
         >
-          {compareYoY ? 'Hiding last year' : 'Compare to last year'}
+          Compare to last year
         </button>
       </div>
 

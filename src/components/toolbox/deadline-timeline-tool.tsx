@@ -192,6 +192,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
               <button
                 key={type}
                 onClick={() => setFilterType(filterType === type ? null : type)}
+                aria-pressed={filterType === type}
                 className={cn(
                   'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
                   filterType === type ? cn(cfg.bg, cfg.color, 'border') : 'bg-muted/50 text-muted-foreground hover:bg-muted'
@@ -224,12 +225,14 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
         <div className="ml-auto flex gap-1 surface-subcard p-1 rounded-xl">
           <button
             onClick={() => setViewMode('timeline')}
+            aria-pressed={viewMode === 'timeline'}
             className={cn('flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium transition-colors', viewMode === 'timeline' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
           >
             <List className="h-3.5 w-3.5" /> Timeline
           </button>
           <button
             onClick={() => setViewMode('calendar')}
+            aria-pressed={viewMode === 'calendar'}
             className={cn('flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium transition-colors', viewMode === 'calendar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
           >
             <LayoutGrid className="h-3.5 w-3.5" /> Calendar

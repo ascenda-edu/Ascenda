@@ -1,6 +1,3 @@
-import { DashboardShell } from '@/components/layout/shell';
-import { SectionNav } from '@/components/layout/section-nav';
-import { PLANNER_SECTION_ITEMS } from '@/components/layout/navigation';
 import { PageHeroSkeleton } from '@/components/layout/page-hero-skeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -42,8 +39,7 @@ const SectionHeading = () => (
 
 export default function ApplicationsLoading() {
   return (
-    <DashboardShell>
-      <SectionNav items={PLANNER_SECTION_ITEMS} />
+    <>
       <PageHeroSkeleton breadcrumbs eyebrow stats={3} actions />
 
       <div className="space-y-6 sm:space-y-8">
@@ -67,6 +63,6 @@ export default function ApplicationsLoading() {
           </ul>
         </section>
       </div>
-    </DashboardShell>
+    </>
   );
 }

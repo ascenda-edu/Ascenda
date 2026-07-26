@@ -193,6 +193,22 @@ const buildEmptySubject = (programmeType: ProgrammeType | ''): SubjectRowState =
   grade_value: '',
 });
 
+/**
+ * An empty row to append to `existing`. IB allows exactly 3 HL, so once three HL rows are
+ * present the next blank row must default to SL — `buildEmptySubject` alone always says HL,
+ * which meant a saved IB profile with fewer than 6 subjects hydrated as 4–6 HL rows and
+ * failed its own "IB requires 3 Higher Level subjects" check before the student typed a thing.
+ */
+const buildNextSubject = (
+  programmeType: ProgrammeType | '',
+  existing: SubjectRowState[]
+): SubjectRowState => {
+  const base = buildEmptySubject(programmeType);
+  if (programmeType !== 'IB') return base;
+  const hlCount = existing.filter((s) => s.level === 'HL').length;
+  return { ...base, level: hlCount < 3 ? 'HL' : 'SL' };
+};
+
 const buildDefaultSubjects = (programmeType: ProgrammeType | ''): SubjectRowState[] => {
   if (programmeType === 'IB') {
     return Array.from({ length: 6 }, (_, i) => ({ subject_name: '', level: i < 3 ? 'HL' : 'SL', grade_value: '' }));
@@ -736,7 +752,7 @@ export const StudentIntakeForm = ({
         level: s.level ?? (prog === 'IB' ? 'HL' : 'A_LEVEL'),
         grade_value: typeof s.grade_value === 'number' ? String(s.grade_value) : s.grade_value ?? '',
       }));
-      while (mapped.length < minRows) mapped.push(buildEmptySubject(prog));
+      while (mapped.length < minRows) mapped.push(buildNextSubject(prog, mapped));
       return mapped;
     });
     setAdmissionsTests(
@@ -948,21 +964,23 @@ export const StudentIntakeForm = ({
     }
   }, [englishRequired, englishTestType]);
 
-  // Suggest the admissions tests a chosen cluster implies.
+  // Suggest the admissions tests a chosen cluster implies — once per cluster change.
   //
-  // The updater MUST return `prev` unchanged when it adds nothing. It used to build
-  // `[...prev]` and return it unconditionally — a fresh array reference every run — and
-  // because `admissionsTests` is one of this effect's own dependencies, that reference
-  // change re-triggered the effect, which produced another fresh array, forever.
-  // Result: "Maximum update depth exceeded" and a wizard that never finished rendering,
-  // for any student whose tests didn't already include a 'NONE' row (the early return
-  // below was the only thing masking it).
+  // `admissionsTests` is deliberately NOT a dependency: this effect WRITES that state,
+  // so depending on it makes the effect re-trigger itself. Two separate bugs came out of
+  // that. (1) The updater used to return `[...prev]` unconditionally — a fresh reference
+  // every run — so the effect fed itself forever: "Maximum update depth exceeded", and a
+  // wizard that never finished rendering for any student without a 'NONE' row. (2) Even
+  // returning `prev` when nothing changed, a suggested row could never be REMOVED:
+  // deselecting the LNAT chip changed `admissionsTests`, which re-ran the effect, which
+  // added LNAT straight back. Keying only on the cluster list fixes both — the current
+  // rows are read inside the updater, where they don't create a feedback loop.
   useEffect(() => {
     const wantsLaw = academicInput.intended_clusters.includes('law');
     const wantsMed = academicInput.intended_clusters.includes('medicine_dentistry');
-    const alreadyNone = admissionsTests.some((t) => t.test_type === 'NONE');
-    if (alreadyNone) return;
+    if (!wantsLaw && !wantsMed) return;
     setAdmissionsTests((prev) => {
+      if (prev.some((t) => t.test_type === 'NONE')) return prev; // "no tests" is an explicit choice
       const additions: typeof prev = [];
       if (wantsLaw && !prev.some((t) => t.test_type === 'LNAT'))
         additions.push({ test_type: 'LNAT', status: '', score_numeric: '', percentile: '' });
@@ -971,7 +989,7 @@ export const StudentIntakeForm = ({
       if (additions.length === 0) return prev; // same reference — no re-render, no loop
       return [...prev, ...additions];
     });
-  }, [academicInput.intended_clusters, admissionsTests]);
+  }, [academicInput.intended_clusters]);
 
   const showEnglishScore = englishRequired !== 'no' && ['IELTS', 'TOEFL', 'DUOLINGO'].includes(englishTestType);
   const showAdmissionsTests =
@@ -1042,7 +1060,7 @@ export const StudentIntakeForm = ({
   const updateSubject = (i: number, key: keyof SubjectRowState, value: string) =>
     setSubjects((prev) => { const next = [...prev]; next[i] = { ...next[i], [key]: value }; return next; });
   const addSubject = () =>
-    setSubjects((prev) => prev.length >= getMaxSubjects(programmeType) ? prev : [...prev, buildEmptySubject(programmeType)]);
+    setSubjects((prev) => prev.length >= getMaxSubjects(programmeType) ? prev : [...prev, buildNextSubject(programmeType, prev)]);
   const removeSubject = (i: number) =>
     setSubjects((prev) => prev.filter((_, idx) => idx !== i));
 
@@ -1217,8 +1235,11 @@ export const StudentIntakeForm = ({
         e['academic_input.subject_list.hl'] = 'IB requires 3 Higher Level subjects.';
     }
     if (programmeType === 'A_LEVEL') {
+      const max = getMaxSubjects('A_LEVEL');
       if (filled.length < 3) e['academic_input.subject_list'] = 'A-levels require at least 3 subjects.';
-      if (filled.length > 6) e['academic_input.subject_list'] = 'A-levels are limited to 6 subjects.';
+      // Keep the ceiling tied to getMaxSubjects — the Add button and the section hint both
+      // use it, and this message used to claim 6 while the UI capped the rows at 4.
+      else if (filled.length > max) e['academic_input.subject_list'] = `A-levels are limited to ${max} subjects.`;
     }
     subjects.forEach((s, i) => {
       if (!s.subject_name.trim()) e[`academic_input.subject_list.${i}.subject_name`] = 'Subject is required.';
@@ -1271,19 +1292,24 @@ export const StudentIntakeForm = ({
 
   /** Scroll the first errored field into view and focus its input. */
   const focusFirstError = useCallback((errs: Record<string, string>, delay = 50) => {
-    if (Object.keys(errs).length === 0) return;
+    const keys = Object.keys(errs);
+    if (keys.length === 0) return;
     window.setTimeout(() => {
       const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-field]'));
-      const exact = nodes.find((node) => {
+      // A node is a candidate if its key IS an error key, or PREFIXES one — the latter
+      // covers group-level messages hung off a container (subject_list → subject_list.hl).
+      const matches = nodes.filter((node) => {
         const key = node.getAttribute('data-field');
-        return !!key && key in errs;
+        return !!key && (key in errs || keys.some((k) => k.startsWith(`${key}.`)));
       });
-      // Fall back to a container whose key prefixes an error key (e.g. subject_list → subject_list.hl)
-      const target = exact ?? nodes.find((node) => {
-        const key = node.getAttribute('data-field');
-        return !!key && Object.keys(errs).some((k) => k.startsWith(`${key}.`));
-      });
-      if (!target) return;
+      if (matches.length === 0) return;
+      // Containers match every row error nested inside them, so in document order the
+      // `subject_list` wrapper always precedes the row that is actually wrong. Prefer the
+      // most specific candidate: the first one that doesn't enclose another candidate.
+      // Without this, a "6 subjects required" group error stole focus for row 1's name
+      // field while the empty row further down was the thing needing attention.
+      const target = matches.find((node) => !matches.some((other) => other !== node && node.contains(other)))
+        ?? matches[0];
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const focusable = target.querySelector<HTMLElement>('input, select, textarea, button');
       (focusable ?? target).focus({ preventScroll: true });
@@ -1370,7 +1396,9 @@ export const StudentIntakeForm = ({
     6: false,
   }), [validateStep1, validateStep2, validateStep3, activities, lifestylePreference]);
 
-  const progressPct = Math.round(((currentStep - 1) / TOTAL_STEPS) * 100);
+  // Divided by the number of TRANSITIONS (TOTAL_STEPS - 1), not the number of steps:
+  // over TOTAL_STEPS the bar topped out at 83% on the final Review step.
+  const progressPct = Math.round(((currentStep - 1) / (TOTAL_STEPS - 1)) * 100);
 
   /** aria-invalid / aria-describedby props for an errored input. */
   const a11yError = (key: string) =>
@@ -2435,8 +2463,14 @@ export const StudentIntakeForm = ({
                     </div>
                     <div className="text-sm space-y-1">
                       <p><span className="text-muted-foreground">Subjects:</span> {subjects.filter((s) => s.subject_name.trim()).length}</p>
-                      {programmeType === 'IB' && academicInput.ib_total_points ?
-                        <p><span className="text-muted-foreground">IB points:</span> {academicInput.ib_total_points}</p> : null}
+                      {/* `ibSubjectSum`, not `academicInput.ib_total_points`: the total is
+                        * DERIVED from the subject grades (buildPayload submits ibSubjectSum),
+                        * and nothing in the UI writes ib_total_points — it only ever holds the
+                        * value hydrated from the last save. Reading it here made the review
+                        * screen quote a stale total that contradicted the grades just entered. */}
+                      {programmeType === 'IB' && ibSubjectSum ?
+                        <p><span className="text-muted-foreground">IB points:</span> {ibSubjectSum}/42
+                          {academicInput.ib_core_points ? ` + ${academicInput.ib_core_points} core` : null}</p> : null}
                       <p><span className="text-muted-foreground">English:</span> {englishRequired ? { yes: 'Required', no: 'Not required', not_sure: 'Not sure' }[englishRequired] ?? '—' : '—'}</p>
                     </div>
                   </SectionCard>

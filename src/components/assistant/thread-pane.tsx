@@ -284,7 +284,11 @@ export function ThreadPane({
             <button
               type="button"
               onClick={onStop}
-              className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-foreground transition-[transform] hover:-translate-y-0.5"
+              // Own focus ring: the wrapper's `focus-within` fires for any child, so
+              // without this, tabbing here highlighted the whole composer as though
+              // the textarea had focus. Same fix in chat/chatbot-widget.tsx, which
+              // duplicates this composer markup verbatim.
+              className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-foreground transition-[transform,box-shadow] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-label="Stop generating"
               title="Stop generating"
             >
@@ -294,7 +298,7 @@ export function ThreadPane({
             <button
               type="submit"
               disabled={!input.trim() || coolingDown}
-              className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[transform,opacity] hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
+              className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[transform,opacity,box-shadow] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-40 disabled:hover:translate-y-0"
               aria-label="Send message"
             >
               <Send className="h-3.5 w-3.5" />

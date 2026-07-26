@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Globe, GraduationCap, DollarSign, Calendar, ExternalLink, Bookmark, BookmarkCheck, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -51,6 +52,8 @@ function isUrgent(dateStr: string | null | undefined): boolean {
 }
 
 export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) => {
+  const router = useRouter();
+  const pathname = usePathname();
   const [query, setQuery] = useSearchParamState('q', '');
   const [country, setCountry] = useSearchParamState('country', '');
   const [level, setLevel] = useSearchParamState('level', '');
@@ -104,7 +107,13 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
   const activeFilterCount = [country, level, maxAmount].filter(Boolean).length;
   const hasFilters = query || country || level || maxAmount;
 
-  const resetFilters = () => { setQuery(''); setCountry(''); setLevel(''); setMaxAmount(''); };
+  // One navigation, not four setter calls. Every filter here lives in the query string,
+  // and `useSearchParamState`'s setter derives the next URL from `window.location.search`
+  // — which `router.replace` does NOT update synchronously. Four setters in the same tick
+  // therefore all read the same stale search string and the last write wins, so "Clear
+  // filters" used to drop only `maxAmount` and leave the user stranded in the empty state.
+  // Replacing with the bare pathname drops all four at once.
+  const resetFilters = () => { router.replace(pathname, { scroll: false }); };
 
   const toggleSave = (s: Scholarship) => {
     const wasSaved = saved.has(s.id);

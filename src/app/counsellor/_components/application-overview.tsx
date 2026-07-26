@@ -24,6 +24,20 @@ const PLATFORM_COLORS: Record<string, string> = {
 
 const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
 
+/**
+ * `Intl.DateTimeFormat.format` THROWS `RangeError: Invalid time value` on an
+ * Invalid Date — unlike `Date.prototype.toLocaleDateString`, which quietly
+ * returns the string "Invalid Date". `deriveApplicationsWithPlatform` stores
+ * `''` for an application whose programme has no deadline row (data.ts), so the
+ * unguarded call took the WHOLE route into the error boundary the moment you
+ * switched to List view. Same wording as the student detail page's formatter.
+ */
+const formatDeadline = (iso: string) => {
+  if (!iso) return 'No deadline';
+  const date = parseLocalDate(iso);
+  return Number.isNaN(date.getTime()) ? 'No deadline' : dateFormatter.format(date);
+};
+
 const STATUSES: ApplicationStatus[] = ['planning', 'in_progress', 'submitted', 'decision'];
 
 export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
@@ -211,7 +225,7 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
                     <TableCell className="text-center">
                       <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold', cfg.bg, cfg.text)}>{cfg.label}</span>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{dateFormatter.format(parseLocalDate(app.deadline))}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{formatDeadline(app.deadline)}</TableCell>
                   </TableRow>
                 );
               })}

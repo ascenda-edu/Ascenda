@@ -1,10 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { DashboardShell } from '@/components/layout/shell';
 import { PageHero } from '@/components/layout/page-hero';
-import { SectionNav } from '@/components/layout/section-nav';
-import { ADMIN_SECTION_ITEMS } from '@/components/layout/navigation';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { ImportPanel } from './_components/import-panel';
 
@@ -41,9 +38,10 @@ export default async function AdminPage() {
   const sources = (sourcesData ?? []) as SourceRow[];
   const neverScraped = sources.filter((source) => !source.last_scraped_at).length;
 
+  // The shell and the section nav live in layout.tsx so they survive navigation
+  // between the two admin routes.
   return (
-    <DashboardShell>
-      <SectionNav items={ADMIN_SECTION_ITEMS} />
+    <>
       <PageHero
         tone="counsellor"
         eyebrow="Admin"
@@ -71,6 +69,6 @@ export default async function AdminPage() {
           </ul>
         </aside>
       </div>
-    </DashboardShell>
+    </>
   );
 }

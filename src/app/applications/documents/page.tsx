@@ -1,10 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { DashboardShell } from '@/components/layout/shell';
 import { PageHero } from '@/components/layout/page-hero';
-import { SectionNav } from '@/components/layout/section-nav';
-import { PLANNER_SECTION_ITEMS } from '@/components/layout/navigation';
 import { RecLetterWorkflow } from '@/components/applications/rec-letter-workflow';
 import {
   DocumentsManager,
@@ -106,8 +103,7 @@ export default async function DocumentsPage() {
   }
 
   return (
-    <DashboardShell>
-      <SectionNav items={PLANNER_SECTION_ITEMS} />
+    <>
       <PageHero
         tone="student"
         eyebrow="Documents"
@@ -146,6 +142,6 @@ export default async function DocumentsPage() {
           </div>
         </div>
       </AnimatedSection>
-    </DashboardShell>
+    </>
   );
 }

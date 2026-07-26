@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, Clock as ClockIcon, BookOpen, MapPin, GraduationCap, Target, FileText } from 'lucide-react';
 import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
@@ -74,7 +75,27 @@ const resolveTab = (id: string): Tab => {
 
 export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps) => {
   const [tabParam, setTabParam] = useSearchParamState('tab', 'overview');
-  const active = resolveTab(tabParam);
+  const urlTab = resolveTab(tabParam);
+  // The URL is a deep-link MIRROR, not the source of truth for the tab.
+  //
+  // Driving `value` straight off the search param made every tab switch wait for
+  // a `router.replace` round-trip — and this page is `force-dynamic`, so that is
+  // a real server request. Radix activates on focus, so arrow-keying across the
+  // row left the focused tab and the `aria-selected` tab disagreeing for the
+  // length of that round-trip (measured 0.5–1s in dev), and a fast sweep dropped
+  // every intermediate activation. Every panel's data is already in props, so
+  // nothing about the switch actually needs the server.
+  const [active, setActive] = useState(urlTab);
+  // Re-sync when the URL changes from OUTSIDE this component: a deep link,
+  // back/forward, or the document board's `?tab=documents` link. Passing the
+  // same string back is a no-op re-render bail in React, not a loop.
+  useEffect(() => { setActive(urlTab); }, [urlTab]);
+
+  const selectTab = (next: string) => {
+    setActive(resolveTab(next));
+    setTabParam(next);
+  };
+
   const matches = student.matches;
 
   const reachCount = matches.filter((m) => m.tier === 'Reach').length;
@@ -84,7 +105,7 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
   return (
     // Radix supplies the tablist/tab/tabpanel wiring, aria-controls and
     // arrow-key handling this row used to declare `role="tablist"` without.
-    <Tabs value={active} onValueChange={setTabParam}>
+    <Tabs value={active} onValueChange={selectTab}>
       <TabsList aria-label="Student detail sections">
         {TABS.map((tab) => {
           const count = tab.id === 'notes'
@@ -151,10 +172,14 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
                   ))}
                 </div>
                 <div className="space-y-2">
-                  {matches.slice(0, 3).map((m) => {
+                  {/* Index in the key: a cohort's matches legitimately repeat a
+                      university+programme pair (two catalogue rows for the same
+                      course), and the pair alone collided — React warned and was
+                      free to drop rows. */}
+                  {matches.slice(0, 3).map((m, i) => {
                     const tc = TIER_COLORS[m.tier];
                     return (
-                      <div key={`${m.university}-${m.program}`} className="flex items-center gap-2 text-sm">
+                      <div key={`${m.university}-${m.program}-${i}`} className="flex items-center gap-2 text-sm">
                         <span className={cn('h-2 w-2 shrink-0 rounded-full', tc.dot)} />
                         <span className="flex-1 truncate text-foreground">{m.university}</span>
                         <span className={cn('shrink-0 text-xs font-semibold', tc.text)}>{m.score}</span>
@@ -329,9 +354,10 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
                       <p className="text-sm font-semibold text-foreground">{tier} — {tierMatches.length} program{tierMatches.length !== 1 ? 's' : ''}</p>
                     </div>
                     <div className="space-y-2">
-                      {tierMatches.map((m) => (
+                      {/* Index in the key — see the Match Summary list above. */}
+                      {tierMatches.map((m, i) => (
                         <div
-                          key={`${m.university}-${m.program}`}
+                          key={`${m.university}-${m.program}-${i}`}
                           className="flex items-center gap-4 rounded-2xl border border-border/60 bg-background/60 px-5 py-4"
                         >
                           <div className="flex-1 space-y-0.5">

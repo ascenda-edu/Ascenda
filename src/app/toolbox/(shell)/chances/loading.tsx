@@ -1,18 +1,17 @@
-import { DashboardShell } from '@/components/layout/shell';
-import { SectionNav } from '@/components/layout/section-nav';
-import { TOOLBOX_SECTION_ITEMS } from '@/components/layout/navigation';
 import { PageHeroSkeleton } from '@/components/layout/page-hero-skeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 
 /**
  * `/toolbox/chances` used to inherit the hub's `loading.tsx` — a grid of tool
- * cards, which is not remotely this page. It renders SectionNav, a 3-stat hero,
+ * cards, which is not remotely this page. It renders a 3-stat hero,
  * then the calculator: a score panel and a list of university rows.
- */
+  *
+ * No SectionNav here: `(shell)/layout.tsx` owns it, and a loading file renders
+ * INSIDE its layout, so drawing one would paint two nav rows on every load.
+*/
 export default function ChancesLoading() {
   return (
-    <DashboardShell>
-      <SectionNav items={TOOLBOX_SECTION_ITEMS} />
+    <>
       <PageHeroSkeleton stats={3} />
 
       <div className="space-y-6">
@@ -38,6 +37,6 @@ export default function ChancesLoading() {
           ))}
         </div>
       </div>
-    </DashboardShell>
+    </>
   );
 }

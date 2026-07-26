@@ -1,18 +1,17 @@
-import { DashboardShell } from '@/components/layout/shell';
-import { SectionNav } from '@/components/layout/section-nav';
-import { TOOLBOX_SECTION_ITEMS } from '@/components/layout/navigation';
 import { PageHeroSkeleton } from '@/components/layout/page-hero-skeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 
 /**
  * `/toolbox/timeline` used to inherit the hub's tool-card grid. It renders
- * SectionNav, a 3-stat hero, then the timeline tool: a "next 14 days" card grid
+ * A 3-stat hero, then the timeline tool: a "next 14 days" card grid
  * followed by the chronological deadline list.
- */
+  *
+ * No SectionNav here: `(shell)/layout.tsx` owns it, and a loading file renders
+ * INSIDE its layout, so drawing one would paint two nav rows on every load.
+*/
 export default function TimelineLoading() {
   return (
-    <DashboardShell>
-      <SectionNav items={TOOLBOX_SECTION_ITEMS} />
+    <>
       <PageHeroSkeleton stats={3} />
 
       <div className="space-y-6">
@@ -31,6 +30,6 @@ export default function TimelineLoading() {
           ))}
         </div>
       </div>
-    </DashboardShell>
+    </>
   );
 }

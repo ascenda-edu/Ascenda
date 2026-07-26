@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
 import { PageHero } from '@/components/layout/page-hero';
-import { SectionNav } from '@/components/layout/section-nav';
-import { COUNSELLOR_SECTION_ITEMS } from '@/components/layout/navigation';
 import { OutcomeDashboard } from '../_components/outcome-dashboard';
 import { AnimatedSection } from '@/components/layout/animated-section';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
@@ -18,7 +16,6 @@ export default async function CounsellorOutcomesPage() {
 
   return (
     <div className="space-y-6">
-      <SectionNav items={COUNSELLOR_SECTION_ITEMS} />
       <PageHero
           tone="counsellor"
         eyebrow="Counsellor"

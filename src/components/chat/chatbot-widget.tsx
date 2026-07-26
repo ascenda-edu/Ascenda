@@ -707,7 +707,11 @@ export function ChatbotWidget() {
                   <button
                     type="button"
                     onClick={stop}
-                    className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-foreground transition-[transform] hover:-translate-y-0.5"
+                    // Own focus ring, not the wrapper's: the wrapper lights up on
+                    // `focus-within`, which fires for ANY child, so tabbing here used
+                    // to highlight the whole composer as though the textarea had
+                    // focus. The button needs an indicator that identifies IT.
+                    className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-foreground transition-[transform,box-shadow] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     aria-label="Stop generating"
                     title="Stop generating"
                   >
@@ -717,7 +721,7 @@ export function ChatbotWidget() {
                   <button
                     type="submit"
                     disabled={!input.trim() || coolingDown}
-                    className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[transform,opacity] hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
+                    className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[transform,opacity,box-shadow] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-40 disabled:hover:translate-y-0"
                     aria-label="Send message"
                   >
                     <Send className="h-3.5 w-3.5" />

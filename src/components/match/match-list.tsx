@@ -53,9 +53,14 @@ const dedupeByUniversity = (items: EnrichedMatch[], maxPerUni: number): Enriched
 
 export const MatchList = ({ matches }: MatchListProps) => {
   const [selectedTierParam, setSelectedTier] = useSearchParamState('tier', 'All');
-  const selectedTier = selectedTierParam as MatchTier | 'All';
+  // Both params come straight off the URL, so they have to be validated rather than cast.
+  // An unrecognised ?tier= (stale link, renamed tier, hand-edited URL) used to blank the
+  // whole page: `matches.length` is still non-zero so the no-results state never showed,
+  // and no tier group's `tier === selectedTier`, so every card vanished with no explanation.
+  const selectedTier: MatchTier | 'All' =
+    (TIER_ORDER as string[]).includes(selectedTierParam) ? (selectedTierParam as MatchTier) : 'All';
   const [viewModeParam, setViewMode] = useSearchParamState('view', 'grid');
-  const viewMode = viewModeParam as 'grid' | 'list';
+  const viewMode: 'grid' | 'list' = viewModeParam === 'list' ? 'list' : 'grid';
   const [tierLimits, setTierLimits] = useState<Record<MatchTier, number>>({
     Reach: INITIAL_PER_TIER,
     Match: INITIAL_PER_TIER,

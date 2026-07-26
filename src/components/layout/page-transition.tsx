@@ -19,17 +19,20 @@ import { EASE, DURATION } from '@/lib/motion';
  * Keying on the pathname HERE, inside the shell, puts the animation below the chrome
  * instead of above it — the right place for it regardless.
  *
- * IMPORTANT, verified in a browser: this does NOT yet make the nav indicator slide.
- * `DashboardShell` is rendered inside each PAGE for most sections rather than in a
- * `layout.tsx` (only counsellor, parent and university-search have it in a layout),
- * so navigating between two sibling pages still remounts the whole shell, navbar
- * included. I tagged the header node and watched it disappear across
- * /applications -> /applications/tasks.
+ * ── Why the section nav is passed as a SLOT, not as a child ─────────────────
+ * `DashboardShell` takes a `nav` prop and renders it OUTSIDE this wrapper. That is
+ * load-bearing, not tidiness: this component is keyed on the pathname, so anything
+ * arriving through `children` is torn down and rebuilt on every navigation. A
+ * SectionNav passed as a child therefore remounted each time, which left its
+ * `layoutId` indicator permanently inert — framer needs the outgoing and incoming
+ * pill in the same commit to animate between them, and a remount gives it neither.
+ * Through the slot the nav outlives the transition and the indicator slides.
+ * Verified in a browser by tagging the nav node: it survives the navigation and the
+ * active pill's x-coordinate animates (407px -> 609px across two parent routes).
  *
- * The `layoutId` indicator on the nav is therefore correct-but-inert: it paints in
- * the right place and costs nothing, and it starts animating for free the day
- * `DashboardShell` moves into per-section layouts. That hoist touches 16 pages and is
- * deliberately NOT bundled into this branch.
+ * This only holds for sections whose `DashboardShell` lives in a `layout.tsx`, since
+ * a layout is what persists across its own routes. Sections that render the shell
+ * inside each PAGE still remount the whole thing, navbar included.
  *
  * ── Why the animation is so small ──────────────────────────────────────────
  * Opacity plus 4px. This fires on every single navigation, so anything more

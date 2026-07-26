@@ -6,13 +6,12 @@ import {
   PieChart, BarChart2, TrendingUp, CheckCircle, Target, Users, Sparkles
 } from 'lucide-react';
 import { PageHero } from '@/components/layout/page-hero';
-import { SectionNav } from '@/components/layout/section-nav';
-import { COUNSELLOR_SECTION_ITEMS } from '@/components/layout/navigation';
 import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
 import type { CohortStats } from '@/lib/counsellor/data';
 import { STAGE_COLORS } from '@/lib/counsellor/stage-colors';
 import { COMPLETION_VISUAL, TIER_VISUAL } from '@/lib/theme/categories';
+import { CHART_ACCENT, CHART_SERIES } from './_components/chart-palette';
 import {
   ProgrammeSplit,
   IbDistribution,
@@ -113,7 +112,10 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
     setDrilldown({
       title: `${label} Students`,
       subtitle: `${group.length} student${group.length !== 1 ? 's' : ''} enrolled in the ${label} programme`,
-      accentColor: programme === 'IB' ? 'bg-feature-fill' : 'bg-info-fill',
+      // Ramp steps 1 and 4 — the two segments `ProgrammeSplit` actually paints.
+      // This used to be feature/info, so clicking the indigo IB segment opened a
+      // violet-accented drill-down and the A-Level one turned blue.
+      accentColor: programme === 'IB' ? CHART_SERIES[0].bar : CHART_SERIES[3].bar,
       summaryStats: [
         { label: 'students', value: String(group.length) },
         { label: 'avg completion', value: `${avgCompletion}%` },
@@ -160,7 +162,10 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
     setDrilldown({
       title: field.label,
       subtitle: `${group.length} student${group.length !== 1 ? 's' : ''} interested in this field`,
-      accentColor: 'bg-feature-fill',
+      // `FieldChart` paints every row with the single bar accent, so the
+      // drill-down wears it too. It was `bg-feature-fill`, which made all ten
+      // indigo rows open a violet panel.
+      accentColor: CHART_ACCENT.bar,
       summaryStats: [
         { label: 'students', value: String(group.length) },
         { label: 'IB', value: String(ibCount) },
@@ -493,7 +498,6 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
 
   return (
     <div className="space-y-6">
-      <SectionNav items={COUNSELLOR_SECTION_ITEMS} />
       <PageHero
           tone="counsellor"
         eyebrow="Counsellor"

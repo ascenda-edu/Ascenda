@@ -2,14 +2,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { DashboardShell } from '@/components/layout/shell';
 import { PageHero } from '@/components/layout/page-hero';
-import { SectionNav } from '@/components/layout/section-nav';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ListChecks } from 'lucide-react';
-import { PLANNER_SECTION_ITEMS } from '@/components/layout/navigation';
 import {
   CrossApplicationTasks,
   type SeedTask,
@@ -120,8 +117,7 @@ export default async function TasksPage() {
   }
 
   return (
-    <DashboardShell>
-      <SectionNav items={PLANNER_SECTION_ITEMS} />
+    <>
       <PageHero
         tone="student"
         eyebrow="Tasks"
@@ -143,6 +139,6 @@ export default async function TasksPage() {
       ) : (
         <CrossApplicationTasks initialTasks={seed} applicationOptions={applicationOptions} />
       )}
-    </DashboardShell>
+    </>
   );
 }

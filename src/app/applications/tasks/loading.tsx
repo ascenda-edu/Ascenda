@@ -1,19 +1,17 @@
-import { DashboardShell } from '@/components/layout/shell';
-import { SectionNav } from '@/components/layout/section-nav';
-import { PLANNER_SECTION_ITEMS } from '@/components/layout/navigation';
 import { PageHeroSkeleton } from '@/components/layout/page-hero-skeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 
 /**
- * Mirrors `applications/tasks/page.tsx`: SectionNav, a hero with breadcrumbs and
- * no stats, then `CrossApplicationTasks` — a filter/add toolbar card followed by
- * grouped task lists. The hero used to be two bare skeleton bars with no card
- * around them at all.
+ * Mirrors `applications/tasks/page.tsx`: a hero with breadcrumbs and no stats, then
+ * `CrossApplicationTasks` — a filter/add toolbar card followed by grouped task
+ * lists. The hero used to be two bare skeleton bars with no card around them.
+ *
+ * No SectionNav here: `applications/layout.tsx` owns it, and a loading file renders
+ * INSIDE its layout, so drawing one would paint two nav rows on every load.
  */
 export default function TasksLoading() {
   return (
-    <DashboardShell>
-      <SectionNav items={PLANNER_SECTION_ITEMS} />
+    <>
       <PageHeroSkeleton breadcrumbs eyebrow />
 
       <div className="space-y-6">
@@ -55,6 +53,6 @@ export default function TasksLoading() {
           ))}
         </div>
       </div>
-    </DashboardShell>
+    </>
   );
 }

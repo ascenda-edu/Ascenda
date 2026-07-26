@@ -214,6 +214,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
           <button
             key={opt.key}
             onClick={() => setSortBy(opt.key)}
+            aria-pressed={sortBy === opt.key}
             className={cn(
               'rounded-full px-3 py-1 text-xs font-medium transition-colors',
               sortBy === opt.key
