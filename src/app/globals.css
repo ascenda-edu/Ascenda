@@ -264,49 +264,6 @@
   }
 }
 
-/* React Big Calendar Dark Mode Overrides */
-[data-theme='dark'] .rbc-calendar {
-  @apply text-foreground;
-}
-
-[data-theme='dark'] .rbc-off-range-bg {
-  @apply bg-muted/30;
-}
-
-[data-theme='dark'] .rbc-today {
-  @apply bg-accent/10;
-}
-
-[data-theme='dark'] .rbc-header {
-  @apply border-border text-muted-foreground;
-}
-
-[data-theme='dark'] .rbc-month-view,
-[data-theme='dark'] .rbc-time-view,
-[data-theme='dark'] .rbc-agenda-view {
-  @apply border-border bg-card;
-}
-
-[data-theme='dark'] .rbc-day-bg+.rbc-day-bg,
-[data-theme='dark'] .rbc-month-row+.rbc-month-row,
-[data-theme='dark'] .rbc-header+.rbc-header,
-[data-theme='dark'] .rbc-day-slot .rbc-events-container,
-[data-theme='dark'] .rbc-day-slot .rbc-time-slot {
-  @apply border-border;
-}
-
-[data-theme='dark'] .rbc-event {
-  @apply bg-primary text-primary-foreground;
-}
-
-[data-theme='dark'] .rbc-toolbar button {
-  @apply text-foreground hover:bg-muted;
-}
-
-[data-theme='dark'] .rbc-toolbar button.rbc-active {
-  @apply bg-primary text-primary-foreground hover:bg-primary/90;
-}
-
 /* Respect the user's reduced-motion preference.
    Framer Motion is gated in-component via useReducedMotion(); this quiets
    CSS-driven transitions/animations (e.g. surface-card and button hover lifts). */

@@ -157,6 +157,55 @@ const config: Config = {
         sans: ["var(--font-inter)", "sans-serif"],
         heading: ["var(--font-outfit)", "sans-serif"],
       },
+      // Rich text (DB-sourced course descriptions, essay content) is rendered with
+      // `prose`. Bound to our tokens so it inherits the app's colours and heading
+      // face instead of Tailwind Typography's own grey ramp — and so dark mode works
+      // off `prose-invert` without a second colour definition.
+      typography: {
+        DEFAULT: {
+          css: {
+            "--tw-prose-body": "hsl(var(--foreground))",
+            "--tw-prose-headings": "hsl(var(--foreground))",
+            "--tw-prose-lead": "hsl(var(--muted-foreground))",
+            "--tw-prose-links": "hsl(var(--primary))",
+            "--tw-prose-bold": "hsl(var(--foreground))",
+            "--tw-prose-counters": "hsl(var(--muted-foreground))",
+            "--tw-prose-bullets": "hsl(var(--border))",
+            "--tw-prose-hr": "hsl(var(--border))",
+            "--tw-prose-quotes": "hsl(var(--foreground))",
+            "--tw-prose-quote-borders": "hsl(var(--border))",
+            "--tw-prose-captions": "hsl(var(--muted-foreground))",
+            "--tw-prose-code": "hsl(var(--foreground))",
+            "--tw-prose-pre-code": "hsl(var(--foreground))",
+            "--tw-prose-pre-bg": "hsl(var(--muted))",
+            "--tw-prose-th-borders": "hsl(var(--border))",
+            "--tw-prose-td-borders": "hsl(var(--border))",
+            // prose-invert reads the -invert-* set; point it at the same tokens,
+            // which already flip under [data-theme='dark'].
+            "--tw-prose-invert-body": "hsl(var(--foreground))",
+            "--tw-prose-invert-headings": "hsl(var(--foreground))",
+            "--tw-prose-invert-lead": "hsl(var(--muted-foreground))",
+            "--tw-prose-invert-links": "hsl(var(--primary))",
+            "--tw-prose-invert-bold": "hsl(var(--foreground))",
+            "--tw-prose-invert-counters": "hsl(var(--muted-foreground))",
+            "--tw-prose-invert-bullets": "hsl(var(--border))",
+            "--tw-prose-invert-hr": "hsl(var(--border))",
+            "--tw-prose-invert-quotes": "hsl(var(--foreground))",
+            "--tw-prose-invert-quote-borders": "hsl(var(--border))",
+            "--tw-prose-invert-captions": "hsl(var(--muted-foreground))",
+            "--tw-prose-invert-code": "hsl(var(--foreground))",
+            "--tw-prose-invert-pre-code": "hsl(var(--foreground))",
+            "--tw-prose-invert-pre-bg": "hsl(var(--muted))",
+            "--tw-prose-invert-th-borders": "hsl(var(--border))",
+            "--tw-prose-invert-td-borders": "hsl(var(--border))",
+            maxWidth: "none",
+            h1: { fontFamily: "var(--font-outfit)" },
+            h2: { fontFamily: "var(--font-outfit)" },
+            h3: { fontFamily: "var(--font-outfit)" },
+            h4: { fontFamily: "var(--font-outfit)" },
+          },
+        },
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -183,7 +232,11 @@ const config: Config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate"), customUtilitiesPlugin],
+  plugins: [
+    require("tailwindcss-animate"),
+    require("@tailwindcss/typography"),
+    customUtilitiesPlugin,
+  ],
 };
 
 export default config;

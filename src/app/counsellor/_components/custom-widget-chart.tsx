@@ -68,7 +68,9 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
               )}
             >
               <span className="w-28 shrink-0 truncate text-right text-xs text-muted-foreground">{bucket.label}</span>
-              <div className="flex-1 overflow-hidden rounded-xl bg-muted/50">
+              {/* The fill carries its own rounded-xl, so clipping here is redundant —
+                  and it used to swallow the hover tooltip. */}
+              <div className="flex-1 rounded-xl bg-muted/50">
                 <div
                   className={cn(
                     'group relative flex h-7 items-center justify-end rounded-xl px-2 text-xs font-bold text-white transition-all duration-700',
@@ -91,7 +93,8 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
   if (def.viz === 'stacked') {
     return (
       <div className="space-y-4">
-        <div className="flex h-10 overflow-hidden rounded-2xl border border-border/50">
+        {/* No overflow-hidden: it clipped the tooltips. Segments round their own outer corners. */}
+        <div className="flex h-10 rounded-2xl border border-border/50">
           {buckets.map((bucket, idx) => {
             const pct = (bucket.count / total) * 100;
             if (pct <= 0) return null;
@@ -101,7 +104,7 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
                 key={bucket.key}
                 onClick={() => onSelect?.(bucket)}
                 className={cn(
-                  'group relative flex min-w-0 items-center justify-center text-xs font-bold text-white transition-all duration-700',
+                  'group relative flex min-w-0 items-center justify-center text-xs font-bold text-white transition-all duration-700 first:rounded-l-2xl last:rounded-r-2xl',
                   colors.bar,
                   interactive ? cn(colors.barHover, 'cursor-pointer') : 'cursor-default'
                 )}

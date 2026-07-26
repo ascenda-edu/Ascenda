@@ -124,8 +124,10 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
 
   return (
     <AnimatePresence>
+      {/* z-[200] is the app's modal layer (see ui/dialog.tsx). At z-50 this tied with
+          the navbar and lost to the chat panel (z-[60]), which painted over it. */}
       {data && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}

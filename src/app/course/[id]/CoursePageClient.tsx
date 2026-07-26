@@ -928,7 +928,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
             <div className="sticky top-0 z-20 border-b border-border/40 bg-background/80 backdrop-blur-md">
               <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-10">
                 <div className="relative">
-                  <div role="tablist" aria-label="Course sections" className="flex gap-1 overflow-x-auto py-2 no-scrollbar">
+                  <div role="tablist" aria-label="Course sections" className="flex gap-1 overflow-x-auto py-2 scrollbar-none">
                     {TABS.map((tab) => {
                       const isActive = activeTab === tab.id;
                       const Icon = tab.icon;
@@ -976,7 +976,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                   {/* Summary Text */}
                   <div className="rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
                     <h2 className="text-2xl font-bold mb-6">Course Overview</h2>
-                    <div className="prose prose-lg prose-neutral dark:prose-invert max-w-4xl text-muted-foreground">
+                    <div className="prose prose-lg dark:prose-invert max-w-4xl text-muted-foreground">
                       {renderRichText(course.summary)}
                     </div>
                   </div>
@@ -987,7 +987,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                         <ListChecks className="h-5 w-5 text-primary" />
                         Course requirements
                       </h3>
-                      <div className="prose prose-lg prose-neutral dark:prose-invert max-w-4xl text-muted-foreground">
+                      <div className="prose prose-lg dark:prose-invert max-w-4xl text-muted-foreground">
                         {renderRichText(course.courseRequirements)}
                       </div>
                     </div>
@@ -999,7 +999,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                         <GraduationCap className="h-5 w-5 text-green-600 dark:text-green-400" />
                         Career snapshot
                       </h3>
-                      <div className="prose prose-lg prose-neutral dark:prose-invert max-w-4xl text-muted-foreground">
+                      <div className="prose prose-lg dark:prose-invert max-w-4xl text-muted-foreground">
                         {renderRichText(course.careerOutcomesOverview)}
                       </div>
                     </div>
@@ -1011,7 +1011,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                         <Landmark className="h-5 w-5 text-primary" />
                         Student life
                       </h3>
-                      <div className="prose prose-lg prose-neutral dark:prose-invert max-w-4xl text-muted-foreground">
+                      <div className="prose prose-lg dark:prose-invert max-w-4xl text-muted-foreground">
                         {renderRichText(course.studentLifeOverview)}
                       </div>
                     </div>
@@ -1440,7 +1440,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                   <div className="rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
                     <h2 className="text-2xl font-bold mb-6">Assessment Methods</h2>
                     {course.assessment ? (
-                      <div className="prose prose-lg prose-neutral dark:prose-invert max-w-4xl text-muted-foreground">
+                      <div className="prose prose-lg dark:prose-invert max-w-4xl text-muted-foreground">
                         {renderRichText(course.assessment)}
                       </div>
                     ) : (
@@ -1558,7 +1558,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                         <MapPin className="h-5 w-5 text-primary" />
                         Student Life & City
                       </h3>
-                      <div className="prose prose-lg prose-neutral dark:prose-invert max-w-4xl text-muted-foreground">
+                      <div className="prose prose-lg dark:prose-invert max-w-4xl text-muted-foreground">
                         {renderRichText(course.studentLifeOverview, { forceBullets: true })}
                       </div>
                     </div>
@@ -1674,7 +1674,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                         <GraduationCap className="h-5 w-5 text-green-600 dark:text-green-400" />
                         Career Outcomes Overview
                       </h3>
-                      <div className="prose prose-lg prose-neutral dark:prose-invert max-w-4xl text-muted-foreground">
+                      <div className="prose prose-lg dark:prose-invert max-w-4xl text-muted-foreground">
                         {renderRichText(course.careerOutcomesOverview, { forceBullets: true })}
                       </div>
                     </div>
@@ -1699,7 +1699,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                   {course.placementYearDetail && (
                     <div className="rounded-3xl border border-border/60 bg-card p-8">
                       <h3 className="text-xl font-bold mb-4">Placement Year Detail</h3>
-                      <div className="prose prose-neutral dark:prose-invert max-w-4xl text-muted-foreground">
+                      <div className="prose dark:prose-invert max-w-4xl text-muted-foreground">
                         {renderRichText(course.placementYearDetail, { forceBullets: true })}
                       </div>
                     </div>
@@ -1712,7 +1712,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                         <MapPin className="h-5 w-5 text-primary" />
                         Study Abroad Opportunities
                       </h3>
-                      <div className="prose prose-neutral dark:prose-invert max-w-4xl text-muted-foreground">
+                      <div className="prose dark:prose-invert max-w-4xl text-muted-foreground">
                         {renderRichText(course.studyAbroadOption, { forceBullets: true })}
                       </div>
                     </div>
@@ -1954,7 +1954,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
                         <Wallet className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                         Cost Overview
                       </h3>
-                      <div className="prose prose-lg prose-neutral dark:prose-invert max-w-4xl text-muted-foreground">
+                      <div className="prose prose-lg dark:prose-invert max-w-4xl text-muted-foreground">
                         {renderRichText(course.costOverview, { forceBullets: true })}
                       </div>
                     </div>

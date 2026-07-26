@@ -19,10 +19,12 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
 
   return (
     <div className="space-y-4">
-      <div className="flex h-10 overflow-hidden rounded-2xl border border-border/50">
+      {/* No overflow-hidden here: it would clip the hover tooltips out of existence.
+          Each segment rounds its own outer corner instead, so the pill shape survives. */}
+      <div className="flex h-10 rounded-2xl border border-border/50">
         <button
           onClick={() => onSelect?.('IB')}
-          className="group relative flex h-full items-center justify-center bg-violet-500/70 text-xs font-bold text-white transition-all hover:bg-violet-500/90 cursor-pointer"
+          className="group relative flex h-full items-center justify-center rounded-l-2xl bg-violet-500/70 text-xs font-bold text-white transition-all hover:bg-violet-500/90 cursor-pointer"
           style={{ width: `${ibPct}%` }}
         >
           IB {ibPct}%
@@ -32,7 +34,7 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
         </button>
         <button
           onClick={() => onSelect?.('A_LEVEL')}
-          className="group relative flex h-full items-center justify-center bg-sky-500/70 text-xs font-bold text-white transition-all hover:bg-sky-500/90 cursor-pointer"
+          className="group relative flex h-full items-center justify-center rounded-r-2xl bg-sky-500/70 text-xs font-bold text-white transition-all hover:bg-sky-500/90 cursor-pointer"
           style={{ width: `${aLevelPct}%` }}
         >
           A-Level {aLevelPct}%
@@ -85,7 +87,9 @@ export const IbDistribution = ({ buckets, onSelect }: IbDistributionProps) => {
             )}
           >
             <span className="w-16 shrink-0 text-right text-xs font-semibold text-muted-foreground">{label}</span>
-            <div className="flex-1 overflow-hidden rounded-xl bg-muted/50">
+            {/* The fill carries its own rounded-xl, so clipping here is redundant —
+                and it used to swallow the hover tooltip. */}
+            <div className="flex-1 rounded-xl bg-muted/50">
               <div
                 className={cn(
                   'group relative flex h-7 items-center justify-end rounded-xl bg-primary/70 px-2 text-xs font-bold text-primary-foreground transition-all duration-700',
@@ -135,7 +139,7 @@ export const FieldChart = ({ fields, onSelect }: FieldChartProps) => {
             )}
           >
             <span className="w-28 shrink-0 truncate text-right text-xs text-muted-foreground">{label}</span>
-            <div className="flex-1 overflow-hidden rounded-xl bg-muted/50">
+            <div className="flex-1 rounded-xl bg-muted/50">
               <div
                 className={cn(
                   'group relative flex h-7 items-center justify-end rounded-xl px-2 text-xs font-bold text-white transition-all duration-700',
@@ -288,14 +292,15 @@ export const MatchTierSummary = ({ tiers, onSelect }: MatchTierSummaryProps) => 
   return (
     <div className="space-y-4">
       {/* Stacked bar */}
-      <div className="flex h-10 overflow-hidden rounded-2xl border border-border/50">
+      {/* See ProgrammeSplit: no overflow-hidden, or the tooltips get clipped away. */}
+      <div className="flex h-10 rounded-2xl border border-border/50">
         {tierList.map(({ key, label, count, color, hoverColor }) => {
           const pct = (count / total) * 100;
           return pct > 0 ? (
             <button
               key={label}
               onClick={() => onSelect?.(key, label)}
-              className={cn(color, hoverColor, 'group relative flex items-center justify-center text-xs font-bold text-white transition-all duration-700 cursor-pointer')}
+              className={cn(color, hoverColor, 'group relative flex items-center justify-center text-xs font-bold text-white transition-all duration-700 cursor-pointer first:rounded-l-2xl last:rounded-r-2xl')}
               style={{ width: `${pct}%` }}
             >
               {pct > 8 ? label : ''}
@@ -357,7 +362,7 @@ export const CompletionBreakdown = ({ students, onSelect }: CompletionBreakdownP
             )}
           >
             <span className="w-14 shrink-0 text-right text-xs font-semibold text-muted-foreground">{label}</span>
-            <div className="flex-1 overflow-hidden rounded-xl bg-muted/50">
+            <div className="flex-1 rounded-xl bg-muted/50">
               <div
                 className={cn(
                   'group relative flex h-7 items-center justify-end rounded-xl px-2 text-xs font-bold text-white transition-all duration-700',
