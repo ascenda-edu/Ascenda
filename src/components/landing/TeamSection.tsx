@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Bot, Briefcase, Check, Clock3, FileText, Heart, Home, TrendingUp, Users, Wallet } from 'lucide-react';
+import { Bot, Briefcase, Check, Clock3, FileText, Heart, Home, Sparkles, TrendingUp, Users, Wallet } from 'lucide-react';
 import { AnimatedSection } from '@/components/layout/animated-section';
 import { cn } from '@/lib/utils';
 import { AppFrame, ProgressRing } from './product-widgets';
@@ -142,12 +142,19 @@ export function TeamSection() {
                             >
                                 <Bot className="h-6 w-6" />
                             </span>
+                            {/* Same pill language as RoleBadge: the node is a third role on
+                                this grid, so it gets named like one — an AI agent, not a
+                                nameless mascot between two screenshots. */}
+                            <span className="inline-flex items-center gap-1 rounded-full border border-violet-500/30 bg-card px-2.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-[0.08em] text-violet-700 shadow-sm dark:text-violet-300">
+                                <Sparkles className="h-3 w-3" aria-hidden />
+                                AI agent
+                            </span>
                             {/* Capped width so the one-liner wraps instead of widening the
                                 middle column and squeezing both surfaces. */}
-                            <div className="max-w-[7rem] text-center">
+                            <div className="max-w-[8.5rem] text-center">
                                 <p className="font-heading text-sm font-semibold text-foreground">Ascendi</p>
                                 <p className="text-xs leading-snug text-muted-foreground">
-                                    keeps everyone on the same page
+                                    Answers questions and keeps everyone on the same page
                                 </p>
                             </div>
                         </div>
