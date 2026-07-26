@@ -60,7 +60,7 @@ export function DocumentsManager({ applications, documents }: DocumentsManagerPr
           <label htmlFor="doc-application" className="text-xs font-semibold text-foreground">
             Attach to application
           </label>
-          <Select value={selected || undefined} onValueChange={setSelected}>
+          <Select value={selected || ''} onValueChange={setSelected}>
             <SelectTrigger id="doc-application" className="sm:max-w-md">
               <SelectValue placeholder="Choose an application" />
             </SelectTrigger>

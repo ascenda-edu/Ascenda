@@ -180,8 +180,11 @@ export function TagList({ value, separator }: { value: string; separator: RegExp
   if (!tags.length) return null;
   return (
     <ul className="flex flex-wrap gap-2">
-      {tags.map((tag) => (
-        <li key={tag} className="surface-chip">
+      {/* Keyed by value AND index: these come from raw catalogue strings split on
+          [,;|], so a repeated tag ("Finance, Consulting, Finance") is possible and a
+          value-only key would collide. */}
+      {tags.map((tag, i) => (
+        <li key={`${tag}-${i}`} className="surface-chip">
           {tag}
         </li>
       ))}

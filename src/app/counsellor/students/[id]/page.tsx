@@ -63,6 +63,7 @@ export default async function StudentDetailPage(props: Props) {
   return (
     <div className="space-y-6">
       <PageHero
+          tone="counsellor"
         eyebrow="Counsellor"
         highlight={programmeLabel}
         title={

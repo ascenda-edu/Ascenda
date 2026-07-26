@@ -281,7 +281,8 @@
      h2 / page section: 22px → 24px (md+)
      h3 / card title:   18px
      body:              15px
-     secondary:         13px  (.text-secondary)
+     secondary:         13px  (.text-body-sm — NOT .text-secondary, see the naming
+                              hazard note further down; `secondary` is a colour token)
      caption:           12px  (text-xs)
      label:             11px  (.text-label)  ← floor for anything readable
 

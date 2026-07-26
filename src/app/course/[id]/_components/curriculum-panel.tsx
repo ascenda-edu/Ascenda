@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { ModuleYearSection } from './course-data';
 import { emphasize } from './rich-text';
@@ -15,10 +14,17 @@ interface CurriculumPanelProps {
   yearSections: ModuleYearSection[];
   /** Flat module list, used when no year structure could be parsed. */
   moduleItems: string[];
+  /**
+   * "Show all" state is owned by the PARENT on purpose. TabsContent unmounts an
+   * inactive panel, so holding it here meant an expanded module list silently
+   * collapsed every time you left the tab and came back — a regression against the
+   * pre-split page, where the flag lived in the never-unmounting page component.
+   */
+  showAllFlat: boolean;
+  onToggleShowAllFlat: () => void;
 }
 
-export function CurriculumPanel({ yearSections, moduleItems }: CurriculumPanelProps) {
-  const [showAllFlat, setShowAllFlat] = useState(false);
+export function CurriculumPanel({ yearSections, moduleItems, showAllFlat, onToggleShowAllFlat }: CurriculumPanelProps) {
   const showToggle = moduleItems.length > FLAT_MODULE_TOGGLE_THRESHOLD && !yearSections.length;
 
   return (
@@ -26,7 +32,7 @@ export function CurriculumPanel({ yearSections, moduleItems }: CurriculumPanelPr
       <div className="flex items-center justify-between gap-4">
         <PanelHeading>Course Curriculum</PanelHeading>
         {showToggle ? (
-          <Button variant="outline" size="sm" onClick={() => setShowAllFlat(!showAllFlat)}>
+          <Button variant="outline" size="sm" onClick={onToggleShowAllFlat}>
             {showAllFlat ? 'Show Less' : 'Show All'}
           </Button>
         ) : null}

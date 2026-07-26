@@ -16,8 +16,7 @@ import { parseTextBlocks, splitSentences } from './course-data';
  *   - `dark:prose-invert` is dead weight — the config points the `-invert-*`
  *     variables at the same tokens, which already flip under [data-theme=dark]
  *     — and a `dark:` colour variant is against the house rules anyway;
- *   - `text-muted-foreground` fights `--tw-prose-body` (= `foreground`) on the
- *     same element, so the intended text colour depended on layer order.
+ *   - `text-muted-foreground` now competes with `--tw-prose-body` on the same element (only since this branch installed the typography plugin — on main `prose` emitted nothing at all, so there was no conflict to have)*     same element, so the intended text colour depended on layer order.
  */
 export const RICH_TEXT_CLASS = 'prose max-w-3xl';
 

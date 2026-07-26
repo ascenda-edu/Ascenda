@@ -130,6 +130,7 @@ export function DashboardClient({
     <div className="space-y-6">
       <SectionNav items={COUNSELLOR_SECTION_ITEMS} />
       <PageHero
+          tone="counsellor"
         eyebrow="Counsellor"
         highlight={`${stats.total} students`}
         title="Overview"

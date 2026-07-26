@@ -20,6 +20,7 @@ export default async function CounsellorDocumentsPage() {
     <div className="space-y-6">
       <SectionNav items={COUNSELLOR_SECTION_ITEMS} />
       <PageHero
+          tone="counsellor"
         eyebrow="Counsellor"
         highlight={overdue > 0 ? `${overdue} overdue` : 'All on track'}
         title="Document management"

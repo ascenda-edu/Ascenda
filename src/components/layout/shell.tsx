@@ -22,12 +22,11 @@ export const DashboardShell = ({ children }: { children: ReactNode }) => {
           <main
             id="main-content"
             tabIndex={-1}
-            className="min-w-0 flex-1 space-y-4 py-2 sm:space-y-6 sm:py-5 lg:py-6"
+            className="min-w-0 flex-1 py-2 sm:py-5 lg:py-6"
           >
-            {/* Inside the shell, so the navbar / sidebar / section nav above it
-                persist across navigations and their sliding indicator can animate. A
-                root template.tsx remounted all of that instead. */}
-            <PageTransition>{children}</PageTransition>
+            {/* space-y lives on PageTransition, not here: this wrapper is <main>'s only
+                child, and `space-y-*` needs siblings to do anything. */}
+            <PageTransition className="space-y-4 sm:space-y-6">{children}</PageTransition>
           </main>
         </div>
         <MobileNav />

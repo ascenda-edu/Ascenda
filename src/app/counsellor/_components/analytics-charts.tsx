@@ -23,33 +23,42 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
           Each segment rounds its own outer corner instead, so the pill shape survives. */}
       <div className="flex h-10 rounded-2xl border border-border/50">
         {/* Steps 1 and 4 of the ramp, not 1 and 2 — adjacent steps are only 1.32:1
-            apart. The `ring-2 ring-card` on the second segment is the 2px surface gap
+            apart. The `ring-2 ring-inset ring-card` on the second segment is the 2px surface gap
             that a monochrome stack depends on to stay readable; without it the two
             indigos merge into one bar.
 
             No text inside the segments: no single label colour clears 4.5:1 across a
             set of fills, and the two cards below already name and quantify both
             series, so in-bar text was redundant. aria-label carries it for SR users. */}
+        {/* Both guarded on > 0 and rounded via first:/last: rather than hardcoding one
+            end each. With a 100%-one-programme cohort the surviving segment used to
+            render full width with only ONE end rounded, so two square corners poked
+            past the container's radius (the removed overflow-hidden used to hide it).
+            React drops `null` children, so first:/last: land on whichever survives. */}
+        {ibPct > 0 ? (
         <button
           onClick={() => onSelect?.('IB')}
           aria-label={`IB: ${breakdown.ib} students, ${ibPct}% of the cohort. Click to explore.`}
-          className="group relative flex h-full items-center justify-center rounded-l-2xl bg-series-1 transition-[width,background-color] hover:bg-series-1/85 cursor-pointer"
+          className="group relative flex h-full items-center justify-center first:rounded-l-2xl last:rounded-r-2xl bg-series-1 transition-[width,background-color] hover:bg-series-1/85 cursor-pointer"
           style={{ width: `${ibPct}%` }}
         >
           <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             {breakdown.ib} students · Click to explore
           </span>
         </button>
+        ) : null}
+        {aLevelPct > 0 ? (
         <button
           onClick={() => onSelect?.('A_LEVEL')}
           aria-label={`A-Level: ${breakdown.aLevel} students, ${aLevelPct}% of the cohort. Click to explore.`}
-          className="group relative z-raised flex h-full items-center justify-center rounded-r-2xl bg-series-4 ring-2 ring-card transition-[width,background-color] hover:bg-series-4/85 cursor-pointer"
+          className="group relative z-raised flex h-full items-center justify-center first:rounded-l-2xl last:rounded-r-2xl bg-series-4 ring-2 ring-inset ring-card transition-[width,background-color] hover:bg-series-4/85 cursor-pointer"
           style={{ width: `${aLevelPct}%` }}
         >
           <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             {breakdown.aLevel} students · Click to explore
           </span>
         </button>
+        ) : null}
       </div>
       <div className="grid grid-cols-2 gap-3">
         {/* These cards ARE the legend for the bar above: a colour swatch carries
@@ -188,13 +197,20 @@ interface FullFunnelProps {
   onSelect?: (stage: keyof CohortStats['appFunnel'], label: string) => void;
 }
 
+// Tone mapping mirrors APPLICATION_STATUS_VISUAL / STAGE_COLORS exactly, so the
+// funnel, the kanban and the drill-down can't disagree about a stage: planning=info,
+// inProgress=warning, submitted=success, decision=feature. It previously used grey
+// for planning and info for inProgress, which meant clicking the blue "In Progress"
+// bar opened a drill-down with an amber accent one click later.
+//
+// `textOnFill` is the tone's own -foreground, NOT `text-foreground`. This is the one
+// chart that still prints its value inside the mark, and near-white ink on a bright
+// fill measured 1.43:1 on "Submitted" in dark mode — the value was invisible.
 const FUNNEL_STAGES = [
-  // Tone mapping matches APPLICATION_STATUS_VISUAL / STAGE_COLORS so the funnel,
-  // the kanban and the analytics drill-down can never disagree about a stage.
-  { key: 'planning' as const, label: 'Planning', color: 'bg-muted-foreground/40', hoverColor: 'hover:bg-muted-foreground/60', textColor: 'text-muted-foreground' },
-  { key: 'inProgress' as const, label: 'In Progress', color: 'bg-info-fill', hoverColor: 'hover:bg-info/85', textColor: 'text-info' },
-  { key: 'submitted' as const, label: 'Submitted', color: 'bg-success-fill', hoverColor: 'hover:bg-success/85', textColor: 'text-success' },
-  { key: 'decision' as const, label: 'Decision Received', color: 'bg-feature-fill', hoverColor: 'hover:bg-feature/85', textColor: 'text-feature' }
+  { key: 'planning' as const, label: 'Planning', color: 'bg-muted-foreground/40', hoverColor: 'hover:bg-muted-foreground/60', textColor: 'text-muted-foreground', textOnFill: 'text-foreground' },
+  { key: 'inProgress' as const, label: 'In Progress', color: 'bg-warning-fill', hoverColor: 'hover:bg-warning-fill/85', textColor: 'text-warning', textOnFill: 'text-warning-foreground' },
+  { key: 'submitted' as const, label: 'Submitted', color: 'bg-success-fill', hoverColor: 'hover:bg-success-fill/85', textColor: 'text-success', textOnFill: 'text-success-foreground' },
+  { key: 'decision' as const, label: 'Decision Received', color: 'bg-feature-fill', hoverColor: 'hover:bg-feature-fill/85', textColor: 'text-feature', textOnFill: 'text-feature-foreground' }
 ];
 
 // Synthetic "last year" funnel for the year-on-year comparison toggle. Builds
@@ -243,7 +259,7 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
       </div>
 
       <div className="space-y-3">
-        {FUNNEL_STAGES.map(({ key, label, color, hoverColor, textColor }, idx) => {
+        {FUNNEL_STAGES.map(({ key, label, color, hoverColor, textColor, textOnFill }, idx) => {
           const count = funnel[key];
           const pct = Math.round((count / total) * 100);
           const width = Math.max(100 - idx * 12, 40);
@@ -270,7 +286,7 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
               </div>
               <div className="flex justify-center">
                 <div
-                  className={cn('group relative flex h-8 items-center justify-center rounded-xl text-xs font-bold text-foreground transition-[width,background-color]', color, count > 0 && hoverColor)}
+                  className={cn('group relative flex h-8 items-center justify-center rounded-xl text-xs font-bold transition-[width,background-color]', color, textOnFill, count > 0 && hoverColor)}
                   style={{ width: `${width}%` }}
                 >
                   {count}
@@ -305,9 +321,9 @@ export const MatchTierSummary = ({ tiers, onSelect }: MatchTierSummaryProps) => 
 
   const tierList = [
     // reach/match/safety is a status scale, matching TIER_VISUAL in lib/theme/categories.
-    { key: 'reach' as const, label: 'Reach', count: tiers.reach, color: 'bg-danger-fill', hoverColor: 'hover:bg-danger/85', card: 'border-danger/25 bg-danger-subtle', hoverCard: 'hover-lift', text: 'text-danger' },
-    { key: 'match' as const, label: 'Match', count: tiers.match, color: 'bg-warning-fill', hoverColor: 'hover:bg-warning/85', card: 'border-warning/25 bg-warning-subtle', hoverCard: 'hover-lift', text: 'text-warning' },
-    { key: 'safe' as const, label: 'Safe', count: tiers.safe, color: 'bg-success-fill', hoverColor: 'hover:bg-success/85', card: 'border-success/25 bg-success-subtle', hoverCard: 'hover-lift', text: 'text-success' }
+    { key: 'reach' as const, label: 'Reach', count: tiers.reach, color: 'bg-danger-fill', hoverColor: 'hover:bg-danger-fill/85', card: 'border-danger/25 bg-danger-subtle', hoverCard: 'hover-lift', text: 'text-danger' },
+    { key: 'match' as const, label: 'Match', count: tiers.match, color: 'bg-warning-fill', hoverColor: 'hover:bg-warning-fill/85', card: 'border-warning/25 bg-warning-subtle', hoverCard: 'hover-lift', text: 'text-warning' },
+    { key: 'safe' as const, label: 'Safe', count: tiers.safe, color: 'bg-success-fill', hoverColor: 'hover:bg-success-fill/85', card: 'border-success/25 bg-success-subtle', hoverCard: 'hover-lift', text: 'text-success' }
   ];
 
   return (
@@ -325,7 +341,7 @@ export const MatchTierSummary = ({ tiers, onSelect }: MatchTierSummaryProps) => 
               // These three are tone tokens (danger/warning/success), so they're
               // separated by hue rather than lightness — but the 2px surface gap is
               // the house rule for every segmented bar, so it applies here too.
-              className={cn(color, hoverColor, 'group relative flex items-center justify-center transition-[width,background-color] duration-700 cursor-pointer first:rounded-l-2xl last:rounded-r-2xl ring-2 ring-card')}
+              className={cn(color, hoverColor, 'group relative flex items-center justify-center transition-[width,background-color] duration-700 cursor-pointer first:rounded-l-2xl last:rounded-r-2xl ring-2 ring-inset ring-card')}
               style={{ width: `${pct}%` }}
             >
               {/* Identity comes from the labelled cards below, not in-bar text. */}
@@ -367,10 +383,10 @@ export const CompletionBreakdown = ({ students, onSelect }: CompletionBreakdownP
   // note `red`, where the rest of the app used `rose`, one of the drifts that made
   // status colour untunable.)
   const buckets = [
-    { label: '100%', count: students.filter((s) => s.pct === 100).length, color: 'bg-success-fill', hoverColor: 'hover:bg-success/85', tooltip: 'Fully complete', min: 100, max: 100 },
-    { label: '75–99%', count: students.filter((s) => s.pct >= 75 && s.pct < 100).length, color: 'bg-info-fill', hoverColor: 'hover:bg-info/85', tooltip: 'Almost complete', min: 75, max: 99 },
-    { label: '50–74%', count: students.filter((s) => s.pct >= 50 && s.pct < 75).length, color: 'bg-warning-fill', hoverColor: 'hover:bg-warning/85', tooltip: 'Partially complete', min: 50, max: 74 },
-    { label: '<50%', count: students.filter((s) => s.pct < 50).length, color: 'bg-danger-fill', hoverColor: 'hover:bg-danger/85', tooltip: 'Needs attention', min: 0, max: 49 }
+    { label: '100%', count: students.filter((s) => s.pct === 100).length, color: 'bg-success-fill', hoverColor: 'hover:bg-success-fill/85', tooltip: 'Fully complete', min: 100, max: 100 },
+    { label: '75–99%', count: students.filter((s) => s.pct >= 75 && s.pct < 100).length, color: 'bg-info-fill', hoverColor: 'hover:bg-info-fill/85', tooltip: 'Almost complete', min: 75, max: 99 },
+    { label: '50–74%', count: students.filter((s) => s.pct >= 50 && s.pct < 75).length, color: 'bg-warning-fill', hoverColor: 'hover:bg-warning-fill/85', tooltip: 'Partially complete', min: 50, max: 74 },
+    { label: '<50%', count: students.filter((s) => s.pct < 50).length, color: 'bg-danger-fill', hoverColor: 'hover:bg-danger-fill/85', tooltip: 'Needs attention', min: 0, max: 49 }
   ];
   const max = Math.max(...buckets.map((b) => b.count), 1);
   const avg = Math.round(students.reduce((a, s) => a + s.pct, 0) / (students.length || 1));

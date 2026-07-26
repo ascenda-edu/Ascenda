@@ -109,10 +109,10 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
                 onClick={() => onSelect?.(bucket)}
                 aria-label={`${bucket.label}: ${bucket.count} ${unitFor(bucket.count)}, ${pctOf(bucket.count)}%`}
                 className={cn(
-                  // ring-2 ring-card is the 2px surface gap between segments. Adjacent
+                  // ring-2 ring-inset ring-card is the 2px surface gap between segments. Adjacent
                   // ramp steps are only ~1.4:1 apart, so the gap — not the colour
                   // delta — is what keeps a monochrome stack readable. Don't remove it.
-                  'group relative flex min-w-0 items-center justify-center transition-[width,background-color] duration-700 first:rounded-l-2xl last:rounded-r-2xl ring-2 ring-card',
+                  'group relative flex min-w-0 items-center justify-center transition-[width,background-color] duration-700 first:rounded-l-2xl last:rounded-r-2xl ring-2 ring-inset ring-card',
                   colors.bar,
                   interactive ? cn(colors.barHover, 'cursor-pointer') : 'cursor-default'
                 )}

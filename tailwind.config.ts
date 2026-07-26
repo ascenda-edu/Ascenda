@@ -63,7 +63,14 @@ const config: Config = {
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}'
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    // src/lib holds several class-string TABLES (theme/categories.ts, theme/fit-score.ts,
+    // counsellor/stage-colors.ts, counsellor/deck-theme.ts, config/toolbox.ts). Without
+    // this glob their classes only compile when the same string happens to appear under
+    // app/ or components/ — which left `ring-primary/25`, `border-warning/40` and
+    // `border-info/40` emitting nothing, so those rings/borders fell back to Tailwind's
+    // default blue and to `border-border` grey.
+    './src/lib/**/*.{js,ts}'
   ],
   theme: {
     container: {

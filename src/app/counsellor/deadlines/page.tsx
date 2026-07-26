@@ -26,6 +26,7 @@ export default async function CounsellorDeadlinesPage() {
     <div className="space-y-6">
       <SectionNav items={COUNSELLOR_SECTION_ITEMS} />
       <PageHero
+          tone="counsellor"
         eyebrow="Counsellor"
         highlight={`${allDeadlines.length} total`}
         title="Deadline monitor"

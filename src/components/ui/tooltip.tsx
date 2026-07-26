@@ -12,8 +12,11 @@ import { cn } from '@/lib/utils';
  * an ancestor, and `z-overlay` puts it above panels but below modals.
  *
  * `TooltipProvider` must wrap anything that renders a `Tooltip` — Radix throws
- * "`Tooltip` must be used within `TooltipProvider`" otherwise. It is not yet
- * mounted app-wide; until it is, wrap locally.
+ * "`Tooltip` must be used within `TooltipProvider`" otherwise. It IS mounted
+ * app-wide, once, in `app/providers.tsx`, so consumers should NOT wrap locally:
+ * `skipDelayDuration` is grouped per provider, and a nested one would restart the
+ * open delay for every tooltip instead of letting a sweep across neighbours feel
+ * instant.
  */
 
 // 200ms, not Radix's 700ms default: these label chart bars and icon buttons, where

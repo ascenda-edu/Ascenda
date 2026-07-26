@@ -809,7 +809,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                   type="button"
                   onClick={() => setAssignOpen(true)}
                   disabled={selectedDeck.cards.length === 0}
-                  className="flex items-center gap-1.5 rounded-full bg-feature-fill px-3.5 py-1.5 text-xs font-semibold text-feature-foreground transition hover:-translate-y-0.5 hover:bg-feature/90 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-full bg-feature-fill px-3.5 py-1.5 text-xs font-semibold text-feature-foreground transition hover:-translate-y-0.5 hover:bg-feature-fill/90 disabled:opacity-50"
                 >
                   <Send className="h-3 w-3" /> Assign to students
                 </button>
@@ -919,7 +919,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                 type="button"
                 onClick={assignDeck}
                 disabled={assignSelection.size === 0 || isAssigning}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-feature-fill px-4 py-2.5 text-sm font-semibold text-feature-foreground transition hover:-translate-y-0.5 hover:bg-feature/90 disabled:opacity-50"
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-feature-fill px-4 py-2.5 text-sm font-semibold text-feature-foreground transition hover:-translate-y-0.5 hover:bg-feature-fill/90 disabled:opacity-50"
               >
                 {isAssigning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 Send quest to {assignSelection.size || 'selected'} student{assignSelection.size === 1 ? '' : 's'}

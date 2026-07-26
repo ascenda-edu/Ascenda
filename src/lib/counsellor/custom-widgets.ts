@@ -248,7 +248,13 @@ const SOURCES: Record<CustomWidgetSource, SourceDef<any>> = {
 };
 
 /** Keep bar lists readable: everything past the top 7 folds into "Other". */
-const MAX_BUCKETS = 8;
+// MUST equal CHART_PALETTE_SIZE in app/counsellor/_components/chart-palette.ts.
+// The palette is a 5-step ramp and chartPaletteAt() wraps, so folding at 8 gave
+// segments 6-8 the same colours as 1-3 — and the in-segment label that used to
+// disambiguate them was removed when bar labels moved out of the marks. Folding at the
+// palette size means a colour is never reused. The 'Other' bucket keeps every student,
+// so nothing is dropped; it's the dataviz rule (past N slots, fold rather than cycle).
+const MAX_BUCKETS = 5;
 
 export interface CustomWidgetDimensionMeta {
   key: string;

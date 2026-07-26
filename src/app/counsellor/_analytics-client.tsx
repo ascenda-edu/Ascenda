@@ -495,6 +495,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
     <div className="space-y-6">
       <SectionNav items={COUNSELLOR_SECTION_ITEMS} />
       <PageHero
+          tone="counsellor"
         eyebrow="Counsellor"
         highlight="Deep dive"
         title="Cohort analytics"

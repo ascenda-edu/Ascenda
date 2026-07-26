@@ -46,6 +46,9 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
   const [course, setCourse] = useState<CourseView | null>(null);
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
+  // Owned here, not in CurriculumPanel: TabsContent unmounts inactive panels, so
+  // panel-local state resets whenever you leave the tab and return.
+  const [showAllFlatModules, setShowAllFlatModules] = useState(false);
 
   const { backHref, backLabel } = useMemo(() => {
     const from = searchParams.get('from');
@@ -204,7 +207,14 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
           overview: (
             <OverviewPanel course={course} costs={costs} hasOutcomes={hasOutcomes} onNavigate={setActiveTab} />
           ),
-          curriculum: <CurriculumPanel yearSections={moduleYearSections} moduleItems={moduleItems} />,
+          curriculum: (
+            <CurriculumPanel
+              yearSections={moduleYearSections}
+              moduleItems={moduleItems}
+              showAllFlat={showAllFlatModules}
+              onToggleShowAllFlat={() => setShowAllFlatModules((v) => !v)}
+            />
+          ),
           requirements: <RequirementsPanel requirements={course.requirements} />,
           assessment: <AssessmentPanel assessment={course.assessment} />,
           campus: <CampusPanel course={course} />,

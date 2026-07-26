@@ -13,6 +13,7 @@ export default function CounsellorInboxPage() {
     <div className="space-y-6">
       <SectionNav items={COUNSELLOR_SECTION_ITEMS} />
       <PageHero
+          tone="counsellor"
         eyebrow="Counsellor"
         title="Inbox"
         description="Every conversation with your students — help requests, replies and check-ins."

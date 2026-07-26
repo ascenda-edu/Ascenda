@@ -22,6 +22,7 @@ export default async function CounsellorApplicationsPage() {
     <div className="space-y-6">
       <SectionNav items={COUNSELLOR_SECTION_ITEMS} />
       <PageHero
+          tone="counsellor"
         eyebrow="Counsellor"
         title="Application overview"
         description="Every student's applications across platforms — kanban or list, with filters. For deadline-only triage, see Deadlines."

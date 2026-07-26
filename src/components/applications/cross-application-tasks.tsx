@@ -289,7 +289,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
             aria-label="Due date (optional)"
             className="rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
-          <Select value={newAppId || undefined} onValueChange={setNewAppId}>
+          <Select value={newAppId || ''} onValueChange={setNewAppId}>
             {/* w-auto: the trigger's base class is w-full, which in this wrap row
               * would claim a whole line. rounded-full/py-2 keep it the same pill
               * height as the two inputs beside it. */}

@@ -20,6 +20,7 @@ export default async function CounsellorOutcomesPage() {
     <div className="space-y-6">
       <SectionNav items={COUNSELLOR_SECTION_ITEMS} />
       <PageHero
+          tone="counsellor"
         eyebrow="Counsellor"
         title="Outcome tracking"
         description="Acceptances, rejections, waitlists, and pending responses across the cohort."
