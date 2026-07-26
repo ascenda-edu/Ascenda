@@ -63,7 +63,7 @@ export function ParentThreadPanel({
   if (!thread) {
     return (
       <EmptyState
-        icon={MessageSquare}
+        icon={<MessageSquare />}
         title="No conversation set up yet"
         description={`The counsellor hasn't opened a parent thread for ${childFirstName} yet. Once they add you as a contact, your conversation will live here.`}
         hint="Ask the school to add your contact details to the counsellor's parent directory."

@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 /**
  * The app's empty state.
@@ -17,7 +17,19 @@ import type { LucideIcon } from "lucide-react";
  * dashed treatment flattened the good news into an absence.
  */
 interface EmptyStateProps {
-    icon?: LucideIcon;
+    /**
+     * A RENDERED icon element, e.g. `icon={<Inbox />}` — not a component reference.
+     *
+     * This is deliberate and load-bearing: EmptyState is a Client Component, and a
+     * Lucide icon is a forwardRef object carrying a `render` FUNCTION. Functions
+     * aren't serialisable across the server/client boundary, so `icon={Inbox}` from a
+     * Server Component throws "Functions cannot be passed directly to Client
+     * Components" and takes the whole route's error boundary with it. That was live on
+     * five server pages. A rendered element serialises fine.
+     *
+     * The wrapper sizes whatever you pass, so call sites don't set icon dimensions.
+     */
+    icon?: ReactNode;
     title: string;
     description?: string;
     hint?: string;
@@ -30,7 +42,7 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({
-    icon: Icon,
+    icon,
     title,
     description,
     hint,
@@ -58,23 +70,21 @@ export function EmptyState({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.18 }}
         >
-            {Icon && (
+            {icon && (
                 <div
+                    aria-hidden
                     className={cn(
                         "flex items-center justify-center rounded-2xl ring-1",
                         inline ? "h-9 w-9" : "h-12 w-12",
+                        // Size and colour the passed element from here, so call sites
+                        // stay `icon={<Inbox />}` with no styling of their own.
+                        inline ? "[&>svg]:h-4 [&>svg]:w-4" : "[&>svg]:h-5 [&>svg]:w-5",
                         positive
-                            ? "bg-success/10 ring-success/25"
-                            : "bg-primary/5 ring-primary/10"
+                            ? "bg-success/10 ring-success/25 [&>svg]:text-success"
+                            : "bg-primary/5 ring-primary/10 [&>svg]:text-primary-ink/50"
                     )}
                 >
-                    <Icon
-                        className={cn(
-                            inline ? "h-4 w-4" : "h-5 w-5",
-                            positive ? "text-success" : "text-primary-ink/50"
-                        )}
-                        aria-hidden
-                    />
+                    {icon}
                 </div>
             )}
             <h3

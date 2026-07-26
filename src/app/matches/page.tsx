@@ -59,7 +59,7 @@ export default async function MatchesPage() {
           }
         />
         <EmptyState
-          icon={AlertTriangle}
+          icon={<AlertTriangle />}
           title="Hit a snag loading your matches"
           description="Try refreshing in a bit, or pop into your profile and tweak something — that often helps."
         />
@@ -85,7 +85,7 @@ export default async function MatchesPage() {
           }
         />
         <EmptyState
-          icon={UserCircle}
+          icon={<UserCircle />}
           title={MATCHES_TEXT.profileIncomplete.emptyMessage}
         />
       </DashboardShell>
@@ -110,7 +110,7 @@ export default async function MatchesPage() {
             </Button>
           }
         />
-        <EmptyState icon={Library} title={MATCHES_TEXT.catalogUnavailable} />
+        <EmptyState icon={<Library />} title={MATCHES_TEXT.catalogUnavailable} />
       </DashboardShell>
     );
   }
@@ -161,7 +161,7 @@ export default async function MatchesPage() {
         <MatchList matches={enriched} />
       ) : (
         <EmptyState
-          icon={Compass}
+          icon={<Compass />}
           title={MATCHES_TEXT.emptyState.title}
           description={MATCHES_TEXT.emptyState.description}
           action={

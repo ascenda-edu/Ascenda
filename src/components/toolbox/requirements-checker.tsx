@@ -238,9 +238,17 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
           return (
             <motion.div key={row.id} variants={cardFade}>
               <div className="surface-subcard rounded-2xl overflow-hidden">
+                {/* The expand toggle and the per-status buttons are SIBLINGS, not
+                    nested. This whole header used to be one <button> with the status
+                    buttons inside it — invalid HTML (a button can't contain a button),
+                    which React reports as a hydration error, and the reason those
+                    handlers needed an e.stopPropagation() to work at all. */}
                 <button
+                  type="button"
                   onClick={() => setExpandedId(isExpanded ? null : row.id)}
-                  className="w-full text-left p-4"
+                  aria-expanded={isExpanded}
+                  aria-controls={`req-panel-${row.id}`}
+                  className="w-full p-4 pb-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -273,29 +281,32 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                     </div>
                   </div>
 
-                  {/* Status icons row */}
-                  <div className="flex gap-2 mt-3">
-                    {row.cells.map((cell) => {
-                      const cfg = STATUS_CONFIG[cell.status];
-                      const Icon = cfg.icon;
-                      return (
-                        <button
-                          key={cell.category}
-                          onClick={(e) => { e.stopPropagation(); cycleStatus(row.id, cell.category); }}
-                          className={cn('flex h-8 w-8 items-center justify-center rounded-lg transition-transform hover:scale-110', cfg.bg)}
-                          aria-label={`${CATEGORY_LABELS[cell.category]}: ${cfg.label}. Click to change status.`}
-                          title={`${CATEGORY_LABELS[cell.category]}: ${cfg.label}`}
-                        >
-                          <Icon className={cn('h-3.5 w-3.5', cfg.color)} />
-                        </button>
-                      );
-                    })}
-                  </div>
                 </button>
+
+                {/* Status icons row — a sibling of the toggle, so no nesting and no
+                    stopPropagation needed. */}
+                <div className="flex gap-2 px-4 pb-4 pt-3">
+                  {row.cells.map((cell) => {
+                    const cfg = STATUS_CONFIG[cell.status];
+                    const Icon = cfg.icon;
+                    return (
+                      <button
+                        key={cell.category}
+                        type="button"
+                        onClick={() => cycleStatus(row.id, cell.category)}
+                        className={cn('flex h-8 w-8 items-center justify-center rounded-lg transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background', cfg.bg)}
+                        aria-label={`${CATEGORY_LABELS[cell.category]}: ${cfg.label}. Click to change status.`}
+                        title={`${CATEGORY_LABELS[cell.category]}: ${cfg.label}`}
+                      >
+                        <Icon className={cn('h-3.5 w-3.5', cfg.color)} />
+                      </button>
+                    );
+                  })}
+                </div>
 
                 <AnimatePresence>
                   {isExpanded && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                    <motion.div id={`req-panel-${row.id}`} initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                       <div className="px-4 pb-4 space-y-2 border-t border-border/50 pt-3">
                         {row.cells.map((cell) => {
                           const cfg = STATUS_CONFIG[cell.status];

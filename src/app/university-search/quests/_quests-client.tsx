@@ -100,7 +100,7 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
 
       {decks.length === 0 ? (
         <EmptyState
-          icon={Scroll}
+          icon={<Scroll />}
           title="No quests yet"
           description="When your counsellor assigns you a deck of universities, it shows up here as a quest log. In the meantime, keep exploring on your own."
           action={

@@ -628,7 +628,7 @@ function UnifiedSearchInner() {
             // Offer a view reset — not the profile-wizard CTAs, which only make
             // sense when the catalogue itself returned nothing.
             <EmptyState
-              icon={SearchX}
+              icon={<SearchX />}
               title="Nothing matches your view filters"
               description="Your fit-tier selection or the search text you're typing is hiding every loaded programme. Reset your view to bring them back."
               action={
@@ -644,7 +644,7 @@ function UnifiedSearchInner() {
             />
           ) : filteredResults.length === 0 ? (
             <EmptyState
-              icon={SearchX}
+              icon={<SearchX />}
               title="No matches found"
               description="Try adjusting your filters or add one more detail to your profile to unlock matches."
               action={

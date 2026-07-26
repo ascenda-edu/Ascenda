@@ -249,7 +249,7 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
         {filtered.length === 0 ? (
           <EmptyState
             key="empty"
-            icon={Search}
+            icon={<Search />}
             title="No scholarships match these filters"
             hint="Try widening your search or clearing filters"
             action={

@@ -147,7 +147,7 @@ export function InboxList({ profileId }: InboxListProps) {
   if (requests.length === 0) {
     return (
       <EmptyState
-        icon={Inbox}
+        icon={<Inbox />}
         title="No messages yet"
         description="When you raise a help request — or your counsellor reaches out — it’ll land here."
       />

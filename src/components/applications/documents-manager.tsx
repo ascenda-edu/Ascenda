@@ -78,7 +78,7 @@ export function DocumentsManager({ applications, documents }: DocumentsManagerPr
 
       {documents.length === 0 ? (
         <EmptyState
-          icon={FileText}
+          icon={<FileText />}
           title="No documents yet"
           description="Upload a transcript, essay, or certificate above and it'll show up here."
         />

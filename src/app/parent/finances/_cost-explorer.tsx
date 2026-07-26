@@ -84,7 +84,7 @@ export function CostExplorer({
   if (costLines.length === 0) {
     return (
       <EmptyState
-        icon={Wallet}
+        icon={<Wallet />}
         title="No cost data yet"
         description={`Once ${childFirstName} is tracking applications, each programme's tuition, living costs, and graduate outcomes will appear here.`}
       />

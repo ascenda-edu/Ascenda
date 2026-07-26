@@ -115,7 +115,7 @@ export default async function ApplicationsPage() {
           }
         />
         <EmptyState
-          icon={ClipboardCheck}
+          icon={<ClipboardCheck />}
           title="No applications yet — let's pick a first one"
           description="Add a program from your shortlist and we'll line up the tasks, deadlines, and documents for you."
           action={

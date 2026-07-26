@@ -131,7 +131,7 @@ export default async function TasksPage() {
       />
       {applicationOptions.length === 0 ? (
         <EmptyState
-          icon={ListChecks}
+          icon={<ListChecks />}
           title="No tasks yet — start an application"
           description="Add a program from your shortlist and its requirements become trackable tasks here."
           action={

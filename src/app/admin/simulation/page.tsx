@@ -125,7 +125,7 @@ export default async function SimulationPage() {
       <div className="space-y-10">
         {batches.length === 0 && (
           <EmptyState
-            icon={FlaskConical}
+            icon={<FlaskConical />}
             title="No simulation results yet"
             description="Run a batch to validate the scoring and matching algorithm against real admission outcomes."
             hint="npx tsx scripts/simulate-profiles.ts batch_10"

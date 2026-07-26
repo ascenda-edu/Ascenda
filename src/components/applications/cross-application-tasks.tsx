@@ -313,7 +313,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
       {/* ── Grouped tasks ───────────────────────────────────────────── */}
       {grouped.length === 0 ? (
         <EmptyState
-          icon={ListChecks}
+          icon={<ListChecks />}
           className="min-h-[200px]"
           title={filter === 'done' ? 'Nothing finished yet' : filter === 'open' ? 'You’re all caught up' : 'No tasks tracked'}
           description={filter === 'open' ? 'Add a task above or check the done tab.' : 'Switch filter to see other tasks.'}

@@ -74,7 +74,7 @@ export function DeadlineGroups({
   if (deadlines.length === 0) {
     return (
       <EmptyState
-        icon={CalendarClock}
+        icon={<CalendarClock />}
         title="No deadlines yet"
         description={`Deadlines appear once ${childName.split(/\s+/)[0]} is tracking applications with dated milestones.`}
       />

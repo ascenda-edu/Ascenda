@@ -404,7 +404,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
       )}
 
       {filtered.length === 0 && (
-        <EmptyState icon={CalendarClock} title="No deadlines match your filters" />
+        <EmptyState icon={<CalendarClock />} title="No deadlines match your filters" />
       )}
     </div>
   );

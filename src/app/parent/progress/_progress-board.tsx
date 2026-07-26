@@ -64,7 +64,7 @@ export function ProgressBoard({
   if (applications.length === 0) {
     return (
       <EmptyState
-        icon={ClipboardCheck}
+        icon={<ClipboardCheck />}
         title="No applications tracked yet"
         description={`When ${childFirstName} starts tracking applications, each one will appear here with its stage and remaining work.`}
       />

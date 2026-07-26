@@ -169,7 +169,7 @@ export default function UniversitySearchShortlistPage() {
 
         {items.length === 0 ? (
           <EmptyState
-            icon={Sparkles}
+            icon={<Sparkles />}
             title="No courses saved yet"
             description="Shortlist directly from results to track actions and compare programs."
             action={
