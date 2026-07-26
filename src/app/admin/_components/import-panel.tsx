@@ -4,6 +4,13 @@ import { useState, useTransition } from 'react';
 import Papa from 'papaparse';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { trackEvent } from '@/lib/analytics';
 import { useToast } from '@/components/ui/toast';
 
@@ -87,19 +94,25 @@ export const ImportPanel = () => {
       </div>
       <div className="space-y-2">
         <Label htmlFor="template">Dataset</Label>
-        <select
-          id="template"
-          className="form-input w-full text-sm text-foreground"
+        {/* `name` belongs on the Root — Radix mirrors the value into a hidden
+            native select so form submission keeps working. */}
+        <Select
+          name="template"
           value={template}
           disabled={isParsing || isSyncing}
-          onChange={(event) => setTemplate(event.target.value as Template)}
+          onValueChange={(value) => setTemplate(value as Template)}
         >
-          {templates.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id="template">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {templates.map((item) => (
+              <SelectItem key={item} value={item}>
+                {item}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="csv-upload">Upload CSV</Label>

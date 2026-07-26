@@ -8,6 +8,13 @@ import { useId, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Loader2, Send } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { ChatAction } from '@/lib/chat/actions';
 import type { ChatMode } from '@/lib/chat/prompts';
 
@@ -317,24 +324,32 @@ function ToolActionCard({
                 disabled={sending}
               />
             ) : field.kind === 'select' ? (
-              <select
-                id={id}
-                value={values[field.key] ?? ''}
-                onChange={(e) => setField(field.key, e.target.value)}
+              // `|| undefined` so an empty draft value shows the placeholder —
+              // Radix cannot hold '' as a value. The panel is portalled, so the
+              // scrolling message thread can't clip it.
+              <Select
+                value={values[field.key] || undefined}
+                onValueChange={(v) => setField(field.key, v)}
                 disabled={sending}
-                className={controlClass}
               >
-                {/* Keep a value not present in options selectable rather than silently snapping. */}
-                {values[field.key] &&
-                  !(field.options ?? []).includes(values[field.key]) && (
-                    <option value={values[field.key]}>{values[field.key]}</option>
-                  )}
-                {(field.options ?? []).map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id={id} size="sm" className="rounded-lg px-2.5">
+                  <SelectValue placeholder="Select…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* Keep a value not present in options selectable rather than silently snapping. */}
+                  {values[field.key] &&
+                    !(field.options ?? []).includes(values[field.key]) && (
+                      <SelectItem value={values[field.key]}>{values[field.key]}</SelectItem>
+                    )}
+                  {/* filter(Boolean): options arrive from the model's tool call, and
+                      a blank one would throw inside Radix. */}
+                  {(field.options ?? []).filter(Boolean).map((opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {opt}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             ) : (
               <input
                 id={id}

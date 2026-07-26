@@ -21,6 +21,13 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { getBrowserSupabaseClient } from '@/lib/supabase/client';
 import { filterVisiblePrograms } from '@/lib/catalog/visibility';
 import type { CounsellorDeck, DeckCard } from '@/lib/counsellor/decks';
@@ -522,17 +529,25 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
               className="form-input rounded-full py-2.5 pl-10 pr-4"
             />
           </div>
-          <select
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            aria-label="Filter by country"
-            className="form-input w-auto rounded-full py-2.5"
-          >
-            <option value="">All countries</option>
-            {countries.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          {/* 'all' is a sentinel: the search effect treats '' as "no country
+              filter", and Radix refuses an empty item value. Mapped at the edge
+              so the query logic below is untouched. */}
+          <Select value={country || 'all'} onValueChange={(v) => setCountry(v === 'all' ? '' : v)}>
+            <SelectTrigger
+              aria-label="Filter by country"
+              className="w-auto rounded-full py-2.5"
+            >
+              <SelectValue placeholder="All countries" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All countries</SelectItem>
+              {/* filter(Boolean): the list is catalogue data, and a blank country
+                  would throw inside Radix rather than render an empty row. */}
+              {countries.filter(Boolean).map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="min-h-[200px] space-y-2">

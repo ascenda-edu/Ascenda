@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CalendarClock, Filter, LayoutGrid, List, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import { stagger, cardFade } from '@/lib/motion';
 import type { TimelineDeadline, TimelineDeadlineType } from '@/lib/data/student-demo-data';
@@ -202,14 +203,23 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
             );
           })}
         </div>
-        <select
-          value={filterUniversity ?? ''}
-          onChange={(e) => setFilterUniversity(e.target.value || null)}
-          className="rounded-full border border-border bg-background px-3 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        {/* 'all' is a sentinel: Radix rejects an empty item value, and "all
+          * universities" is a real choice rather than a placeholder. Mapped back
+          * to null here so the filter logic below is untouched. */}
+        <Select
+          value={filterUniversity ?? 'all'}
+          onValueChange={(value) => setFilterUniversity(value === 'all' ? null : value)}
         >
-          <option value="">All universities</option>
-          {universities.map((u) => <option key={u} value={u}>{u}</option>)}
-        </select>
+          {/* w-auto: the trigger is w-full by default, which would take a whole
+            * line of this wrap row. */}
+          <SelectTrigger size="sm" aria-label="Filter by university" className="w-auto">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All universities</SelectItem>
+            {universities.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+          </SelectContent>
+        </Select>
 
         <div className="ml-auto flex gap-1 surface-subcard p-1 rounded-xl">
           <button

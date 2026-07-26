@@ -7,6 +7,13 @@ import { DashboardShell } from '@/components/layout/shell';
 import { PageHero } from '@/components/layout/page-hero';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useSupabase } from '@/hooks/useSupabase';
 import { insertHelpRequest } from '@/lib/demo/help-request-client';
@@ -240,18 +247,23 @@ export default function AppointmentPage() {
                 className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </label>
-            <label className="block space-y-1.5">
+            {/* A div, not a label: the trigger is a button, which takes its
+                accessible name from its contents rather than from a wrapping
+                label — hence the aria-label. The overrides match the date input
+                beside it (rounded-xl, px-3 py-2) so the pair still reads as one row. */}
+            <div className="block space-y-1.5">
               <span className="eyebrow">Duration</span>
-              <select
-                value={duration}
-                onChange={(event) => setDuration(event.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {DURATIONS.map((value) => (
-                  <option key={value} value={value}>{value}</option>
-                ))}
-              </select>
-            </label>
+              <Select value={duration} onValueChange={setDuration}>
+                <SelectTrigger aria-label="Duration" className="rounded-xl px-3 py-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DURATIONS.map((value) => (
+                    <SelectItem key={value} value={value}>{value}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">

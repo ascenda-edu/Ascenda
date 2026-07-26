@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Globe, GraduationCap, DollarSign, Calendar, ExternalLink, Bookmark, BookmarkCheck, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/toast';
 import { trackEvent } from '@/lib/analytics';
 import type { Scholarship } from './types';
@@ -176,29 +177,38 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                   <label htmlFor="scholarship-filter-country" className="eyebrow flex items-center gap-1.5">
                     <Globe className="h-3 w-3" /> Country
                   </label>
-                  <select
-                    id="scholarship-filter-country"
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  {/* 'all' is a sentinel — Radix rejects an empty item value, and
+                    * "All countries" is a real choice, not a placeholder. Mapped
+                    * back to '' at the edge so filterScholarships is unchanged. */}
+                  <Select
+                    value={country || 'all'}
+                    onValueChange={(value) => setCountry(value === 'all' ? '' : value)}
                   >
-                    <option value="">All countries</option>
-                    {countries.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                    <SelectTrigger id="scholarship-filter-country" size="sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All countries</SelectItem>
+                      {countries.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="scholarship-filter-level" className="eyebrow flex items-center gap-1.5">
                     <GraduationCap className="h-3 w-3" /> Level
                   </label>
-                  <select
-                    id="scholarship-filter-level"
-                    value={level}
-                    onChange={(e) => setLevel(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  <Select
+                    value={level || 'all'}
+                    onValueChange={(value) => setLevel(value === 'all' ? '' : value)}
                   >
-                    <option value="">All levels</option>
-                    {levels.map((l) => <option key={l} value={l}>{l}</option>)}
-                  </select>
+                    <SelectTrigger id="scholarship-filter-level" size="sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All levels</SelectItem>
+                      {levels.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="scholarship-filter-max-award" className="eyebrow flex items-center gap-1.5">

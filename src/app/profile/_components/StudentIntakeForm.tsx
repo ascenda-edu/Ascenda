@@ -7,6 +7,7 @@ import {
   Trash2, PlusCircle, Info, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { PROFILE_STEPS } from '@/lib/profile/steps';
 import { cn } from '@/lib/utils';
@@ -277,7 +278,18 @@ const isValidDraft = (d: unknown): d is IntakeDraft => {
 // ─── Reusable field components ────────────────────────────────────────────────
 
 const inputCls = 'flex h-11 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-0 transition-[color,border-color,box-shadow] duration-150';
-const selectCls = inputCls + ' cursor-pointer';
+// SelectTrigger's default size clones the global `.form-input` (46px, rounded-2xl).
+// This wizard predates that class and uses `inputCls` (44px, rounded-xl), so every
+// trigger is nudged onto the input shape — a select and a text field share a grid
+// row here, and a 2px/4px-of-radius mismatch between them is visible.
+// Radix forbids an item with value='' , but these fields are OPTIONAL and their
+// native predecessors had a selectable `<option value="">` — so a user could set a
+// value and then take it back. A placeholder alone is not a substitute: it only
+// shows while the field is empty and can never be re-chosen. This sentinel restores
+// that path, mapped back to '' at the boundary so the submitted payload is unchanged.
+const CLEAR = '__clear';
+
+const selectTriggerCls = 'h-11 rounded-xl';
 
 /** Stable DOM id for a validation error message, so inputs can point at it via aria-describedby. */
 const fieldErrorId = (key: string) => `intake-error-${key.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
@@ -1681,24 +1693,38 @@ export const StudentIntakeForm = ({
                     </label>
                     <label className="space-y-1.5">
                       <span className="text-sm font-medium text-muted-foreground">School type <span className="text-xs">(optional)</span></span>
-                      <select className={selectCls} value={academicInput.school_type}
-                        onChange={(e) => updateAcademicInput('school_type', e.target.value)}>
-                        <option value="">Select…</option>
-                        {SCHOOL_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
+                      {/* `|| undefined` so an empty value shows the placeholder —
+                        * Radix treats '' as a real (and illegal) item value. */}
+                      <Select value={academicInput.school_type || undefined}
+                        onValueChange={(v) => updateAcademicInput('school_type', v === CLEAR ? '' : v)}>
+                        <SelectTrigger aria-label="School type" className={selectTriggerCls}>
+                          <SelectValue placeholder="Select…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={CLEAR}>Not specified</SelectItem>
+                          {SCHOOL_TYPE_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </label>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <label className="space-y-1.5" data-field="academic_input.graduation_year">
                       <span className="text-sm font-medium">Graduation year</span>
-                      <select className={cn(selectCls, errors['academic_input.graduation_year'] && 'border-destructive')}
-                        {...a11yError('academic_input.graduation_year')}
-                        value={academicInput.graduation_year}
-                        onChange={(e) => updateAcademicInput('graduation_year', e.target.value)}>
-                        <option value="">Select…</option>
-                        {GRADUATION_YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-                      </select>
+                      <Select value={academicInput.graduation_year || undefined}
+                        onValueChange={(v) => updateAcademicInput('graduation_year', v === CLEAR ? '' : v)}>
+                        <SelectTrigger
+                          aria-label="Graduation year"
+                          {...a11yError('academic_input.graduation_year')}
+                          className={cn(selectTriggerCls, errors['academic_input.graduation_year'] && 'border-destructive')}>
+                          <SelectValue placeholder="Select…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {/* GRADUATION_YEARS is number[]; the state field is a string. */}
+                          <SelectItem value={CLEAR}>Not specified</SelectItem>
+                          {GRADUATION_YEARS.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                       <FieldError msg={errors['academic_input.graduation_year']} id={fieldErrorId('academic_input.graduation_year')} />
                     </label>
                     <label className="space-y-1.5">
@@ -1801,16 +1827,20 @@ export const StudentIntakeForm = ({
                           </div>
                           <div className="md:col-span-3">
                             <label className="md:hidden text-xs font-medium text-muted-foreground mb-1 block">Level</label>
-                            <select
-                              className={selectCls}
+                            <Select
                               value={subj.level}
-                              onChange={(e) => updateSubject(i, 'level', e.target.value)}
+                              onValueChange={(v) => updateSubject(i, 'level', v)}
                               disabled={programmeType === 'A_LEVEL'}
                             >
-                              {programmeType === 'IB'
-                                ? <><option value="HL">HL</option><option value="SL">SL</option></>
-                                : <option value="A_LEVEL">A-level</option>}
-                            </select>
+                              <SelectTrigger aria-label={`Level for subject ${i + 1}`} className={selectTriggerCls}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {programmeType === 'IB'
+                                  ? <><SelectItem value="HL">HL</SelectItem><SelectItem value="SL">SL</SelectItem></>
+                                  : <SelectItem value="A_LEVEL">A-level</SelectItem>}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="md:col-span-3" data-field={`academic_input.subject_list.${i}.grade_value`}>
                             <label className="md:hidden text-xs font-medium text-muted-foreground mb-1 block">Grade</label>
@@ -1818,12 +1848,19 @@ export const StudentIntakeForm = ({
                               ? <input type="number" min={1} max={7} className={cn(inputCls, errors[`academic_input.subject_list.${i}.grade_value`] && 'border-destructive')}
                                   {...a11yError(`academic_input.subject_list.${i}.grade_value`)}
                                   value={subj.grade_value} onChange={(e) => updateSubject(i, 'grade_value', e.target.value)} placeholder="1–7" />
-                              : <select className={cn(selectCls, errors[`academic_input.subject_list.${i}.grade_value`] && 'border-destructive')}
-                                  {...a11yError(`academic_input.subject_list.${i}.grade_value`)}
-                                  value={subj.grade_value} onChange={(e) => updateSubject(i, 'grade_value', e.target.value)}>
-                                  <option value="">Grade…</option>
-                                  {A_LEVEL_GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
-                                </select>
+                              : <Select value={subj.grade_value || undefined}
+                                  onValueChange={(v) => updateSubject(i, 'grade_value', v === CLEAR ? '' : v)}>
+                                  <SelectTrigger
+                                    aria-label={`Grade for subject ${i + 1}`}
+                                    {...a11yError(`academic_input.subject_list.${i}.grade_value`)}
+                                    className={cn(selectTriggerCls, errors[`academic_input.subject_list.${i}.grade_value`] && 'border-destructive')}>
+                                    <SelectValue placeholder="Grade…" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value={CLEAR}>Not specified</SelectItem>
+                                    {A_LEVEL_GRADES.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
                             }
                             <FieldError msg={errors[`academic_input.subject_list.${i}.grade_value`]} id={fieldErrorId(`academic_input.subject_list.${i}.grade_value`)} />
                           </div>
@@ -1888,19 +1925,29 @@ export const StudentIntakeForm = ({
                         </label>
                         <label className="space-y-1.5">
                           <span className="text-sm font-medium text-muted-foreground">TOK grade <span className="text-xs">(optional)</span></span>
-                          <select className={selectCls} value={academicInput.ib_tok_grade}
-                            onChange={(e) => updateAcademicInput('ib_tok_grade', e.target.value)}>
-                            <option value="">Select…</option>
-                            {IB_GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
-                          </select>
+                          <Select value={academicInput.ib_tok_grade || undefined}
+                            onValueChange={(v) => updateAcademicInput('ib_tok_grade', v === CLEAR ? '' : v)}>
+                            <SelectTrigger aria-label="TOK grade" className={selectTriggerCls}>
+                              <SelectValue placeholder="Select…" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={CLEAR}>Not specified</SelectItem>
+                              {IB_GRADES.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
                         </label>
                         <label className="space-y-1.5">
                           <span className="text-sm font-medium text-muted-foreground">EE grade <span className="text-xs">(optional)</span></span>
-                          <select className={selectCls} value={academicInput.ib_ee_grade}
-                            onChange={(e) => updateAcademicInput('ib_ee_grade', e.target.value)}>
-                            <option value="">Select…</option>
-                            {IB_GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
-                          </select>
+                          <Select value={academicInput.ib_ee_grade || undefined}
+                            onValueChange={(v) => updateAcademicInput('ib_ee_grade', v === CLEAR ? '' : v)}>
+                            <SelectTrigger aria-label="EE grade" className={selectTriggerCls}>
+                              <SelectValue placeholder="Select…" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={CLEAR}>Not specified</SelectItem>
+                              {IB_GRADES.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
                         </label>
                         <label className="space-y-1.5">
                           <span className="text-sm font-medium text-muted-foreground">EE subject <span className="text-xs">(optional)</span></span>
@@ -1948,13 +1995,19 @@ export const StudentIntakeForm = ({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                         <label className="space-y-1.5" data-field="academic_input.english_test_type">
                           <span className="text-sm font-medium">Test type</span>
-                          <select
-                            className={cn(selectCls, errors['academic_input.english_test_type'] && 'border-destructive')}
-                            {...a11yError('academic_input.english_test_type')}
-                            value={englishTestType}
-                            onChange={(e) => setEnglishTestType(e.target.value as EnglishTestType)}>
-                            {ENGLISH_TEST_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                          </select>
+                          <Select
+                            value={englishTestType || undefined}
+                            onValueChange={(v) => setEnglishTestType(v as EnglishTestType)}>
+                            <SelectTrigger
+                              aria-label="Test type"
+                              {...a11yError('academic_input.english_test_type')}
+                              className={cn(selectTriggerCls, errors['academic_input.english_test_type'] && 'border-destructive')}>
+                              <SelectValue placeholder="Select…" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ENGLISH_TEST_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
                           <FieldError msg={errors['academic_input.english_test_type']} id={fieldErrorId('academic_input.english_test_type')} />
                         </label>
                         <div className="space-y-1.5" data-field="academic_input.english_status">

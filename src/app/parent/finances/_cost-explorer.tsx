@@ -4,6 +4,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Briefcase, Home, TrendingUp, Wallet } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { TIER_VISUAL, type FitTier } from '@/lib/theme/categories';
 import {
   DEFAULT_HOME_CURRENCY,
@@ -97,21 +104,24 @@ export function CostExplorer({
         <label className="sr-only" htmlFor="parent-home-currency">
           Home currency
         </label>
-        {/* `form-input` is THE input treatment (tailwind.config.ts). `w-auto` keeps the
-            toolbar layout — utilities are emitted after components, so it beats the
-            component class's own `w-full`. */}
-        <select
-          id="parent-home-currency"
+        {/* `w-auto` keeps the toolbar layout — the trigger is `w-full` by default,
+            and tailwind-merge lets the utility win. The sr-only label above still
+            names it via htmlFor → the trigger's id. */}
+        <Select
           value={hydrated ? currency : DEFAULT_HOME_CURRENCY}
-          onChange={(e) => changeCurrency(e.target.value as HomeCurrencyCode)}
-          className="form-input w-auto"
+          onValueChange={(value) => changeCurrency(value as HomeCurrencyCode)}
         >
-          {HOME_CURRENCIES.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.code} — {c.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id="parent-home-currency" className="w-auto">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {HOME_CURRENCIES.map((c) => (
+              <SelectItem key={c.code} value={c.code}>
+                {c.code} — {c.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Yearly cost-of-attendance summary */}

@@ -6,6 +6,7 @@ import { Check, ListChecks, Plus, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { dueLabel } from '@/lib/applications/due-label';
@@ -288,18 +289,21 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
             aria-label="Due date (optional)"
             className="rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
-          <select
-            value={newAppId}
-            onChange={(e) => setNewAppId(e.target.value)}
-            aria-label="Attach task to application"
-            className="rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-          >
-            {applicationOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <Select value={newAppId || undefined} onValueChange={setNewAppId}>
+            {/* w-auto: the trigger's base class is w-full, which in this wrap row
+              * would claim a whole line. rounded-full/py-2 keep it the same pill
+              * height as the two inputs beside it. */}
+            <SelectTrigger aria-label="Attach task to application" className="w-auto rounded-full py-2">
+              <SelectValue placeholder="Application" />
+            </SelectTrigger>
+            <SelectContent>
+              {applicationOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button size="sm" onClick={add} disabled={!newName.trim() || !newAppId || adding}>
             <Plus className="mr-1 h-3.5 w-3.5" /> {adding ? 'Adding…' : 'Add'}
           </Button>

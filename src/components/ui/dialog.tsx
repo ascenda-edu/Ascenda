@@ -1,28 +1,30 @@
 'use client';
 
 import * as React from 'react';
-import { createPortal } from 'react-dom';
-import { AnimatePresence, motion, HTMLMotionProps } from 'framer-motion';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { cn } from '@/lib/utils';
 
-const FOCUSABLE =
-    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+/**
+ * Radix-backed dialog. This replaced a hand-rolled modal that carried its own
+ * portal, focus trap, scroll lock, Escape handler and `aria-labelledby`
+ * registration — all of which Radix does, and does better (focus sentinels so
+ * Tab can't escape into browser chrome, `aria-hidden` on the rest of the page,
+ * a layer stack so nested dialogs dismiss in the right order).
+ *
+ * The public API is unchanged: `<Dialog open onOpenChange align>` wrapping a
+ * `<DialogContent>`, with `DialogHeader` / `DialogTitle` inside. No consumer
+ * needs a `DialogTrigger` — every call site opens from its own button and passes
+ * `open` — but Trigger/Close are exported now that they're free.
+ */
 
 type DialogAlign = 'center' | 'left';
 
-interface DialogContextValue {
-    onOpenChange?: (open: boolean) => void;
-    titleId: string;
-    align: DialogAlign;
-    registerTitle: () => void;
-    unregisterTitle: () => void;
-}
+// Only `align` needs sharing, and only downward to DialogContent, so this stays a
+// bare value context rather than the object the old implementation needed for its
+// title-registration bookkeeping.
+const DialogAlignContext = React.createContext<DialogAlign>('center');
 
-const DialogContext = React.createContext<DialogContextValue | null>(null);
-
-interface DialogProps {
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
+interface DialogProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root> {
     /**
      * Placement of the dialog surface. `'center'` (default) is the classic
      * modal; `'left'` turns it into a full-height slide-over anchored to the
@@ -30,191 +32,141 @@ interface DialogProps {
      * scrim behaviour are identical for both.
      */
     align?: DialogAlign;
-    children: React.ReactNode;
 }
 
-export function Dialog({ open, onOpenChange, align = 'center', children }: DialogProps) {
-    const [mounted, setMounted] = React.useState(false);
-    const [hasTitle, setHasTitle] = React.useState(false);
-    const titleId = React.useId();
-    const containerRef = React.useRef<HTMLDivElement>(null);
-    const previouslyFocused = React.useRef<HTMLElement | null>(null);
-
-    const registerTitle = React.useCallback(() => setHasTitle(true), []);
-    const unregisterTitle = React.useCallback(() => setHasTitle(false), []);
-    const contextValue = React.useMemo<DialogContextValue>(
-        () => ({ onOpenChange, titleId, align, registerTitle, unregisterTitle }),
-        [onOpenChange, titleId, align, registerTitle, unregisterTitle]
-    );
-
-    React.useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    // Escape to close
-    React.useEffect(() => {
-        if (!open) return;
-        const onKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onOpenChange?.(false);
-        };
-        document.addEventListener('keydown', onKeyDown);
-        return () => document.removeEventListener('keydown', onKeyDown);
-    }, [open, onOpenChange]);
-
-    // Lock body scroll while open
-    React.useEffect(() => {
-        if (!open) return;
-        const original = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-        return () => {
-            document.body.style.overflow = original;
-        };
-    }, [open]);
-
-    // Move focus into the dialog on open, restore it on close
-    React.useEffect(() => {
-        if (open) {
-            previouslyFocused.current = document.activeElement as HTMLElement | null;
-            const node = containerRef.current;
-            const target = node?.querySelector<HTMLElement>(FOCUSABLE) ?? node;
-            target?.focus();
-        } else {
-            previouslyFocused.current?.focus?.();
-        }
-    }, [open]);
-
-    // Trap Tab focus within the dialog
-    const onTrapKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key !== 'Tab') return;
-        const node = containerRef.current;
-        if (!node) return;
-        const focusables = Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-            (el) => el.offsetParent !== null
-        );
-        if (focusables.length === 0) {
-            e.preventDefault();
-            return;
-        }
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        const active = document.activeElement;
-        if (e.shiftKey && active === first) {
-            e.preventDefault();
-            last.focus();
-        } else if (!e.shiftKey && active === last) {
-            e.preventDefault();
-            first.focus();
-        }
-    };
-
-    if (!mounted) return null;
-
-    return createPortal(
-        <AnimatePresence>
-            {open && (
-                <DialogContext.Provider value={contextValue}>
-                    <div
-                        className={cn(
-                            'fixed inset-0 z-modal flex',
-                            align === 'left' ? 'items-stretch justify-start' : 'items-center justify-center'
-                        )}
-                    >
-                        {/* Backdrop */}
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => onOpenChange?.(false)}
-                            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-                        />
-                        {/* Content Wrapper handles z-index, positioning, and a11y semantics */}
-                        <div
-                            ref={containerRef}
-                            role="dialog"
-                            aria-modal="true"
-                            aria-labelledby={hasTitle ? titleId : undefined}
-                            tabIndex={-1}
-                            onKeyDown={onTrapKeyDown}
-                            className={cn(
-                                'relative z-[205] flex outline-none [overscroll-behavior:contain]',
-                                align === 'left'
-                                    ? 'h-full items-stretch justify-start'
-                                    : 'w-full items-center justify-center p-4 sm:p-6'
-                            )}
-                        >
-                            {children}
-                        </div>
-                    </div>
-                </DialogContext.Provider>
-            )}
-        </AnimatePresence>,
-        document.body
+export function Dialog({ align = 'center', ...props }: DialogProps) {
+    return (
+        <DialogAlignContext.Provider value={align}>
+            <DialogPrimitive.Root {...props} />
+        </DialogAlignContext.Provider>
     );
 }
 
-interface DialogContentProps extends Omit<HTMLMotionProps<'div'>, 'ref'> {
-    children: React.ReactNode;
-    className?: string;
-}
+export const DialogTrigger = DialogPrimitive.Trigger;
+export const DialogClose = DialogPrimitive.Close;
 
-export const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
-    ({ children, className, ...props }, ref) => {
-        const ctx = React.useContext(DialogContext);
-        const isLeft = ctx?.align === 'left';
-        const motionProps = isLeft
-            ? {
-                initial: { opacity: 0, x: '-100%' },
-                animate: { opacity: 1, x: 0 },
-                exit: { opacity: 0, x: '-100%' },
-            }
-            : {
-                initial: { opacity: 0, scale: 0.95, y: 20 },
-                animate: { opacity: 1, scale: 1, y: 0 },
-                exit: { opacity: 0, scale: 0.95, y: 20 },
-            };
-        return (
-            <motion.div
-                ref={ref}
-                {...motionProps}
-                // Slide-over keeps its own eased timing; the center modal restores
-                // the original `{ duration: 0.2 }` so pre-existing dialogs are
-                // timing-identical to before the slide-over variant landed.
-                transition={isLeft ? { duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] } : { duration: 0.2 }}
+// Shared entrance/exit timing. ~200ms in, faster out, per the house rule; the
+// `duration-*` utility is re-mapped to animation-duration by tailwindcss-animate,
+// and the `data-[state=closed]:` variant outranks the base by specificity.
+const TIMING = 'duration-200 data-[state=closed]:duration-150';
+
+export type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>;
+
+export const DialogContent = React.forwardRef<
+    React.ComponentRef<typeof DialogPrimitive.Content>,
+    DialogContentProps
+>(({ className, children, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => {
+    const align = React.useContext(DialogAlignContext);
+    const isLeft = align === 'left';
+
+    // Radix restores focus to its own DialogTrigger on close. Nothing here uses
+    // one — every consumer drives `open` from a button elsewhere in the tree — so
+    // Radix would drop focus to <body>. FocusScope dispatches open-auto-focus
+    // *before* it moves focus, so activeElement is still the opener at that point;
+    // stash it and put focus back ourselves. The ref lives as long as the mounted
+    // content, which spans exactly one open→close cycle.
+    const openerRef = React.useRef<HTMLElement | null>(null);
+
+    return (
+        <DialogPrimitive.Portal>
+            <DialogPrimitive.Overlay
                 className={cn(
-                    // e-4 is the ladder's modal step; a dialog should sit above popovers.
-                    'relative overflow-hidden border bg-background text-foreground shadow-e-4',
-                    isLeft
-                        ? 'h-full w-[min(88vw,360px)] max-w-full border-y-0 border-l-0'
-                        : 'w-full max-w-lg rounded-xl sm:rounded-2xl',
-                    className
+                    'fixed inset-0 z-modal bg-black/50 backdrop-blur-sm',
+                    'data-[state=open]:animate-in data-[state=open]:fade-in-0',
+                    'data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
+                    TIMING
                 )}
-                {...props}
+            />
+            {/* Positioning wrapper rather than translate-centring on the panel
+                itself: it keeps the viewport gutter on small screens and lets the
+                slide-over stretch to full height, both of which the previous
+                flex-centred implementation relied on. It must not eat outside
+                clicks, hence pointer-events-none here / auto on the panel. */}
+            <div
+                className={cn(
+                    'pointer-events-none fixed inset-0 z-modal flex',
+                    isLeft ? 'items-stretch justify-start' : 'items-center justify-center p-4 sm:p-6'
+                )}
             >
-                {children}
-            </motion.div>
-        );
-    }
-);
+                <DialogPrimitive.Content
+                    ref={ref}
+                    onOpenAutoFocus={(event) => {
+                        openerRef.current = document.activeElement as HTMLElement | null;
+                        onOpenAutoFocus?.(event);
+                    }}
+                    onCloseAutoFocus={(event) => {
+                        onCloseAutoFocus?.(event);
+                        if (event.defaultPrevented) return;
+                        const opener = openerRef.current;
+                        // isConnected: the opener is often inside a list the dialog
+                        // just mutated, in which case there is nothing to return to
+                        // and Radix's own fallback should run instead.
+                        if (opener?.isConnected) {
+                            event.preventDefault();
+                            opener.focus();
+                        }
+                    }}
+                    className={cn(
+                        // e-4 is the ladder's modal step; a dialog should sit above popovers.
+                        'pointer-events-auto relative overflow-hidden border bg-background text-foreground shadow-e-4',
+                        // The panel is a programmatic focus target, not a control —
+                        // it takes focus on open so screen readers land inside it.
+                        // Every interactive element within keeps its own ring.
+                        'focus:outline-none',
+                        isLeft
+                            ? cn(
+                                'h-full w-[min(88vw,360px)] max-w-full border-y-0 border-l-0',
+                                'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-left-full',
+                                'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-left-full'
+                            )
+                            : cn(
+                                'w-full max-w-lg rounded-xl sm:rounded-2xl',
+                                'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-bottom-2',
+                                'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-bottom-2'
+                            ),
+                        TIMING,
+                        className
+                    )}
+                    {...props}
+                >
+                    {children}
+                </DialogPrimitive.Content>
+            </div>
+        </DialogPrimitive.Portal>
+    );
+});
 DialogContent.displayName = 'DialogContent';
 
 export function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
     return <div className={cn('flex flex-col space-y-1.5 text-center sm:text-left', className)} {...props} />;
 }
 
-export function DialogTitle({ className, id, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-    const ctx = React.useContext(DialogContext);
-    // Tell the Dialog a title exists so it can wire aria-labelledby; dialogs
-    // without a DialogTitle then avoid a dangling aria-labelledby reference.
-    React.useEffect(() => {
-        if (id) return; // caller supplied their own id/labelling
-        ctx?.registerTitle();
-        return () => ctx?.unregisterTitle();
-    }, [ctx, id]);
-    return (
-        <h2
-            id={id ?? ctx?.titleId}
-            className={cn('text-lg font-semibold leading-none tracking-tight', className)}
-            {...props}
-        />
-    );
-}
+/**
+ * Radix wires `aria-labelledby` to this automatically and omits it when no title
+ * is rendered, which is what the old `registerTitle`/`unregisterTitle` dance
+ * existed to achieve. Caveat: passing your own `id` overrides Radix's generated
+ * one and leaves the label reference dangling — label the content instead
+ * (`<DialogContent aria-label="…">`) if you need a custom scheme.
+ */
+export const DialogTitle = React.forwardRef<
+    React.ComponentRef<typeof DialogPrimitive.Title>,
+    React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
+>(({ className, ...props }, ref) => (
+    <DialogPrimitive.Title
+        ref={ref}
+        className={cn('text-lg font-semibold leading-none tracking-tight', className)}
+        {...props}
+    />
+));
+DialogTitle.displayName = 'DialogTitle';
+
+// Optional, and wired to `aria-describedby` when present. Worth using for the
+// one-line "this can't be undone" copy the confirm dialogs already render as a
+// loose <p>.
+export const DialogDescription = React.forwardRef<
+    React.ComponentRef<typeof DialogPrimitive.Description>,
+    React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
+>(({ className, ...props }, ref) => (
+    <DialogPrimitive.Description ref={ref} className={cn('text-sm text-muted-foreground', className)} {...props} />
+));
+DialogDescription.displayName = 'DialogDescription';

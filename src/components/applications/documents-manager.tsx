@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { FileText, FileEdit, Folder, type LucideIcon } from 'lucide-react';
 import { DocumentUploader } from './document-uploader';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export interface DocumentManagerApp {
   id: string;
@@ -59,18 +60,18 @@ export function DocumentsManager({ applications, documents }: DocumentsManagerPr
           <label htmlFor="doc-application" className="text-xs font-semibold text-foreground">
             Attach to application
           </label>
-          <select
-            id="doc-application"
-            value={selected}
-            onChange={(event) => setSelected(event.target.value)}
-            className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:max-w-md"
-          >
-            {applications.map((app) => (
-              <option key={app.id} value={app.id}>
-                {app.label}
-              </option>
-            ))}
-          </select>
+          <Select value={selected || undefined} onValueChange={setSelected}>
+            <SelectTrigger id="doc-application" className="sm:max-w-md">
+              <SelectValue placeholder="Choose an application" />
+            </SelectTrigger>
+            <SelectContent>
+              {applications.map((app) => (
+                <SelectItem key={app.id} value={app.id}>
+                  {app.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <DocumentUploader applicationId={selected} onUploaded={() => router.refresh()} />
         </div>
       )}
