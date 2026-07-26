@@ -683,10 +683,21 @@ export function HowItWorksScrub() {
             // py-14 so `items-center` centres the stage in the space BELOW the fixed
             // nav rather than in the raw viewport.
             stageClassName="py-14"
-            // 240, not 300: the stage plays forward once and then holds, so every svh
-            // of travel is also svh a visitor has to scroll back through if they turn
-            // around inside it. 140svh of scrub is enough for the three steps.
-            pinVh={240}
+            // 380svh → 280svh of actual scrub travel (the first 100 is the sticky
+            // stage riding into place), and the number comes from measured scroll
+            // rates rather than taste. A MacBook two-finger flick runs 400–1500 px/s
+            // and a wheel notch is 100–120px; at the old 240 (140svh ≈ 1075px at the
+            // pin's 768px height floor) each step owned 0.22 of travel ≈ 236px, so a
+            // step was over in 0.16–0.6s and ONE notch advanced ~9% of the whole
+            // choreography — the three beats blurred into a single flicker for
+            // anybody scrolling normally. At 280svh a step is ~473px (0.3–1.2s) and a
+            // notch moves ~4.5%, which is a gradient rather than a jump.
+            //
+            // Not longer than that: the stage plays forward once and then holds, so
+            // every svh of travel is also svh a visitor has to scroll back through if
+            // they turn around inside it — and past ~4 screens the section starts
+            // reading as scrolljacking however smooth it is.
+            pinVh={380}
             pinQuery="(min-width: 1280px) and (min-height: 768px)"
             settled={({ afterPin }) => <StepGrid p={staticP} afterPin={afterPin} />}
         >

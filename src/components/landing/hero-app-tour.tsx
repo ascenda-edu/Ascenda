@@ -274,29 +274,6 @@ export function HeroAppTour({ className }: { className?: string }) {
     }, [paused]);
 
     const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-    const panelRefs = useRef<(HTMLDivElement | null)[]>([]);
-    // null until the first measurement lands. Nothing depends on it for *layout*
-    // correctness — only the active panel is in flow, so `height: auto` is already
-    // the right height at SSR and on the first paint. The measured px value exists
-    // solely so the height can TRANSITION: CSS cannot interpolate from `auto`.
-    const [stackHeight, setStackHeight] = useState<number | null>(null);
-
-    // The stack's height tracks the ACTIVE panel only. ResizeObserver rather than
-    // a one-shot measure because content changes size *within* a tab too: dragging
-    // the chances slider re-tiers programmes and reflows the rows.
-    // offsetHeight, not getBoundingClientRect(): the incoming panel is still at
-    // scale-[0.985] on the frame we measure (its transform transition has only just
-    // started), and a transformed rect would read ~1.5% short — and ResizeObserver
-    // never fires again for a transform, so that error would stick.
-    useEffect(() => {
-        const el = panelRefs.current[active];
-        if (!el) return;
-        const measure = () => setStackHeight(el.offsetHeight);
-        measure();
-        const observer = new ResizeObserver(measure);
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, [active]);
 
     const pin = (index?: number) => {
         if (index !== undefined) setActive(index);
@@ -394,39 +371,29 @@ export function HeroAppTour({ className }: { className?: string }) {
                     })}
                 </div>
 
-                {/* The card is content-fitted per tab and animates between heights.
-                    Previously all four panels sat in one grid cell, so the TALLEST tab set
-                    the height for all of them — layout never shifted, but the short tabs
-                    showed a slab of dead space between their content and the caption. The
-                    trade is now inverted: content always fills the card, and the card
-                    resizes. Only the ACTIVE panel is in flow (self-start, content-sized),
-                    so `height: auto` is already correct at SSR and on the first paint —
-                    that's why there's no measured height in the server markup and no snap
-                    after hydration. The inactive panels are absolutely stacked into the same
-                    col-start-1/row-start-1 grid area (still the fade's overlap; browsers
-                    without abspos-grid-area support fall back to the padding box, which is
-                    the identical rect for a single full-width column) and contribute no
-                    height. Pure CSS transitions (not framer) so the hidden state is in the
-                    SSR HTML — no flash of four overlapping panels before hydration.
+                {/* Fixed height, on purpose: all four panels sit in the SAME
+                    col-start-1/row-start-1 grid area and all four stay IN FLOW, so the
+                    tallest tab sizes the row and the card is the same size on every
+                    tab. This is the hero's largest object and it sits beside the
+                    headline — a card that resized itself as the tabs auto-advanced was
+                    the one thing on the page that moved without being asked to, and it
+                    dragged the CTA column with it every 6s. The short tabs pay for it
+                    with some dead space above the caption; a hero that holds still is
+                    worth more than a snug card.
+                    `invisible` rather than absolute positioning is the whole mechanism:
+                    it hides the inactive panels while they keep contributing height.
+                    Pure CSS transitions (not framer) so the hidden state is already in
+                    the SSR HTML — no flash of four overlapping panels before hydration.
                     Incoming-only fade: the panel background is translucent, so a true
-                    cross-fade would show both panels' text mid-transition. overflow-hidden
-                    is what stops the outgoing (taller) panel bleeding over the caption
-                    while the height shrinks — every focusable control sits well inside a
-                    padded card, so no focus ring lands on the clipped edge. */}
+                    cross-fade would show both panels' text mid-transition. */}
                 {/* minmax(0,1fr): an implicit `auto` track would size to the widest
                     panel's max-content and blow out the hero on narrow viewports. */}
-                <div
-                    className="relative grid grid-cols-[minmax(0,1fr)] overflow-hidden transition-[height] duration-300 ease-out motion-reduce:transition-none"
-                    style={stackHeight !== null ? { height: stackHeight } : undefined}
-                >
+                <div className="relative grid grid-cols-[minmax(0,1fr)]">
                     {TOUR_TABS.map((tab, i) => {
                         const selected = i === active;
                         return (
                             <div
                                 key={tab.id}
-                                ref={(el) => {
-                                    panelRefs.current[i] = el;
-                                }}
                                 role="tabpanel"
                                 id={`tour-panel-${tab.id}`}
                                 aria-labelledby={`tour-tab-${tab.id}`}
@@ -434,8 +401,8 @@ export function HeroAppTour({ className }: { className?: string }) {
                                 className={cn(
                                     'col-start-1 row-start-1 min-w-0 self-start transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none',
                                     selected
-                                        ? 'relative translate-y-0 scale-100 opacity-100'
-                                        : 'pointer-events-none invisible absolute inset-x-0 top-0 translate-y-2 scale-[0.985] opacity-0',
+                                        ? 'translate-y-0 scale-100 opacity-100'
+                                        : 'pointer-events-none invisible translate-y-2 scale-[0.985] opacity-0',
                                 )}
                             >
                                 <tab.Panel onInteract={() => pin()} />
@@ -445,7 +412,7 @@ export function HeroAppTour({ className }: { className?: string }) {
                 </div>
 
                 <p className="relative mt-3 text-center text-[0.6875rem] text-muted-foreground">
-                    Pinned. Nothing moves without you.
+                    Click Around
                 </p>
             </div>
         </SpotlightPanel>
