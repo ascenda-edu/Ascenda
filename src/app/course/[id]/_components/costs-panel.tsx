@@ -39,21 +39,30 @@ export function CostsPanel({ course, costs }: { course: CourseView; costs: Cours
     <div className="space-y-6">
       <PanelHeading>Costs &amp; Living Expenses</PanelHeading>
 
+      {/* Every tile here is deliberately NEUTRAL. These were tone-coded
+          danger/warning/success/info, which made the app editorialise about money it
+          can't judge: the total read as `danger` (this price is bad), international
+          tuition as `warning` and home tuition as `success` — telling this product's
+          users, who ARE the international ones, that the number applying to them is a
+          problem. Neutralising also fixed a real ambiguity: the two accommodation
+          tiles were both `info` and so indistinguishable from each other. Identity
+          comes from the label, the same rule the charts follow.
+
+          The cost-of-living band below KEEPS its tones — HIGH/MEDIUM/LOW is a genuine
+          ordinal scale, and all three remain distinct. */}
       <div className="grid gap-4 md:grid-cols-3">
         {formattedCostTuition ? (
           <MetricTile
-            tone="warning"
             label={formattedDomesticTuition ? 'Intl. Tuition' : 'Annual Tuition'}
             value={formattedCostTuition}
             detail="Per year"
           />
         ) : null}
         {formattedDomesticTuition ? (
-          <MetricTile tone="success" label="Home Tuition" value={formattedDomesticTuition} detail="Per year" />
+          <MetricTile label="Home Tuition" value={formattedDomesticTuition} detail="Per year" />
         ) : null}
         {totalCost ? (
           <MetricTile
-            tone="danger"
             label="Total Programme Cost"
             value={formatCurrencyString(totalCost, course.currency)}
             detail={`For full ${course.duration}`}
@@ -61,7 +70,6 @@ export function CostsPanel({ course, costs }: { course: CourseView; costs: Cours
         ) : null}
         {course.studentDormCost ? (
           <MetricTile
-            tone="info"
             label="Halls of Residence"
             value={formatCurrencyString(course.studentDormCost, 'GBP')}
             detail="Per year"
@@ -69,7 +77,6 @@ export function CostsPanel({ course, costs }: { course: CourseView; costs: Cours
         ) : null}
         {course.averageRentOutsideCampus ? (
           <MetricTile
-            tone="info"
             label="Off-Campus Rent"
             value={formatCurrencyString(course.averageRentOutsideCampus, 'GBP')}
             detail="Per month (average)"

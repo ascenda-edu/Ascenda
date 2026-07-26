@@ -316,10 +316,16 @@ export const mapRawData = (rawData: Record<string, any>, uni: Record<string, any
     requirements: buildRequirements(rawData), quickFacts: [], courseUrl: rawData.provider_course_url ?? null, applyUrl: rawData.provider_apply_url ?? null,
     outcomes: buildOutcomes(rawData), openDays: parseOpenDays(rawData.open_days),
     courseRequirements: rawData.course_requirements ?? (programMeta.course_requirements as string | undefined) ?? null,
-    careerOutcomesOverview: rawData.career_outcomes_overview ?? (programMeta.career_outcomes_overview as string | undefined) ?? null,
-    studentLifeOverview: rawData.student_life_overview ?? (programMeta.student_life_overview as string | undefined) ?? null,
-    studentLifeTags: rawData.student_life_tags ?? (programMeta.student_life_tags as string | undefined) ?? null,
-    costOverview: rawData.cost_overview ?? (programMeta.cost_overview as string | undefined) ?? null,
+    // These four resolve from `metadata` ONLY. The matching programs.* columns do
+    // not exist on the live table — verified against the database, which answers
+    // 42703 "column does not exist" for all four — so the `rawData.X ??` branch they
+    // used to lead with was dead on every render. Don't add them to PROGRAMS_SELECT
+    // either: PostgREST 400s the whole query for an unknown column, which would take
+    // the entire course page down.
+    careerOutcomesOverview: (programMeta.career_outcomes_overview as string | undefined) ?? null,
+    studentLifeOverview: (programMeta.student_life_overview as string | undefined) ?? null,
+    studentLifeTags: (programMeta.student_life_tags as string | undefined) ?? null,
+    costOverview: (programMeta.cost_overview as string | undefined) ?? null,
     universityLife: uni.university_life ?? null, culturalSocialEnvironment: uni.cultural_social_environment ?? null,
     cityLife: uni.city_life ?? null, climate: uni.climate ?? null, safety: uni.safety_index ?? null,
     transportAccessibility: uni.transport_accessibility ?? null, numberOfStudents: uni.number_of_students ?? null,
