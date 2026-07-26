@@ -948,18 +948,28 @@ export const StudentIntakeForm = ({
     }
   }, [englishRequired, englishTestType]);
 
+  // Suggest the admissions tests a chosen cluster implies.
+  //
+  // The updater MUST return `prev` unchanged when it adds nothing. It used to build
+  // `[...prev]` and return it unconditionally — a fresh array reference every run — and
+  // because `admissionsTests` is one of this effect's own dependencies, that reference
+  // change re-triggered the effect, which produced another fresh array, forever.
+  // Result: "Maximum update depth exceeded" and a wizard that never finished rendering,
+  // for any student whose tests didn't already include a 'NONE' row (the early return
+  // below was the only thing masking it).
   useEffect(() => {
     const wantsLaw = academicInput.intended_clusters.includes('law');
     const wantsMed = academicInput.intended_clusters.includes('medicine_dentistry');
     const alreadyNone = admissionsTests.some((t) => t.test_type === 'NONE');
     if (alreadyNone) return;
     setAdmissionsTests((prev) => {
-      const next = [...prev];
-      if (wantsLaw && !next.some((t) => t.test_type === 'LNAT'))
-        next.push({ test_type: 'LNAT', status: '', score_numeric: '', percentile: '' });
-      if (wantsMed && !next.some((t) => t.test_type === 'UCAT'))
-        next.push({ test_type: 'UCAT', status: '', score_numeric: '', percentile: '' });
-      return next;
+      const additions: typeof prev = [];
+      if (wantsLaw && !prev.some((t) => t.test_type === 'LNAT'))
+        additions.push({ test_type: 'LNAT', status: '', score_numeric: '', percentile: '' });
+      if (wantsMed && !prev.some((t) => t.test_type === 'UCAT'))
+        additions.push({ test_type: 'UCAT', status: '', score_numeric: '', percentile: '' });
+      if (additions.length === 0) return prev; // same reference — no re-render, no loop
+      return [...prev, ...additions];
     });
   }, [academicInput.intended_clusters, admissionsTests]);
 
