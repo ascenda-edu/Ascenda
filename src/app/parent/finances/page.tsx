@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
 import { PageHero } from '@/components/layout/page-hero';
-import { SectionNav } from '@/components/layout/section-nav';
-import { PARENT_SECTION_ITEMS } from '@/components/layout/navigation';
 import { AnimatedSection } from '@/components/layout/animated-section';
 import { loadChildFinances } from '@/lib/parent/data';
 import { formatGbp } from '@/lib/parent/currency';
@@ -19,7 +17,6 @@ export default async function ParentFinancesPage() {
   if (!activeChild) {
     return (
       <div className="space-y-6">
-        <SectionNav items={PARENT_SECTION_ITEMS} />
         <PageHero
           tone="student"
           eyebrow="Parent"
@@ -55,7 +52,6 @@ export default async function ParentFinancesPage() {
 
   return (
     <div className="space-y-6">
-      <SectionNav items={PARENT_SECTION_ITEMS} />
 
       <PageHero
         tone="student"

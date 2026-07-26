@@ -10,8 +10,6 @@ import {
   UserCircle,
 } from 'lucide-react';
 import { PageHero } from '@/components/layout/page-hero';
-import { SectionNav } from '@/components/layout/section-nav';
-import { PARENT_SECTION_ITEMS } from '@/components/layout/navigation';
 import { AnimatedSection } from '@/components/layout/animated-section';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -47,7 +45,6 @@ export default async function ParentOverviewPage() {
   if (!activeChild) {
     return (
       <div className="space-y-6">
-        <SectionNav items={PARENT_SECTION_ITEMS} />
         <PageHero
           tone="student"
           eyebrow="Parent"
@@ -78,7 +75,6 @@ export default async function ParentOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <SectionNav items={PARENT_SECTION_ITEMS} />
 
       <PageHero
         tone="student"

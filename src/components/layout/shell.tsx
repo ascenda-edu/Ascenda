@@ -7,7 +7,23 @@ import { CommandPalette } from './command-palette';
 import { ChatbotWidgetLazy } from '@/components/chat/chatbot-widget-lazy';
 import { PageTransition } from './page-transition';
 
-export const DashboardShell = ({ children }: { children: ReactNode }) => {
+export const DashboardShell = ({
+  children,
+  nav
+}: {
+  children: ReactNode;
+  /**
+   * Section nav, rendered ABOVE the page-transition wrapper.
+   *
+   * This slot exists because `PageTransition` is keyed on the pathname, so anything
+   * inside it remounts on every navigation. A section nav passed through `children`
+   * therefore remounted too — which is precisely what left the nav's `layoutId`
+   * indicator inert, since framer needs the outgoing and incoming pill in the SAME
+   * commit to animate between them. Passed here it lives outside the keyed subtree
+   * and survives, so the indicator slides.
+   */
+  nav?: ReactNode;
+}) => {
   return (
     <SidebarProvider>
       <div className="relative min-h-screen bg-background pb-24 text-foreground transition-colors md:pb-16">
@@ -22,10 +38,13 @@ export const DashboardShell = ({ children }: { children: ReactNode }) => {
           <main
             id="main-content"
             tabIndex={-1}
-            className="min-w-0 flex-1 py-2 sm:py-5 lg:py-6"
+            className="min-w-0 flex-1 space-y-4 py-2 sm:space-y-6 sm:py-5 lg:py-6"
           >
-            {/* space-y lives on PageTransition, not here: this wrapper is <main>'s only
-                child, and `space-y-*` needs siblings to do anything. */}
+            {/* space-y appears on BOTH elements deliberately: here it spaces the nav
+                from the content below it (two siblings), and on PageTransition it
+                spaces the page's own top-level blocks. Neither is redundant — a
+                `space-y-*` rule only ever applies to an element's own children. */}
+            {nav}
             <PageTransition className="space-y-4 sm:space-y-6">{children}</PageTransition>
           </main>
         </div>
