@@ -78,33 +78,35 @@
     --feature-foreground: 0 0% 100%;
     --feature-subtle: 258 70% 96%;
 
-    /* ── Categorical chart series ───────────────────────────────────────────
-       Five slots, assigned in FIXED ORDER and never cycled. Distinct from the
-       tone tokens above on purpose: those are reserved for status (good/bad) and
-       must never double as "series 4".
+    /* ── Chart series: a monochrome brand ramp ──────────────────────────────
+       ONE hue (the brand indigo) in five lightness steps, NOT five different
+       hues. This is a deliberate design decision, made after a multi-hue
+       categorical palette was rejected as too loud beside an indigo brand.
 
-       Validated with the dataviz skill's checker on the *adjacent* pairlist,
-       which is the right contract for the bar / stacked-bar / funnel forms this
-       app actually draws. Light: worst adjacent CVD ΔE 17.0 deutan · 29.0 tritan,
-       normal-vision 32.0. Dark passes with no warnings at all.
+       The rule for this app's charts is therefore: **a bar chart uses one accent
+       and the row label carries identity** (see CHART_ACCENT in
+       counsellor/_components/chart-palette.ts). These ramp steps exist only for
+       STACKED / SEGMENTED bars, where adjacent segments genuinely have to be
+       told apart within a single bar.
 
-       Why five and not the eight this replaced: the old rotation was
-       violet/sky/emerald/amber/rose/indigo/teal/orange — which put two blues and
-       two greens on screen together. Indigo↔violet measured ΔE 1.3 under
-       protanopia and 7.5 with normal colour vision; emerald↔teal 4.9. Those pairs
-       were not distinguishable, so the 7th and 8th slots were decoration, not
-       information. Slot 6+ should fold into "Other" or facet into small
-       multiples — do not generate a 9th hue.
+       Adjacent steps sit 1.3–1.5:1 apart, which is as good as a single hue gets
+       across five steps — you cannot reach 3:1 between them without leaving the
+       hue. That is why every stacked segment must carry a 2px surface-coloured
+       gap: the gap, not the colour delta, is what separates them. Don't remove it.
 
-       Amber and emerald sit just under 3:1 on the light surface (2.15, 2.54). The
-       relief rule applies and is already satisfied: every bar in this app carries
-       a visible value and a row label, so identity is never colour-alone. Keep it
-       that way if you restyle the charts. */
-    --series-1: 243.4 75.4% 58.6%;
-    --series-2: 37.7 92.1% 50.2%;
-    --series-3: 200.4 98.0% 39.4%;
-    --series-4: 345.3 82.7% 40.8%;
-    --series-5: 160.1 84.1% 39.4%;
+       Every step clears 3:1 against its own card so no segment disappears
+       (light 2.23–13.93 reading outward, dark 3.25–12.53). Dark is a SELECTED
+       range, not a flip: on a near-black card the whole ramp has to live in the
+       upper lightness band or the darkest steps vanish.
+
+       Ordering is meaningful here (light→dark reads as small→large), so if you
+       apply this to genuinely unordered categories, sort them by value first or
+       you imply a ranking that isn't there. */
+    --series-1: 241 65% 30%;
+    --series-2: 241 65% 42%;
+    --series-3: 241 65% 55%;
+    --series-4: 241 65% 67%;
+    --series-5: 241 65% 79%;
 
     --radius: 0.625rem;
   }
@@ -177,14 +179,14 @@
     --feature-foreground: 224 32% 12%;
     --feature-subtle: 258 40% 16%;
 
-    /* Dark series steps are SELECTED for the dark surface, not flipped from light.
-       The dark lightness band is narrower (OKLCH L 0.48–0.67 vs 0.43–0.77), so
-       slots 1, 2, 4 and 5 all move. Slot 3 happens to sit in both bands. */
-    --series-1: 238.7 83.5% 66.7%;
-    --series-2: 32.1 94.6% 43.7%;
-    --series-3: 200.4 98.0% 39.4%;
-    --series-4: 349.7 89.2% 60.2%;
-    --series-5: 161.4 93.5% 30.4%;
+    /* The ramp runs the other way on a dark card, and lives in a compressed upper
+       band (60–90% rather than 30–79%) because anything below ~58% lightness
+       drops under 3:1 against a near-black surface and reads as a hole. */
+    --series-1: 241 65% 90%;
+    --series-2: 241 65% 82%;
+    --series-3: 241 65% 74%;
+    --series-4: 241 65% 66%;
+    --series-5: 241 65% 60%;
   }
 }
 

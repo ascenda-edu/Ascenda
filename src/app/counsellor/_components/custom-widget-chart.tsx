@@ -8,7 +8,7 @@ import {
   type CustomWidgetDef
 } from '@/lib/counsellor/custom-widgets';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
-import { chartPaletteAt } from './chart-palette';
+import { CHART_ACCENT, chartPaletteAt } from './chart-palette';
 
 interface CustomWidgetChartProps {
   def: CustomWidgetDef;
@@ -54,8 +54,10 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
     const max = Math.max(...buckets.map((b) => b.count), 1);
     return (
       <div className="space-y-2.5">
-        {buckets.map((bucket, idx) => {
-          const colors = chartPaletteAt(idx);
+        {buckets.map((bucket) => {
+          // One accent: the row label to the left identifies each bar. The ramp is
+          // only for stacked segments, where separation inside one bar is required.
+          const colors = CHART_ACCENT;
           const clickable = interactive && bucket.count > 0;
           return (
             <button
@@ -107,7 +109,10 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
                 onClick={() => onSelect?.(bucket)}
                 aria-label={`${bucket.label}: ${bucket.count} ${unitFor(bucket.count)}, ${pctOf(bucket.count)}%`}
                 className={cn(
-                  'group relative flex min-w-0 items-center justify-center transition-all duration-700 first:rounded-l-2xl last:rounded-r-2xl',
+                  // ring-2 ring-card is the 2px surface gap between segments. Adjacent
+                  // ramp steps are only ~1.4:1 apart, so the gap — not the colour
+                  // delta — is what keeps a monochrome stack readable. Don't remove it.
+                  'group relative flex min-w-0 items-center justify-center transition-all duration-700 first:rounded-l-2xl last:rounded-r-2xl ring-2 ring-card',
                   colors.bar,
                   interactive ? cn(colors.barHover, 'cursor-pointer') : 'cursor-default'
                 )}

@@ -1,33 +1,39 @@
-// Single source of truth for the counsellor analytics colour rotation.
-// FieldChart (analytics-charts.tsx) uses the bar/barHover columns; the custom
-// widget charts also need text/card tints for their stacked and kpi layouts.
-// Keep every class literal spelled out so Tailwind's scanner picks them up.
+// Chart colour for the counsellor analytics.
 //
-// ── What changed and why ───────────────────────────────────────────────────────
-// This used to be eight hardcoded Tailwind hues (violet, sky, emerald, amber,
-// rose, indigo, teal, orange). Two problems, both measured with the dataviz
-// skill's validator rather than eyeballed:
+// ── The rule ───────────────────────────────────────────────────────────────────
+// A BAR CHART USES ONE ACCENT. Identity comes from the row label, which every bar
+// in this app already carries. Use `CHART_ACCENT`.
 //
-//  1. Eight hues put two blues and two greens on screen together.
-//     indigo↔violet measured ΔE 1.3 under protanopia and 7.5 with normal colour
-//     vision; emerald↔teal 4.9. Below ~15 normal-vision ΔE a pair is hard to tell
-//     apart even with full colour vision — so slots 7 and 8 carried no
-//     information. There are now FIVE slots. Slot 6+ should fold into "Other" or
-//     facet into small multiples; never generate a 9th hue.
+// Multi-hue categorical palettes were tried and rejected: five saturated hues
+// (indigo/amber/sky/crimson/emerald) read as a circus beside an indigo brand, and
+// the eight-hue rotation before that was worse — it put two blues and two greens
+// on screen together (indigo↔violet measured ΔE 1.3 under protanopia, emerald↔teal
+// 4.9 with normal colour vision), so its 7th and 8th slots carried no information
+// at all. Colour was doing decoration, not work.
 //
-//  2. The hues were used at /70 opacity with `text-white` labels on top. White on
-//     amber-500 is 2.13:1 and on emerald-500 1.95:1 — nowhere near AA's 4.5:1.
-//     The series colour now stays on the mark and labels wear ink.
+// `CHART_SERIES` is the fallback for STACKED / SEGMENTED bars only, where adjacent
+// segments inside one bar genuinely must be told apart. It is a monochrome ramp of
+// the brand hue — see globals.css for the step values and why dark mode uses a
+// different, compressed range.
 //
-// The palette lives in globals.css as --series-1..5, with separately SELECTED dark
-// steps (the dark OKLCH lightness band is narrower, so four of the five move).
-// Validated on the adjacent pairlist, the correct contract for the bar /
-// stacked-bar / funnel forms drawn here: worst adjacent CVD ΔE 17.0 deutan in
-// light, and dark passes with no warnings.
-//
-// `text` is deliberately an ink token rather than the series colour: values,
-// labels and legends wear text tokens while the coloured mark beside them carries
-// identity. That is what keeps these charts legible at every series count.
+// ── Two things not to break ────────────────────────────────────────────────────
+// 1. Stacked segments need a 2px surface-coloured gap between them. Adjacent ramp
+//    steps are only 1.3–1.5:1 apart, which is the ceiling for a single hue across
+//    five steps; the GAP is what separates them, not the colour delta.
+// 2. Labels wear ink, never the series colour. No label colour clears 4.5:1 across
+//    a set of fills — that was already proven when the palette was multi-hue (the
+//    sky slot measured 4.10 on white and 4.24 on ink, failing both) — so values sit
+//    beside the mark, not on it.
+
+/** The single accent for bar charts. Row labels carry identity. */
+export const CHART_ACCENT = {
+  bar: 'bg-primary',
+  barHover: 'hover:bg-primary/85',
+  /** Values and labels wear ink, never the mark colour. */
+  text: 'text-foreground',
+  card: 'border-primary/25 bg-primary/10',
+  cardHover: 'hover:border-primary/45'
+} as const;
 
 export interface ChartPaletteEntry {
   /** Solid mark fill. */
@@ -41,7 +47,12 @@ export interface ChartPaletteEntry {
   cardHover: string;
 }
 
-export const CHART_PALETTE: ChartPaletteEntry[] = [
+/**
+ * Monochrome brand ramp, for STACKED / SEGMENTED bars only.
+ * Ordering is meaningful (light→dark reads small→large), so sort unordered
+ * categories by value before using this or you imply a ranking that isn't there.
+ */
+export const CHART_SERIES: ChartPaletteEntry[] = [
   { bar: 'bg-series-1', barHover: 'hover:bg-series-1/85', text: 'text-foreground', card: 'border-series-1/25 bg-series-1/10', cardHover: 'hover:border-series-1/45' },
   { bar: 'bg-series-2', barHover: 'hover:bg-series-2/85', text: 'text-foreground', card: 'border-series-2/25 bg-series-2/10', cardHover: 'hover:border-series-2/45' },
   { bar: 'bg-series-3', barHover: 'hover:bg-series-3/85', text: 'text-foreground', card: 'border-series-3/25 bg-series-3/10', cardHover: 'hover:border-series-3/45' },
@@ -49,15 +60,17 @@ export const CHART_PALETTE: ChartPaletteEntry[] = [
   { bar: 'bg-series-5', barHover: 'hover:bg-series-5/85', text: 'text-foreground', card: 'border-series-5/25 bg-series-5/10', cardHover: 'hover:border-series-5/45' }
 ];
 
-/** Number of distinct categorical slots. Past this, fold into "Other". */
-export const CHART_PALETTE_SIZE = CHART_PALETTE.length;
+/** Kept as an alias so existing imports keep working. */
+export const CHART_PALETTE = CHART_SERIES;
+
+/** Number of distinct ramp steps. Past this, fold into "Other". */
+export const CHART_PALETTE_SIZE = CHART_SERIES.length;
 
 /**
- * Colour for categorical slot `idx`.
+ * Ramp step for segment `idx` of a stacked bar.
  *
- * NOTE: this still wraps on overflow, so a 6-bucket chart reuses slot 1. That
- * limitation is kept deliberately — the real fix is an "Other" bucket inside the
- * chart components, which is Phase 4 work. Until then every consumer prints a
- * visible label per row, so a repeated hue is cosmetic rather than misleading.
+ * NOTE: wraps on overflow, so a 6-segment bar reuses step 1. Kept deliberately
+ * narrow — the real fix is an "Other" bucket in the chart components. Every
+ * consumer prints a visible label, so a repeated step is cosmetic, not misleading.
  */
-export const chartPaletteAt = (idx: number): ChartPaletteEntry => CHART_PALETTE[idx % CHART_PALETTE.length];
+export const chartPaletteAt = (idx: number): ChartPaletteEntry => CHART_SERIES[idx % CHART_SERIES.length];

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { CHART_PALETTE } from './chart-palette';
+import { CHART_ACCENT } from './chart-palette';
 import type { CohortStats } from './types';
 
 // ─── Programme Split ──────────────────────────────────────────────────────────
@@ -22,10 +22,14 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
       {/* No overflow-hidden here: it would clip the hover tooltips out of existence.
           Each segment rounds its own outer corner instead, so the pill shape survives. */}
       <div className="flex h-10 rounded-2xl border border-border/50">
-        {/* No text inside the segments: white fails on these fills (2.15:1 on the
-            amber-family slot) and no single label colour clears 4.5:1 across the
-            palette. The two cards below already name and quantify both series, so
-            the in-bar text was redundant anyway. aria-label carries it for SR users. */}
+        {/* Steps 1 and 4 of the ramp, not 1 and 2 — adjacent steps are only 1.32:1
+            apart. The `ring-2 ring-card` on the second segment is the 2px surface gap
+            that a monochrome stack depends on to stay readable; without it the two
+            indigos merge into one bar.
+
+            No text inside the segments: no single label colour clears 4.5:1 across a
+            set of fills, and the two cards below already name and quantify both
+            series, so in-bar text was redundant. aria-label carries it for SR users. */}
         <button
           onClick={() => onSelect?.('IB')}
           aria-label={`IB: ${breakdown.ib} students, ${ibPct}% of the cohort. Click to explore.`}
@@ -39,7 +43,7 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
         <button
           onClick={() => onSelect?.('A_LEVEL')}
           aria-label={`A-Level: ${breakdown.aLevel} students, ${aLevelPct}% of the cohort. Click to explore.`}
-          className="group relative flex h-full items-center justify-center rounded-r-2xl bg-series-2 transition-all hover:bg-series-2/85 cursor-pointer"
+          className="group relative z-raised flex h-full items-center justify-center rounded-r-2xl bg-series-4 ring-2 ring-card transition-all hover:bg-series-4/85 cursor-pointer"
           style={{ width: `${aLevelPct}%` }}
         >
           <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
@@ -62,11 +66,11 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
         </button>
         <button
           onClick={() => onSelect?.('A_LEVEL')}
-          className="hover-lift cursor-pointer rounded-2xl border border-series-2/25 bg-series-2/10 px-5 py-4 text-center"
+          className="hover-lift cursor-pointer rounded-2xl border border-series-4/25 bg-series-4/10 px-5 py-4 text-center"
         >
           <p className="text-2xl font-bold tabular-nums text-foreground">{breakdown.aLevel}</p>
           <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-series-2" />
+            <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-series-4" />
             A-Level students
           </p>
         </button>
@@ -116,9 +120,8 @@ export const IbDistribution = ({ buckets, onSelect }: IbDistributionProps) => {
                 )}
               </div>
             </div>
-            {/* Value reads in ink beside the mark, not on it. No single label colour
-                clears 4.5:1 across the series fills — sky measures 4.10 on white and
-                4.24 on ink — so an in-bar label cannot be made accessible. */}
+            {/* Value reads in ink beside the mark, not on it: no label colour clears
+                4.5:1 across a set of fills, so an in-bar label can't be accessible. */}
             <span className="w-8 shrink-0 text-right text-xs font-bold tabular-nums text-foreground">{count}</span>
           </button>
         ))}
@@ -134,8 +137,8 @@ interface FieldChartProps {
   onSelect?: (field: { key: string; label: string }) => void;
 }
 
-const FIELD_COLORS = CHART_PALETTE.map((c) => c.bar);
-const FIELD_HOVER_COLORS = CHART_PALETTE.map((c) => c.barHover);
+// One accent for the whole chart — the row label to the left of each bar is what
+// identifies it. Rotating hues here was decoration, not information.
 
 export const FieldChart = ({ fields, onSelect }: FieldChartProps) => {
   const max = Math.max(...fields.map((f) => f.count), 1);
@@ -144,7 +147,7 @@ export const FieldChart = ({ fields, onSelect }: FieldChartProps) => {
   return (
     <div className="space-y-4">
       <div className="space-y-2.5">
-        {fields.map(({ key, label, count }, idx) => (
+        {fields.map(({ key, label, count }) => (
           <button
             key={label}
             onClick={() => count > 0 && onSelect?.({ key, label })}
@@ -158,8 +161,8 @@ export const FieldChart = ({ fields, onSelect }: FieldChartProps) => {
               <div
                 className={cn(
                   'group relative h-7 rounded-xl transition-all duration-700',
-                  FIELD_COLORS[idx % FIELD_COLORS.length],
-                  count > 0 && FIELD_HOVER_COLORS[idx % FIELD_HOVER_COLORS.length]
+                  CHART_ACCENT.bar,
+                  count > 0 && CHART_ACCENT.barHover
                 )}
                 style={{ width: `${(count / max) * 100}%`, minWidth: count > 0 ? '0.5rem' : '0' }}
               >
@@ -319,7 +322,10 @@ export const MatchTierSummary = ({ tiers, onSelect }: MatchTierSummaryProps) => 
               key={label}
               onClick={() => onSelect?.(key, label)}
               aria-label={`${label}: ${count} students, ${Math.round(pct)}%. Click to explore.`}
-              className={cn(color, hoverColor, 'group relative flex items-center justify-center transition-all duration-700 cursor-pointer first:rounded-l-2xl last:rounded-r-2xl')}
+              // These three are tone tokens (danger/warning/success), so they're
+              // separated by hue rather than lightness — but the 2px surface gap is
+              // the house rule for every segmented bar, so it applies here too.
+              className={cn(color, hoverColor, 'group relative flex items-center justify-center transition-all duration-700 cursor-pointer first:rounded-l-2xl last:rounded-r-2xl ring-2 ring-card')}
               style={{ width: `${pct}%` }}
             >
               {/* Identity comes from the labelled cards below, not in-bar text. */}
