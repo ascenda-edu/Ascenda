@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import type { OutcomeResult, MatchTier, CounsellorOutcome } from '@/lib/counsellor/types';
 import type { OutcomeStats } from '@/lib/counsellor/data';
 import { TIER_VISUAL } from '@/lib/theme/categories';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const RESULT_CONFIG: Record<OutcomeResult, { icon: typeof CheckCircle2; color: string; bg: string; label: string }> = {
   accepted: { icon: CheckCircle2, color: 'text-success', bg: 'bg-success-subtle', label: 'Accepted' },
@@ -137,45 +138,48 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
         })}
       </div>
 
-      {/* Results table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border">
-              <th scope="col" className="eyebrow text-left py-2 pr-3">Student</th>
-              <th scope="col" className="eyebrow text-left py-2 px-3">University</th>
-              <th scope="col" className="eyebrow text-left py-2 px-3">Programme</th>
-              <th scope="col" className="eyebrow text-center py-2 px-3">Result</th>
-              <th scope="col" className="eyebrow text-center py-2 px-3">Tier</th>
-              <th scope="col" className="eyebrow text-left py-2 pl-3">Date</th>
-            </tr>
-          </thead>
-          <tbody>
+      {/* Results table — the `Table` primitive holds a min-width so these six
+          columns scroll on a narrow viewport instead of compressing into
+          slivers, which is what the bare `overflow-x-auto` here used to do. The
+          card is on purpose the call site's job (see ui/table.tsx). */}
+      <div className="surface-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col">Student</TableHead>
+              <TableHead scope="col">University</TableHead>
+              <TableHead scope="col">Programme</TableHead>
+              <TableHead scope="col" className="text-center">Result</TableHead>
+              <TableHead scope="col" className="text-center">Tier</TableHead>
+              <TableHead scope="col">Date</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {filtered.map((o) => {
               const cfg = RESULT_CONFIG[o.result];
               const Icon = cfg.icon;
               return (
-                <tr key={o.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
-                  <td className="py-2.5 pr-3 font-medium text-foreground">{o.studentName}</td>
-                  <td className="py-2.5 px-3 text-muted-foreground">{o.university}</td>
-                  <td className="py-2.5 px-3 text-muted-foreground text-xs">{o.program}</td>
-                  <td className="py-2.5 px-3 text-center">
+                <TableRow key={o.id}>
+                  <TableCell className="font-medium text-foreground">{o.studentName}</TableCell>
+                  <TableCell className="text-muted-foreground">{o.university}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{o.program}</TableCell>
+                  <TableCell className="text-center">
                     <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold', cfg.bg, cfg.color)}>
                       <Icon className="h-3 w-3" /> {cfg.label}
                     </span>
                     {o.conditions && <p className="text-label text-muted-foreground mt-0.5">{o.conditions}</p>}
-                  </td>
-                  <td className="py-2.5 px-3 text-center">
+                  </TableCell>
+                  <TableCell className="text-center">
                     <span className={cn('rounded-full px-2 py-0.5 text-label font-semibold', TIER_COLORS[o.tier])}>{o.tier}</span>
-                  </td>
-                  <td className="py-2.5 pl-3 text-xs text-muted-foreground">
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
                     {o.responseDate ? dateFormatter.format(new Date(o.responseDate)) : '—'}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {filtered.length === 0 && (

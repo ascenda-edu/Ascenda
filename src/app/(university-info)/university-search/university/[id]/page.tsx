@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { UniversityInformation, type UniversityData } from '@/components/university-search/university-information';
+import { PAGE_BODY_IN_SHELL } from './_components/page-body';
 
 export const metadata: Metadata = {
   title: 'University'
@@ -119,11 +120,23 @@ export default async function UniversityDetailPage(props: PageProps & { searchPa
 
   if (programRecord) {
     const universityData = mapToUniversityData(programRecord as ProgramRecord, (programRecord as ProgramRecord).universities ?? null);
-    return <UniversityInformation universityData={universityData} programId={params.id} contextSource={contextSource} />;
+    return (
+      <UniversityInformation
+        universityData={universityData}
+        programId={params.id}
+        contextSource={contextSource}
+        className={PAGE_BODY_IN_SHELL}
+      />
+    );
   }
 
   if (error) {
-    return <UniversityInformation error="Unable to load this university right now. Please try again or pick another result." />;
+    return (
+      <UniversityInformation
+        error="Unable to load this university right now. Please try again or pick another result."
+        className={PAGE_BODY_IN_SHELL}
+      />
+    );
   }
 
   notFound();

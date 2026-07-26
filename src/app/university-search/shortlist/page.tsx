@@ -8,6 +8,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { PageHero } from '@/components/layout/page-hero';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeroSkeleton } from '@/components/layout/page-hero-skeleton';
 import { useShortlist } from '@/components/university-search/shortlist-store';
 import { ComparisonModal } from '@/components/university-search/ComparisonModal';
 import type { ProgramSearchResult } from '@/components/university-search/types';
@@ -61,7 +63,10 @@ export default function UniversitySearchShortlistPage() {
   if (!ready) {
     return (
       <div className="space-y-8 pb-24">
-        <Skeleton className="h-24 w-full rounded-3xl" />
+        {/* PageHeroSkeleton, not a guessed height — this is the same shift the
+            route-level loading.tsx files were fixed for, and it would have
+            re-introduced it right after that skeleton handed off. */}
+        <PageHeroSkeleton breadcrumbs eyebrow actions />
         <div className="grid gap-4 md:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <Skeleton key={index} className="h-28 w-full rounded-2xl" />
@@ -163,18 +168,16 @@ export default function UniversitySearchShortlistPage() {
         </div>
 
         {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border bg-muted/40 px-8 py-16 text-center">
-            <div className="mb-4 rounded-full bg-muted p-4">
-              <Sparkles className="h-6 w-6 text-primary-ink" aria-hidden />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground">No courses saved yet</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Shortlist directly from results to track actions and compare programs.
-            </p>
-            <Button asChild size="sm" className="mt-4">
-              <Link href="/university-search/search">Browse results</Link>
-            </Button>
-          </div>
+          <EmptyState
+            icon={Sparkles}
+            title="No courses saved yet"
+            description="Shortlist directly from results to track actions and compare programs."
+            action={
+              <Button asChild size="sm">
+                <Link href="/university-search/search">Browse results</Link>
+              </Button>
+            }
+          />
         ) : (
           <div className="grid gap-6 md:grid-cols-2">
             {items.map((item) => {

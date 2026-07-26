@@ -1,22 +1,22 @@
+import { PageHeroSkeleton } from '@/components/layout/page-hero-skeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UniversityCardSkeleton } from '@/components/university-card-skeleton';
 
-// Mirrors the unified search layout: PageHero block, sort/view toolbar, the
-// desktop facet rail (lg+), and a grid of card skeletons.
+/**
+ * Search-shaped: the hero, the desktop facet rail (lg+), the sort/view toolbar
+ * and a grid of card skeletons. It stays the SEARCH shape because the two other
+ * routes it covers — `/university-search` and `/university-search/results` — both
+ * redirect straight here, so keeping one shape means no shift across the
+ * redirect. `/shortlist` and `/quests` look nothing like this and now have their
+ * own `loading.tsx`.
+ *
+ * The hero block used to force `!px-4 !py-3` — a "compact PageHero" variant that
+ * no longer exists (the hero is `p-5 sm:p-6`).
+ */
 export default function SearchLoading() {
   return (
     <div className="space-y-6">
-      {/* PageHero-shaped block */}
-      <div className="surface-card !px-4 !py-3 sm:!px-5 sm:!py-3.5">
-        <div className="flex flex-col gap-1.5">
-          <Skeleton className="h-3 w-40" />
-          <div className="space-y-2">
-            <Skeleton className="h-5 w-64 max-w-full" />
-            <Skeleton className="h-3 w-80 max-w-full" />
-            <Skeleton className="h-8 w-32 rounded-full" />
-          </div>
-        </div>
-      </div>
+      <PageHeroSkeleton breadcrumbs eyebrow actions />
 
       <div className="grid items-start gap-6 lg:grid-cols-[280px,1fr]">
         {/* Facet rail (lg+) */}

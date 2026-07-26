@@ -1,13 +1,20 @@
+import { SectionNav } from '@/components/layout/section-nav';
+import { COUNSELLOR_SECTION_ITEMS } from '@/components/layout/navigation';
+import { PageHeroSkeleton } from '@/components/layout/page-hero-skeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 
+/**
+ * Mirrors `_dashboard-client.tsx`: the SectionNav row (rendered for real — it has
+ * its own Suspense fallback, and this is what the student sections' loading files
+ * do), then a hero with an eyebrow and FOUR stat tiles (they live inside PageHero;
+ * there is no separate stats bar), then the at-risk / help-requests pair, the
+ * widget grid, and the roster.
+ */
 export default function CounsellorLoading() {
   return (
     <div className="space-y-6">
-      {/* Hero skeleton — matches the short PageHero surface-card, whose stat tiles
-          sit INSIDE it. There used to be a separate 4-tile stats bar here, left over
-          from when the overview rendered one; the page hasn't since the stats moved
-          into PageHero, so every load shifted the widget grid up by ~120px. */}
-      <Skeleton className="h-20 rounded-2xl" />
+      <SectionNav items={COUNSELLOR_SECTION_ITEMS} />
+      <PageHeroSkeleton stats={4} />
       {/* At-risk panel + live help requests */}
       <div className="grid gap-6 lg:grid-cols-2">
         {[1, 2].map((i) => (

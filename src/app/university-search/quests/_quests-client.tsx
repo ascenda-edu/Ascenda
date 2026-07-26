@@ -8,6 +8,7 @@ import { PageHero } from '@/components/layout/page-hero';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useShortlist } from '@/components/university-search/shortlist-store';
 import { DECK_FIT, DECK_RARITY } from '@/lib/counsellor/deck-theme';
 import type { StudentQuestDeck } from '@/lib/counsellor/decks';
@@ -98,19 +99,16 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
       </header>
 
       {decks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border bg-muted/40 px-8 py-16 text-center">
-          <div className="mb-4 rounded-full bg-feature-subtle p-4">
-            <Scroll className="h-6 w-6 text-feature" aria-hidden />
-          </div>
-          <h3 className="text-lg font-semibold text-foreground">No quests yet</h3>
-          <p className="mt-2 max-w-md text-sm text-muted-foreground">
-            When your counsellor assigns you a deck of universities, it shows up here as a quest log. In the meantime,
-            keep exploring on your own.
-          </p>
-          <Button asChild size="sm" className="mt-4">
-            <Link href="/university-search/search">Explore universities</Link>
-          </Button>
-        </div>
+        <EmptyState
+          icon={Scroll}
+          title="No quests yet"
+          description="When your counsellor assigns you a deck of universities, it shows up here as a quest log. In the meantime, keep exploring on your own."
+          action={
+            <Button asChild size="sm">
+              <Link href="/university-search/search">Explore universities</Link>
+            </Button>
+          }
+        />
       ) : (
         <div className="space-y-8">
           {decks.map((deck) => {

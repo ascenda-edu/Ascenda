@@ -232,6 +232,11 @@ export const TOOLBOX_SECTION_ITEMS: SectionNavItem[] = [
   { label: 'Timeline', href: '/toolbox/timeline' },
 ];
 
+export const ADMIN_SECTION_ITEMS: SectionNavItem[] = [
+  { label: 'Console', href: '/admin', exact: true },
+  { label: 'Simulation', href: '/admin/simulation' },
+];
+
 export const COUNSELLOR_SECTION_ITEMS: SectionNavItem[] = [
   { label: 'Overview', href: '/counsellor', exact: true },
   { label: 'Inbox', href: '/counsellor/inbox' },

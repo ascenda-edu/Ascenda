@@ -1,8 +1,17 @@
 import { DashboardShell } from '@/components/layout/shell';
-import { PageHero } from '@/components/layout/page-hero';
+import { PageHeroSkeleton } from '@/components/layout/page-hero-skeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeadlinesSkeleton, RecommendedProgramsSkeleton, TaskListSkeleton } from '@/components/dashboard/dashboard-skeletons';
 
+/**
+ * Mirrors `dashboard/page.tsx`: hero with an eyebrow, four stat tiles and two
+ * actions, then the three hub rows.
+ *
+ * The hero used to be the REAL `PageHero` filled with placeholder copy
+ * ("Welcome back", four em-dash stats), which reads as content that then gets
+ * replaced — and animates its count-up on values that don't exist. It's a
+ * skeleton now, like every other route.
+ */
 const PanelSkeleton = ({ lines = 4 }: { lines?: number }) => (
     <div className="surface-card h-full">
         <div className="relative z-10 space-y-4">
@@ -22,25 +31,7 @@ const PanelSkeleton = ({ lines = 4 }: { lines?: number }) => (
 export default function DashboardLoading() {
     return (
         <DashboardShell>
-            <PageHero
-                tone="student"
-                eyebrow="Home"
-                title="Welcome back"
-                description="Pulling together your tasks, deadlines, and matches. One sec."
-                highlight="Loading"
-                stats={[
-                    { label: 'Applications', value: '—', detail: 'Loading' },
-                    { label: 'Due this week', value: '—', detail: 'Loading' },
-                    { label: 'Next deadline', value: '—', detail: 'Loading' },
-                    { label: 'Profile', value: '—', detail: 'Loading' }
-                ]}
-                actions={
-                    <div className="flex gap-2">
-                        <Skeleton className="h-9 w-40" />
-                        <Skeleton className="h-9 w-36" />
-                    </div>
-                }
-            />
+            <PageHeroSkeleton stats={4} actions />
 
             <div className="space-y-6">
                 {/* Row 1 — priority spine + profile progress */}

@@ -20,14 +20,13 @@ import { cn } from '@/lib/utils';
  * `destructive` is intentionally absent: it belongs to destructive *actions*
  * (buttons), not to labels. A badge for a bad state is `danger`.
  *
- * DO NOT give a size `.text-label` (11px). tailwind-merge has no font-size entry
- * for it, so it falls through to the text-COLOUR group and `cn()` then treats it
- * and the tone colour as rivals — last one written wins, the other vanishes:
- *   twMerge('text-success text-label') -> 'text-label'    // colour gone
- *   twMerge('text-label text-success') -> 'text-success'  // 11px gone
- * Both sizes here therefore use real font-size utilities. (The second form is
- * already live at application-overview.tsx:134/155/205, where three chips lose
- * their 11px to their own tone class — out of scope, but that's the shape of it.)
+ * HISTORICAL NOTE — this hazard is FIXED, don't let this comment stop you.
+ * `.text-label` (11px) used to collide with the tone colour: tailwind-merge had no
+ * font-size entry for it, so it prefix-matched into the text-COLOUR group and `cn()`
+ * treated the two as rivals, dropping whichever was written first. `lib/utils.ts`
+ * now registers `text-label` and `text-body-sm` in tailwind-merge's `font-size`
+ * group, so both survive in either order and they correctly override `text-xs`.
+ * An 11px badge size is therefore safe to add if a call site needs one.
  */
 const badgeVariants = cva(
   'inline-flex items-center gap-1 rounded-full border font-semibold whitespace-nowrap transition-colors',

@@ -98,15 +98,19 @@ export function CounsellorInbox() {
     <div className="space-y-4">
       {/* Toolbar: filters + search */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div role="tablist" aria-label="Filter conversations" className="flex flex-wrap gap-1.5">
+        {/* Filter chips, NOT a tab set: they narrow one list in place rather
+            than switching between panels, so they carry `aria-pressed` toggles
+            in a labelled group. They used to claim role="tablist"/role="tab"
+            with no tabpanel and no aria-controls, which promises a screen
+            reader a panel switch that never happens. */}
+        <div role="group" aria-label="Filter conversations" className="flex flex-wrap gap-1.5">
           {FILTERS.map((f) => {
             const isActive = filter === f.key;
             const count = counts[f.key];
             return (
               <button
                 key={f.key}
-                role="tab"
-                aria-selected={isActive}
+                aria-pressed={isActive}
                 type="button"
                 onClick={() => setFilter(f.key)}
                 className={cn(

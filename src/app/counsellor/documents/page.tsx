@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { PageHero } from '@/components/layout/page-hero';
+import { SectionNav } from '@/components/layout/section-nav';
+import { COUNSELLOR_SECTION_ITEMS } from '@/components/layout/navigation';
 import { CounsellorDocumentBoard } from '../_components/counsellor-document-board';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { loadCounsellorDocuments } from '@/lib/counsellor/data';
@@ -16,6 +18,7 @@ export default async function CounsellorDocumentsPage() {
 
   return (
     <div className="space-y-6">
+      <SectionNav items={COUNSELLOR_SECTION_ITEMS} />
       <PageHero
         eyebrow="Counsellor"
         highlight={overdue > 0 ? `${overdue} overdue` : 'All on track'}

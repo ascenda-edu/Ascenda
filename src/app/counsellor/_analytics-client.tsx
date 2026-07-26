@@ -6,6 +6,8 @@ import {
   PieChart, BarChart2, TrendingUp, CheckCircle, Target, Users, Sparkles
 } from 'lucide-react';
 import { PageHero } from '@/components/layout/page-hero';
+import { SectionNav } from '@/components/layout/section-nav';
+import { COUNSELLOR_SECTION_ITEMS } from '@/components/layout/navigation';
 import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
 import type { CohortStats } from '@/lib/counsellor/data';
@@ -491,6 +493,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
 
   return (
     <div className="space-y-6">
+      <SectionNav items={COUNSELLOR_SECTION_ITEMS} />
       <PageHero
         eyebrow="Counsellor"
         highlight="Deep dive"

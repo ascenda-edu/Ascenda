@@ -1,34 +1,55 @@
 import { DashboardShell } from '@/components/layout/shell';
 import { SectionNav } from '@/components/layout/section-nav';
 import { PLANNER_SECTION_ITEMS } from '@/components/layout/navigation';
+import { PageHeroSkeleton } from '@/components/layout/page-hero-skeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 
+/**
+ * Mirrors `applications/documents/page.tsx`: SectionNav, a 2-stat hero, then TWO
+ * full-width cards (letter tracker, then uploaded documents). This used to draw
+ * a three-column grid of four small cards, which the page never renders.
+ */
+const DocRow = () => (
+  <div className="flex items-center gap-4 rounded-2xl border border-border/60 bg-background/60 px-5 py-4">
+    <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
+    <div className="min-w-0 flex-1 space-y-2">
+      <Skeleton className="h-4 w-48 max-w-full" />
+      <Skeleton className="h-3 w-32" />
+    </div>
+    <Skeleton className="h-3 w-16 shrink-0" />
+  </div>
+);
+
 export default function DocumentsLoading() {
-    return (
-        <DashboardShell>
-            <SectionNav items={PLANNER_SECTION_ITEMS} />
+  return (
+    <DashboardShell>
+      <SectionNav items={PLANNER_SECTION_ITEMS} />
+      <PageHeroSkeleton stats={2} />
 
-            <div className="surface-card space-y-4 p-6">
-                <Skeleton className="h-3 w-20" />
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-4 w-72" />
-            </div>
+      {/* Letter tracker */}
+      <div className="surface-card space-y-3">
+        <Skeleton className="h-3 w-40" />
+        <Skeleton className="h-5 w-36" />
+        <Skeleton className="h-3 w-full max-w-lg" />
+        <div className="space-y-3 pt-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <DocRow key={i} />
+          ))}
+        </div>
+      </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="space-y-3 rounded-3xl border border-border bg-card p-5">
-                        <div className="flex items-center gap-3">
-                            <Skeleton className="h-10 w-10 rounded-xl" />
-                            <div className="space-y-1.5 flex-1">
-                                <Skeleton className="h-4 w-32" />
-                                <Skeleton className="h-3 w-24" />
-                            </div>
-                        </div>
-                        <Skeleton className="h-2 w-full rounded-full" />
-                        <Skeleton className="h-8 w-full rounded-lg" />
-                    </div>
-                ))}
-            </div>
-        </DashboardShell>
-    );
+      {/* Uploaded documents */}
+      <div className="surface-card space-y-3">
+        <Skeleton className="h-3 w-40" />
+        <Skeleton className="h-5 w-28" />
+        <Skeleton className="h-3 w-full max-w-lg" />
+        <div className="space-y-3 pt-3">
+          <Skeleton className="h-10 w-full max-w-md rounded-xl" />
+          {Array.from({ length: 3 }).map((_, i) => (
+            <DocRow key={i} />
+          ))}
+        </div>
+      </div>
+    </DashboardShell>
+  );
 }

@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, Clock as ClockIcon, BookOpen, MapPin, GraduationCap, Target, FileText } from 'lucide-react';
 import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
 import { parseLocalDate } from '@/lib/utils/dates';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
 import {
   TIER_VISUAL,
@@ -81,39 +82,30 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
   const safeCount = matches.filter((m) => m.tier === 'Safe').length;
 
   return (
-    <div className="space-y-6">
-      {/* Tab nav */}
-      <nav role="tablist" aria-label="Student detail sections" className="flex items-center gap-2 overflow-x-auto scrollbar-none rounded-4xl border border-border bg-card px-3 sm:px-4 py-2.5 sm:py-3 shadow-e-3">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            role="tab"
-            aria-selected={active === tab.id}
-            onClick={() => setTabParam(tab.id)}
-            className={cn(
-              'shrink-0 rounded-full border px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold transition hover:bg-muted/80',
-              active === tab.id
-                ? 'border-primary bg-primary text-primary-foreground shadow-e-3'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {tab.label}
-            {tab.id === 'notes' && student.notes.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-label font-bold text-primary-ink">
-                {student.notes.length}
-              </span>
-            )}
-            {tab.id === 'matches' && matches.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-label font-bold text-primary-ink">
-                {matches.length}
-              </span>
-            )}
-          </button>
-        ))}
-      </nav>
+    // Radix supplies the tablist/tab/tabpanel wiring, aria-controls and
+    // arrow-key handling this row used to declare `role="tablist"` without.
+    <Tabs value={active} onValueChange={setTabParam}>
+      <TabsList aria-label="Student detail sections">
+        {TABS.map((tab) => {
+          const count = tab.id === 'notes'
+            ? student.notes.length
+            : tab.id === 'matches'
+              ? matches.length
+              : 0;
+          return (
+            <TabsTrigger key={tab.id} value={tab.id}>
+              {tab.label}
+              {count > 0 && (
+                <span className="ml-1.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-label font-bold text-primary-ink">
+                  {count}
+                </span>
+              )}
+            </TabsTrigger>
+          );
+        })}
+      </TabsList>
 
-      {/* Overview tab */}
-      {active === 'overview' && (
+      <TabsContent value="overview">
         <div className="grid gap-4 md:grid-cols-2">
           {/* Personal info */}
           <div className="surface-card space-y-4">
@@ -217,10 +209,9 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
             )}
           </div>
         </div>
-      )}
+      </TabsContent>
 
-      {/* Academic tab */}
-      {active === 'academic' && (
+      <TabsContent value="academic">
         <div className="grid gap-4 md:grid-cols-2">
           {/* Grades */}
           <div className="surface-card space-y-4">
@@ -313,10 +304,9 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
             </div>
           </div>
         </div>
-      )}
+      </TabsContent>
 
-      {/* Matches tab */}
-      {active === 'matches' && (
+      <TabsContent value="matches">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
@@ -374,10 +364,9 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
               )}
           </>
         </div>
-      )}
+      </TabsContent>
 
-      {/* Applications tab */}
-      {active === 'applications' && (
+      <TabsContent value="applications">
         <div className="space-y-4">
           <PortfolioBalance student={student} />
           {student.applications.length > 0 ? (
@@ -414,13 +403,13 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
             </div>
           )}
         </div>
-      )}
+      </TabsContent>
 
-      {/* Notes tab */}
-      {active === 'notes' && <NotesPanel notes={student.notes} studentId={student.id} />}
+      <TabsContent value="notes">
+        <NotesPanel notes={student.notes} studentId={student.id} />
+      </TabsContent>
 
-      {/* Timeline tab */}
-      {active === 'timeline' && (
+      <TabsContent value="timeline">
         <div className="surface-card space-y-4">
           <div>
             <p className="font-semibold text-foreground">Profile Evolution</p>
@@ -431,7 +420,7 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
             studentName={`${student.personal.firstName} ${student.personal.lastName}`}
           />
         </div>
-      )}
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 };

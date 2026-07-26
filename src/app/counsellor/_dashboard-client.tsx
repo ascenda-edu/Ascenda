@@ -5,6 +5,8 @@ import { AnimatePresence } from 'framer-motion';
 import { AlertTriangle, TrendingUp, BarChart2, Clock, Activity, PieChart, Trophy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PageHero } from '@/components/layout/page-hero';
+import { SectionNav } from '@/components/layout/section-nav';
+import { COUNSELLOR_SECTION_ITEMS } from '@/components/layout/navigation';
 import type { CounsellorStudent, AtRiskAlert } from '@/lib/counsellor/types';
 import type { CohortStats, DeadlineWithStudent, ActivityItem } from '@/lib/counsellor/data';
 import { AtRiskPanel } from './_components/at-risk-panel';
@@ -126,6 +128,7 @@ export function DashboardClient({
 
   return (
     <div className="space-y-6">
+      <SectionNav items={COUNSELLOR_SECTION_ITEMS} />
       <PageHero
         eyebrow="Counsellor"
         highlight={`${stats.total} students`}

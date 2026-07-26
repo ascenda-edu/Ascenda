@@ -1,20 +1,20 @@
 import { DashboardShell } from '@/components/layout/shell';
+import { PageHeroSkeleton } from '@/components/layout/page-hero-skeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 
+/**
+ * Mirrors `inbox/page.tsx`: hero with an eyebrow and no stats, then the
+ * InboxList rows. The hero block used to force `!px-4 !py-3` — a "compact
+ * PageHero" variant that no longer exists (the hero is `p-5 sm:p-6`), so this
+ * placeholder was ~20px short at every breakpoint.
+ */
 export default function InboxLoading() {
   return (
     <DashboardShell>
-      {/* Mirrors the compact PageHero (eyebrow · title · description). */}
-      <div className="surface-card !px-4 !py-3 sm:!px-5 sm:!py-3.5">
-        <div className="space-y-1.5">
-          <Skeleton className="h-2.5 w-24" />
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-3 w-72 max-w-full" />
-        </div>
-      </div>
+      <PageHeroSkeleton />
 
       {/* Mirrors the InboxList rows. */}
-      <div className="mt-4 space-y-2">
+      <div className="space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
