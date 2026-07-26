@@ -73,16 +73,18 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
               <div className="flex-1 rounded-xl bg-muted/50">
                 <div
                   className={cn(
-                    'group relative flex h-7 items-center justify-end rounded-xl px-2 text-xs font-bold text-white transition-all duration-700',
+                    'group relative h-7 rounded-xl transition-all duration-700',
                     colors.bar,
                     clickable && colors.barHover
                   )}
-                  style={{ width: `${(bucket.count / max) * 100}%`, minWidth: bucket.count > 0 ? '2rem' : '0' }}
+                  style={{ width: `${(bucket.count / max) * 100}%`, minWidth: bucket.count > 0 ? '0.5rem' : '0' }}
                 >
-                  {bucket.count > 0 ? bucket.count : ''}
                   {bucket.count > 0 && tooltip(bucket)}
                 </div>
               </div>
+              <span className="w-8 shrink-0 text-right text-xs font-bold tabular-nums text-foreground">
+                {bucket.count}
+              </span>
             </button>
           );
         })}
@@ -103,15 +105,15 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
               <button
                 key={bucket.key}
                 onClick={() => onSelect?.(bucket)}
+                aria-label={`${bucket.label}: ${bucket.count} ${unitFor(bucket.count)}, ${pctOf(bucket.count)}%`}
                 className={cn(
-                  'group relative flex min-w-0 items-center justify-center text-xs font-bold text-white transition-all duration-700 first:rounded-l-2xl last:rounded-r-2xl',
+                  'group relative flex min-w-0 items-center justify-center transition-all duration-700 first:rounded-l-2xl last:rounded-r-2xl',
                   colors.bar,
                   interactive ? cn(colors.barHover, 'cursor-pointer') : 'cursor-default'
                 )}
                 style={{ width: `${pct}%` }}
               >
-                {pct > 12 && <span className="truncate px-1">{bucket.label}</span>}
-                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-label font-semibold text-background opacity-0 shadow-e-2 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                   {bucket.count} {unitFor(bucket.count)} · {pctOf(bucket.count)}%{interactive ? ' · Click to explore' : ''}
                 </span>
               </button>

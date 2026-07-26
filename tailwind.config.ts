@@ -1,37 +1,25 @@
 import type { Config } from 'tailwindcss';
 import plugin from 'tailwindcss/plugin';
 
-// Plugin to add the glass and form utilities
+// Form + surface component classes.
+//
+// Removed here as confirmed dead (zero call sites app-wide): .panel-card (a
+// byte-identical duplicate of .panel), .text-glow, .form-panel and its two
+// modifiers, .form-flow, .form-touch-target, and .navbar-subtitle. If you need one
+// back, prefer the .surface-* family in globals.css — that's the card system of
+// record, with 149 consumers.
 const customUtilitiesPlugin = plugin(function ({ addComponents }) {
   addComponents({
     // Opaque elevated surface (not actual glassmorphism — no backdrop blur).
     '.panel': {
-      '@apply border border-border bg-card shadow-sm dark:bg-card dark:border-white/10': {},
-    },
-    '.panel-card': {
-      '@apply border border-border bg-card shadow-sm dark:bg-card dark:border-white/10': {},
-    },
-    '.text-glow': {
-      'text-shadow': '0 0 20px rgba(90, 88, 238, 0.35)',
+      '@apply border border-border bg-card shadow-e-1 dark:bg-card dark:border-white/10': {},
     },
     // Form utilities
     '.form-grid': {
       '@apply grid gap-4 sm:gap-6': {},
     },
-    '.form-flow': {
-      '@apply gap-6': {},
-    },
     '.form-stack': {
       '@apply flex flex-col gap-4': {},
-    },
-    '.form-panel': {
-      '@apply rounded-2xl border border-border bg-card text-foreground shadow-sm transition-colors': {},
-    },
-    '.form-panel--roomy': {
-      '@apply gap-6 p-6 sm:p-8': {},
-    },
-    '.form-panel--quiet': {
-      '@apply gap-4 p-5 sm:p-6 bg-muted/60': {},
     },
     '.form-field': {
       '@apply flex flex-col gap-2': {},
@@ -39,17 +27,16 @@ const customUtilitiesPlugin = plugin(function ({ addComponents }) {
     '.form-label': {
       '@apply text-sm font-semibold text-foreground': {},
     },
+    // THE input treatment. There were ten competing ones — nine hand-rolled in the
+    // counsellor area alone, three of which had no focus ring at all. Use this.
     '.form-input': {
-      '@apply w-full rounded-2xl border border-input bg-background px-4 py-3 text-sm text-foreground shadow-sm transition-all duration-300 placeholder:text-muted-foreground/80 hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring': {},
+      '@apply w-full rounded-2xl border border-input bg-background px-4 py-3 text-sm text-foreground shadow-e-1 transition-[border-color,box-shadow] duration-200 placeholder:text-muted-foreground/80 hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background': {},
     },
     '.form-input--multi': {
       '@apply min-h-[120px]': {},
     },
     '.form-input--textarea': {
       '@apply min-h-[140px] resize-y': {},
-    },
-    '.form-touch-target': {
-      '@apply rounded-xl bg-muted/40 px-3 py-2 transition hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring': {},
     },
     '.form-feedback': {
       '@apply text-sm font-medium': {},
@@ -58,23 +45,15 @@ const customUtilitiesPlugin = plugin(function ({ addComponents }) {
       '@apply text-destructive': {},
     },
     '.form-feedback--success': {
-      '@apply text-emerald-500': {},
+      '@apply text-success': {},
     },
     '.form-action': {
       '@apply w-full sm:w-auto': {},
     },
-    // Navbar utilities
+    // Navbar wordmark. Was raw hex (#0f172a / #334155 / #d1d5db) inside the token
+    // system — the config reaching around itself.
     '.navbar-brand': {
-      color: '#0f172a',
-    },
-    '[data-theme="dark"] .navbar-brand': {
-      color: '#ffffff',
-    },
-    '.navbar-subtitle': {
-      color: '#334155',
-    },
-    '[data-theme="dark"] .navbar-subtitle': {
-      color: '#d1d5db',
+      '@apply text-foreground': {},
     },
   })
 });
@@ -104,6 +83,11 @@ const config: Config = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          // `text-primary-ink` — the indigo that is legible as TEXT on neutral
+          // surfaces in both themes. Use this for copy, labels, links and icons.
+          // `text-primary` fails AA in dark mode (3.58:1) and always will, because
+          // --primary is tuned to carry white button text.
+          ink: "hsl(var(--primary-ink))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -129,29 +113,75 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Tone tokens. `--{tone}` is safe as text on any neutral surface AND as a
+        // solid fill; `-subtle` is the tinted surface it stays legible on.
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
+          subtle: "hsl(var(--success-subtle))",
         },
         warning: {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
+          subtle: "hsl(var(--warning-subtle))",
+        },
+        danger: {
+          DEFAULT: "hsl(var(--danger))",
+          foreground: "hsl(var(--danger-foreground))",
+          subtle: "hsl(var(--danger-subtle))",
         },
         info: {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
+          subtle: "hsl(var(--info-subtle))",
         },
+        feature: {
+          DEFAULT: "hsl(var(--feature))",
+          foreground: "hsl(var(--feature-foreground))",
+          subtle: "hsl(var(--feature-subtle))",
+        },
+        // Categorical chart slots, assigned in fixed order — never cycled, and never
+        // interchangeable with the tone tokens above. See globals.css for the
+        // validation record and why there are five rather than eight.
+        "series-1": "hsl(var(--series-1))",
+        "series-2": "hsl(var(--series-2))",
+        "series-3": "hsl(var(--series-3))",
+        "series-4": "hsl(var(--series-4))",
+        "series-5": "hsl(var(--series-5))",
       },
+      // Elevation ladder. Before this there was no system: `shadow-sm` at rest and
+      // `shadow-md` on hover everywhere, plus ~15 files with literal rgba shadows.
+      // Named by role so the intent survives; e-1 is a resting card, e-4 a modal.
       boxShadow: {
-        soft: "0 2px 10px rgba(0, 0, 0, 0.05)",
-        floating: "0 10px 30px -10px rgba(0, 0, 0, 0.1)",
-        glow: "0 0 20px rgba(99, 102, 241, 0.15)",
+        "e-1": "0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04)",
+        "e-2": "0 2px 4px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.06)",
+        "e-3": "0 4px 8px rgba(15, 23, 42, 0.06), 0 12px 28px rgba(15, 23, 42, 0.10)",
+        "e-4": "0 8px 16px rgba(15, 23, 42, 0.08), 0 24px 60px rgba(15, 23, 42, 0.16)",
         nav: "0 30px 80px rgba(15, 23, 42, 0.08)",
       },
+      // One radius ladder, all bound to --radius. Previously only lg/md/sm were
+      // token-linked, so --radius governed ~8% of the app's radii while xl/2xl/3xl
+      // sat at Tailwind's stock values and 58 sites used arbitrary rounded-[Npx].
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        sm: "calc(var(--radius) - 4px)",   /*  6px */
+        md: "calc(var(--radius) - 2px)",   /*  8px */
+        lg: "var(--radius)",               /* 10px */
+        xl: "calc(var(--radius) + 4px)",   /* 14px */
+        "2xl": "calc(var(--radius) + 8px)",  /* 18px */
+        "3xl": "calc(var(--radius) + 14px)", /* 24px */
+        "4xl": "calc(var(--radius) + 18px)", /* 28px */
+      },
+      // Named layers, so "which z-index?" stops being a guess. The chat panel used
+      // to sit at z-[60] and paint over modals pinned at z-50.
+      zIndex: {
+        raised: "10",
+        sticky: "20",
+        nav: "30",
+        docked: "40",
+        panel: "60",
+        overlay: "100",
+        modal: "200",
+        toast: "300",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "sans-serif"],
@@ -215,10 +245,6 @@ const config: Config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        "fade-in": {
-          from: { opacity: "0", transform: "translateY(10px)" },
-          to: { opacity: "1", transform: "translateY(0)" },
-        },
         shimmer: {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(100%)" },
@@ -227,7 +253,6 @@ const config: Config = {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.2s ease-out forwards",
         shimmer: "shimmer 3.2s linear infinite",
       },
     },

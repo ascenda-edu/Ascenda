@@ -99,7 +99,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
   const daysLeft = nextDeadline ? daysUntil(nextDeadline.date) : null;
 
   return (
-    <div className="group surface-card surface-card--static relative flex flex-col gap-4 transition-all hover:-translate-y-1 hover:shadow-floating">
+    <div className="group surface-card hover-lift relative flex flex-col gap-4">
       {/* Main card link overlay */}
       <Link
         href={`/counsellor/students/${student.id}`}

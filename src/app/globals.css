@@ -29,17 +29,82 @@
     --destructive-foreground: 0 0% 100%;
 
     --border: 220 13% 89%;
-    --input: 220 13% 89%;
+    /* --input is deliberately much darker than --border. A decorative card edge can
+       be faint, but a form-control boundary must clear 3:1 against its own field
+       (WCAG 1.4.11 non-text contrast). These were identical, giving 1.30:1. */
+    --input: 220 13% 60%;
     --ring: 241 65% 55%;
 
-    --success: 152 60% 40%;
+    /* ── Tone tokens ────────────────────────────────────────────────────────
+       Every value below is solved for WCAG AA and verified in both themes; see
+       the table in the dark block. Each tone carries three values:
+
+         --{tone}            the colour itself. Safe BOTH as text on any neutral
+                             surface (card/background/muted) AND as a solid fill.
+         --{tone}-foreground text that sits on the solid fill.
+         --{tone}-subtle     tinted surface for chips, badges and soft cards.
+                             --{tone} is guaranteed legible on it.
+
+       Asymmetry worth knowing: the tones' base value is text-safe, but --primary's
+       is not — primary must stay white-on-indigo for buttons, which forces it
+       darker than text needs. Hence --primary-ink for `text-primary`-style use.
+       Don't "fix" that by changing --primary; it will break every button.
+
+       Semantics (mirrored from lib/theme/categories.ts, the tone system of record):
+         danger  = urgent / overdue / reach      warning = todo / pending / match
+         success = done / submitted / safety     info    = in-progress / planning
+         feature = essay / session / counsellor-flavoured
+       --destructive stays separate: it's for destructive *actions* (delete), red,
+       not the rose status tone. */
+    --primary-ink: 241 65% 55%;
+
+    --success: 160 84% 26%;
     --success-foreground: 0 0% 100%;
+    --success-subtle: 160 70% 96%;
 
-    --warning: 38 92% 50%;
+    --warning: 38 92% 30%;
     --warning-foreground: 0 0% 100%;
+    --warning-subtle: 38 70% 96%;
 
-    --info: 241 65% 55%;
+    --danger: 350 80% 45%;
+    --danger-foreground: 0 0% 100%;
+    --danger-subtle: 350 70% 96%;
+
+    --info: 199 89% 33.5%;
     --info-foreground: 0 0% 100%;
+    --info-subtle: 199 70% 96%;
+
+    --feature: 258 80% 45%;
+    --feature-foreground: 0 0% 100%;
+    --feature-subtle: 258 70% 96%;
+
+    /* ── Categorical chart series ───────────────────────────────────────────
+       Five slots, assigned in FIXED ORDER and never cycled. Distinct from the
+       tone tokens above on purpose: those are reserved for status (good/bad) and
+       must never double as "series 4".
+
+       Validated with the dataviz skill's checker on the *adjacent* pairlist,
+       which is the right contract for the bar / stacked-bar / funnel forms this
+       app actually draws. Light: worst adjacent CVD ΔE 17.0 deutan · 29.0 tritan,
+       normal-vision 32.0. Dark passes with no warnings at all.
+
+       Why five and not the eight this replaced: the old rotation was
+       violet/sky/emerald/amber/rose/indigo/teal/orange — which put two blues and
+       two greens on screen together. Indigo↔violet measured ΔE 1.3 under
+       protanopia and 7.5 with normal colour vision; emerald↔teal 4.9. Those pairs
+       were not distinguishable, so the 7th and 8th slots were decoration, not
+       information. Slot 6+ should fold into "Other" or facet into small
+       multiples — do not generate a 9th hue.
+
+       Amber and emerald sit just under 3:1 on the light surface (2.15, 2.54). The
+       relief rule applies and is already satisfied: every bar in this app carries
+       a visible value and a row label, so identity is never colour-alone. Keep it
+       that way if you restyle the charts. */
+    --series-1: 243.4 75.4% 58.6%;
+    --series-2: 37.7 92.1% 50.2%;
+    --series-3: 200.4 98.0% 39.4%;
+    --series-4: 345.3 82.7% 40.8%;
+    --series-5: 160.1 84.1% 39.4%;
 
     --radius: 0.625rem;
   }
@@ -75,17 +140,51 @@
     --destructive-foreground: 0 0% 100%;
 
     --border: 224 14% 18%;
-    --input: 224 14% 18%;
+    --input: 224 14% 42%; /* 3.04:1 vs the field background — was 1.26:1 */
     --ring: 241 65% 62%;
 
-    --success: 152 60% 40%;
-    --success-foreground: 0 0% 100%;
+    /* Dark tone values are LIGHTER than light-mode's and flip the foreground to ink.
+       That's required, not stylistic: a dark fill on a dark card can't clear 3:1.
+
+       Verified ratios (text on card / fg on fill / text on own subtle):
+         success  11.48 / 11.11 / 8.08      warning  8.41 / 8.14 / 6.30
+         danger    5.14 /  4.97 / 4.55      info     6.80 / 6.58 / 5.29
+         feature   5.06 /  4.89 / 4.71      primary-ink 5.06 on card, 4.55 on muted
+
+       --primary stays 62%: as a FILL that is correct (white text 5.01:1, and 3.58:1
+       against the card). It was only ever broken as text — which is what
+       --primary-ink is for. Previously `text-primary` measured 3.58:1 here and
+       failed AA, on 10px labels no less. */
+    --primary-ink: 241 65% 69%;
+
+    --success: 160 84% 50%;
+    --success-foreground: 224 32% 12%;
+    --success-subtle: 160 40% 16%;
 
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    --warning-foreground: 224 32% 12%;
+    --warning-subtle: 38 40% 16%;
 
-    --info: 241 65% 62%;
-    --info-foreground: 0 0% 100%;
+    --danger: 350 80% 62.5%;
+    --danger-foreground: 224 32% 12%;
+    --danger-subtle: 350 40% 16%;
+
+    --info: 199 89% 50%;
+    --info-foreground: 224 32% 12%;
+    --info-subtle: 199 40% 16%;
+
+    --feature: 258 80% 69%;
+    --feature-foreground: 224 32% 12%;
+    --feature-subtle: 258 40% 16%;
+
+    /* Dark series steps are SELECTED for the dark surface, not flipped from light.
+       The dark lightness band is narrower (OKLCH L 0.48–0.67 vs 0.43–0.77), so
+       slots 1, 2, 4 and 5 all move. Slot 3 happens to sit in both bands. */
+    --series-1: 238.7 83.5% 66.7%;
+    --series-2: 32.1 94.6% 43.7%;
+    --series-3: 200.4 98.0% 39.4%;
+    --series-4: 349.7 89.2% 60.2%;
+    --series-5: 161.4 93.5% 30.4%;
   }
 }
 
@@ -146,13 +245,22 @@
     @apply font-heading tracking-tight;
   }
 
-  /* Tightened type scale — 5 sizes total across the app:
-     h1 / hero: 28px (sm) → 32px (md+)
+  /* Type scale — 7 steps. The previous comment claimed 5 and claimed body was 14px;
+     body is in fact 15px (see the `body` rule above), and the app had grown 400+
+     uses of two undeclared sizes plus ~19 further one-offs. Rather than pretend
+     those don't exist, the two real ones are now named steps (.text-label,
+     .text-secondary below) and the stragglers collapse onto them.
+
+     h1 / hero:         28px → 32px (md+)
      h2 / page section: 22px → 24px (md+)
-     h3 / card title: 18px
-     body: 14px (text-sm)
-     caption: 12px (text-xs)
-     Marketing landing pages may opt out via inline overrides. */
+     h3 / card title:   18px
+     body:              15px
+     secondary:         13px  (.text-secondary)
+     caption:           12px  (text-xs)
+     label:             11px  (.text-label)  ← floor for anything readable
+
+     11px is the floor. 10px sentence-case copy was in 100 places; it is not a
+     size, it is a legibility problem. Marketing landing pages may opt out inline. */
   h1 {
     @apply text-[1.75rem] leading-tight font-semibold md:text-[2rem];
   }
@@ -192,12 +300,36 @@
     display: none;
   }
 
+  /* The opt-in interaction for cards and tiles that are actually clickable.
+     One spelling of the lift, app-wide — there were three (-translate-y-px,
+     -translate-y-0.5, and -translate-y-1 with shadow-xl). */
   .hover-lift {
-    @apply transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-md;
+    @apply transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-e-2;
   }
 }
 
 @layer components {
+  /* The two type steps the app had grown organically as arbitrary values.
+     text-[0.8125rem] (21 uses) and text-[0.6875rem] (248 uses) are these. */
+  .text-secondary {
+    @apply text-[0.8125rem] leading-normal;
+  }
+
+  .text-label {
+    @apply text-[0.6875rem] leading-normal;
+  }
+
+  /* Eyebrow / micro-label. Collapses a 15-value tracking free-for-all
+     (0.05em … 0.4em) into one treatment, and uses primary-ink so it passes AA in
+     dark mode — these labels were the single worst contrast offender in the app. */
+  .eyebrow {
+    @apply text-label font-semibold uppercase tracking-[0.18em] text-muted-foreground;
+  }
+
+  .eyebrow-accent {
+    @apply text-label font-semibold uppercase tracking-[0.18em] text-primary-ink;
+  }
+
   .helper-text {
     @apply text-sm text-muted-foreground/90 leading-relaxed;
   }
@@ -209,12 +341,17 @@
     @apply px-3 sm:px-6 lg:px-10;
   }
 
+  /* Static by default. 69 of 149 call sites (46%) used to bolt on
+     `surface-card--static` purely to cancel a hover lift they never wanted — when
+     nearly half your consumers opt out, the default is the bug. Cards that ARE
+     interactive opt IN with `hover-lift` below. `surface-card--static` is kept as a
+     no-op alias so existing call sites stay valid while they're migrated. */
   .surface-card {
-    @apply relative overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-sm transition-[transform,box-shadow,border-color,background-color] duration-200 hover:-translate-y-px hover:shadow-md dark:border-white/10 dark:bg-card;
+    @apply relative overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-e-1 transition-[transform,box-shadow,border-color,background-color] duration-200 dark:border-white/10 dark:bg-card;
   }
 
   .surface-card--static {
-    @apply hover:translate-y-0 hover:shadow-sm;
+    /* Intentionally empty: static is now the default. */
   }
 
   .surface-subcard {
@@ -226,15 +363,15 @@
   }
 
   .surface-toolbar {
-    @apply relative overflow-hidden rounded-xl border border-border bg-card px-5 py-3 shadow-sm transition-colors dark:border-white/10 dark:bg-card;
+    @apply relative overflow-hidden rounded-xl border border-border bg-card px-5 py-3 shadow-e-1 transition-colors dark:border-white/10 dark:bg-card;
   }
 
   .surface-stage {
-    @apply relative overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-sm transition-[border-color,background-color] duration-200 dark:border-white/10 dark:bg-card;
+    @apply relative overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-e-1 transition-[border-color,background-color] duration-200 dark:border-white/10 dark:bg-card;
   }
 
   .surface-stat {
-    @apply relative overflow-hidden rounded-xl border border-border bg-card p-4 sm:p-5 shadow-sm transition-[border-color,background-color] duration-200 dark:border-white/10 dark:bg-card;
+    @apply relative overflow-hidden rounded-xl border border-border bg-card p-4 sm:p-5 shadow-e-1 transition-[border-color,background-color] duration-200 dark:border-white/10 dark:bg-card;
   }
 
   .nav-pill {
@@ -242,7 +379,7 @@
   }
 
   .nav-pill-active {
-    @apply border-primary/20 bg-primary text-primary-foreground shadow-sm;
+    @apply border-primary/20 bg-primary text-primary-foreground shadow-e-1;
   }
 
   .page-soft-bg {

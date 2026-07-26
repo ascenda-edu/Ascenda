@@ -81,77 +81,100 @@ export interface CategoryVisual {
   bar: string;
 }
 
+/**
+ * Tone class bundles, now built from the semantic tone tokens in globals.css
+ * rather than raw Tailwind palette literals.
+ *
+ * Why this matters: every value below used to be a hardcoded `emerald-600` /
+ * `rose-200/60` etc. — 1,808 such literals across the app. That made status colour
+ * untunable, gave it no dark-mode contrast pass, and let it drift (emerald vs
+ * green, rose vs red, sky vs blue were all in play simultaneously).
+ *
+ * The tokens are solved for WCAG AA in BOTH themes, so no `dark:` variants are
+ * needed here at all — the token flips itself. Each tone guarantees:
+ *   text-{tone}         >= 4.5:1 on card, background and muted
+ *   bg-{tone}-subtle    a tint that text-{tone} stays >= 4.5:1 against
+ *   bg-{tone}           a solid fill that text-{tone}-foreground sits on
+ *
+ * The legacy tone NAMES (rose/amber/emerald/sky/violet) are kept as the public
+ * CategoryTone union so ~13 consuming files don't churn, but each now maps to its
+ * semantic token. The mapping is the one already documented above:
+ *   rose -> danger, amber -> warning, emerald -> success, sky -> info,
+ *   violet -> feature.
+ */
 const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
   rose: {
-    text: 'text-rose-600 dark:text-rose-400',
-    bg: 'bg-rose-500/10',
-    border: 'border-rose-200/60 dark:border-rose-500/20',
-    ring: 'ring-rose-500/20',
-    accent: 'border-l-rose-500',
+    text: 'text-danger',
+    bg: 'bg-danger-subtle',
+    border: 'border-danger/25',
+    ring: 'ring-danger/25',
+    accent: 'border-l-danger',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-rose-500/10 text-rose-600 border border-rose-200/60 dark:text-rose-400 dark:border-rose-500/20',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-danger-subtle text-danger border border-danger/25',
     swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-600 ring-1 ring-rose-500/20 dark:text-rose-400',
-    bar: 'bg-rose-500'
+      'flex h-9 w-9 items-center justify-center rounded-2xl bg-danger-subtle text-danger ring-1 ring-danger/25',
+    bar: 'bg-danger'
   },
   amber: {
-    text: 'text-amber-600 dark:text-amber-400',
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-200/60 dark:border-amber-500/20',
-    ring: 'ring-amber-500/20',
-    accent: 'border-l-amber-500',
+    text: 'text-warning',
+    bg: 'bg-warning-subtle',
+    border: 'border-warning/25',
+    ring: 'ring-warning/25',
+    accent: 'border-l-warning',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-amber-500/10 text-amber-600 border border-amber-200/60 dark:text-amber-400 dark:border-amber-500/20',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-warning-subtle text-warning border border-warning/25',
     swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20 dark:text-amber-400',
-    bar: 'bg-amber-500'
+      'flex h-9 w-9 items-center justify-center rounded-2xl bg-warning-subtle text-warning ring-1 ring-warning/25',
+    bar: 'bg-warning'
   },
   emerald: {
-    text: 'text-emerald-600 dark:text-emerald-400',
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-200/60 dark:border-emerald-500/20',
-    ring: 'ring-emerald-500/20',
-    accent: 'border-l-emerald-500',
+    text: 'text-success',
+    bg: 'bg-success-subtle',
+    border: 'border-success/25',
+    ring: 'ring-success/25',
+    accent: 'border-l-success',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-200/60 dark:text-emerald-400 dark:border-emerald-500/20',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-success-subtle text-success border border-success/25',
     swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20 dark:text-emerald-400',
-    bar: 'bg-emerald-500'
+      'flex h-9 w-9 items-center justify-center rounded-2xl bg-success-subtle text-success ring-1 ring-success/25',
+    bar: 'bg-success'
   },
   sky: {
-    text: 'text-sky-600 dark:text-sky-400',
-    bg: 'bg-sky-500/10',
-    border: 'border-sky-200/60 dark:border-sky-500/20',
-    ring: 'ring-sky-500/20',
-    accent: 'border-l-sky-500',
+    text: 'text-info',
+    bg: 'bg-info-subtle',
+    border: 'border-info/25',
+    ring: 'ring-info/25',
+    accent: 'border-l-info',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-sky-500/10 text-sky-600 border border-sky-200/60 dark:text-sky-400 dark:border-sky-500/20',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-info-subtle text-info border border-info/25',
     swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-600 ring-1 ring-sky-500/20 dark:text-sky-400',
-    bar: 'bg-sky-500'
+      'flex h-9 w-9 items-center justify-center rounded-2xl bg-info-subtle text-info ring-1 ring-info/25',
+    bar: 'bg-info'
   },
   violet: {
-    text: 'text-violet-600 dark:text-violet-400',
-    bg: 'bg-violet-500/10',
-    border: 'border-violet-200/60 dark:border-violet-500/20',
-    ring: 'ring-violet-500/20',
-    accent: 'border-l-violet-500',
+    text: 'text-feature',
+    bg: 'bg-feature-subtle',
+    border: 'border-feature/25',
+    ring: 'ring-feature/25',
+    accent: 'border-l-feature',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-violet-500/10 text-violet-600 border border-violet-200/60 dark:text-violet-400 dark:border-violet-500/20',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-feature-subtle text-feature border border-feature/25',
     swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-violet-500/10 text-violet-600 ring-1 ring-violet-500/20 dark:text-violet-400',
-    bar: 'bg-violet-500'
+      'flex h-9 w-9 items-center justify-center rounded-2xl bg-feature-subtle text-feature ring-1 ring-feature/25',
+    bar: 'bg-feature'
   },
   primary: {
-    text: 'text-primary',
+    // primary-ink, not primary: --primary is tuned to carry white button text and
+    // measures 3.58:1 as text on a dark card.
+    text: 'text-primary-ink',
     bg: 'bg-primary/10',
-    border: 'border-primary/20',
-    ring: 'ring-primary/20',
+    border: 'border-primary/25',
+    ring: 'ring-primary/25',
     accent: 'border-l-primary',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-primary border border-primary/20',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-primary-ink border border-primary/25',
     swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20',
+      'flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary-ink ring-1 ring-primary/25',
     bar: 'bg-primary'
   },
   neutral: {

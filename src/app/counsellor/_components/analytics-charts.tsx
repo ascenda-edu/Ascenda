@@ -22,41 +22,53 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
       {/* No overflow-hidden here: it would clip the hover tooltips out of existence.
           Each segment rounds its own outer corner instead, so the pill shape survives. */}
       <div className="flex h-10 rounded-2xl border border-border/50">
+        {/* No text inside the segments: white fails on these fills (2.15:1 on the
+            amber-family slot) and no single label colour clears 4.5:1 across the
+            palette. The two cards below already name and quantify both series, so
+            the in-bar text was redundant anyway. aria-label carries it for SR users. */}
         <button
           onClick={() => onSelect?.('IB')}
-          className="group relative flex h-full items-center justify-center rounded-l-2xl bg-violet-500/70 text-xs font-bold text-white transition-all hover:bg-violet-500/90 cursor-pointer"
+          aria-label={`IB: ${breakdown.ib} students, ${ibPct}% of the cohort. Click to explore.`}
+          className="group relative flex h-full items-center justify-center rounded-l-2xl bg-series-1 transition-all hover:bg-series-1/85 cursor-pointer"
           style={{ width: `${ibPct}%` }}
         >
-          IB {ibPct}%
           <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             {breakdown.ib} students · Click to explore
           </span>
         </button>
         <button
           onClick={() => onSelect?.('A_LEVEL')}
-          className="group relative flex h-full items-center justify-center rounded-r-2xl bg-sky-500/70 text-xs font-bold text-white transition-all hover:bg-sky-500/90 cursor-pointer"
+          aria-label={`A-Level: ${breakdown.aLevel} students, ${aLevelPct}% of the cohort. Click to explore.`}
+          className="group relative flex h-full items-center justify-center rounded-r-2xl bg-series-2 transition-all hover:bg-series-2/85 cursor-pointer"
           style={{ width: `${aLevelPct}%` }}
         >
-          A-Level {aLevelPct}%
           <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             {breakdown.aLevel} students · Click to explore
           </span>
         </button>
       </div>
       <div className="grid grid-cols-2 gap-3">
+        {/* These cards ARE the legend for the bar above: a colour swatch carries
+            identity, the number wears ink. */}
         <button
           onClick={() => onSelect?.('IB')}
-          className="rounded-2xl border border-violet-200/60 bg-violet-500/10 px-5 py-4 text-center transition hover:-translate-y-0.5 hover:shadow-md hover:border-violet-300/80 cursor-pointer dark:border-violet-500/20 dark:hover:border-violet-400/40"
+          className="hover-lift cursor-pointer rounded-2xl border border-series-1/25 bg-series-1/10 px-5 py-4 text-center"
         >
-          <p className="text-2xl font-bold text-violet-700 dark:text-violet-300">{breakdown.ib}</p>
-          <p className="text-xs text-muted-foreground">IB students</p>
+          <p className="text-2xl font-bold tabular-nums text-foreground">{breakdown.ib}</p>
+          <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-series-1" />
+            IB students
+          </p>
         </button>
         <button
           onClick={() => onSelect?.('A_LEVEL')}
-          className="rounded-2xl border border-sky-200/60 bg-sky-500/10 px-5 py-4 text-center transition hover:-translate-y-0.5 hover:shadow-md hover:border-sky-300/80 cursor-pointer dark:border-sky-500/20 dark:hover:border-sky-400/40"
+          className="hover-lift cursor-pointer rounded-2xl border border-series-2/25 bg-series-2/10 px-5 py-4 text-center"
         >
-          <p className="text-2xl font-bold text-sky-700 dark:text-sky-300">{breakdown.aLevel}</p>
-          <p className="text-xs text-muted-foreground">A-Level students</p>
+          <p className="text-2xl font-bold tabular-nums text-foreground">{breakdown.aLevel}</p>
+          <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-series-2" />
+            A-Level students
+          </p>
         </button>
       </div>
     </div>
@@ -92,19 +104,22 @@ export const IbDistribution = ({ buckets, onSelect }: IbDistributionProps) => {
             <div className="flex-1 rounded-xl bg-muted/50">
               <div
                 className={cn(
-                  'group relative flex h-7 items-center justify-end rounded-xl bg-primary/70 px-2 text-xs font-bold text-primary-foreground transition-all duration-700',
-                  count > 0 && 'hover:bg-primary/90'
+                  'group relative h-7 rounded-xl bg-primary transition-all duration-700',
+                  count > 0 && 'hover:bg-primary/85'
                 )}
-                style={{ width: `${(count / maxCount) * 100}%`, minWidth: count > 0 ? '2rem' : '0' }}
+                style={{ width: `${(count / maxCount) * 100}%`, minWidth: count > 0 ? '0.5rem' : '0' }}
               >
-                {count > 0 ? count : ''}
                 {count > 0 && (
-                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-label font-semibold text-background opacity-0 shadow-e-2 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                     {count} student{count !== 1 ? 's' : ''} · {Math.round((count / total) * 100)}% · Click to explore
                   </span>
                 )}
               </div>
             </div>
+            {/* Value reads in ink beside the mark, not on it. No single label colour
+                clears 4.5:1 across the series fills — sky measures 4.10 on white and
+                4.24 on ink — so an in-bar label cannot be made accessible. */}
+            <span className="w-8 shrink-0 text-right text-xs font-bold tabular-nums text-foreground">{count}</span>
           </button>
         ))}
       </div>
@@ -142,20 +157,20 @@ export const FieldChart = ({ fields, onSelect }: FieldChartProps) => {
             <div className="flex-1 rounded-xl bg-muted/50">
               <div
                 className={cn(
-                  'group relative flex h-7 items-center justify-end rounded-xl px-2 text-xs font-bold text-white transition-all duration-700',
+                  'group relative h-7 rounded-xl transition-all duration-700',
                   FIELD_COLORS[idx % FIELD_COLORS.length],
                   count > 0 && FIELD_HOVER_COLORS[idx % FIELD_HOVER_COLORS.length]
                 )}
-                style={{ width: `${(count / max) * 100}%`, minWidth: count > 0 ? '2rem' : '0' }}
+                style={{ width: `${(count / max) * 100}%`, minWidth: count > 0 ? '0.5rem' : '0' }}
               >
-                {count > 0 ? count : ''}
                 {count > 0 && (
-                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-label font-semibold text-background opacity-0 shadow-e-2 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                     {count} student{count !== 1 ? 's' : ''} · {Math.round((count / total) * 100)}% · Click to explore
                   </span>
                 )}
               </div>
             </div>
+            <span className="w-8 shrink-0 text-right text-xs font-bold tabular-nums text-foreground">{count}</span>
           </button>
         ))}
       </div>
@@ -171,10 +186,12 @@ interface FullFunnelProps {
 }
 
 const FUNNEL_STAGES = [
+  // Tone mapping matches APPLICATION_STATUS_VISUAL / STAGE_COLORS so the funnel,
+  // the kanban and the analytics drill-down can never disagree about a stage.
   { key: 'planning' as const, label: 'Planning', color: 'bg-muted-foreground/40', hoverColor: 'hover:bg-muted-foreground/60', textColor: 'text-muted-foreground' },
-  { key: 'inProgress' as const, label: 'In Progress', color: 'bg-sky-500/70', hoverColor: 'hover:bg-sky-500/90', textColor: 'text-sky-700 dark:text-sky-400' },
-  { key: 'submitted' as const, label: 'Submitted', color: 'bg-violet-500/70', hoverColor: 'hover:bg-violet-500/90', textColor: 'text-violet-700 dark:text-violet-400' },
-  { key: 'decision' as const, label: 'Decision Received', color: 'bg-emerald-500/70', hoverColor: 'hover:bg-emerald-500/90', textColor: 'text-emerald-700 dark:text-emerald-400' }
+  { key: 'inProgress' as const, label: 'In Progress', color: 'bg-info', hoverColor: 'hover:bg-info/85', textColor: 'text-info' },
+  { key: 'submitted' as const, label: 'Submitted', color: 'bg-success', hoverColor: 'hover:bg-success/85', textColor: 'text-success' },
+  { key: 'decision' as const, label: 'Decision Received', color: 'bg-feature', hoverColor: 'hover:bg-feature/85', textColor: 'text-feature' }
 ];
 
 // Synthetic "last year" funnel for the year-on-year comparison toggle. Builds
@@ -190,11 +207,11 @@ const buildPriorYearFunnel = (current: CohortStats['appFunnel']): CohortStats['a
 const formatDelta = (current: number, prior: number): { label: string; tone: string } => {
   const diff = current - prior;
   if (prior === 0 && current === 0) return { label: 'flat', tone: 'text-muted-foreground' };
-  if (prior === 0) return { label: 'new', tone: 'text-emerald-600 dark:text-emerald-400' };
+  if (prior === 0) return { label: 'new', tone: 'text-success' };
   const pct = Math.round((diff / prior) * 100);
   if (pct === 0) return { label: '±0%', tone: 'text-muted-foreground' };
   const sign = pct > 0 ? '▲' : '▼';
-  const tone = pct > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+  const tone = pct > 0 ? 'text-success' : 'text-danger';
   return { label: `${sign} ${Math.abs(pct)}%`, tone };
 };
 
@@ -212,9 +229,9 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
           type="button"
           onClick={() => setCompareYoY((prev) => !prev)}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.6875rem] font-semibold transition',
+            'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-label font-semibold transition',
             compareYoY
-              ? 'border-violet-300/70 bg-violet-500/10 text-violet-700 dark:text-violet-300'
+              ? 'border-feature/40 bg-feature-subtle text-feature'
               : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:bg-muted/60 hover:text-foreground'
           )}
         >
@@ -250,7 +267,7 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
               </div>
               <div className="flex justify-center">
                 <div
-                  className={cn('group relative flex h-8 items-center justify-center rounded-xl text-xs font-bold text-white transition-all', color, count > 0 && hoverColor)}
+                  className={cn('group relative flex h-8 items-center justify-center rounded-xl text-xs font-bold text-foreground transition-all', color, count > 0 && hoverColor)}
                   style={{ width: `${width}%` }}
                 >
                   {count}
@@ -284,9 +301,10 @@ export const MatchTierSummary = ({ tiers, onSelect }: MatchTierSummaryProps) => 
   const total = tiers.reach + tiers.match + tiers.safe || 1;
 
   const tierList = [
-    { key: 'reach' as const, label: 'Reach', count: tiers.reach, color: 'bg-rose-500/80', hoverColor: 'hover:bg-rose-500', card: 'border-rose-200/60 bg-rose-500/10 dark:border-rose-500/20', hoverCard: 'hover:border-rose-300/80 hover:-translate-y-0.5 hover:shadow-md dark:hover:border-rose-400/40', text: 'text-rose-600 dark:text-rose-400' },
-    { key: 'match' as const, label: 'Match', count: tiers.match, color: 'bg-amber-500/80', hoverColor: 'hover:bg-amber-500', card: 'border-amber-200/60 bg-amber-500/10 dark:border-amber-500/20', hoverCard: 'hover:border-amber-300/80 hover:-translate-y-0.5 hover:shadow-md dark:hover:border-amber-400/40', text: 'text-amber-600 dark:text-amber-400' },
-    { key: 'safe' as const, label: 'Safe', count: tiers.safe, color: 'bg-emerald-500/80', hoverColor: 'hover:bg-emerald-500', card: 'border-emerald-200/60 bg-emerald-500/10 dark:border-emerald-500/20', hoverCard: 'hover:border-emerald-300/80 hover:-translate-y-0.5 hover:shadow-md dark:hover:border-emerald-400/40', text: 'text-emerald-600 dark:text-emerald-400' }
+    // reach/match/safety is a status scale, matching TIER_VISUAL in lib/theme/categories.
+    { key: 'reach' as const, label: 'Reach', count: tiers.reach, color: 'bg-danger', hoverColor: 'hover:bg-danger/85', card: 'border-danger/25 bg-danger-subtle', hoverCard: 'hover-lift', text: 'text-danger' },
+    { key: 'match' as const, label: 'Match', count: tiers.match, color: 'bg-warning', hoverColor: 'hover:bg-warning/85', card: 'border-warning/25 bg-warning-subtle', hoverCard: 'hover-lift', text: 'text-warning' },
+    { key: 'safe' as const, label: 'Safe', count: tiers.safe, color: 'bg-success', hoverColor: 'hover:bg-success/85', card: 'border-success/25 bg-success-subtle', hoverCard: 'hover-lift', text: 'text-success' }
   ];
 
   return (
@@ -300,10 +318,11 @@ export const MatchTierSummary = ({ tiers, onSelect }: MatchTierSummaryProps) => 
             <button
               key={label}
               onClick={() => onSelect?.(key, label)}
-              className={cn(color, hoverColor, 'group relative flex items-center justify-center text-xs font-bold text-white transition-all duration-700 cursor-pointer first:rounded-l-2xl last:rounded-r-2xl')}
+              aria-label={`${label}: ${count} students, ${Math.round(pct)}%. Click to explore.`}
+              className={cn(color, hoverColor, 'group relative flex items-center justify-center transition-all duration-700 cursor-pointer first:rounded-l-2xl last:rounded-r-2xl')}
               style={{ width: `${pct}%` }}
             >
-              {pct > 8 ? label : ''}
+              {/* Identity comes from the labelled cards below, not in-bar text. */}
               <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                 {count} {label} · {Math.round(pct)}% · Click to explore
               </span>
@@ -337,11 +356,15 @@ interface CompletionBreakdownProps {
 }
 
 export const CompletionBreakdown = ({ students, onSelect }: CompletionBreakdownProps) => {
+  // Completion bands are a STATUS scale, not categorical data, so they use the tone
+  // tokens rather than chart series colours. (They were emerald/sky/amber/red-500 —
+  // note `red`, where the rest of the app used `rose`, one of the drifts that made
+  // status colour untunable.)
   const buckets = [
-    { label: '100%', count: students.filter((s) => s.pct === 100).length, color: 'bg-emerald-500/70', hoverColor: 'hover:bg-emerald-500/90', tooltip: 'Fully complete', min: 100, max: 100 },
-    { label: '75–99%', count: students.filter((s) => s.pct >= 75 && s.pct < 100).length, color: 'bg-sky-500/70', hoverColor: 'hover:bg-sky-500/90', tooltip: 'Almost complete', min: 75, max: 99 },
-    { label: '50–74%', count: students.filter((s) => s.pct >= 50 && s.pct < 75).length, color: 'bg-amber-500/70', hoverColor: 'hover:bg-amber-500/90', tooltip: 'Partially complete', min: 50, max: 74 },
-    { label: '<50%', count: students.filter((s) => s.pct < 50).length, color: 'bg-red-500/70', hoverColor: 'hover:bg-red-500/90', tooltip: 'Needs attention', min: 0, max: 49 }
+    { label: '100%', count: students.filter((s) => s.pct === 100).length, color: 'bg-success', hoverColor: 'hover:bg-success/85', tooltip: 'Fully complete', min: 100, max: 100 },
+    { label: '75–99%', count: students.filter((s) => s.pct >= 75 && s.pct < 100).length, color: 'bg-info', hoverColor: 'hover:bg-info/85', tooltip: 'Almost complete', min: 75, max: 99 },
+    { label: '50–74%', count: students.filter((s) => s.pct >= 50 && s.pct < 75).length, color: 'bg-warning', hoverColor: 'hover:bg-warning/85', tooltip: 'Partially complete', min: 50, max: 74 },
+    { label: '<50%', count: students.filter((s) => s.pct < 50).length, color: 'bg-danger', hoverColor: 'hover:bg-danger/85', tooltip: 'Needs attention', min: 0, max: 49 }
   ];
   const max = Math.max(...buckets.map((b) => b.count), 1);
   const avg = Math.round(students.reduce((a, s) => a + s.pct, 0) / (students.length || 1));
@@ -365,20 +388,20 @@ export const CompletionBreakdown = ({ students, onSelect }: CompletionBreakdownP
             <div className="flex-1 rounded-xl bg-muted/50">
               <div
                 className={cn(
-                  'group relative flex h-7 items-center justify-end rounded-xl px-2 text-xs font-bold text-white transition-all duration-700',
+                  'group relative h-7 rounded-xl transition-all duration-700',
                   color,
                   count > 0 && hoverColor
                 )}
-                style={{ width: `${(count / max) * 100}%`, minWidth: count > 0 ? '2rem' : '0' }}
+                style={{ width: `${(count / max) * 100}%`, minWidth: count > 0 ? '0.5rem' : '0' }}
               >
-                {count > 0 ? count : ''}
                 {count > 0 && (
-                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[0.6875rem] font-semibold text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-label font-semibold text-background opacity-0 shadow-e-2 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                     {count} student{count !== 1 ? 's' : ''} · {tooltip} · Click to explore
                   </span>
                 )}
               </div>
             </div>
+            <span className="w-8 shrink-0 text-right text-xs font-bold tabular-nums text-foreground">{count}</span>
           </button>
         ))}
       </div>
