@@ -143,6 +143,53 @@ create table if not exists student_lifestyle_preference (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+-- Structured extracurricular entries.
+--
+-- Present on the remote database and in the generated types, but missing from
+-- this file and from every migration until 2026-08-01 — while
+-- src/lib/profile/persist-intake.ts delete-then-inserts it on EVERY profile save
+-- and throws on error. So any database built from this repo (a preview branch, a
+-- new laptop, the CI `database` job) could not save a student profile at all.
+-- Nothing caught it because nothing had ever built a database from these files.
+-- Backported from 20260801130000_reconcile_missing_tables.sql.
+create table if not exists student_activities (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references profiles(id) on delete cascade,
+  category text not null,
+  level text,
+  duration text,
+  highlight text,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default timezone('utc', now())
+);
+create index if not exists student_activities_profile_idx
+  on student_activities (profile_id, sort_order);
+
+-- Admin-only scoring-simulation output (src/app/admin/simulation/page.tsx).
+-- Same story as student_activities: live on the remote database, absent here.
+create table if not exists simulation_results (
+  id uuid primary key default gen_random_uuid(),
+  run_id text not null,
+  batch_label text not null,
+  profile_name text not null,
+  programme_type text not null,
+  profile_snapshot jsonb,
+  student_score numeric,
+  student_band text,
+  student_ib_equivalent numeric,
+  actual_university text not null,
+  actual_program text not null,
+  actual_country text not null,
+  chance_percent numeric,
+  algorithm_result text,
+  algorithm_notes text,
+  score_breakdown jsonb,
+  validation_pass boolean,
+  created_at timestamptz default timezone('utc', now())
+);
+create index if not exists simulation_results_run_idx
+  on simulation_results (run_id, created_at);
+
 -- Student scores
 create table if not exists student_scores (
   profile_id uuid primary key references profiles(id) on delete cascade,
@@ -830,6 +877,11 @@ alter table student_academic_input enable row level security;
 alter table student_subjects enable row level security;
 alter table student_admissions_tests enable row level security;
 alter table student_lifestyle_preference enable row level security;
+-- Both added 2026-08-01. Creating a table WITHOUT enabling RLS leaves it
+-- readable and writable by every authenticated session via PostgREST, so the
+-- `enable` and the `create table` must never be separated.
+alter table student_activities enable row level security;
+alter table simulation_results enable row level security;
 alter table student_scores enable row level security;
 alter table universities enable row level security;
 alter table programs enable row level security;
@@ -915,6 +967,17 @@ create policy admissions_admin on student_admissions_tests
   using ((select auth_role()) = 'admin');
 
 -- Lifestyle preferences policies
+-- student_activities owner policy. The counsellor-read and admin policies for
+-- these two tables live further down, WITH the other function-dependent policies
+-- — they call can_act_as_counsellor()/is_admin(), which are not defined until
+-- later in this file, and a policy cannot reference a function that does not yet
+-- exist. Mirrors 20260801130000_reconcile_missing_tables.sql.
+drop policy if exists student_activities_self on student_activities;
+create policy student_activities_self on student_activities
+  for all to authenticated
+  using (profile_id = (select auth.uid()))
+  with check (profile_id = (select auth.uid()));
+
 drop policy if exists lifestyle_self on student_lifestyle_preference;
 drop policy if exists lifestyle_admin on student_lifestyle_preference;
 create policy lifestyle_self on student_lifestyle_preference
@@ -1207,6 +1270,23 @@ as $$
   select auth.uid() is not null;
 $$;
 
+-- From 20260801120000. is_counsellor() spans 'counsellor' AND 'admin', so it
+-- cannot express "admin only" — which the destructive-verb policies need.
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from profiles
+    where id = auth.uid() and role = 'admin'
+  );
+$$;
+
+grant execute on function public.is_admin() to authenticated;
+
 grant execute on function public.is_counsellor() to authenticated;
 grant execute on function public.is_demo_account() to authenticated;
 grant execute on function public.can_act_as_counsellor() to authenticated;
@@ -1250,6 +1330,17 @@ create trigger trg_guard_profile_role
 drop policy if exists profiles_counsellor_read on profiles;
 create policy profiles_counsellor_read on profiles
   for select to authenticated using (public.can_act_as_counsellor());
+
+drop policy if exists student_activities_counsellor_read on student_activities;
+create policy student_activities_counsellor_read on student_activities
+  for select to authenticated
+  using (public.can_act_as_counsellor());
+
+drop policy if exists simulation_results_admin on simulation_results;
+create policy simulation_results_admin on simulation_results
+  for all to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
 
 drop policy if exists personal_counsellor_read on student_personal_information;
 create policy personal_counsellor_read on student_personal_information
