@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import type { Database } from '@/lib/types/database';
-import { isProfileComplete } from '@/lib/profile/completion';
+import { COMPLETION_COLUMNS, isProfileComplete } from '@/lib/profile/completion';
 
 const PROTECTED_PREFIXES = [
   '/dashboard',
@@ -148,10 +148,15 @@ export async function middleware(req: NextRequest) {
       }
     }
 
+    // Column lists come from COMPLETION_COLUMNS, never written out here. The
+    // hand-written list this replaced omitted `english_status`, which flipped
+    // the answer for every student who chose "Not sure" on the English question:
+    // they were bounced to /profile/wizard from every protected route, cached for
+    // 12h by cookie, while the dashboard showed them 100% complete.
     const [personalResponse, academicResponse, lifestyleResponse, subjectsResponse] = await Promise.all([
-      supabase.from('student_personal_information').select('first_name,last_name,email,nationality,resident_country').eq('profile_id', user.id).maybeSingle(),
-      supabase.from('student_academic_input').select('programme_type,school_name,school_country,graduation_year,intended_clusters,english_required').eq('profile_id', user.id).maybeSingle(),
-      supabase.from('student_lifestyle_preference').select('extracurricular_interests').eq('profile_id', user.id).maybeSingle(),
+      supabase.from('student_personal_information').select(COMPLETION_COLUMNS.personal).eq('profile_id', user.id).maybeSingle(),
+      supabase.from('student_academic_input').select(COMPLETION_COLUMNS.academicInput).eq('profile_id', user.id).maybeSingle(),
+      supabase.from('student_lifestyle_preference').select(COMPLETION_COLUMNS.lifestyle).eq('profile_id', user.id).maybeSingle(),
       supabase.from('student_subjects').select('id', { count: 'exact', head: true }).eq('profile_id', user.id)
     ]);
 

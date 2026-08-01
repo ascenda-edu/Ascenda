@@ -9,7 +9,7 @@ import { parseLocalDate } from '@/lib/utils/dates';
 import { stagger, cardFade } from '@/lib/motion';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ApplicationStatus, ApplicationPlatform, EnrichedApplication } from '@/lib/counsellor/types';
-import { STAGE_COLORS } from '@/lib/counsellor/stage-colors';
+import { STAGE_COLORS, STAGE_ORDER } from '@/lib/counsellor/stage-colors';
 
 // Platform is CATEGORICAL, not status — an OUAC application isn't "urgent" because
 // it used to be rose. These are the five categorical series slots (see
@@ -38,7 +38,12 @@ const formatDeadline = (iso: string) => {
   return Number.isNaN(date.getTime()) ? 'No deadline' : dateFormatter.format(date);
 };
 
-const STATUSES: ApplicationStatus[] = ['planning', 'in_progress', 'submitted', 'decision'];
+// Kanban columns follow the single pipeline order rather than a private copy of it,
+// so a new application status can't be dropped from the board (`enrolled` was).
+const STATUSES: readonly ApplicationStatus[] = STAGE_ORDER;
+
+const emptyByStatus = <T,>(): Record<ApplicationStatus, T[]> =>
+  Object.fromEntries(STAGE_ORDER.map((s) => [s, [] as T[]])) as Record<ApplicationStatus, T[]>;
 
 export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
   const allApps = apps;
@@ -64,16 +69,14 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
 
   // Group by status for kanban; within each status, group by student
   const columns = useMemo(() => {
-    const map: Record<ApplicationStatus, EnrichedApplication[]> = { planning: [], in_progress: [], submitted: [], decision: [] };
-    filtered.forEach((a) => map[a.status].push(a));
+    const map = emptyByStatus<EnrichedApplication>();
+    filtered.forEach((a) => map[a.status]?.push(a));
     return map;
   }, [filtered]);
 
   // Per-column: unique students with all their apps in that stage
   const kanbanByStudent = useMemo(() => {
-    const result: Record<ApplicationStatus, { studentId: string; studentName: string; flagEmoji: string; apps: EnrichedApplication[] }[]> = {
-      planning: [], in_progress: [], submitted: [], decision: []
-    };
+    const result = emptyByStatus<{ studentId: string; studentName: string; flagEmoji: string; apps: EnrichedApplication[] }>();
     (Object.keys(columns) as ApplicationStatus[]).forEach((status) => {
       const seen = new Map<string, typeof result[ApplicationStatus][number]>();
       columns[status].forEach((app) => {
@@ -136,9 +139,10 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
         ))}
       </div>
 
-      {/* Kanban view — one card per student, apps listed inside */}
+      {/* Kanban view — one card per student, apps listed inside.
+          One column per pipeline stage — five since `enrolled` became representable. */}
       {view === 'kanban' && (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {STATUSES.map((status) => {
             const cfg = STAGE_COLORS[status];
             const studentGroups = kanbanByStudent[status];

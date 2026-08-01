@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast';
 import { useSupabase } from '@/hooks/useSupabase';
 import { insertHelpRequest } from '@/lib/demo/help-request-client';
+import { parseLocalDate } from '@/lib/utils/dates';
 import type { RecLetterRequest, RecLetterStatus } from '@/lib/data/student-demo-data';
 
 const REMIND_STORAGE_KEY = 'ascenda-letter-reminders';
@@ -73,8 +74,11 @@ interface RecLetterWorkflowProps {
   letters: RecLetterRequest[];
 }
 
+// `requestedDate` is a date-only string ('YYYY-MM-DD'). `new Date()` parses
+// that as UTC midnight, which renders one calendar day early for every user
+// west of Greenwich — parse it as a LOCAL date instead.
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return parseLocalDate(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
 export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {

@@ -38,12 +38,10 @@ const STATUS_LABELS: Record<ChildApplication['status'], string> = {
   enrolled: 'Enrolled',
 };
 
-const STATUS_VISUAL: Record<ChildApplication['status'], CategoryVisual> = {
-  ...APPLICATION_STATUS_VISUAL,
-  // No 'enrolled' tone exists app-wide; it reads as a settled/positive state, the
-  // same as submitted.
-  enrolled: APPLICATION_STATUS_VISUAL.submitted,
-};
+// `enrolled` is now a first-class member of APPLICATION_STATUS_VISUAL (primary
+// tone), so this no longer borrows submitted's emerald — the parent board and the
+// counsellor board show the same colour for the same application again.
+const STATUS_VISUAL: Record<ChildApplication['status'], CategoryVisual> = APPLICATION_STATUS_VISUAL;
 
 // Sort working applications first, settled ones last (student board order).
 const STATUS_ORDER: Record<ChildApplication['status'], number> = {

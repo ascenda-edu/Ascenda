@@ -372,7 +372,7 @@
       "result": {
         "breakdown": {
           "a_level_project_bonus": 0,
-          "academic_performance": 8,
+          "academic_performance": 67,
           "activities": {
             "commitment": 8,
             "intl_experience": 3,
@@ -391,14 +391,14 @@
           "key_subject_grades": 10,
           "preferred_subjects_alignment": 13,
           "rigour_score": 15,
-          "student_band": "Weak",
+          "student_band": "Strong",
           "tests_and_english": 18,
-          "total_score": 84
+          "total_score": 143
         },
         "eligibility_flags": [],
         "readiness_flags": [],
-        "student_band": "Weak",
-        "total_score": 84
+        "student_band": "Strong",
+        "total_score": 143
       }
     },
     {
@@ -407,7 +407,7 @@
       "result": {
         "breakdown": {
           "a_level_project_bonus": 0,
-          "academic_performance": 8,
+          "academic_performance": 46,
           "activities": {
             "commitment": 8,
             "intl_experience": 3,
@@ -426,14 +426,14 @@
           "key_subject_grades": 8,
           "preferred_subjects_alignment": 13,
           "rigour_score": 13,
-          "student_band": "Weak",
+          "student_band": "Solid",
           "tests_and_english": 18,
-          "total_score": 80
+          "total_score": 118
         },
         "eligibility_flags": [],
         "readiness_flags": [],
-        "student_band": "Weak",
-        "total_score": 80
+        "student_band": "Solid",
+        "total_score": 118
       }
     },
     {
@@ -460,15 +460,15 @@
           "ib_hl_strength": 0,
           "key_subject_grades": 8,
           "preferred_subjects_alignment": 13,
-          "rigour_score": 0,
+          "rigour_score": 13,
           "student_band": "Strong",
           "tests_and_english": 18,
-          "total_score": 134
+          "total_score": 147
         },
         "eligibility_flags": [],
         "readiness_flags": [],
         "student_band": "Strong",
-        "total_score": 134
+        "total_score": 147
       }
     },
     {
@@ -495,17 +495,17 @@
           "ib_hl_strength": 0,
           "key_subject_grades": 4,
           "preferred_subjects_alignment": 10,
-          "rigour_score": 0,
+          "rigour_score": 6,
           "student_band": "Weak",
           "tests_and_english": 0,
-          "total_score": 32
+          "total_score": 38
         },
         "eligibility_flags": [],
         "readiness_flags": [
           "english_test_missing"
         ],
         "student_band": "Weak",
-        "total_score": 32
+        "total_score": 38
       }
     },
     {

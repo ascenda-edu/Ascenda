@@ -7,7 +7,7 @@
   ],
   "row_count": 4,
   "rows": [
-    {"case":"act_subjects_as_the_form_emits_them","subject_level":"A_LEVEL","rigour_score":0,"academic_performance":68,"total_score":68,"note":"F-04: what every real ACT student gets — rigour 0"},
+    {"case":"act_subjects_as_the_form_emits_them","subject_level":"A_LEVEL","rigour_score":13,"academic_performance":68,"total_score":81,"note":"F-04: what every real ACT student gets — rigour 0"},
     {"case":"act_subjects_at_AP_level","subject_level":"AP","rigour_score":13,"academic_performance":68,"total_score":81,"note":"F-04: the branch RigourTable.ACT was written for; nothing emits AP"},
     {"case":"act_subjects_at_HL_level","subject_level":"HL","rigour_score":0,"academic_performance":68,"total_score":68,"note":"not emitted for ACT; recorded for completeness"},
     {"case":"act_no_subjects","subject_level":null,"rigour_score":0,"academic_performance":68,"total_score":68,"note":"baseline"}

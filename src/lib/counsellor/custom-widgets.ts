@@ -14,6 +14,7 @@ import type {
   CounsellorMatch,
   CounsellorStudent
 } from '@/lib/counsellor/types';
+import { STAGE_LABEL, STAGE_ORDER } from '@/lib/counsellor/stage-colors';
 
 export type CustomWidgetId = `custom:${string}`;
 export type CustomWidgetSource = 'students' | 'applications' | 'matches' | 'deadlines';
@@ -165,9 +166,11 @@ const APPLICATION_SOURCE: SourceDef<CounsellorApplication> = {
     {
       key: 'status',
       label: 'Stage',
-      values: (a) =>
-        ({ planning: 'Planning', in_progress: 'In progress', submitted: 'Submitted', decision: 'Decision received' }[a.status] ?? 'Unknown'),
-      orderedLabels: ['Planning', 'In progress', 'Submitted', 'Decision received']
+      // Labels/order come from STAGE_ORDER + STAGE_LABEL. The inline table here
+      // omitted `enrolled`, so every enrolled application would have been bucketed
+      // as "Unknown" and dropped off the end of the ordered axis.
+      values: (a) => STAGE_LABEL[a.status] ?? 'Unknown',
+      orderedLabels: STAGE_ORDER.map((s) => STAGE_LABEL[s])
     },
     {
       key: 'platform',

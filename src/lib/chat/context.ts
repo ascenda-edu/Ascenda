@@ -263,7 +263,7 @@ async function buildCounsellorContext(
   const sections = [
     'COUNSELLOR COHORT',
     `Cohort: ${plural(stats.total, 'student')}, avg profile completion ${stats.avgCompletion}%, ${stats.flagged} flagged, ${stats.deadlinesThisWeek} deadlines this week.`,
-    `Application funnel: ${stats.appFunnel.planning} planning, ${stats.appFunnel.inProgress} in progress, ${stats.appFunnel.submitted} submitted, ${stats.appFunnel.decision} awaiting decision.`,
+    `Application funnel: ${stats.appFunnel.planning} planning, ${stats.appFunnel.inProgress} in progress, ${stats.appFunnel.submitted} submitted, ${stats.appFunnel.decision} awaiting decision, ${stats.appFunnel.enrolled} enrolled.`,
     alerts.length > 0
       ? `At-risk alerts:\n${alerts
           .map(

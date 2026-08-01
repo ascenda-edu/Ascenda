@@ -485,6 +485,30 @@ const mapRows = (
     };
   });
 
+// Orders a fetched page by fit score, descending, with unknown-fit rows last.
+//
+// Fit is a per-profile number that does not exist in the `programs` table, so
+// it CANNOT be an `.order()` — it is resolved after the page arrives (see
+// loadMatchScores). Ordering therefore happens here, over the page. The DB
+// order stays `id asc` so offset pagination remains stable and non-repeating;
+// this only decides how the rows within each page are presented, and appended
+// pages are never reshuffled (rows the user has already read stay put).
+//
+// The `id` tiebreaker keeps the comparator total: `Array.prototype.sort` is
+// stable, but tied fit scores are the norm (chance_percent is an integer), and
+// a total comparator makes the rendered order reproducible for a given page.
+export const sortByFit = (rows: ProgramSearchResult[]): ProgramSearchResult[] =>
+  [...rows].sort((a, b) => {
+    const av = typeof a.fitScore === 'number' && Number.isFinite(a.fitScore) ? a.fitScore : null;
+    const bv = typeof b.fitScore === 'number' && Number.isFinite(b.fitScore) ? b.fitScore : null;
+    if (av !== bv) {
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      return bv - av;
+    }
+    return a.id.localeCompare(b.id);
+  });
+
 const friendlyError = (fetchError: unknown): string => {
   const message =
     fetchError instanceof Error
@@ -791,8 +815,10 @@ export function useSearchResults(filters: SearchFilters): SearchResultsState {
         const join = uni.kind === 'embedded' ? '!inner' : '!left';
         let query = applyWhere(supabase.from('programs').select(buildSelect(join)), ctx, true);
 
-        // Sort. `fit` (and the ranking-with-q fallback) intentionally add NO
-        // order — the DB's natural order is what the page annotates as fit.
+        // Sort. `fit` (and the ranking-with-q fallback) add NO DB order: fit is
+        // a per-profile score with no column to order on, so the page is
+        // fetched in PK order and then ordered by fit in memory (sortByFit,
+        // applied after the scores land below).
         switch (f.sort) {
           case 'tuition-asc':
             query = query.order('yearly_international_tuition_fee_gbp', {
@@ -853,7 +879,9 @@ export function useSearchResults(filters: SearchFilters): SearchResultsState {
         const rawCount = rawRows.length;
         const scores = await loadMatchScores(supabase, rawRows, signal);
         if (signal.aborted) return;
-        const mapped = mapRows(filterVisiblePrograms(rawRows), uniNameById, scores);
+        const mappedRows = mapRows(filterVisiblePrograms(rawRows), uniNameById, scores);
+        // The default sort is labelled "fit" — make it mean it.
+        const mapped = f.sort === 'fit' ? sortByFit(mappedRows) : mappedRows;
 
         // hasMore is derived from the RAW page size only — never from count.
         const more = rawCount === PAGE_SIZE;

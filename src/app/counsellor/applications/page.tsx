@@ -15,6 +15,9 @@ export default async function CounsellorApplicationsPage() {
   const allApps = deriveApplicationsWithPlatform(cohort);
   const submitted = allApps.filter((a) => a.status === 'submitted').length;
   const planning = allApps.filter((a) => a.status === 'planning' || a.status === 'in_progress').length;
+  // The outcome the whole section exists to produce. It was unreachable until
+  // `enrolled` stopped being rewritten to `decision` in lib/counsellor/data.ts.
+  const enrolled = allApps.filter((a) => a.status === 'enrolled').length;
 
   return (
     <div className="space-y-6">
@@ -27,6 +30,7 @@ export default async function CounsellorApplicationsPage() {
           { label: 'Total', value: String(allApps.length), detail: 'Applications' },
           { label: 'Submitted', value: String(submitted), detail: 'Sent to universities' },
           { label: 'In progress', value: String(planning), detail: 'Still being prepared' },
+          { label: 'Enrolled', value: String(enrolled), detail: 'Place accepted' },
         ]}
       />
       <AnimatedSection>

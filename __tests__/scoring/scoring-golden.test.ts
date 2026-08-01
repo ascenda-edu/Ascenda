@@ -1039,19 +1039,36 @@ describe('golden — A-level grade signatures (task A)', () => {
     );
   });
 
-  it('records the currently-known inversions from the audit', () => {
+  it('has repaired the inversions recorded by the audit (F-01)', () => {
     const score = (signature: string) =>
       rows.find((row) => row.signature === signature)?.academic_performance;
-    // Audit doc 05-domain-logic.md, finding F-01. Asserted, not "fixed".
-    expect(score('A*A*D')).toBe(8);
+
+    // These nine were the audit's worked examples (05-domain-logic.md, F-01).
+    // Six of them scored the catch-all 8 while strictly WEAKER signatures scored
+    // 10-40. This test used to assert the broken values, to pin the bug down; it
+    // now asserts the repair, so a regression re-breaks the build.
+    //
+    // The three originally-tabulated values are unchanged — the fix preserved
+    // every one of the 25 calibrated entries and only filled the 30 gaps.
     expect(score('DDD')).toBe(10);
     expect(score('ABD')).toBe(40);
-    expect(score('AAD')).toBe(8);
     expect(score('BBC')).toBe(36);
-    expect(score('ACC')).toBe(8);
     expect(score('CCD')).toBe(16);
-    expect(score('BBD')).toBe(8);
     expect(score('CCC')).toBe(24);
+
+    // Previously 8, now placed inside the range dominance permits.
+    expect(score('A*A*D')).toBe(67);
+    expect(score('AAD')).toBe(46);
+    expect(score('ACC')).toBe(38);
+    expect(score('BBD')).toBe(31);
+
+    // The property that actually matters, stated directly: each repaired
+    // signature now outscores every signature it strictly dominates.
+    expect(score('A*A*D')!).toBeGreaterThan(score('DDD')!);
+    expect(score('A*A*D')!).toBeGreaterThan(score('ABD')!);
+    expect(score('AAD')!).toBeGreaterThan(score('DDD')!);
+    expect(score('ACC')!).toBeGreaterThan(score('CCC')!);
+    expect(score('BBD')!).toBeGreaterThan(score('CCD')!);
   });
 });
 
@@ -1141,12 +1158,21 @@ describe('golden — ACT (task B)', () => {
 
   it('matches the committed ACT rigour-path baseline (F-04)', () => {
     const rows = buildActRigourRows();
-    // The bug, stated as an assertion: the level the form emits scores 0,
-    // the level the RigourTable was written for scores > 0.
+    // This used to assert the BUG: the level the intake form actually emits
+    // (`A_LEVEL`) scored 0, while the level `RigourTable.ACT` was written for
+    // (`AP`) scored 13 — and nothing in the app can produce `AP`, so every real
+    // ACT student silently lost up to 15 of 200 points, about one band.
+    //
+    // `calculateRigourScore` now accepts both for ACT, which is what heals the
+    // rows already in the database; fixing only the form would have left every
+    // existing ACT student at 0. The two paths must now agree.
     const asEmitted = rows.find((row) => row.subject_level === 'A_LEVEL');
     const asIntended = rows.find((row) => row.subject_level === 'AP');
-    expect(asEmitted?.rigour_score).toBe(0);
+    expect(asEmitted?.rigour_score).toBeGreaterThan(0);
     expect(asIntended?.rigour_score).toBeGreaterThan(0);
+    expect(asEmitted?.rigour_score).toBe(asIntended?.rigour_score);
+    // HL is still not an ACT level, so it correctly contributes nothing.
+    expect(rows.find((row) => row.subject_level === 'HL')?.rigour_score).toBe(0);
     assertGolden(
       'act-rigour-paths.golden.json',
       serializeTable(

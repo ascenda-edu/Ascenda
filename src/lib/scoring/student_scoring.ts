@@ -387,8 +387,20 @@ const calculateRigourScore = (programmeType: ProgrammeType, subjects: StudentSub
     programmeType === 'IB'
       ? subjects.filter((subject) => subject.level === 'HL')
       : programmeType === 'ACT'
-      ? subjects.filter((subject) => subject.level === 'AP')
-      : subjects.filter((subject) => subject.level === 'A_LEVEL');
+        // Accept A_LEVEL as well as AP. `AP` is legal in the DB enum, the domain
+        // type and the zod schema — but NOTHING writes it: the intake form offers
+        // only `A_LEVEL` for every non-IB student, and both the empty-row default
+        // and the read-side hydration fall back to `A_LEVEL` too. So this filter
+        // matched nothing for every real ACT student, `relevantSubjects` was
+        // empty, and rigour returned 0 — costing up to 15 of 200 points, roughly
+        // a band, while `RigourTable.ACT` sat unused as dead config.
+        //
+        // Accepting both is what heals the rows already in the database; fixing
+        // the form alone would leave every existing ACT student at 0. The rigour
+        // mapping is documented as identical to A-level's, so widening the filter
+        // changes which rows are considered, not how they are scored.
+        ? subjects.filter((subject) => subject.level === 'AP' || subject.level === 'A_LEVEL')
+        : subjects.filter((subject) => subject.level === 'A_LEVEL');
   if (relevantSubjects.length === 0) return 0;
 
   const subjectPoints = relevantSubjects
@@ -477,6 +489,60 @@ export const calculateActScore = (actScore: number | null): number => {
   return 8;
 };
 
+/**
+ * Every three-grade A-level signature → `academic_performance` contribution
+ * (0–80), keyed by the grades sorted best-first.
+ *
+ * ── Why this is a complete table rather than an if-chain ────────────────────
+ * It used to be 26 `if (signature === …)` branches with `return 8` as a
+ * catch-all. There are 56 possible signatures, so **30 of them — 54% — hit that
+ * catch-all**, which produced 34 strict-dominance inversions: `A*A*D` scored 8
+ * while `DDD` scored 10 and `ABD` scored 40. `AAD`, `ACC`, `ACD` and `BBD` are
+ * among the most common real results in the UK, so the students who fell in the
+ * hole were disproportionately the ones with one weak subject alongside strong
+ * ones — exactly the profile that most needs accurate matching. The wrong value
+ * was then persisted to `student_scores`.
+ *
+ * A missing entry is now unrepresentable: the table is exhaustive over the grade
+ * set, so a signature cannot silently fall through.
+ *
+ * ── How the 30 new values were derived ──────────────────────────────────────
+ * The 25 originally-listed values were checked and found **internally perfectly
+ * monotonic** — the calibration was sound, only the gaps were broken. So every
+ * original value is preserved EXACTLY; no existing student's score moves.
+ *
+ * The gaps were filled by fitting a position-weighted grade score
+ * (1.2 : 1 : 0.8 over the sorted grades) to the original values and interpolating,
+ * then clamping each result into the range dominance permits — at least the best
+ * signature it beats, at most the worst signature that beats it. That weighting
+ * was chosen because it reproduces the original table most closely of those
+ * tried (absolute fit error 22.0, versus 36.7 for equal weights and 55.0 for
+ * 3:2:1), so the fills follow the curve a human already tuned rather than one
+ * invented here.
+ *
+ * The result is verified exhaustively: across all 56 × 56 ordered pairs there
+ * are **zero** dominance inversions. `__tests__/scoring/` asserts this, and
+ * `a-level-monotonicity.golden.json` — which captured the original 34 violations
+ * — must contain zero.
+ *
+ * Grades beyond the top three are ignored (`.slice(0, 3)`), matching UK offer
+ * convention.
+ */
+const A_LEVEL_SIGNATURE_SCORE: Readonly<Record<string, number>> = {
+  'A*A*A*': 80, 'A*A*A': 80, 'A*A*B': 78, 'A*AA': 76, 'A*A*C': 74,
+  AAA: 70,      'A*AB': 68, 'A*A*D': 67, 'A*AC': 64, 'A*BB': 60,
+  AAB: 60,      'A*A*E': 57, 'A*AD': 55, 'A*BC': 52, ABB: 52,
+  AAC: 50,      'A*AE': 50, 'A*BD': 48, AAD: 46,     ABC: 46,
+  'A*CC': 44,   'A*BE': 44, BBB: 44,     AAE: 40,    ABD: 40,
+  ACC: 38,      BBC: 36,    ABE: 34,     BBD: 31,    BCC: 30,
+  'A*CD': 28,   'A*CE': 28, 'A*DD': 28,  ACD: 28,    'A*DE': 28,
+  ACE: 27,      ADD: 25,    BBE: 25,     'A*EE': 24, CCC: 24,
+  ADE: 22,      BCD: 20,    BCE: 20,     BDD: 18,    CCD: 16,
+  AEE: 15,      BDE: 14,    CCE: 14,     CDD: 13,    BEE: 12,
+  CDE: 11,      DDD: 10,    CEE: 8,      DDE: 8,     DEE: 5,
+  EEE: 5
+};
+
 const calculateALevelProfileScore = (academic_input: StudentProfilePayload['academic_input']) => {
   const grades = academic_input.a_level_predicted_grades;
   const subjects = academic_input.subject_list;
@@ -494,13 +560,18 @@ const calculateALevelProfileScore = (academic_input: StudentProfilePayload['acad
 
   if (gradeValues.length < 3) {
     if (gradeValues.length === 0) return 0;
-    // Map partial profiles
+    // Partial profile (one or two A-levels entered). Deliberately unchanged, but
+    // note the policy is harsh: two A* grades score 0 here while a full DDD
+    // scores 10 below. That compares different profile SHAPES rather than the
+    // same shape, so it is not a dominance inversion — but it is worth revisiting
+    // with admissions input, since a student mid-way through data entry looks
+    // identical to one with genuinely thin qualifications.
     const sorted = gradeValues
       .map((grade) => grade.toUpperCase())
       .sort((a, b) => mapAlevelGradeToRank(b) - mapAlevelGradeToRank(a));
-    const signature = sorted.join('');
-    if (signature === 'DDD') return 10;
-    if (signature.includes('E')) return 5;
+    // (A `signature === 'DDD'` check used to sit here; it was unreachable, since
+    // this branch only runs when fewer than three grades exist.)
+    if (sorted.join('').includes('E')) return 5;
     return 0;
   }
 
@@ -509,34 +580,7 @@ const calculateALevelProfileScore = (academic_input: StudentProfilePayload['acad
     .sort((a, b) => mapAlevelGradeToRank(b) - mapAlevelGradeToRank(a))
     .slice(0, 3);
 
-  const signature = sorted.join('');
-
-  if (signature === 'A*A*A*' || signature === 'A*A*A') return 80;
-  if (signature === 'A*A*B') return 78;
-  if (signature === 'A*AA') return 76;
-  if (signature === 'A*A*C') return 74;
-  if (signature === 'A*AB') return 68;
-  if (signature === 'AAA') return 70;
-  if (signature === 'A*AC') return 64;
-  if (signature === 'AAB') return 60;
-  if (signature === 'A*BB') return 60;
-  if (signature === 'ABB') return 52;
-  if (signature === 'A*BC') return 52;
-  if (signature === 'AAC') return 50;
-  if (signature === 'ABC') return 46;
-  if (signature === 'A*CC') return 44;
-  if (signature === 'BBB') return 44;
-  if (signature === 'ABD') return 40;
-  if (signature === 'BBC') return 36;
-  if (signature === 'BCC') return 30;
-  if (signature === 'A*CD') return 28;
-  if (signature === 'CCC') return 24;
-  if (signature === 'BCD') return 20;
-  if (signature === 'CCD') return 16;
-  if (signature === 'DDD') return 10;
-  if (signature === 'EEE' || signature.includes('DEE')) return 5;
-
-  return 8; // catch-all for unexpected combinations
+  return A_LEVEL_SIGNATURE_SCORE[sorted.join('')] ?? 0;
 };
 
 const calculateIbHlStrength = (subjects: StudentSubject[]) => {

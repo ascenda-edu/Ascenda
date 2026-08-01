@@ -12,7 +12,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/types/database';
-import { buildStepCompletion } from '@/lib/profile/completion';
+import { COMPLETION_COLUMNS, buildStepCompletion } from '@/lib/profile/completion';
+import { matchTierFromScore } from '@/lib/matching/match-tier';
 import { flagEmoji } from '@/lib/utils/flag';
 import { MS_PER_DAY, parseLocalDate, startOfToday } from '@/lib/utils/dates';
 import type {
@@ -32,6 +33,7 @@ import type {
   CounsellorOutcome,
   OutcomeResult,
 } from '@/lib/counsellor/types';
+import type { AppFunnel } from '@/lib/counsellor/stage-colors';
 import type { CounsellorDocument, EvolutionEntry } from '@/lib/data/student-demo-data';
 import { DEMO_EMAIL } from '@/lib/demo/demo-profile';
 
@@ -80,13 +82,23 @@ export type ActivityItem = CounsellorNote & {
   studentId: string;
   studentFlag: string;
 };
+/**
+ * "Still needs work from the student." Written as an allow-list of the open
+ * stages rather than a deny-list of the closed ones — the deny-list version
+ * (`status !== 'submitted' && status !== 'decision'`) counted every ENROLLED
+ * application as incomplete the moment `enrolled` became representable.
+ */
+const OPEN_APPLICATION_STATUSES: readonly ApplicationStatus[] = ['planning', 'in_progress'];
+const isOpenApplication = (a: { status: ApplicationStatus }): boolean =>
+  OPEN_APPLICATION_STATUSES.includes(a.status);
+
 export interface CohortStats {
   total: number;
   avgCompletion: number;
   flagged: number;
   deadlinesThisWeek: number;
   matchTiers: { reach: number; match: number; safe: number };
-  appFunnel: { planning: number; inProgress: number; submitted: number; decision: number };
+  appFunnel: AppFunnel;
   programmeBreakdown: { ib: number; aLevel: number };
 }
 export interface OutcomeStats {
@@ -101,8 +113,12 @@ export interface OutcomeStats {
 
 // ── small mappers ────────────────────────────────────────────────────────────
 
+// Thresholds come from lib/matching/match-tier. This used to hardcode >=70/>=50,
+// which disagreed with the rule the search surfaces applied — a score of 75 read
+// "Safe" here and "Match" there. `?? 'Reach'` keeps the previous behaviour of
+// this call site, which treated a missing score as a Reach.
 const tierFromScore = (score: number | null | undefined): MatchTier =>
-  (score ?? 0) >= 70 ? 'Safe' : (score ?? 0) >= 50 ? 'Match' : 'Reach';
+  matchTierFromScore(score) ?? 'Reach';
 
 const tierFromMatchRow = (row: { score: number | null; breakdown: unknown }): MatchTier => {
   const t = (row.breakdown as { tier?: MatchTier } | null)?.tier;
@@ -389,7 +405,12 @@ const buildStudents = async (
       return {
         university: info?.university ?? 'University',
         program: info?.courseName ?? 'Programme',
-        status: (app.status === 'enrolled' ? 'decision' : app.status) as ApplicationStatus,
+        // Straight through. This used to read
+        //   (app.status === 'enrolled' ? 'decision' : app.status)
+        // because ApplicationStatus omitted `enrolled` — which made every
+        // enrolled student read as "awaiting decision" and put the cohort's
+        // enrolment count permanently at zero.
+        status: app.status as ApplicationStatus,
         deadline: earliest ?? '',
         platform: (app.platform ?? undefined) as ApplicationPlatform | undefined,
         country: info?.country,
@@ -447,7 +468,7 @@ const buildStudents = async (
     if (hasUrgentDeadline) flags.push('deadline_urgent');
     if (studentMatches.length === 0) flags.push('no_matches');
     const daysSinceActive = Math.round((Date.now() - new Date(lastActive).getTime()) / MS_PER_DAY);
-    const hasOpenApp = studentApps.some((app) => app.status === 'planning' || app.status === 'in_progress');
+    const hasOpenApp = studentApps.some(isOpenApplication);
     if (daysSinceActive > 14 && hasOpenApp) flags.push('stalled');
 
     return {
@@ -544,7 +565,12 @@ export const loadRoster = async (
   const [academicRes, subjectsRes, lifestyleRes] = await Promise.all([
     supabase
       .from('student_academic_input')
-      .select('profile_id, programme_type, school_name, school_country, graduation_year, intended_clusters, english_required')
+      // Column list comes from COMPLETION_COLUMNS, not hand-written. This was the
+      // second copy that omitted `english_status` (the other was middleware.ts),
+      // so a student who answered "Not sure" to the English question showed as
+      // incomplete on the counsellor roster while their own dashboard — reading
+      // the same rule over `select('*')` — showed them complete.
+      .select(`profile_id, ${COMPLETION_COLUMNS.academicInput}`)
       .in('profile_id', ids),
     supabase.from('student_subjects').select('profile_id').in('profile_id', ids),
     supabase.from('student_lifestyle_preference').select('profile_id').in('profile_id', ids),
@@ -607,6 +633,7 @@ export const deriveCohortStats = (students: CounsellorStudent[]): CohortStats =>
       inProgress: students.filter((s) => s.applications.some((a) => a.status === 'in_progress')).length,
       submitted: students.filter((s) => s.applications.some((a) => a.status === 'submitted')).length,
       decision: students.filter((s) => s.applications.some((a) => a.status === 'decision')).length,
+      enrolled: students.filter((s) => s.applications.some((a) => a.status === 'enrolled')).length,
     },
     programmeBreakdown: {
       ib: students.filter((s) => s.academic.programmeType === 'IB').length,
@@ -689,12 +716,12 @@ export const deriveAtRiskAlerts = (students: CounsellorStudent[]): AtRiskAlert[]
       });
     }
     const daysSinceActive = Math.round((now - new Date(s.lastActive).getTime()) / MS_PER_DAY);
-    if (daysSinceActive > 14 && s.applications.some((a) => a.status === 'planning' || a.status === 'in_progress')) {
+    if (daysSinceActive > 14 && s.applications.some(isOpenApplication)) {
       alerts.push({
         studentId: s.id, studentName: name, flagEmoji: emoji,
         riskType: 'stalled_application',
         urgency: daysSinceActive > 30 ? 'critical' : 'high',
-        description: `No activity for ${daysSinceActive} days with ${s.applications.filter((a) => a.status !== 'submitted' && a.status !== 'decision').length} incomplete application(s).`,
+        description: `No activity for ${daysSinceActive} days with ${s.applications.filter(isOpenApplication).length} incomplete application(s).`,
         suggestedAction: 'Send a check-in message or schedule a meeting.',
       });
     }

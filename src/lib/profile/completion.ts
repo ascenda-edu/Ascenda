@@ -25,6 +25,33 @@ export interface ProfileRecordGroup {
   lifestyle: LifestyleRow;
 }
 
+/**
+ * The exact columns `buildStepCompletion` reads. **Select these, not a
+ * hand-written subset.**
+ *
+ * This exists because a caller wrote its own narrow column list and left out
+ * `english_status`. That column is half of the `academic_details` rule below:
+ * answering "Not sure" to the English question sets `english_required` to null,
+ * so `english_status` is the only remaining evidence the step was completed.
+ * Selecting the subset silently changed the ANSWER rather than failing.
+ *
+ * The caller was `middleware.ts`, so the effect was that any student who
+ * answered "Not sure" was redirected to the wizard from every protected route —
+ * and the result was cached in a cookie for 12 hours — while their dashboard,
+ * reading the same function over a `select('*')`, showed the profile 100%
+ * complete.
+ *
+ * A column list is part of a query's meaning, not an optimisation. Exporting it
+ * from beside the rule that consumes it is what makes the two impossible to
+ * drift apart.
+ */
+export const COMPLETION_COLUMNS = {
+  personal: 'first_name,last_name,email,nationality,resident_country',
+  academicInput:
+    'programme_type,school_name,school_country,graduation_year,intended_clusters,english_required,english_status',
+  lifestyle: 'extracurricular_interests'
+} as const;
+
 export const buildStepCompletion = ({
   personal,
   academicInput,

@@ -2,8 +2,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { filterVisiblePrograms, getFlaggedProgramIds } from '../catalog/visibility';
 import type { Database } from '../types/database';
 import type { EnrichedMatch, MissingProfileSection } from './types';
-import type { MatchTier } from './match-tier';
+import { matchTierFromScore, type MatchTier } from './match-tier';
 import type { StudentProfilePayload } from '@/lib/profile/intake-types';
+import { logger } from '@/lib/observability/logger';
 import { scoreStudentProfile } from '@/lib/scoring/student_scoring';
 import { mapIntakeRowsToPayload } from '@/lib/scoring/student_score_loader';
 import type { CourseRecord, EnrichedCourseRecord } from '@/lib/tiering/course_tiering';
@@ -386,8 +387,10 @@ export const loadMatchesForProfile = async (
               if (!programName || !universityName || !universityCountry) return null;
 
               const cachedTier = (breakdown.tier as MatchTier | undefined) ?? null;
-              const fallbackTier: MatchTier =
-                (row.score ?? 0) >= 70 ? 'Safe' : (row.score ?? 0) >= 50 ? 'Match' : 'Reach';
+              // Thresholds come from ./match-tier. This used to hardcode
+              // >=70/>=50, disagreeing with the search surfaces on every score in
+              // the 70-79 band.
+              const fallbackTier: MatchTier = matchTierFromScore(row.score) ?? 'Reach';
 
               return {
                 program: {
@@ -917,6 +920,16 @@ export const loadMatchesForProfile = async (
   };
 };
 
+/** Raised when EVERY course_scoring_v1 batch failed — see the note on
+ * `scoreProgramsForProfile`. Exported so a caller can distinguish an
+ * infrastructure failure from "this student has no scorable programmes". */
+export class CourseScoringUnavailableError extends Error {
+  constructor(readonly batchCount: number, readonly batchError?: unknown) {
+    super(`course_scoring_v1 unavailable — all ${batchCount} batch(es) failed`);
+    this.name = 'CourseScoringUnavailableError';
+  }
+}
+
 // ── On-demand scoring ───────────────────────────────────────────────────────
 //
 // Scores an explicit list of programs for a student, regardless of whether
@@ -926,11 +939,29 @@ export const loadMatchesForProfile = async (
 // selection concerns, not score validity, so none apply here. Uses the same
 // classifier as the ranked path (classifyCourseChance), so a program that IS
 // in the cache gets the identical number from either source.
+//
+// UNKNOWN IS A VALUE. A program with no row in course_scoring_v1 maps to
+// `null`, never to a number. It used to be classified against an all-null
+// course record, whose documented defaults (courseScore ?? 40 →
+// tierImpliedMinIb(40) = 25) handed a median student 90% and, via the ≥80
+// tier cut, a confident "Safe". A program we know nothing about is now
+// rendered as "fit unknown" (getFitScoreVisuals already has that branch and
+// UniversityCard omits the ring entirely) rather than as the best result on
+// the page.
+//
+// FAILURE IS NOT ABSENCE. A failed batch is logged and, if some batches
+// succeeded, degrades only its own ids to `null` — dropping 50 good scores
+// because one batch of 200 timed out is worse for the student than an honest
+// per-program "unknown", and `null` can no longer be mistaken for a
+// confident score. But when EVERY batch fails the result is indistinguishable
+// from "no program is scorable", so that case throws: the route turns it into
+// a 5xx that monitoring can see, while the search page's existing best-effort
+// catch keeps rendering cards with no fit score.
 export const scoreProgramsForProfile = async (
   supabase: Client,
   profileId: string,
   programIds: string[]
-): Promise<Record<string, number>> => {
+): Promise<Record<string, number | null>> => {
   const ids = [...new Set(programIds)].filter(Boolean);
   if (!ids.length) return {};
 
@@ -977,14 +1008,38 @@ export const scoreProgramsForProfile = async (
       .in('course_id', batch)
   );
   const courseRows: CourseScoringRow[] = [];
-  for (const { data, error } of batchResults) {
-    // Best-effort: a failed batch just yields no rows — those ids fall through
-    // to the null-input fallback below rather than failing the whole page.
-    if (error) continue;
+  let failedBatches = 0;
+  let firstBatchError: unknown = null;
+  for (let batchIndex = 0; batchIndex < batchResults.length; batchIndex++) {
+    const { data, error } = batchResults[batchIndex];
+    if (error) {
+      // Never silent: a swallowed batch used to be indistinguishable from a
+      // catalogue with no scoring rows, and the fallback below turned it into
+      // a page of confident "Safe" cards.
+      failedBatches += 1;
+      firstBatchError ??= error;
+      logger.error('course_scoring_v1 batch failed while scoring programs', error, {
+        profileId,
+        batchIndex,
+        batchCount: batchResults.length,
+        requestedIds: ids.length
+      });
+      continue;
+    }
     courseRows.push(...((data as unknown as CourseScoringRow[]) ?? []));
   }
+  if (batchResults.length > 0 && failedBatches === batchResults.length) {
+    throw new CourseScoringUnavailableError(batchResults.length, firstBatchError);
+  }
+  if (failedBatches > 0) {
+    logger.warn('Returning partial fit scores — some course_scoring_v1 batches failed', {
+      profileId,
+      failedBatches,
+      batchCount: batchResults.length
+    });
+  }
 
-  const scores: Record<string, number> = {};
+  const scores: Record<string, number | null> = {};
   for (const row of courseRows) {
     const pid = String(row.program_id ?? row.course_id ?? '');
     if (!pid) continue;
@@ -1006,17 +1061,12 @@ export const scoreProgramsForProfile = async (
     scores[pid] = classifyCourseChance(studentIb, mapCourseScoringRow(row)).chancePercent;
   }
 
-  // Programs absent from the scoring view still get a score — classify with
-  // null course data (the classifier's documented defaults kick in), so no
-  // card is ever left blank.
-  const nullCourse = {
-    min_ib_score: null,
-    total_course_score: null,
-    course_selectivity_score: null
-  } as unknown as EnrichedCourseRecord;
-  const fallbackScore = classifyCourseChance(studentIb, nullCourse).chancePercent;
+  // Programs absent from the scoring view (or in a batch that failed) are
+  // explicitly UNKNOWN. The key is present so the caller can tell "we looked
+  // and there is nothing" apart from "we never asked", and can cache the
+  // answer; the value is null so nothing downstream can read it as a score.
   for (const id of ids) {
-    if (!(id in scores)) scores[id] = fallbackScore;
+    if (!(id in scores)) scores[id] = null;
   }
 
   return scores;
