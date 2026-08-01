@@ -187,6 +187,14 @@ create table if not exists universities (
   city_id uuid references cities(id) on delete set null,
   rank_overall int,
   rank_source text,
+  -- Present on the remote database and in the generated types, but missing from
+  -- this file until 2026-08-01 — while idx_universities_recognition_score below
+  -- referenced it. A fresh `psql -f schema.sql` therefore ABORTED at that index,
+  -- and everything after it (roughly half the tables, all 93 policies, all 19
+  -- functions) silently never ran. Nothing caught it because nothing ever
+  -- replayed this file; the CI `database` job now does, on every PR.
+  -- Used by search suggestions to prioritise well-known universities (>= 5).
+  recognition_score numeric,
   website text,
   intl_tuition_low numeric,
   intl_tuition_high numeric,

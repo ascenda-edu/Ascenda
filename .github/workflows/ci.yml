@@ -5,15 +5,27 @@ on:
   push:
     branches: [main]
 
+# A second push to a PR makes the first run's result irrelevant. Without this,
+# slow runs queue behind each other and the reported status lags the branch.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+
 jobs:
   # GitHub runs PR checks against a merge of head into base *as it was when the
   # run started*. If base moves afterwards, the green tick refers to a merge
   # that no longer exists — which is how #33 and #34 both passed CI and then
   # landed together untested, having edited the same three files.
   #
-  # "Require branches to be up to date" would prevent this, but it needs GitHub
-  # Pro on a private repo. This is the free approximation, narrowed to the case
-  # that actually matters: base and PR touching the SAME file. A blanket
+  # "Require branches to be up to date" would prevent this, but it needs a paid
+  # GitHub plan on a private repo. This is the free approximation, narrowed to
+  # the case that actually matters: base and PR touching the SAME file. A blanket
   # is-behind-base check would redden every open PR on every push to main, and a
   # warning that fires constantly is a warning nobody reads.
   #
@@ -48,7 +60,47 @@ jobs:
 
           echo "No shared-file drift against ${BASE} since ${merge_base}."
 
-  build:
+  # ── Static analysis ────────────────────────────────────────────────────────
+  # Split from `test` and `build` so all three run concurrently. Steps use
+  # `if: always()` so ONE run reports EVERY failure, rather than making you fix
+  # them one push at a time.
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        if: always()
+        run: npm run lint
+
+      - name: Module boundaries
+        if: always()
+        # Fences the layering the architecture audit measured as already clean
+        # (zero lib→components, lib→app, components→app edges among 1,350 edges).
+        run: npm run lint:boundaries
+
+      - name: Design tokens
+        if: always()
+        # Ratcheting: fails only when a violation count INCREASES over the
+        # committed baseline. See scripts/check-design-tokens.baseline.json.
+        run: npm run lint:tokens
+
+      - name: Dead code (advisory)
+        if: always()
+        # Reports only — knip's baseline is non-zero and triaging it is Phase 4.
+        # Kept visible so the list cannot quietly grow.
+        run: npm run lint:deadcode
+
+  # ── Tests ──────────────────────────────────────────────────────────────────
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -56,19 +108,153 @@ jobs:
         with:
           # Must stay >= 22: jest.environment-node.js exists to strip the
           # experimental localStorage/sessionStorage globals Node 22 introduced,
-          # and on Node 20 that wrapper is a no-op — so CI never exercised the
-          # path every developer machine actually takes.
-          node-version: 22
+          # and on Node 20 that wrapper is a no-op — so CI would never exercise
+          # the path every developer machine actually takes.
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test -- --runInBand
-      - run: npm run build
+
+      - name: Unit + integration tests
+        run: npm test -- --runInBand --coverage --coverageReporters=text-summary --coverageReporters=json-summary
+
+      # Coverage is ~13% overall but ~79% in lib/chat. A single global threshold
+      # would be either meaningless or permanently red, so this reports the
+      # number rather than gating on it. Add a per-directory floor on
+      # features/*/model/** once Phase 3 gives that code a home.
+      - name: Coverage summary
+        if: always()
+        run: |
+          {
+            echo '### Coverage'
+            echo '```'
+            node -e '
+              const t = require("./coverage/coverage-summary.json").total;
+              for (const k of ["statements", "branches", "functions", "lines"]) {
+                console.log(k.padEnd(12), (t[k].pct + "%").padStart(7), `(${t[k].covered}/${t[k].total})`);
+              }'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+  # ── Build + bundle budget ──────────────────────────────────────────────────
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
         env:
           # Placeholders — the build only needs the vars to exist; no page fetches
-          # Supabase at build time (all authed routes are dynamic).
+          # Supabase at build time (all authed routes are dynamic). src/lib/env.ts
+          # is deliberately shaped so these two satisfy every REQUIRED variable.
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder-publishable-key
-          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+
+      - name: Bundle budget
+        # Reads .next/app-build-manifest.json, so it must follow the build.
+        run: npm run check:bundle
+
+  # ── Database: prove the repo can still build a database ────────────────────
+  # The audit found schema.sql aborts partway (it indexes a column its own
+  # CREATE TABLE never declares) and that two live tables exist in no schema file
+  # at all. Nothing caught either, because nothing ever ran this SQL.
+  #
+  # Replaying migrations TWICE also proves they are idempotent — required here,
+  # since they are applied one-off via `npm run db:apply` rather than by a tool
+  # that tracks what it has already run.
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports: ['5432:5432']
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Stub the Supabase-only objects
+        # schema.sql targets a Supabase database: it references the auth schema,
+        # auth.uid()/auth.jwt(), and the service_role/authenticated/anon roles,
+        # none of which exist in stock Postgres. These stubs let the DDL parse so
+        # the SHAPE of the schema is verified. They do NOT emulate RLS — this job
+        # proves the schema builds, not that the policies are correct.
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 <<'SQL'
+          create extension if not exists pgcrypto;
+          create schema if not exists auth;
+          create table if not exists auth.users (id uuid primary key);
+          create or replace function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
+          create or replace function auth.jwt() returns jsonb language sql stable as $$ select '{}'::jsonb $$;
+          do $$ begin create role authenticated; exception when duplicate_object then null; end $$;
+          do $$ begin create role anon;          exception when duplicate_object then null; end $$;
+          do $$ begin create role service_role;  exception when duplicate_object then null; end $$;
+          SQL
+
+      - name: schema.sql must build a database
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/schema.sql
+
+      - name: Migrations must replay, twice (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          for pass in 1 2; do
+            echo "── pass $pass ──"
+            for f in supabase/migrations/*.sql; do
+              echo "  $f"
+              psql -h localhost -U postgres -v ON_ERROR_STOP=1 -q -f "$f"
+            done
+          done
+          echo "All migrations replayed twice with no error."
+
+  # ── Aggregate gate ─────────────────────────────────────────────────────────
+  # ONE check to require in branch protection. Adding a job above never means
+  # touching the protection settings again — just add it to `needs`.
+  #
+  # `if: always()` plus the explicit result test is load-bearing: without it this
+  # job is SKIPPED when a dependency fails, and GitHub counts a skipped required
+  # check as PASSING.
+  #
+  # `database` is deliberately NOT in `needs` yet. Its one known blocker (the
+  # missing universities.recognition_score column) is fixed, but there is no
+  # Postgres in the authoring environment, so the full replay has never actually
+  # been observed green — and a required check that fails on arrival is a check
+  # someone deletes. It runs and reports on every PR; add it here the first time
+  # it passes, which should be this PR.
+  ci-ok:
+    if: always()
+    needs: [quality, test, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify every job succeeded
+        run: |
+          results='${{ join(needs.*.result, ' ') }}'
+          echo "job results: $results"
+          for r in $results; do
+            if [ "$r" != "success" ]; then
+              echo "::error::A required job did not succeed ($results)"
+              exit 1
+            fi
+          done
+          echo "All required jobs succeeded."

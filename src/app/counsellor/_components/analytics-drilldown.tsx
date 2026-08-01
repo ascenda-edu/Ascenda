@@ -100,10 +100,9 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
 
   // Lock body scroll when open
   useEffect(() => {
-    if (data) {
-      document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = ''; };
-    }
+    if (!data) return undefined;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
   }, [data]);
 
   const filtered = data?.items.filter((item) => {

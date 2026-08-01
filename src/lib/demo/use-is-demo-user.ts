@@ -16,13 +16,23 @@ export const useIsDemoUser = (): boolean => {
     const supabase = getBrowserSupabaseClient();
     let cancelled = false;
 
-    supabase.auth.getUser().then(({ data }) => {
-      if (cancelled) return;
-      const email = data?.user?.email;
-      const result = isDemoUser(email);
-      setIsDemo(result);
-      sessionStorage.setItem(CACHE_KEY, result ? '1' : '0');
-    });
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (cancelled) return;
+        const email = data?.user?.email;
+        const result = isDemoUser(email);
+        setIsDemo(result);
+        sessionStorage.setItem(CACHE_KEY, result ? '1' : '0');
+      })
+      // getUser() reaches the network, so it can reject (offline, auth server
+      // down). Unhandled, that surfaced as an unhandled rejection and left
+      // `isDemo` stuck at whatever sessionStorage last cached. Failing closed to
+      // "not the demo user" is the safe default.
+      .catch(() => {
+        if (cancelled) return;
+        setIsDemo(false);
+      });
 
     return () => {
       cancelled = true;

@@ -21,7 +21,17 @@ const config: Config = {
     // for .tsx component tests (e.g. the assistant widget renderer). The object
     // form merges over the discovered tsconfig.json, so paths/esModuleInterop
     // etc. are preserved; harmless for the existing .ts-only test suites.
-    '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: { jsx: 'react-jsx' } }]
+    //
+    // verbatimModuleSyntax override: tsconfig.json enables it so that erasing a
+    // type-only import can never change runtime behaviour in the app. ts-jest
+    // emits CommonJS, and the two are mutually exclusive — TS1286 rejects any
+    // `import` statement in a module compiled to CJS. Disabling it HERE keeps
+    // the guarantee where it matters (the shipped bundle, checked by
+    // `tsc --noEmit`) without forcing the whole test suite to ESM.
+    '^.+\\.(ts|tsx)$': [
+      'ts-jest',
+      { tsconfig: { jsx: 'react-jsx', verbatimModuleSyntax: false } }
+    ]
   }
 };
 

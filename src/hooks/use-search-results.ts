@@ -17,7 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { getBrowserSupabaseClient } from '@/lib/supabase/client';
 import { filterVisiblePrograms, getFlaggedProgramIds } from '@/lib/catalog/visibility';
-import { ProgramSearchResult, tierFromScore } from '@/components/university-search/types';
+import { type ProgramSearchResult, tierFromScore } from '@/components/university-search/types';
 import type { SearchFilters } from '@/lib/university-search/search-params';
 
 export interface SearchResultsState {

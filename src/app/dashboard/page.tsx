@@ -19,7 +19,7 @@ import { ProfileProgressCard } from '@/components/dashboard/hub/profile-progress
 import { PipelineCard, type PipelineStage } from '@/components/dashboard/hub/pipeline-card';
 import { CounsellorCard } from '@/components/dashboard/hub/counsellor-card';
 import { QuickLinks } from '@/components/dashboard/hub/quick-links';
-import { buildStepCompletion, ProfileRecordGroup } from '@/lib/profile/completion';
+import { buildStepCompletion, type ProfileRecordGroup } from '@/lib/profile/completion';
 import { PROFILE_STEPS } from '@/lib/profile/steps';
 import { countUnreadForStudent, listInboxRequests, resolveProfileNames } from '@/lib/demo/help-request-client';
 import { DEMO_COUNSELLOR } from '@/lib/demo/counsellor';
