@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { DashboardShell } from '@/components/layout/shell';
 import { SectionNav } from '@/components/layout/section-nav';
 import { TOOLBOX_SECTION_ITEMS } from '@/components/layout/navigation';
+import { getIdentity } from '@/lib/auth/identity';
 
 /**
  * Owns the shell for the four toolbox routes that live inside it — the hub, Chances,
@@ -29,10 +30,17 @@ import { TOOLBOX_SECTION_ITEMS } from '@/components/layout/navigation';
  * The nav goes through the `nav` slot rather than `children`: children are wrapped in
  * a pathname-keyed transition inside the shell, so anything passed as a child remounts
  * on every navigation — the exact thing this is here to avoid.
+ *
+ * `getIdentity()` is not a second guard — the real one stays in
+ * `toolbox/layout.tsx` one level up. This is the nullable read, feeding the shell's
+ * `role` so the nav components stop re-deriving it in the browser
+ * (docs/audit/11-security-authz.md F8). Memoised per request by React `cache()`.
  */
-export default function ToolboxShellLayout({ children }: { children: ReactNode }) {
+export default async function ToolboxShellLayout({ children }: { children: ReactNode }) {
+  const identity = await getIdentity();
+
   return (
-    <DashboardShell nav={<SectionNav items={TOOLBOX_SECTION_ITEMS} />}>
+    <DashboardShell role={identity?.role ?? null} nav={<SectionNav items={TOOLBOX_SECTION_ITEMS} />}>
       {children}
     </DashboardShell>
   );

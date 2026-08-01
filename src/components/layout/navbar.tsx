@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '../theme/theme-toggle';
 import { getTopNavEntries, NAV_ITEMS } from './navigation';
-import { useUserRole } from '@/hooks/use-user-role';
+import { useRole } from '@/lib/auth/role-context';
 import { NavLink } from './nav-link';
 import { NavDropdown } from './nav-dropdown';
 
@@ -18,7 +18,8 @@ import { CommandPaletteIconTrigger, CommandPaletteTrigger } from './command-pale
 import { NotificationBell } from '@/components/notifications/notification-bell';
 
 export const Navbar = () => {
-  const role = useUserRole();
+  // Server-resolved (RoleProvider in DashboardShell); no browser round trip.
+  const role = useRole();
   const pathname = usePathname();
   const router = useRouter();
   const supabase = useSupabase();

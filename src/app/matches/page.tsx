@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { requireIdentity } from '@/lib/auth/identity';
 import { DashboardShell } from '@/components/layout/shell';
 import { MatchList } from '@/components/match/match-list';
 import { PageHero } from '@/components/layout/page-hero';
@@ -22,14 +22,11 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function MatchesPage() {
+  // One memoised identity lookup for the whole request (@/lib/auth/identity):
+  // replaces the copy-pasted getUser()+redirect guard and yields the role the
+  // shell needs, so the browser stops re-deriving it.
+  const identity = await requireIdentity();
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
-  }
 
   // 300 (≈100/tier) covers many "show more" clicks while keeping the RSC
   // payload a third of the previous 900-match serialization. It equals the
@@ -38,11 +35,11 @@ export default async function MatchesPage() {
   // whenever ANY caller (e.g. the dashboard) computed within the TTL; the
   // tens-of-seconds recompute happens at most once per TTL, for whoever
   // arrives first.
-  const matchResult = await loadMatchesForProfile(supabase, user.id, { resultLimit: 300 });
+  const matchResult = await loadMatchesForProfile(supabase, identity.userId, { resultLimit: 300 });
 
   if (matchResult.error) {
     return (
-      <DashboardShell>
+      <DashboardShell role={identity.role}>
         <SectionNav items={EXPLORE_SECTION_ITEMS} />
         <PageHero
           tone="student"
@@ -69,7 +66,7 @@ export default async function MatchesPage() {
 
   if (matchResult.missingSections.length > 0) {
     return (
-      <DashboardShell>
+      <DashboardShell role={identity.role}>
         <SectionNav items={EXPLORE_SECTION_ITEMS} />
         <PageHero
           tone="student"
@@ -94,7 +91,7 @@ export default async function MatchesPage() {
 
   if (matchResult.catalogSize.programs === 0 || matchResult.catalogSize.universities === 0) {
     return (
-      <DashboardShell>
+      <DashboardShell role={identity.role}>
         <SectionNav items={EXPLORE_SECTION_ITEMS} />
         <PageHero
           tone="student"
@@ -125,7 +122,7 @@ export default async function MatchesPage() {
   const topMatch = enriched[0];
 
   return (
-    <DashboardShell>
+    <DashboardShell role={identity.role}>
       <SectionNav items={EXPLORE_SECTION_ITEMS} />
       <PageHero
         tone="student"

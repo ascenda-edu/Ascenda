@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { requireIdentity } from '@/lib/auth/identity';
 import { DashboardShell } from '@/components/layout/shell';
 import { AssistantWorkspace } from '@/components/assistant/assistant-workspace';
 
@@ -8,18 +7,14 @@ export const metadata: Metadata = { title: 'Assistant' };
 export const dynamic = 'force-dynamic';
 
 export default async function AssistantPage() {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
-  }
+  // One memoised identity lookup for the whole request (@/lib/auth/identity):
+  // replaces the copy-pasted getUser()+redirect guard and yields the role the
+  // shell needs, so the browser stops re-deriving it.
+  const identity = await requireIdentity();
 
   return (
-    <DashboardShell>
-      <AssistantWorkspace mode="student" userId={user.id} />
+    <DashboardShell role={identity.role}>
+      <AssistantWorkspace mode="student" userId={identity.userId} />
     </DashboardShell>
   );
 }

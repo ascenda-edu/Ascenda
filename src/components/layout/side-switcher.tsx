@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Briefcase, GraduationCap, HeartHandshake, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsDemoUser } from '@/lib/demo/use-is-demo-user';
-import { useUserRole } from '@/hooks/use-user-role';
+import { SESSION_ROLE_KEY, useRole } from '@/lib/auth/role-context';
 
 type Mode = 'student' | 'counsellor' | 'parent';
 
@@ -40,7 +40,8 @@ export const SideSwitcher = ({ className, collapsed }: { className?: string; col
   const pathname = usePathname();
   const router = useRouter();
   const isDemo = useIsDemoUser();
-  const role = useUserRole();
+  // Server-resolved (RoleProvider in DashboardShell); no browser round trip.
+  const role = useRole();
 
   const currentMode = modeForPath(pathname);
   const otherModes = (Object.keys(MODES) as Mode[]).filter((mode) => mode !== currentMode);
@@ -59,7 +60,10 @@ export const SideSwitcher = ({ className, collapsed }: { className?: string; col
 
   const handleSwitch = (mode: Mode) => {
     try {
-      sessionStorage.setItem('ascenda-session-role', mode);
+      // The demo view preference. `useRole` reads this key back and lets it
+      // outrank the server-resolved role for CHROME only — see the header of
+      // @/lib/auth/role-context.
+      sessionStorage.setItem(SESSION_ROLE_KEY, mode);
     } catch {
       // sessionStorage can throw in private mode; the route guard handles fallback.
     }

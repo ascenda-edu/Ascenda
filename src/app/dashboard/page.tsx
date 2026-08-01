@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { redirect } from 'next/navigation';
 import { CalendarClock, ListChecks } from 'lucide-react';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { requireIdentity } from '@/lib/auth/identity';
 import { DashboardShell } from '@/components/layout/shell';
 import { DeadlineTimeline } from '@/components/dashboard/deadline-timeline';
 import { MatchesPeek, MatchesPeekSkeleton } from './_components/matches-peek';
@@ -62,14 +62,11 @@ const PIPELINE_STAGES: Array<{ key: ApplicationStatus; label: string }> = [
 ];
 
 export default async function DashboardPage() {
+  // One memoised identity lookup for the whole request (@/lib/auth/identity):
+  // replaces the copy-pasted getUser()+redirect guard and yields the role the
+  // shell needs, so the browser stops re-deriving it.
+  const identity = await requireIdentity();
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
-  }
 
   const today = new Date().toISOString().slice(0, 10);
   const nowIso = new Date().toISOString();
@@ -77,7 +74,7 @@ export default async function DashboardPage() {
   const { data: applications } = await supabase
     .from('applications')
     .select('id, status, program_id')
-    .eq('profile_id', user.id);
+    .eq('profile_id', identity.userId);
 
   const applicationIds = (applications ?? []).map((app) => app.id);
   const applicationProgramIds = (applications ?? []).map((app) => app.program_id);
@@ -110,19 +107,19 @@ export default async function DashboardPage() {
     supabase
       .from('student_personal_information')
       .select('first_name,last_name,email,nationality,resident_country')
-      .eq('profile_id', user.id)
+      .eq('profile_id', identity.userId)
       .maybeSingle(),
     supabase
       .from('student_academic_input')
       .select('programme_type,school_name,school_country,graduation_year,intended_clusters,english_required,english_status')
-      .eq('profile_id', user.id)
+      .eq('profile_id', identity.userId)
       .maybeSingle(),
     supabase
       .from('student_lifestyle_preference')
       .select('extracurricular_interests')
-      .eq('profile_id', user.id)
+      .eq('profile_id', identity.userId)
       .maybeSingle(),
-    supabase.from('student_subjects').select('id').eq('profile_id', user.id),
+    supabase.from('student_subjects').select('id').eq('profile_id', identity.userId),
     // NOTE: matches are deliberately NOT loaded here — an uncached match
     // compute can take tens of seconds, so the matches cell streams in behind
     // Suspense (see MatchesPeek) instead of blocking the whole hub.
@@ -134,7 +131,7 @@ export default async function DashboardPage() {
     // row (request.body is the opener), so when there's no reply we fall back to
     // the counsellor who owns the most relevant thread and resolve the name here
     // (off the critical path) via resolveProfileNames, which batches + caches.
-    Promise.all([listInboxRequests(supabase, user.id), countUnreadForStudent(supabase, user.id)])
+    Promise.all([listInboxRequests(supabase, identity.userId), countUnreadForStudent(supabase, identity.userId)])
       .then(async ([requests, unread]) => {
         let inboxCounsellorId: string | null = null;
         let unreadFromReply = false;
@@ -175,7 +172,7 @@ export default async function DashboardPage() {
     supabase
       .from('help_meetings')
       .select('title, scheduled_for, location, status, counsellor_profile_id')
-      .eq('student_profile_id', user.id)
+      .eq('student_profile_id', identity.userId)
       .in('status', ['proposed', 'confirmed'])
       .gte('scheduled_for', nowIso)
       .order('scheduled_for', { ascending: true })
@@ -398,7 +395,7 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <DashboardShell>
+    <DashboardShell role={identity.role}>
       <PageHero
         tone="student"
         eyebrow="Home"
@@ -486,7 +483,7 @@ export default async function DashboardPage() {
           </AnimatedSection>
           <AnimatedSection className="lg:col-span-7" delay={0.08}>
             <Suspense fallback={<MatchesPeekSkeleton />}>
-              <MatchesPeek profileId={user.id} />
+              <MatchesPeek profileId={identity.userId} />
             </Suspense>
           </AnimatedSection>
         </div>
@@ -494,7 +491,7 @@ export default async function DashboardPage() {
         {/* Row 3.5 — counsellor-assigned university decks (hidden when none;
             no AnimatedSection so a null panel leaves no empty gap in the stack) */}
         <Suspense fallback={null}>
-          <CounsellorQuests profileId={user.id} />
+          <CounsellorQuests profileId={identity.userId} />
         </Suspense>
 
         {/* Row 4 — launch strip to the rest of the app */}
