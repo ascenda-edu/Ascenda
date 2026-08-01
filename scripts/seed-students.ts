@@ -9,7 +9,9 @@
  *   npm run seed:students -- --count=12
  *   npm run seed:students -- --teardown   # remove seeded students only
  *
- * Requires .env.local with SUPABASE_SERVICE_ROLE_KEY + NEXT_PUBLIC_SUPABASE_URL.
+ * Requires .env.local with SUPABASE_SERVICE_ROLE_KEY + NEXT_PUBLIC_SUPABASE_URL
+ * + SEED_STUDENT_PASSWORD (the password given to every seeded account — no
+ * default; the script refuses to run without it).
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -39,8 +41,21 @@ import type {
   AdmissionsTestType,
 } from '@/lib/profile/intake-types';
 
+/** Required env read — no fallback default (never hardcode credentials). */
+const requireEnv = (name: string): string => {
+  const value = process.env[name];
+  if (!value) {
+    console.error(
+      `Missing ${name}. Set it in .env.local (no default is provided) before running this script.`
+    );
+    process.exit(1);
+  }
+  return value;
+};
+
 const SEED_EMAIL_SUFFIX = '+seed@ascenda.demo';
-const SEED_PASSWORD = 'AscendaSeed!2026';
+// Password applied to every seeded `*+seed@ascenda.demo` account.
+const SEED_PASSWORD = requireEnv('SEED_STUDENT_PASSWORD');
 // Distinctive marker on seed-created catalogue deadlines so teardown removes only
 // our rows (and never a real catalogue deadline).
 const SEED_DEADLINE_INTAKE = 'Fall 2026 (seed)';

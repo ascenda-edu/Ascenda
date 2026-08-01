@@ -89,6 +89,20 @@ const validBody = {
   mode: 'student',
 };
 
+/**
+ * Minimal stand-in for the one PostgREST chain resolveChatMode runs:
+ *   .from('guardian_links').select(_, {head}).eq(...).eq(...) -> { count }
+ * `count` is how many ACTIVE links the caller has; 0 means "not a parent".
+ */
+const guardianLinkCount = (count: number) =>
+  jest.fn(() => ({
+    select: jest.fn(() => ({
+      eq: jest.fn(() => ({
+        eq: jest.fn(() => Promise.resolve({ count, error: null })),
+      })),
+    })),
+  }));
+
 // Model-fallback tests below spy on console.warn (openStreamWithFallback warns
 // per rejected model). Restoring in afterEach keeps the spy from leaking if an
 // assertion throws mid-test.
@@ -103,6 +117,11 @@ describe('POST /api/chat', () => {
     process.env.GEMINI_API_KEY = 'test-key';
     (createRouteHandlerSupabaseClient as jest.Mock).mockReturnValue({
       auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'user-123' } } }) },
+      // resolveChatMode authorises parent mode against an active guardian_link.
+      // The default fixture IS a linked parent, so the parent-mode tests below
+      // exercise the tool policy rather than re-testing the entitlement check
+      // (which has its own test).
+      from: guardianLinkCount(1),
     });
     (checkRateLimit as jest.Mock).mockReturnValue(true);
     (canActAsCounsellor as jest.Mock).mockResolvedValue(true);
@@ -324,6 +343,19 @@ describe('POST /api/chat', () => {
   it('returns 403 for counsellor mode when the counsellor seam denies (future-tightened guard)', async () => {
     (canActAsCounsellor as jest.Mock).mockResolvedValue(false);
     const res = await POST(chatRequest({ ...validBody, mode: 'counsellor' }));
+    expect(res.status).toBe(403);
+    expect(mockGenerate).not.toHaveBeenCalled();
+  });
+
+  it('returns 403 for parent mode when the caller has no active guardian_link', async () => {
+    // `mode` is client-supplied. A caller with no linked child is not a parent,
+    // so parent mode — whose context is built around another person's child —
+    // must be refused rather than quietly downgraded.
+    (createRouteHandlerSupabaseClient as jest.Mock).mockReturnValue({
+      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'user-123' } } }) },
+      from: guardianLinkCount(0),
+    });
+    const res = await POST(chatRequest({ ...validBody, mode: 'parent' }));
     expect(res.status).toBe(403);
     expect(mockGenerate).not.toHaveBeenCalled();
   });

@@ -6,7 +6,7 @@ This is the playbook for the Sunday call with Sarah. It maps every beat in Raf's
 
 **Demo login:**
 - Email: `greg@workiflow.com`
-- Password: `AscendaDemo!2026`
+- Password: `«DEMO_USER_PASSWORD»`
 
 The single Supabase auth user behind the demo is also the counsellor on the other side — the **Faculty view** switcher in the navbar flips between the two sides. Everything that writes to the database (help requests, replies, notes, meetings, nudges, notifications) persists for real.
 

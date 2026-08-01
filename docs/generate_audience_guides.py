@@ -1,9 +1,29 @@
 """Generate counsellor and student presentation guides as Word docs."""
+import os
+import sys
+
 from docx import Document
 from docx.shared import Pt, RGBColor, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
+
+def require_env(name):
+    """Read a required credential from the environment — never hardcode one here.
+
+    The generated .docx guides get handed to counsellors and students, so a
+    literal password in this file becomes a password in every copy handed out.
+    """
+    value = os.environ.get(name)
+    if not value:
+        sys.exit(
+            f"Missing {name}. Export it before generating guides "
+            f"(no default is provided): {name}=... python docs/generate_audience_guides.py"
+        )
+    return value
+
+
+DEMO_PASSWORD = require_env("DEMO_USER_PASSWORD")
 
 PURPLE = RGBColor(0x2d, 0x1b, 0x69)
 VIOLET = RGBColor(0x7c, 0x3a, 0xed)
@@ -361,7 +381,7 @@ def build_counsellor():
         ("Send a follow-up email", "Reference one specific thing they said that connected to what you showed. Generic follow-ups get ignored."),
         ("Log their feedback", "What resonated, what was missing, any objections raised. This feeds directly into what we build next."),
         ("Answer any open questions directly", "If they asked about integrations, pricing, or data compliance — send a direct answer, not a deck."),
-        ("Share login details", "Include the URL and demo login so they can explore independently: greg@workiflow.com / AscendaDemo!2026"),
+        ("Share login details", f"Include the URL and demo login so they can explore independently: greg@workiflow.com / {DEMO_PASSWORD}"),
     ]
     for action, detail in after_items:
         p2 = doc.add_paragraph()
@@ -579,7 +599,7 @@ def build_student():
     # ── AFTER ──
     section_heading(doc, "After the session — within 24 hours")
     after_items = [
-        ("Share the platform URL and login", "Include: ascenda-ashy.vercel.app / greg@workiflow.com / AscendaDemo!2026. Students who can explore independently will."),
+        ("Share the platform URL and login", f"Include: ascenda-ashy.vercel.app / greg@workiflow.com / {DEMO_PASSWORD}. Students who can explore independently will."),
         ("Note what resonated", "Specifically: which part of the application process they said felt most overwhelming. This is the hook for the follow-up."),
         ("Answer open questions directly", "If they asked something you couldn't answer on the spot, follow up with the specific answer. Students remember this."),
         ("Reference something they said", "A follow-up that quotes their own words — 'You mentioned you were worried about X' — lands much better than a generic message."),

@@ -1,14 +1,14 @@
 // Shared chat mode resolution + authorization for the Ascendi endpoints.
 //
-// DEMO POSTURE: `mode` is client-supplied and only enum-validated, NOT bound to
-// profiles.role — so any signed-in user can request counsellor/parent context,
-// exactly as they can open /counsellor and /parent today. Binding counsellor
-// mode to canActAsCounsellor() is a no-op under the demo posture (the guard is
-// open to every authenticated user), but tightening that RLS at real onboarding
-// automatically closes this chat privilege-escalation path — no change needed
-// at the call sites. When restoring the profiles.role check (see the matching
-// markers in counsellor/layout.tsx and parent/layout.tsx), bind `mode` to the
-// user's role here too.
+// `mode` arrives from the client, so it is a REQUEST, not a fact. Each
+// privileged mode is authorised against what the caller actually is before it is
+// granted; an unauthorised request is refused rather than downgraded, so the
+// caller cannot silently receive a different assistant than the UI is showing.
+//
+// This previously enum-validated `mode` and nothing else, on the reasoning that
+// binding counsellor mode to canActAsCounsellor() was a no-op while that guard
+// was open to everyone. It was — which meant any signed-in user could ask for
+// counsellor mode and receive whole-cohort context in the prompt.
 
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { canActAsCounsellor } from '@/lib/api/guards';
@@ -21,9 +21,31 @@ export type ResolveChatModeResult =
   | { ok: false; reason: 'forbidden' };
 
 /**
- * Resolve the client-supplied mode to a valid ChatMode (falling back to
- * 'student') and authorize counsellor mode against the counsellor seam. Returns
- * a discriminated result so each route can map a failure to its own 403 body.
+ * A parent is someone with at least one active guardian_link — the same seam the
+ * /parent portal scopes on. Without this, parent mode was reachable by any
+ * signed-in user, and the parent prompt is built around another person's child.
+ */
+const hasActiveGuardianLink = async (
+  supabase: SupabaseClient<any, any, any>,
+  userId: string
+): Promise<boolean> => {
+  const { count, error } = await supabase
+    .from('guardian_links')
+    .select('id', { count: 'exact', head: true })
+    .eq('parent_profile_id', userId)
+    .eq('status', 'active');
+
+  // Fail closed.
+  if (error) return false;
+  return (count ?? 0) > 0;
+};
+
+/**
+ * Resolve the client-supplied mode to a ChatMode the caller is entitled to.
+ *
+ * An unrecognised mode falls back to 'student' (the least-privileged mode); a
+ * recognised but unauthorised mode is refused, so each route can map the failure
+ * to its own 403 body.
  */
 export const resolveChatMode = async (
   supabase: SupabaseClient<any, any, any>,
@@ -35,6 +57,10 @@ export const resolveChatMode = async (
     : 'student';
 
   if (mode === 'counsellor' && !(await canActAsCounsellor(supabase, user))) {
+    return { ok: false, reason: 'forbidden' };
+  }
+
+  if (mode === 'parent' && !(await hasActiveGuardianLink(supabase, user.id))) {
     return { ok: false, reason: 'forbidden' };
   }
 

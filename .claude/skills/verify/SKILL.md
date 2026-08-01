@@ -36,10 +36,10 @@ curl -b "$(cat cookies.txt)" http://localhost:3000/<route>
 ### Test accounts
 
 - Seeded students: `aarav.sharma.0+seed@ascenda.demo` (pattern
-  `first.last.N+seed@ascenda.demo`, N = index) / password `AscendaSeed!2026`
+  `first.last.N+seed@ascenda.demo`, N = index) / password `«SEED_STUDENT_PASSWORD»`
   (see `scripts/seed-students.ts`). Safe to create/delete data on these.
 - `greg@workiflow.com` is the real demo user — its password is NOT the
-  seed default; don't assume `AscendaDemo!2026` works.
+  seed default; don't assume `«DEMO_USER_PASSWORD»` works.
 
 The user's access token (for direct PostgREST reads/cleanup under RLS) is
 inside the cookie: strip `base64-`, base64url-decode, `.access_token`.

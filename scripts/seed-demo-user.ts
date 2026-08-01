@@ -15,8 +15,9 @@
  *
  * Re-running is safe — every step uses upserts keyed on profile_id.
  *
- * Requires SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_URL (or
- * SUPABASE_URL) in .env.local.
+ * Requires SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_URL (or
+ * SUPABASE_URL) and DEMO_USER_PASSWORD in .env.local. DEMO_USER_PASSWORD has
+ * no default — the script refuses to run without it.
  */
 
 // Load env from .env.local without a dotenv dep.
@@ -55,7 +56,19 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 // wrestling with module resolution.
 const DEMO_EMAIL = 'greg@workiflow.com';
 
-const DEMO_PASSWORD = process.env.DEMO_USER_PASSWORD ?? 'AscendaDemo!2026';
+/** Required env read — no fallback default (never hardcode credentials). */
+const requireEnv = (name: string): string => {
+  const value = process.env[name];
+  if (!value) {
+    console.error(
+      `Missing ${name}. Set it in .env.local (no default is provided) before running this script.`
+    );
+    process.exit(1);
+  }
+  return value;
+};
+
+const DEMO_PASSWORD = requireEnv('DEMO_USER_PASSWORD');
 const DEMO_FULL_NAME = 'Greg Franck';
 
 const getClient = (): SupabaseClient => {
@@ -664,7 +677,7 @@ const main = async () => {
   console.log('\nDone.');
   console.log(`  Profile id: ${profileId}`);
   console.log(`  Email:      ${DEMO_EMAIL}`);
-  console.log(`  Password:   ${DEMO_PASSWORD}`);
+  console.log('  Password:   (the value of DEMO_USER_PASSWORD in your .env.local)');
   console.log('\nLog in, run profile completeness once, then matches will use the demo tier mix.');
 };
 

@@ -20,7 +20,57 @@ const PROTECTED_PREFIXES = [
   '/assistant'
 ];
 
+/**
+ * The ONLY `/api` paths that may be reached without a session.
+ *
+ * Everything else under `/api` fails closed (401) before the handler runs, so a
+ * new route that forgets its own `getUser()` is not silently public — which is
+ * exactly how this matcher failed before: it listed page prefixes only, so
+ * middleware never executed for `/api/*` at all and every handler was on its
+ * own honour system.
+ *
+ * `/api/calendar-feed` is anonymous by design: external calendar clients
+ * subscribe to the URL and cannot present a Supabase cookie. It is already
+ * throttled per client IP (see its own `checkRateLimit` call).
+ */
+const PUBLIC_API_PREFIXES = ['/api/calendar-feed'];
+
+/**
+ * Presence check only — deliberately NOT `auth.getUser()`.
+ *
+ * `getUser()` round-trips to the auth server to validate the JWT, and every
+ * protected handler already does that for itself. Repeating it here would double
+ * the auth latency of every API call to re-derive an answer the handler is about
+ * to compute authoritatively.
+ *
+ * So middleware answers the cheap question ("is there a session at all?") and
+ * rejects the unauthenticated case for free; the handler remains the real
+ * boundary and still decides who the caller is and what they may touch. A forged
+ * or expired cookie gets past this check and is then rejected by the handler.
+ */
+const hasSessionCookie = (req: NextRequest) =>
+  req.cookies.getAll().some((cookie) => /^sb-.+-auth-token(\.\d+)?$/.test(cookie.name));
+
 export async function middleware(req: NextRequest) {
+  // API requests are handled before the Supabase client is constructed: they must
+  // never be answered with a redirect to an HTML page, and they must not pay for
+  // the onboarding machinery below.
+  if (req.nextUrl.pathname.startsWith('/api/')) {
+    const { pathname } = req.nextUrl;
+    const isPublicApi = PUBLIC_API_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    );
+
+    if (!isPublicApi && !hasSessionCookie(req)) {
+      return NextResponse.json(
+        { error: { code: 'unauthenticated', message: 'Authentication required.' } },
+        { status: 401 }
+      );
+    }
+
+    return NextResponse.next();
+  }
+
   const res = NextResponse.next();
 
   const supabase = createServerClient<Database>(
@@ -179,5 +229,14 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/(dashboard|profile|matches|applications|admin|university-search|course|shortlist|scholarships|counsellor|parent|role-select|inbox|assistant)(.*)', '/login', '/signup']
+  matcher: [
+    '/(dashboard|profile|matches|applications|admin|university-search|course|shortlist|scholarships|counsellor|parent|role-select|inbox|assistant)(.*)',
+    '/login',
+    '/signup',
+    // Every API route runs through the fail-closed check at the top of
+    // `middleware`. Without this entry the matcher covered page prefixes only,
+    // so no API request ever reached middleware and each handler's own
+    // `getUser()` call was the single point of failure.
+    '/api/:path*'
+  ]
 };

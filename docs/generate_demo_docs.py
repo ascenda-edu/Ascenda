@@ -1,4 +1,7 @@
 """Generate two Word versions of the demo script."""
+import os
+import sys
+
 from docx import Document
 from docx.shared import Pt, RGBColor, Inches, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -180,9 +183,26 @@ BEATS = [
     },
 ]
 
+def require_env(name):
+    """Read a required credential from the environment — never hardcode one here.
+
+    The generated .docx files get shared outside the team, so a literal password
+    in this file becomes a password in every copy of the deck.
+    """
+    value = os.environ.get(name)
+    if not value:
+        sys.exit(
+            f"Missing {name}. Export it before generating docs "
+            f"(no default is provided): {name}=... python docs/generate_demo_docs.py"
+        )
+    return value
+
+
+DEMO_PASSWORD = require_env("DEMO_USER_PASSWORD")
+
 PREP = {
     "url": "https://ascenda-ashy.vercel.app",
-    "login": "greg@workiflow.com / AscendaDemo!2026",
+    "login": f"greg@workiflow.com / {DEMO_PASSWORD}",
     "browser": "Chrome, clean profile, full screen, 100% zoom",
     "backup": "Second tab pre-logged in",
 }
