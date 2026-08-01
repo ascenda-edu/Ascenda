@@ -29,17 +29,101 @@
     --destructive-foreground: 0 0% 100%;
 
     --border: 220 13% 89%;
-    --input: 220 13% 89%;
+    /* --input is deliberately much darker than --border. A decorative card edge can
+       be faint, but a form-control boundary must clear 3:1 against its own field
+       (WCAG 1.4.11 non-text contrast). These were identical, giving 1.30:1. */
+    --input: 220 13% 60%;
     --ring: 241 65% 55%;
 
-    --success: 152 60% 40%;
-    --success-foreground: 0 0% 100%;
+    /* ── Tone tokens ────────────────────────────────────────────────────────
+       Every value below is solved for WCAG AA and verified in both themes; see
+       the table in the dark block. Each tone carries FOUR values:
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+         --{tone}            text/icon colour. >= 4.5:1 on card, background, muted
+                             and on its own -subtle tint. Use for `text-{tone}`.
+         --{tone}-fill       the vivid mark: chart bars, progress fills, solid
+                             badges. >= 3:1 against the card. Use for `bg-{tone}-fill`.
+         --{tone}-foreground text that sits ON -fill.
+         --{tone}-subtle     tinted surface for chips, badges and soft cards.
 
-    --info: 241 65% 55%;
-    --info-foreground: 0 0% 100%;
+       The same split exists on the brand: --primary is the button fill and
+       --primary-ink is the text value. `text-primary` fails AA in dark mode
+       (3.58:1) and always will, because --primary is tuned to carry white button
+       text. Don't "fix" that by changing --primary; it will break every button.
+
+       Semantics (mirrored from lib/theme/categories.ts, the tone system of record):
+         danger  = urgent / overdue / reach      warning = todo / pending / match
+         success = done / submitted / safety     info    = in-progress / planning
+         feature = essay / session / counsellor-flavoured
+       --destructive stays separate: it's for destructive *actions* (delete), red,
+       not the rose status tone. */
+    --primary-ink: 241 65% 55%;
+
+    /* Each tone carries a TEXT value and a FILL value, and they are not the same
+       number. Solving one value for both is what made every chart bar and progress
+       fill in light mode read as mud: text has to be dark enough for 4.5:1 on a white
+       card, and at that lightness a saturated hue turns into brown-gold or forest
+       green. `--{tone}` is the text value; `--{tone}-fill` is the vivid mark.
+       (Dark mode never had the problem — "light enough for a near-black card" and
+       "vivid" happen to be the same place, so there the two values coincide.)
+
+       -fill is the vivid-est lightness that still clears 3:1 against the card, and
+       -foreground is whichever of ink/white clears 4.5:1 ON that fill. Note feature
+       takes white where the other four take ink — that's the hue, not an oversight. */
+    --success: 160 84% 26%;
+    --success-fill: 160 84% 36%;
+    --success-foreground: 224 32% 12%;
+    --success-subtle: 160 70% 96%;
+
+    --warning: 38 92% 30%;
+    --warning-fill: 38 92% 42%;
+    --warning-foreground: 224 32% 12%;
+    --warning-subtle: 38 70% 96%;
+
+    --danger: 350 80% 45%;
+    --danger-fill: 350 80% 60%;
+    --danger-foreground: 224 32% 12%;
+    --danger-subtle: 350 70% 96%;
+
+    --info: 199 89% 33.5%;
+    --info-fill: 199 89% 46.5%;
+    --info-foreground: 224 32% 12%;
+    --info-subtle: 199 70% 96%;
+
+    --feature: 258 80% 45%;
+    --feature-fill: 258 80% 60%;
+    --feature-foreground: 0 0% 100%;
+    --feature-subtle: 258 70% 96%;
+
+    /* ── Chart series: a monochrome brand ramp ──────────────────────────────
+       ONE hue (the brand indigo) in five lightness steps, NOT five different
+       hues. This is a deliberate design decision, made after a multi-hue
+       categorical palette was rejected as too loud beside an indigo brand.
+
+       The rule for this app's charts is therefore: **a bar chart uses one accent
+       and the row label carries identity** (see CHART_ACCENT in
+       counsellor/_components/chart-palette.ts). These ramp steps exist only for
+       STACKED / SEGMENTED bars, where adjacent segments genuinely have to be
+       told apart within a single bar.
+
+       Adjacent steps sit 1.3–1.5:1 apart, which is as good as a single hue gets
+       across five steps — you cannot reach 3:1 between them without leaving the
+       hue. That is why every stacked segment must carry a 2px surface-coloured
+       gap: the gap, not the colour delta, is what separates them. Don't remove it.
+
+       Every step clears 3:1 against its own card so no segment disappears
+       (light 2.23–13.93 reading outward, dark 3.25–12.53). Dark is a SELECTED
+       range, not a flip: on a near-black card the whole ramp has to live in the
+       upper lightness band or the darkest steps vanish.
+
+       Ordering is meaningful here (light→dark reads as small→large), so if you
+       apply this to genuinely unordered categories, sort them by value first or
+       you imply a ranking that isn't there. */
+    --series-1: 241 65% 30%;
+    --series-2: 241 65% 42%;
+    --series-3: 241 65% 55%;
+    --series-4: 241 65% 67%;
+    --series-5: 241 65% 79%;
 
     --radius: 0.625rem;
   }
@@ -75,17 +159,58 @@
     --destructive-foreground: 0 0% 100%;
 
     --border: 224 14% 18%;
-    --input: 224 14% 18%;
+    --input: 224 14% 42%; /* 3.04:1 vs the field background — was 1.26:1 */
     --ring: 241 65% 62%;
 
-    --success: 152 60% 40%;
-    --success-foreground: 0 0% 100%;
+    /* Dark tone values are LIGHTER than light-mode's and flip the foreground to ink.
+       That's required, not stylistic: a dark fill on a dark card can't clear 3:1.
+
+       Verified ratios (text on card / fg on fill / text on own subtle):
+         success  11.48 / 11.11 / 8.08      warning  8.41 / 8.14 / 6.30
+         danger    5.14 /  4.97 / 4.55      info     6.80 / 6.58 / 5.29
+         feature   5.06 /  4.89 / 4.71      primary-ink 5.06 on card, 4.55 on muted
+
+       --primary stays 62%: as a FILL that is correct (white text 5.01:1, and 3.58:1
+       against the card). It was only ever broken as text — which is what
+       --primary-ink is for. Previously `text-primary` measured 3.58:1 here and
+       failed AA, on 10px labels no less. */
+    --primary-ink: 241 65% 69%;
+
+    /* In dark mode text and fill coincide, so -fill mirrors the tone value. Kept as
+       an explicit declaration rather than an alias so both themes read the same way. */
+    --success: 160 84% 50%;
+    --success-fill: 160 84% 50%;
+    --success-foreground: 224 32% 12%;
+    --success-subtle: 160 40% 16%;
 
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    --warning-fill: 38 92% 50%;
+    --warning-foreground: 224 32% 12%;
+    --warning-subtle: 38 40% 16%;
 
-    --info: 241 65% 62%;
-    --info-foreground: 0 0% 100%;
+    --danger: 350 80% 62.5%;
+    --danger-fill: 350 80% 62.5%;
+    --danger-foreground: 224 32% 12%;
+    --danger-subtle: 350 40% 16%;
+
+    --info: 199 89% 50%;
+    --info-fill: 199 89% 50%;
+    --info-foreground: 224 32% 12%;
+    --info-subtle: 199 40% 16%;
+
+    --feature: 258 80% 69%;
+    --feature-fill: 258 80% 69%;
+    --feature-foreground: 224 32% 12%;
+    --feature-subtle: 258 40% 16%;
+
+    /* The ramp runs the other way on a dark card, and lives in a compressed upper
+       band (60–90% rather than 30–79%) because anything below ~58% lightness
+       drops under 3:1 against a near-black surface and reads as a hole. */
+    --series-1: 241 65% 90%;
+    --series-2: 241 65% 82%;
+    --series-3: 241 65% 74%;
+    --series-4: 241 65% 66%;
+    --series-5: 241 65% 60%;
   }
 }
 
@@ -146,13 +271,23 @@
     @apply font-heading tracking-tight;
   }
 
-  /* Tightened type scale — 5 sizes total across the app:
-     h1 / hero: 28px (sm) → 32px (md+)
+  /* Type scale — 7 steps. The previous comment claimed 5 and claimed body was 14px;
+     body is in fact 15px (see the `body` rule above), and the app had grown 400+
+     uses of two undeclared sizes plus ~19 further one-offs. Rather than pretend
+     those don't exist, the two real ones are now named steps (.text-label,
+     .text-secondary below) and the stragglers collapse onto them.
+
+     h1 / hero:         28px → 32px (md+)
      h2 / page section: 22px → 24px (md+)
-     h3 / card title: 18px
-     body: 14px (text-sm)
-     caption: 12px (text-xs)
-     Marketing landing pages may opt out via inline overrides. */
+     h3 / card title:   18px
+     body:              15px
+     secondary:         13px  (.text-body-sm — NOT .text-secondary, see the naming
+                              hazard note further down; `secondary` is a colour token)
+     caption:           12px  (text-xs)
+     label:             11px  (.text-label)  ← floor for anything readable
+
+     11px is the floor. 10px sentence-case copy was in 100 places; it is not a
+     size, it is a legibility problem. Marketing landing pages may opt out inline. */
   h1 {
     @apply text-[1.75rem] leading-tight font-semibold md:text-[2rem];
   }
@@ -192,12 +327,45 @@
     display: none;
   }
 
+  /* The opt-in interaction for cards and tiles that are actually clickable.
+     One spelling of the lift, app-wide — there were three (-translate-y-px,
+     -translate-y-0.5, and -translate-y-1 with shadow-xl). */
   .hover-lift {
-    @apply transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-md;
+    @apply transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-e-2;
   }
 }
 
 @layer components {
+  /* The two type steps the app had grown organically as arbitrary values.
+     text-[0.8125rem] (21 uses) and text-[0.6875rem] (248 uses) are these.
+
+     NAMING HAZARD — do not name a size utility after a colour token. This step was
+     briefly `.text-secondary`, which collides with the `secondary` COLOUR: Tailwind
+     then emits a second `.text-secondary{color:hsl(var(--secondary))}` rule in
+     @layer utilities, ~56KB later in the stylesheet than this one, so it wins. Every
+     element using it got near-white text (light `--secondary` is 220 14% 92%) that
+     even an explicit `text-foreground` alongside it could not override. It shipped
+     into the chat and assistant message bubbles before being caught.
+     `label` is not a colour token, so `.text-label` is safe. */
+  .text-body-sm {
+    @apply text-[0.8125rem] leading-normal;
+  }
+
+  .text-label {
+    @apply text-[0.6875rem] leading-normal;
+  }
+
+  /* Eyebrow / micro-label. Collapses a 15-value tracking free-for-all
+     (0.05em … 0.4em) into one treatment, and uses primary-ink so it passes AA in
+     dark mode — these labels were the single worst contrast offender in the app. */
+  .eyebrow {
+    @apply text-label font-semibold uppercase tracking-[0.18em] text-muted-foreground;
+  }
+
+  .eyebrow-accent {
+    @apply text-label font-semibold uppercase tracking-[0.18em] text-primary-ink;
+  }
+
   .helper-text {
     @apply text-sm text-muted-foreground/90 leading-relaxed;
   }
@@ -209,12 +377,17 @@
     @apply px-3 sm:px-6 lg:px-10;
   }
 
+  /* Static by default. 69 of 149 call sites (46%) used to bolt on
+     `surface-card--static` purely to cancel a hover lift they never wanted — when
+     nearly half your consumers opt out, the default is the bug. Cards that ARE
+     interactive opt IN with `hover-lift` below. `surface-card--static` is kept as a
+     no-op alias so existing call sites stay valid while they're migrated. */
   .surface-card {
-    @apply relative overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-sm transition-[transform,box-shadow,border-color,background-color] duration-200 hover:-translate-y-px hover:shadow-md dark:border-white/10 dark:bg-card;
+    @apply relative overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-e-1 transition-[transform,box-shadow,border-color,background-color] duration-200 dark:border-white/10 dark:bg-card;
   }
 
   .surface-card--static {
-    @apply hover:translate-y-0 hover:shadow-sm;
+    /* Intentionally empty: static is now the default. */
   }
 
   .surface-subcard {
@@ -226,15 +399,15 @@
   }
 
   .surface-toolbar {
-    @apply relative overflow-hidden rounded-xl border border-border bg-card px-5 py-3 shadow-sm transition-colors dark:border-white/10 dark:bg-card;
+    @apply relative overflow-hidden rounded-xl border border-border bg-card px-5 py-3 shadow-e-1 transition-colors dark:border-white/10 dark:bg-card;
   }
 
   .surface-stage {
-    @apply relative overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-sm transition-[border-color,background-color] duration-200 dark:border-white/10 dark:bg-card;
+    @apply relative overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-e-1 transition-[border-color,background-color] duration-200 dark:border-white/10 dark:bg-card;
   }
 
   .surface-stat {
-    @apply relative overflow-hidden rounded-xl border border-border bg-card p-4 sm:p-5 shadow-sm transition-[border-color,background-color] duration-200 dark:border-white/10 dark:bg-card;
+    @apply relative overflow-hidden rounded-xl border border-border bg-card p-4 sm:p-5 shadow-e-1 transition-[border-color,background-color] duration-200 dark:border-white/10 dark:bg-card;
   }
 
   .nav-pill {
@@ -242,7 +415,7 @@
   }
 
   .nav-pill-active {
-    @apply border-primary/20 bg-primary text-primary-foreground shadow-sm;
+    @apply border-primary/20 bg-primary text-primary-foreground shadow-e-1;
   }
 
   .page-soft-bg {
@@ -262,49 +435,6 @@
     content: '';
     @apply pointer-events-none absolute inset-x-0 -bottom-16 h-16 bg-gradient-to-t from-background to-transparent;
   }
-}
-
-/* React Big Calendar Dark Mode Overrides */
-[data-theme='dark'] .rbc-calendar {
-  @apply text-foreground;
-}
-
-[data-theme='dark'] .rbc-off-range-bg {
-  @apply bg-muted/30;
-}
-
-[data-theme='dark'] .rbc-today {
-  @apply bg-accent/10;
-}
-
-[data-theme='dark'] .rbc-header {
-  @apply border-border text-muted-foreground;
-}
-
-[data-theme='dark'] .rbc-month-view,
-[data-theme='dark'] .rbc-time-view,
-[data-theme='dark'] .rbc-agenda-view {
-  @apply border-border bg-card;
-}
-
-[data-theme='dark'] .rbc-day-bg+.rbc-day-bg,
-[data-theme='dark'] .rbc-month-row+.rbc-month-row,
-[data-theme='dark'] .rbc-header+.rbc-header,
-[data-theme='dark'] .rbc-day-slot .rbc-events-container,
-[data-theme='dark'] .rbc-day-slot .rbc-time-slot {
-  @apply border-border;
-}
-
-[data-theme='dark'] .rbc-event {
-  @apply bg-primary text-primary-foreground;
-}
-
-[data-theme='dark'] .rbc-toolbar button {
-  @apply text-foreground hover:bg-muted;
-}
-
-[data-theme='dark'] .rbc-toolbar button.rbc-active {
-  @apply bg-primary text-primary-foreground hover:bg-primary/90;
 }
 
 /* Respect the user's reduced-motion preference.

@@ -8,9 +8,9 @@ import { stagger, cardFade } from '@/lib/motion';
 import type { RequirementRow, RequirementStatus, RequirementCategory } from '@/lib/data/student-demo-data';
 
 const STATUS_CONFIG: Record<RequirementStatus, { icon: typeof CheckCircle2; color: string; bg: string; label: string; ring: string }> = {
-  'complete': { icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10', label: 'Complete', ring: 'stroke-emerald-500' },
-  'in-progress': { icon: Clock, color: 'text-sky-500', bg: 'bg-sky-500/10', label: 'In progress', ring: 'stroke-sky-500' },
-  'missing': { icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-500/10', label: 'Missing', ring: 'stroke-rose-500' },
+  'complete': { icon: CheckCircle2, color: 'text-success', bg: 'bg-success-subtle', label: 'Complete', ring: 'stroke-success' },
+  'in-progress': { icon: Clock, color: 'text-info', bg: 'bg-info-subtle', label: 'In progress', ring: 'stroke-info' },
+  'missing': { icon: AlertTriangle, color: 'text-danger', bg: 'bg-danger-subtle', label: 'Missing', ring: 'stroke-danger' },
   'not-required': { icon: Minus, color: 'text-muted-foreground', bg: 'bg-muted/30', label: 'N/A', ring: 'stroke-muted-foreground' },
 };
 
@@ -100,7 +100,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
             <circle cx="40" cy="40" r="36" fill="none" stroke="currentColor" strokeWidth="5" className="text-muted/20" />
             <motion.circle
               cx="40" cy="40" r="36" fill="none" strokeWidth="5" strokeLinecap="round"
-              className={cn(avgProgress >= 80 ? 'stroke-emerald-500' : avgProgress >= 50 ? 'stroke-amber-500' : 'stroke-rose-500')}
+              className={cn(avgProgress >= 80 ? 'stroke-success' : avgProgress >= 50 ? 'stroke-warning' : 'stroke-danger')}
               initial={{ strokeDasharray: `0 ${circumference}` }}
               animate={{ strokeDasharray: `${(avgProgress / 100) * circumference} ${circumference}` }}
               transition={{ duration: 1, ease: 'easeOut' }}
@@ -111,11 +111,11 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
               key={avgProgress}
               initial={{ scale: 1.3, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className={cn('text-2xl font-bold', avgProgress >= 80 ? 'text-emerald-600' : avgProgress >= 50 ? 'text-amber-600' : 'text-rose-600')}
+              className={cn('text-2xl font-bold', avgProgress >= 80 ? 'text-success' : avgProgress >= 50 ? 'text-warning' : 'text-danger')}
             >
               {avgProgress}%
             </motion.span>
-            <span className="text-[0.625rem] text-muted-foreground">Overall</span>
+            <span className="text-label text-muted-foreground">Overall</span>
           </div>
         </div>
 
@@ -140,12 +140,12 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
             {categoryRates.map(({ category, rate }) => (
               <div key={category} className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[0.625rem] font-medium text-muted-foreground">{CATEGORY_LABELS[category]}</span>
-                  <span className="text-[0.625rem] font-semibold text-foreground">{rate}%</span>
+                  <span className="text-label font-medium text-muted-foreground">{CATEGORY_LABELS[category]}</span>
+                  <span className="text-label font-semibold text-foreground">{rate}%</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
                   <motion.div
-                    className={cn('h-full rounded-full', rate >= 80 ? 'bg-emerald-500' : rate >= 50 ? 'bg-amber-500' : 'bg-rose-500')}
+                    className={cn('h-full rounded-full', rate >= 80 ? 'bg-success-fill' : rate >= 50 ? 'bg-warning-fill' : 'bg-danger-fill')}
                     initial={{ width: 0 }}
                     animate={{ width: `${rate}%` }}
                     transition={{ duration: 0.6 }}
@@ -158,18 +158,18 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
       </div>
 
       {/* Interactive note */}
-      <p className="text-[0.6875rem] text-muted-foreground/70 italic">Click any status icon to cycle through: Missing → In Progress → Complete → N/A. Your changes are saved automatically.</p>
+      <p className="text-label text-muted-foreground/70 italic">Click any status icon to cycle through: Missing → In Progress → Complete → N/A. Your changes are saved automatically.</p>
 
       {/* Desktop: interactive table */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left py-3 pr-4 text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">University</th>
+              <th className="eyebrow text-left py-3 pr-4">University</th>
               {categories.map((cat) => (
-                <th key={cat} className="text-center px-3 py-3 text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{CATEGORY_LABELS[cat]}</th>
+                <th key={cat} className="eyebrow text-center px-3 py-3">{CATEGORY_LABELS[cat]}</th>
               ))}
-              <th className="text-center px-3 py-3 text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Progress</th>
+              <th className="eyebrow text-center px-3 py-3">Progress</th>
             </tr>
           </thead>
           <tbody>
@@ -192,7 +192,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                       <button
                         onClick={() => cycleStatus(row.id, cell.category)}
                         className={cn(
-                          'mx-auto flex h-9 w-9 items-center justify-center rounded-xl transition-[transform,box-shadow] hover:scale-110 hover:shadow-md',
+                          'mx-auto flex h-9 w-9 items-center justify-center rounded-xl transition-[transform,box-shadow] hover:scale-110 hover:shadow-e-2',
                           cfg.bg
                         )}
                         aria-label={`${row.university} — ${CATEGORY_LABELS[cell.category]}: ${cfg.label}. Click to change status.`}
@@ -211,14 +211,14 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                         <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-muted/20" />
                         <motion.circle
                           cx="18" cy="18" r="14" fill="none" strokeWidth="2.5" strokeLinecap="round"
-                          className={cn(row.progress >= 80 ? 'stroke-emerald-500' : row.progress >= 50 ? 'stroke-amber-500' : 'stroke-rose-500')}
+                          className={cn(row.progress >= 80 ? 'stroke-success' : row.progress >= 50 ? 'stroke-warning' : 'stroke-danger')}
                           animate={{ strokeDasharray: `${(row.progress / 100) * 2 * Math.PI * 14} ${2 * Math.PI * 14}` }}
                           transition={{ duration: 0.5 }}
                         />
                       </svg>
                       <span className={cn(
-                        'absolute inset-0 flex items-center justify-center text-[0.5625rem] font-bold',
-                        row.progress >= 80 ? 'text-emerald-600' : row.progress >= 50 ? 'text-amber-600' : 'text-rose-600'
+                        'absolute inset-0 flex items-center justify-center text-label font-bold',
+                        row.progress >= 80 ? 'text-success' : row.progress >= 50 ? 'text-warning' : 'text-danger'
                       )}>
                         {row.progress}
                       </span>
@@ -238,9 +238,17 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
           return (
             <motion.div key={row.id} variants={cardFade}>
               <div className="surface-subcard rounded-2xl overflow-hidden">
+                {/* The expand toggle and the per-status buttons are SIBLINGS, not
+                    nested. This whole header used to be one <button> with the status
+                    buttons inside it — invalid HTML (a button can't contain a button),
+                    which React reports as a hydration error, and the reason those
+                    handlers needed an e.stopPropagation() to work at all. */}
                 <button
+                  type="button"
                   onClick={() => setExpandedId(isExpanded ? null : row.id)}
-                  className="w-full text-left p-4"
+                  aria-expanded={isExpanded}
+                  aria-controls={`req-panel-${row.id}`}
+                  className="w-full p-4 pb-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -257,14 +265,14 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                           <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-muted/20" />
                           <motion.circle
                             cx="18" cy="18" r="14" fill="none" strokeWidth="2.5" strokeLinecap="round"
-                            className={cn(row.progress >= 80 ? 'stroke-emerald-500' : row.progress >= 50 ? 'stroke-amber-500' : 'stroke-rose-500')}
+                            className={cn(row.progress >= 80 ? 'stroke-success' : row.progress >= 50 ? 'stroke-warning' : 'stroke-danger')}
                             animate={{ strokeDasharray: `${(row.progress / 100) * 2 * Math.PI * 14} ${2 * Math.PI * 14}` }}
                             transition={{ duration: 0.5 }}
                           />
                         </svg>
                         <span className={cn(
-                          'absolute inset-0 flex items-center justify-center text-[0.625rem] font-bold',
-                          row.progress >= 80 ? 'text-emerald-600' : row.progress >= 50 ? 'text-amber-600' : 'text-rose-600'
+                          'absolute inset-0 flex items-center justify-center text-label font-bold',
+                          row.progress >= 80 ? 'text-success' : row.progress >= 50 ? 'text-warning' : 'text-danger'
                         )}>
                           {row.progress}%
                         </span>
@@ -273,29 +281,32 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                     </div>
                   </div>
 
-                  {/* Status icons row */}
-                  <div className="flex gap-2 mt-3">
-                    {row.cells.map((cell) => {
-                      const cfg = STATUS_CONFIG[cell.status];
-                      const Icon = cfg.icon;
-                      return (
-                        <button
-                          key={cell.category}
-                          onClick={(e) => { e.stopPropagation(); cycleStatus(row.id, cell.category); }}
-                          className={cn('flex h-8 w-8 items-center justify-center rounded-lg transition-transform hover:scale-110', cfg.bg)}
-                          aria-label={`${CATEGORY_LABELS[cell.category]}: ${cfg.label}. Click to change status.`}
-                          title={`${CATEGORY_LABELS[cell.category]}: ${cfg.label}`}
-                        >
-                          <Icon className={cn('h-3.5 w-3.5', cfg.color)} />
-                        </button>
-                      );
-                    })}
-                  </div>
                 </button>
+
+                {/* Status icons row — a sibling of the toggle, so no nesting and no
+                    stopPropagation needed. */}
+                <div className="flex gap-2 px-4 pb-4 pt-3">
+                  {row.cells.map((cell) => {
+                    const cfg = STATUS_CONFIG[cell.status];
+                    const Icon = cfg.icon;
+                    return (
+                      <button
+                        key={cell.category}
+                        type="button"
+                        onClick={() => cycleStatus(row.id, cell.category)}
+                        className={cn('flex h-8 w-8 items-center justify-center rounded-lg transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background', cfg.bg)}
+                        aria-label={`${CATEGORY_LABELS[cell.category]}: ${cfg.label}. Click to change status.`}
+                        title={`${CATEGORY_LABELS[cell.category]}: ${cfg.label}`}
+                      >
+                        <Icon className={cn('h-3.5 w-3.5', cfg.color)} />
+                      </button>
+                    );
+                  })}
+                </div>
 
                 <AnimatePresence>
                   {isExpanded && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                    <motion.div id={`req-panel-${row.id}`} initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                       <div className="px-4 pb-4 space-y-2 border-t border-border/50 pt-3">
                         {row.cells.map((cell) => {
                           const cfg = STATUS_CONFIG[cell.status];

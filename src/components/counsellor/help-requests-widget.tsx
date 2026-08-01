@@ -52,15 +52,15 @@ export function HelpRequestsWidget() {
   const visible = expanded ? sorted : sorted.slice(0, COLLAPSED_COUNT);
 
   return (
-    <div className="surface-card surface-card--static">
+    <div className="surface-card">
       <div className="relative z-10 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-violet-500/10 text-violet-600 dark:text-violet-300">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-feature-subtle text-feature">
               <Inbox className="h-5 w-5" aria-hidden />
             </div>
             <div>
-              <p className="text-[0.6875rem] font-semibold uppercase tracking-widest text-muted-foreground">
+              <p className="eyebrow">
                 Live · from your students
               </p>
               <h2 className="text-lg font-semibold text-foreground">Help requests</h2>
@@ -102,16 +102,16 @@ export function HelpRequestsWidget() {
                       type="button"
                       onClick={() => openRequest(req.id)}
                       className={cn(
-                        'group flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-0.5 hover:shadow-sm',
+                        'group flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left hover-lift',
                         isAccepted
-                          ? 'border-emerald-200/60 bg-emerald-500/5 hover:border-emerald-300/70'
-                          : 'border-violet-200/60 bg-violet-500/5 hover:border-violet-300/70'
+                          ? 'border-success/25 bg-success-subtle hover:border-success/50'
+                          : 'border-feature/25 bg-feature-subtle hover:border-feature/50'
                       )}
                     >
                       <Sparkles
                         className={cn(
                           'mt-0.5 h-4 w-4 shrink-0',
-                          isAccepted ? 'text-emerald-600' : 'text-violet-600'
+                          isAccepted ? 'text-success' : 'text-feature'
                         )}
                         aria-hidden
                       />
@@ -120,7 +120,7 @@ export function HelpRequestsWidget() {
                           <p className="truncate text-sm font-semibold text-foreground">
                             {names.get(req.student_profile_id) ?? 'Student'}
                           </p>
-                          <span className="shrink-0 text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">
+                          <span className="eyebrow shrink-0">
                             {formatRelativeTime(req.created_at)}
                           </span>
                         </div>
@@ -136,7 +136,7 @@ export function HelpRequestsWidget() {
                         </p>
                       </div>
                       {isAccepted ? (
-                        <span className="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.15em] text-emerald-700 dark:text-emerald-300">
+                        <span className="eyebrow shrink-0 rounded-full bg-success-subtle px-2 py-0.5 text-success">
                           Accepted
                         </span>
                       ) : null}

@@ -2,9 +2,13 @@
 // Consumers: the deck builder (/counsellor/universities), the student
 // dashboard quest log, and the counsellor character sheet.
 
-import { TIER_LABEL } from '@/lib/theme/categories';
+import { TIER_LABEL, TIER_VISUAL } from '@/lib/theme/categories';
 import type { DeckCardFit, DeckCardRarity } from '@/lib/types/demo-tables';
 
+// Rarity is an ORDINAL game scale, not a status, so it keeps its own ramp rather
+// than borrowing the status tones' meaning. The hues are the ones this UI already
+// used (gold / violet / blue / grey), now expressed as tokens so they carry the
+// AA-verified light and dark values instead of needing `dark:` variants.
 export const DECK_RARITY: Record<
   DeckCardRarity,
   { label: string; stars: number; color: string; badge: string }
@@ -12,20 +16,20 @@ export const DECK_RARITY: Record<
   legendary: {
     label: 'Legendary',
     stars: 4,
-    color: 'text-amber-500',
-    badge: 'border-amber-400/60 bg-amber-500/15 text-amber-600 dark:text-amber-300',
+    color: 'text-warning',
+    badge: 'border-warning/40 bg-warning-subtle text-warning',
   },
   epic: {
     label: 'Epic',
     stars: 3,
-    color: 'text-violet-500',
-    badge: 'border-violet-400/60 bg-violet-500/15 text-violet-600 dark:text-violet-300',
+    color: 'text-feature',
+    badge: 'border-feature/40 bg-feature-subtle text-feature',
   },
   rare: {
     label: 'Rare',
     stars: 2,
-    color: 'text-sky-500',
-    badge: 'border-sky-400/60 bg-sky-500/15 text-sky-600 dark:text-sky-300',
+    color: 'text-info',
+    badge: 'border-info/40 bg-info-subtle text-info',
   },
   common: {
     label: 'Common',
@@ -35,18 +39,16 @@ export const DECK_RARITY: Record<
   },
 };
 
-// Labels come from the app-wide TIER_LABEL map. The badge classes are the
-// deck-specific compact chips; TIER_VISUAL in @/lib/theme/categories is the
-// app-wide fit styling (different padding/dark-mode treatment) — converge on
-// it later if the deck UI should match the rest of the app.
+// Fit now derives from TIER_VISUAL, the app-wide system of record, rather than
+// carrying a fourth private copy of the reach/match/safety colours. (The old
+// version also had no dark: variant on reach or safety, so those two chips were
+// unreadable on dark cards.) Padding stays deck-local — these chips are more
+// compact than TIER_VISUAL.chip — but the colour can no longer drift.
+const fitBadge = (tier: keyof typeof TIER_VISUAL) =>
+  `${TIER_VISUAL[tier].border} ${TIER_VISUAL[tier].bg} ${TIER_VISUAL[tier].text}`;
+
 export const DECK_FIT: Record<DeckCardFit, { label: string; badge: string }> = {
-  reach: { label: TIER_LABEL.reach, badge: 'border-rose-200/60 bg-rose-500/10 text-rose-600' },
-  match: {
-    label: TIER_LABEL.match,
-    badge: 'border-amber-200/60 bg-amber-500/10 text-amber-700 dark:text-amber-400',
-  },
-  safety: {
-    label: TIER_LABEL.safety,
-    badge: 'border-emerald-200/60 bg-emerald-500/10 text-emerald-600',
-  },
+  reach: { label: TIER_LABEL.reach, badge: fitBadge('reach') },
+  match: { label: TIER_LABEL.match, badge: fitBadge('match') },
+  safety: { label: TIER_LABEL.safety, badge: fitBadge('safety') },
 };

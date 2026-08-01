@@ -19,7 +19,7 @@ interface MessageStudentButtonProps {
 
 const VARIANT_CLASSES = {
   header:
-    'flex items-center justify-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition hover:-translate-y-0.5 hover:bg-primary/20',
+    'flex items-center justify-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary-ink transition hover:-translate-y-0.5 hover:bg-primary/20',
   nudge:
     'flex shrink-0 items-center gap-2 self-start rounded-full border border-border bg-background px-4 py-2 text-xs font-semibold text-foreground transition hover:-translate-y-0.5 hover:bg-muted/60'
 } as const;

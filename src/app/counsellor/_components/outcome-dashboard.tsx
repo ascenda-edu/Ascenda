@@ -6,22 +6,34 @@ import { CheckCircle2, XCircle, Clock, MinusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { OutcomeResult, MatchTier, CounsellorOutcome } from '@/lib/counsellor/types';
 import type { OutcomeStats } from '@/lib/counsellor/data';
+import { TIER_VISUAL } from '@/lib/theme/categories';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const RESULT_CONFIG: Record<OutcomeResult, { icon: typeof CheckCircle2; color: string; bg: string; label: string }> = {
-  accepted: { icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-500/10', label: 'Accepted' },
-  rejected: { icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-500/10', label: 'Rejected' },
-  waitlisted: { icon: Clock, color: 'text-amber-600', bg: 'bg-amber-500/10', label: 'Waitlisted' },
-  pending: { icon: Clock, color: 'text-sky-600', bg: 'bg-sky-500/10', label: 'Pending' },
+  accepted: { icon: CheckCircle2, color: 'text-success', bg: 'bg-success-subtle', label: 'Accepted' },
+  rejected: { icon: XCircle, color: 'text-danger', bg: 'bg-danger-subtle', label: 'Rejected' },
+  waitlisted: { icon: Clock, color: 'text-warning', bg: 'bg-warning-subtle', label: 'Waitlisted' },
+  pending: { icon: Clock, color: 'text-info', bg: 'bg-info-subtle', label: 'Pending' },
   withdrawn: { icon: MinusCircle, color: 'text-muted-foreground', bg: 'bg-muted/30', label: 'Withdrawn' },
 };
 
 const TIER_COLORS: Record<MatchTier, string> = {
-  Reach: 'text-rose-600 bg-rose-500/10',
-  Match: 'text-amber-600 bg-amber-500/10',
-  Safe: 'text-emerald-600 bg-emerald-500/10',
+  Reach: `${TIER_VISUAL.reach.text} ${TIER_VISUAL.reach.bg}`,
+  Match: `${TIER_VISUAL.match.text} ${TIER_VISUAL.match.bg}`,
+  Safe: `${TIER_VISUAL.safety.text} ${TIER_VISUAL.safety.bg}`,
 };
 
 const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+// `Intl.DateTimeFormat.format` throws `RangeError: Invalid time value` rather
+// than returning a placeholder, and an unparseable date would take this whole
+// route into the error boundary — which is exactly what happened to the
+// Applications list view. A truthiness check alone doesn't cover it.
+const formatResponseDate = (iso: string | null | undefined) => {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? '—' : dateFormatter.format(date);
+};
 
 export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutcome[]; stats: OutcomeStats }) {
   const [filterResult, setFilterResult] = useState<OutcomeResult | null>(null);
@@ -51,10 +63,10 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {([
           { label: 'Total', value: stats.total, color: 'text-foreground' },
-          { label: 'Accepted', value: stats.accepted, color: 'text-emerald-600' },
-          { label: 'Rejected', value: stats.rejected, color: 'text-rose-600' },
-          { label: 'Waitlisted', value: stats.waitlisted, color: 'text-amber-600' },
-          { label: 'Pending', value: stats.pending, color: 'text-sky-600' },
+          { label: 'Accepted', value: stats.accepted, color: 'text-success' },
+          { label: 'Rejected', value: stats.rejected, color: 'text-danger' },
+          { label: 'Waitlisted', value: stats.waitlisted, color: 'text-warning' },
+          { label: 'Pending', value: stats.pending, color: 'text-info' },
         ] as const).map((stat) => (
           <div key={stat.label} className="surface-subcard p-3 text-center">
             <p className={cn('text-xl font-bold', stat.color)}>{stat.value}</p>
@@ -70,7 +82,7 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
             <circle cx="40" cy="40" r="34" fill="none" stroke="currentColor" strokeWidth="6" className="text-muted/20" />
             <motion.circle
               cx="40" cy="40" r="34" fill="none" strokeWidth="6" strokeLinecap="round"
-              className={cn(stats.acceptanceRate >= 50 ? 'stroke-emerald-500' : 'stroke-amber-500')}
+              className={cn(stats.acceptanceRate >= 50 ? 'stroke-success' : 'stroke-warning')}
               initial={{ strokeDasharray: `0 ${2 * Math.PI * 34}` }}
               animate={{ strokeDasharray: `${(stats.acceptanceRate / 100) * 2 * Math.PI * 34} ${2 * Math.PI * 34}` }}
               transition={{ duration: 1, ease: 'easeOut' }}
@@ -96,7 +108,7 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
             </div>
             <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
               <motion.div
-                className={cn('h-full rounded-full', rate >= 50 ? 'bg-emerald-500' : rate >= 25 ? 'bg-amber-500' : 'bg-rose-500')}
+                className={cn('h-full rounded-full', rate >= 50 ? 'bg-success-fill' : rate >= 25 ? 'bg-warning-fill' : 'bg-danger-fill')}
                 initial={{ width: 0 }} animate={{ width: `${rate}%` }} transition={{ duration: 0.6 }}
               />
             </div>
@@ -113,10 +125,10 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
         <input
           id="outcome-dashboard-search"
           type="text"
-          placeholder="Search student..."
+          placeholder="Search student…"
           value={filterStudent}
           onChange={(e) => setFilterStudent(e.target.value)}
-          className="rounded-full border border-border bg-background px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring w-44"
+          className="form-input w-44 rounded-full px-3 py-1.5 text-xs"
         />
         <button
           onClick={() => setFilterResult(null)}
@@ -136,45 +148,48 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
         })}
       </div>
 
-      {/* Results table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border">
-              <th scope="col" className="text-left py-2 pr-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Student</th>
-              <th scope="col" className="text-left py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">University</th>
-              <th scope="col" className="text-left py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Programme</th>
-              <th scope="col" className="text-center py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Result</th>
-              <th scope="col" className="text-center py-2 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tier</th>
-              <th scope="col" className="text-left py-2 pl-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Date</th>
-            </tr>
-          </thead>
-          <tbody>
+      {/* Results table — the `Table` primitive holds a min-width so these six
+          columns scroll on a narrow viewport instead of compressing into
+          slivers, which is what the bare `overflow-x-auto` here used to do. The
+          card is on purpose the call site's job (see ui/table.tsx). */}
+      <div className="surface-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col">Student</TableHead>
+              <TableHead scope="col">University</TableHead>
+              <TableHead scope="col">Programme</TableHead>
+              <TableHead scope="col" className="text-center">Result</TableHead>
+              <TableHead scope="col" className="text-center">Tier</TableHead>
+              <TableHead scope="col">Date</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {filtered.map((o) => {
               const cfg = RESULT_CONFIG[o.result];
               const Icon = cfg.icon;
               return (
-                <tr key={o.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
-                  <td className="py-2.5 pr-3 font-medium text-foreground">{o.studentName}</td>
-                  <td className="py-2.5 px-3 text-muted-foreground">{o.university}</td>
-                  <td className="py-2.5 px-3 text-muted-foreground text-xs">{o.program}</td>
-                  <td className="py-2.5 px-3 text-center">
+                <TableRow key={o.id}>
+                  <TableCell className="font-medium text-foreground">{o.studentName}</TableCell>
+                  <TableCell className="text-muted-foreground">{o.university}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{o.program}</TableCell>
+                  <TableCell className="text-center">
                     <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold', cfg.bg, cfg.color)}>
                       <Icon className="h-3 w-3" /> {cfg.label}
                     </span>
-                    {o.conditions && <p className="text-[0.625rem] text-muted-foreground mt-0.5">{o.conditions}</p>}
-                  </td>
-                  <td className="py-2.5 px-3 text-center">
-                    <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-semibold', TIER_COLORS[o.tier])}>{o.tier}</span>
-                  </td>
-                  <td className="py-2.5 pl-3 text-xs text-muted-foreground">
-                    {o.responseDate ? dateFormatter.format(new Date(o.responseDate)) : '—'}
-                  </td>
-                </tr>
+                    {o.conditions && <p className="text-label text-muted-foreground mt-0.5">{o.conditions}</p>}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <span className={cn('rounded-full px-2 py-0.5 text-label font-semibold', TIER_COLORS[o.tier])}>{o.tier}</span>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {formatResponseDate(o.responseDate)}
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {filtered.length === 0 && (

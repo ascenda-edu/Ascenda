@@ -31,9 +31,9 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 function urgencyClass(days: number) {
-  if (days <= 3) return 'text-red-600 bg-red-500/10 border-red-200/50 dark:border-red-500/20';
-  if (days <= 7) return 'text-amber-600 bg-amber-500/10 border-amber-200/50 dark:border-amber-500/20';
-  return 'text-sky-600 bg-sky-500/10 border-sky-200/50 dark:border-sky-500/20';
+  if (days <= 3) return 'text-danger bg-danger-subtle border-danger/25';
+  if (days <= 7) return 'text-warning bg-warning-subtle border-warning/25';
+  return 'text-info bg-info-subtle border-info/25';
 }
 
 function formatDate(iso: string) {
@@ -88,9 +88,9 @@ export const DeadlineWidget = ({ deadlines }: DeadlineWidgetProps) => {
         <button
           onClick={() => setManageOpen((o) => !o)}
           className={cn(
-            'flex items-center gap-1.5 rounded-full border px-3 py-1 text-[0.6875rem] font-medium transition hover:-translate-y-0.5',
+            'flex items-center gap-1.5 rounded-full border px-3 py-1 text-label font-medium transition hover:-translate-y-0.5',
             manageOpen
-              ? 'border-primary/40 bg-primary/10 text-primary'
+              ? 'border-primary/40 bg-primary/10 text-primary-ink'
               : 'border-border/60 bg-background/60 text-muted-foreground hover:text-foreground'
           )}
         >
@@ -111,7 +111,7 @@ export const DeadlineWidget = ({ deadlines }: DeadlineWidgetProps) => {
             className="overflow-hidden"
           >
             <div className="rounded-2xl border border-border/60 bg-muted/30 p-3 space-y-1.5">
-              <p className="text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground px-1 pb-0.5">
+              <p className="eyebrow px-1 pb-0.5">
                 Students
               </p>
               {students.map(({ id, name, flag }) => {
@@ -133,8 +133,8 @@ export const DeadlineWidget = ({ deadlines }: DeadlineWidgetProps) => {
                       className={cn(
                         'flex h-6 w-6 items-center justify-center rounded-lg border transition',
                         isPinned
-                          ? 'border-primary/40 bg-primary/10 text-primary'
-                          : 'border-border/60 text-muted-foreground hover:text-primary hover:border-primary/40'
+                          ? 'border-primary/40 bg-primary/10 text-primary-ink'
+                          : 'border-border/60 text-muted-foreground hover:text-primary-ink hover:border-primary/40'
                       )}
                     >
                       {isPinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
@@ -145,7 +145,7 @@ export const DeadlineWidget = ({ deadlines }: DeadlineWidgetProps) => {
                       className={cn(
                         'flex h-6 w-6 items-center justify-center rounded-lg border transition',
                         isHidden
-                          ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-600'
+                          ? 'border-success/25 bg-success-subtle text-success'
                           : 'border-border/60 text-muted-foreground hover:text-destructive hover:border-destructive/40'
                       )}
                     >
@@ -157,7 +157,7 @@ export const DeadlineWidget = ({ deadlines }: DeadlineWidgetProps) => {
               {(pinnedIds.size > 0 || hiddenIds.size > 0) && (
                 <button
                   onClick={() => { setPinnedIds(new Set()); setHiddenIds(new Set()); }}
-                  className="mt-1 w-full text-center text-[0.6875rem] text-muted-foreground hover:text-foreground transition"
+                  className="mt-1 w-full text-center text-label text-muted-foreground hover:text-foreground transition"
                 >
                   Reset all
                 </button>
@@ -188,7 +188,7 @@ export const DeadlineWidget = ({ deadlines }: DeadlineWidgetProps) => {
                     isPinned && 'border-primary/20 bg-primary/5'
                   )}
                 >
-                  {isPinned && <Pin className="h-3 w-3 shrink-0 text-primary/50" />}
+                  {isPinned && <Pin className="h-3 w-3 shrink-0 text-primary-ink/50" />}
                   <div className={cn('flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl border text-center text-xs font-bold leading-none', urgencyClass(d.daysUntil))}>
                     <Clock className="mb-0.5 h-3 w-3" />
                     {d.daysUntil <= 0 ? 'Due' : `${d.daysUntil}d`}

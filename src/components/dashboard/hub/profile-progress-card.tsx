@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Check, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { EASE } from '@/lib/motion';
 import { HubCard } from './hub-card';
 
 export interface ProfileStepStatus {
@@ -37,7 +38,7 @@ export function ProfileProgressCard({ percent, steps, nextStepTitle }: ProfilePr
       title={complete ? 'Profile complete' : 'Finish your profile'}
       icon={UserCircle}
       iconClassName={
-        complete ? 'bg-emerald-500/10 text-emerald-600 ring-emerald-500/15 dark:text-emerald-300' : undefined
+        complete ? 'bg-success-subtle text-success ring-success/25' : undefined
       }
     >
       <div className="flex h-full flex-col gap-4">
@@ -53,11 +54,13 @@ export function ProfileProgressCard({ percent, steps, nextStepTitle }: ProfilePr
                 strokeWidth="7"
                 strokeLinecap="round"
                 strokeDasharray={CIRCUMFERENCE}
-                className={complete ? 'stroke-emerald-500' : 'stroke-primary'}
+                className={complete ? 'stroke-success' : 'stroke-primary'}
                 initial={{ strokeDashoffset: reduced ? dashTarget : CIRCUMFERENCE }}
                 whileInView={{ strokeDashoffset: dashTarget }}
                 viewport={{ once: true }}
-                transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94] }}
+                // Off the DURATION scale deliberately: the ring is drawing a value, and
+                // the second-long sweep is what makes the percentage readable as it fills.
+                transition={{ duration: 1, ease: EASE }}
               />
             </svg>
             <span className="absolute inset-0 flex items-center justify-center text-lg font-semibold tabular-nums text-foreground">
@@ -80,7 +83,7 @@ export function ProfileProgressCard({ percent, steps, nextStepTitle }: ProfilePr
                 className={cn(
                   'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border',
                   step.done
-                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
+                    ? 'border-success/40 bg-success-subtle text-success'
                     : 'border-border bg-muted/40 text-transparent'
                 )}
                 aria-hidden

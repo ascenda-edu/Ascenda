@@ -6,6 +6,7 @@ import { ArrowUpDown, Check, ChevronDown } from 'lucide-react';
 import type { SortOption } from '@/lib/university-search/search-params';
 import { SORT_OPTIONS } from '@/lib/university-search/search-params';
 import { cn } from '@/lib/utils';
+import { DURATION, EASE } from '@/lib/motion';
 
 export const SORT_LABELS: Record<SortOption, string> = {
   fit: 'Best match',
@@ -111,14 +112,13 @@ export function SortMenu({ value, onChange }: SortMenuProps) {
         {open ? (
           <motion.div
             initial={{ opacity: 0, y: -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.98 }}
-            transition={{ duration: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
+            animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: DURATION.fast, ease: EASE } }}
+            exit={{ opacity: 0, y: -6, scale: 0.98, transition: { duration: DURATION.exit, ease: EASE } }}
             role="listbox"
             aria-label="Sort results by"
             tabIndex={-1}
             onKeyDown={onListKeyDown}
-            className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-border bg-popover p-1.5 shadow-xl dark:border-white/10"
+            className="absolute right-0 z-panel mt-2 w-64 overflow-hidden rounded-2xl border border-border bg-popover p-1.5 shadow-e-3 dark:border-white/10"
           >
             {SORT_OPTIONS.map((option, index) => {
               const selected = option === value;
@@ -137,7 +137,7 @@ export function SortMenu({ value, onChange }: SortMenuProps) {
                   className={cn(
                     'flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm transition-colors cursor-pointer focus-visible:outline-none',
                     index === activeIndex ? 'bg-muted' : 'hover:bg-muted/60',
-                    selected ? 'font-semibold text-primary' : 'text-foreground'
+                    selected ? 'font-semibold text-primary-ink' : 'text-foreground'
                   )}
                 >
                   <span>{SORT_LABELS[option]}</span>

@@ -27,7 +27,7 @@ export async function CounsellorQuests({ profileId }: { profileId: string }) {
         eyebrow="From your counsellor"
         title={`Quest log · ${clearedCount}/${questCount} cleared`}
         icon={Scroll}
-        iconClassName="bg-violet-500/10 text-violet-600 ring-violet-500/15 dark:text-violet-300"
+        iconClassName="bg-feature-subtle text-feature ring-feature/25"
         action={{ label: 'Open quest log', href: '/university-search/quests' }}
       >
         <div className="grid gap-4 md:grid-cols-2">
@@ -47,7 +47,7 @@ export async function CounsellorQuests({ profileId }: { profileId: string }) {
                   return (
                     <li key={quest.programId} className="flex items-center gap-2 text-sm">
                       {quest.cleared ? (
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" aria-label="Cleared — application started" />
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-label="Cleared — application started" />
                       ) : (
                         <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="Active quest" />
                       )}
@@ -66,7 +66,7 @@ export async function CounsellorQuests({ profileId }: { profileId: string }) {
                           <Star key={i} className="h-2.5 w-2.5 fill-current" />
                         ))}
                       </span>
-                      <span className={cn('shrink-0 rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold', fit.badge)}>
+                      <span className={cn('shrink-0 rounded-full border px-2 py-0.5 text-label font-semibold', fit.badge)}>
                         {fit.label}
                       </span>
                     </li>

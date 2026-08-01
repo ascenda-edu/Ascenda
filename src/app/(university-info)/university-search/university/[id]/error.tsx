@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { UniversityInformation } from '@/components/university-search/university-information';
+import { PAGE_BODY_IN_SHELL } from './_components/page-body';
 
 export default function UniversityPageError({ error, reset }: { error: Error; reset: () => void }) {
   useEffect(() => {
@@ -10,17 +11,19 @@ export default function UniversityPageError({ error, reset }: { error: Error; re
     console.error(error);
   }, [error]);
 
+  // No `min-h-screen` / `max-w-6xl` wrapper any more: `layout.tsx` puts this
+  // inside `<DashboardShell>`, which owns the page height and the gutter.
   return (
-    <div className="min-h-screen bg-background">
+    <>
       <UniversityInformation
         error="Something went wrong while loading this university. Please retry."
-        className="min-h-0 pb-0 pt-6"
+        className={PAGE_BODY_IN_SHELL}
       />
-      <div className="shell-gutter mx-auto flex w-full max-w-6xl justify-center py-8">
+      <div className="flex justify-center">
         <Button type="button" onClick={() => reset()}>
           Try again
         </Button>
       </div>
-    </div>
+    </>
   );
 }

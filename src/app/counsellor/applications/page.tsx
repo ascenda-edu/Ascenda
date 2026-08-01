@@ -19,6 +19,7 @@ export default async function CounsellorApplicationsPage() {
   return (
     <div className="space-y-6">
       <PageHero
+          tone="counsellor"
         eyebrow="Counsellor"
         title="Application overview"
         description="Every student's applications across platforms — kanban or list, with filters. For deadline-only triage, see Deadlines."

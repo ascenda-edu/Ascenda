@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { ErrorState } from '@/components/ui/error-state';
 
 export default function ScholarshipsError({
   error,
@@ -10,21 +9,5 @@ export default function ScholarshipsError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    console.error(error);
-  }, [error]);
-
-  return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center text-foreground">
-      <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Scholarships error</p>
-      <h1 className="text-2xl font-semibold text-foreground">Unable to load scholarships.</h1>
-      <p className="max-w-md text-sm text-muted-foreground">
-        This is usually temporary. Try refreshing or click below.
-      </p>
-      <Button type="button" onClick={() => reset()}>
-        Try again
-      </Button>
-      {error?.digest ? <p className="text-xs text-muted-foreground">Ref: {error.digest}</p> : null}
-    </div>
-  );
+  return <ErrorState scope="Scholarships" title="Unable to load scholarships." error={error} reset={reset} />;
 }

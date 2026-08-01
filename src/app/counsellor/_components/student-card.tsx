@@ -3,6 +3,8 @@ import { AlertTriangle, Clock, CheckCircle2, BookOpen, Eye, Mail } from 'lucide-
 import { cn } from '@/lib/utils';
 import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
+import { TIER_VISUAL, COMPLETION_VISUAL, classifyCompletion } from '@/lib/theme/categories';
+import { avatarColor } from './avatar-palette';
 import { MessageStudentButton } from './message-student-button';
 
 interface StudentCardProps {
@@ -17,41 +19,26 @@ function Highlight({ text, query }: { text: string; query: string }) {
   return (
     <>
       {text.slice(0, idx)}
-      <mark className="rounded bg-primary/20 px-0.5 text-primary not-italic">{text.slice(idx, idx + query.length)}</mark>
+      <mark className="rounded bg-primary/20 px-0.5 text-primary-ink not-italic">{text.slice(idx, idx + query.length)}</mark>
       {text.slice(idx + query.length)}
     </>
   );
 }
 
 const TIER_COLORS = {
-  Reach: 'bg-rose-500/10 text-rose-600 border-rose-200/50 dark:border-rose-500/20',
-  Match: 'bg-amber-500/10 text-amber-600 border-amber-200/50 dark:border-amber-500/20',
-  Safe: 'bg-emerald-500/10 text-emerald-600 border-emerald-200/50 dark:border-emerald-500/20'
+  Reach: cn(TIER_VISUAL.reach.bg, TIER_VISUAL.reach.text, TIER_VISUAL.reach.border),
+  Match: cn(TIER_VISUAL.match.bg, TIER_VISUAL.match.text, TIER_VISUAL.match.border),
+  Safe: cn(TIER_VISUAL.safety.bg, TIER_VISUAL.safety.text, TIER_VISUAL.safety.border)
 };
 
 function getInitials(first: string, last: string) {
   return `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase() || '–';
 }
 
-const AVATAR_PALETTE = [
-  'bg-violet-500/20 text-violet-700 dark:text-violet-300',
-  'bg-sky-500/20 text-sky-700 dark:text-sky-300',
-  'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',
-  'bg-amber-500/20 text-amber-700 dark:text-amber-300',
-  'bg-rose-500/20 text-rose-700 dark:text-rose-300',
-  'bg-indigo-500/20 text-indigo-700 dark:text-indigo-300'
-];
-
-function avatarColor(id: string) {
-  const hash = id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
-}
-
+// Completion banding is COMPLETION_VISUAL's, not a private copy of the same
+// thresholds (100 / 75 / 50 → full / high / mid / low).
 function getCompletionColor(pct: number) {
-  if (pct === 100) return 'bg-emerald-500';
-  if (pct >= 75) return 'bg-sky-500';
-  if (pct >= 50) return 'bg-amber-500';
-  return 'bg-red-500';
+  return COMPLETION_VISUAL[classifyCompletion(pct)].bar;
 }
 
 function getNextDeadline(student: CounsellorStudent) {
@@ -99,7 +86,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
   const daysLeft = nextDeadline ? daysUntil(nextDeadline.date) : null;
 
   return (
-    <div className="group surface-card surface-card--static relative flex flex-col gap-4 transition-all hover:-translate-y-1 hover:shadow-floating">
+    <div className="group surface-card hover-lift relative flex flex-col gap-4">
       {/* Main card link overlay */}
       <Link
         href={`/counsellor/students/${student.id}`}
@@ -114,7 +101,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="truncate font-semibold text-foreground group-hover:text-primary transition-colors">
+            <p className="truncate font-semibold text-foreground group-hover:text-primary-ink transition-colors">
               <Highlight text={`${student.personal.firstName} ${student.personal.lastName}`} query={highlight} />
             </p>
             <span className="text-base" role="img" aria-label={`Flag of ${student.personal.nationality}`}>{student.personal.flagEmoji}</span>
@@ -124,15 +111,15 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
           </p>
           <p className="text-xs text-muted-foreground">{student.personal.schoolCity}, {student.personal.schoolCountry}</p>
           <p className={cn(
-            'mt-1 text-[0.6875rem] font-medium',
-            isActiveSoon(student.lastActive) ? 'text-emerald-600' : 'text-muted-foreground'
+            'mt-1 text-label font-medium',
+            isActiveSoon(student.lastActive) ? 'text-success' : 'text-muted-foreground'
           )}>
             Active {formatRelative(student.lastActive)}
           </p>
         </div>
         {student.flags.length > 0 && (
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-500/10">
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-warning-subtle">
+            <AlertTriangle className="h-3.5 w-3.5 text-warning" />
           </div>
         )}
 
@@ -140,7 +127,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
         <div className="absolute right-0 top-0 flex gap-1 opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 group-focus-within:opacity-100 z-20">
           <Link
             href={`/counsellor/students/${student.id}`}
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground backdrop-blur-sm transition hover:border-primary/40 hover:text-primary"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground backdrop-blur-sm transition hover:border-primary/40 hover:text-primary-ink"
           >
             <Eye className="h-3.5 w-3.5" />
           </Link>
@@ -151,7 +138,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
               lastName: student.personal.lastName
             }}
             variant={null}
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground backdrop-blur-sm transition hover:border-primary/40 hover:text-primary"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground backdrop-blur-sm transition hover:border-primary/40 hover:text-primary-ink"
           >
             <Mail className="h-3.5 w-3.5" />
           </MessageStudentButton>
@@ -163,8 +150,8 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
         <span className={cn(
           'rounded-full border px-3 py-0.5 text-xs font-semibold',
           student.academic.programmeType === 'IB'
-            ? 'border-violet-200/60 bg-violet-500/10 text-violet-700 dark:text-violet-300'
-            : 'border-sky-200/60 bg-sky-500/10 text-sky-700 dark:text-sky-300'
+            ? 'border-feature/25 bg-feature-subtle text-feature'
+            : 'border-info/25 bg-info-subtle text-info'
         )}>
           {student.academic.programmeType === 'IB'
             ? student.academic.ibPoints ? `IB · ${student.academic.ibPoints} pts` : 'IB'
@@ -179,13 +166,13 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
       <div className="relative z-10 space-y-1.5">
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">Profile complete</span>
-          <span className={cn('font-semibold', student.profile.completionPct === 100 ? 'text-emerald-600' : 'text-amber-600')}>
+          <span className={cn('font-semibold', student.profile.completionPct === 100 ? 'text-success' : 'text-warning')}>
             {student.profile.completionPct}%
           </span>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
           <div
-            className={cn('h-1.5 rounded-full transition-all', completionColor)}
+            className={cn('h-1.5 rounded-full transition-[width]', completionColor)}
             style={{ width: `${student.profile.completionPct}%` }}
           />
         </div>
@@ -215,7 +202,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
       {/* Footer: next deadline */}
       <div className="relative z-10 border-t border-border/60 pt-3">
         {nextDeadline ? (
-          <div className={cn('flex items-center gap-2 text-xs', daysLeft !== null && daysLeft <= 7 ? 'text-red-500' : 'text-muted-foreground')}>
+          <div className={cn('flex items-center gap-2 text-xs', daysLeft !== null && daysLeft <= 7 ? 'text-danger' : 'text-muted-foreground')}>
             <Clock className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">
               {daysLeft !== null && daysLeft <= 0 ? 'Overdue: ' : daysLeft !== null && daysLeft <= 7 ? `${daysLeft}d: ` : ''}
@@ -223,7 +210,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
             </span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-xs text-emerald-600">
+          <div className="flex items-center gap-2 text-xs text-success">
             <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
             No upcoming deadlines
           </div>

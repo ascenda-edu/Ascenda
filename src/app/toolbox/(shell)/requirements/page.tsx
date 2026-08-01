@@ -1,8 +1,5 @@
 import type { Metadata } from 'next';
-import { DashboardShell } from '@/components/layout/shell';
 import { PageHero } from '@/components/layout/page-hero';
-import { SectionNav } from '@/components/layout/section-nav';
-import { TOOLBOX_SECTION_ITEMS } from '@/components/layout/navigation';
 import { RequirementsChecker } from '@/components/toolbox/requirements-checker';
 import { DEMO_REQUIREMENTS } from '@/lib/data/student-demo-data';
 
@@ -14,8 +11,7 @@ export default async function RequirementsPage() {
   const complete = DEMO_REQUIREMENTS.filter((r) => r.progress === 100).length;
 
   return (
-    <DashboardShell>
-      <SectionNav items={TOOLBOX_SECTION_ITEMS} />
+    <>
       <PageHero
         tone="student"
         eyebrow="Requirements"
@@ -28,6 +24,6 @@ export default async function RequirementsPage() {
         ]}
       />
       <RequirementsChecker matrix={DEMO_REQUIREMENTS} />
-    </DashboardShell>
+    </>
   );
 }

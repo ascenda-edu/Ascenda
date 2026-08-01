@@ -24,12 +24,12 @@ interface Props {
 
 const urgencyTone = (days: number | null): { dot: string; label: string; labelTone: string } => {
   if (days === null) return { dot: 'bg-muted-foreground/40', label: 'No deadline', labelTone: 'text-muted-foreground' };
-  if (days < 0) return { dot: 'bg-rose-500', label: `${Math.abs(days)}d overdue`, labelTone: 'text-rose-600 dark:text-rose-400' };
-  if (days === 0) return { dot: 'bg-rose-500', label: 'Due today', labelTone: 'text-rose-600 dark:text-rose-400' };
-  if (days === 1) return { dot: 'bg-rose-500', label: 'Due tomorrow', labelTone: 'text-rose-600 dark:text-rose-400' };
-  if (days <= 3) return { dot: 'bg-rose-500', label: `Due in ${days} days`, labelTone: 'text-rose-600 dark:text-rose-400' };
-  if (days <= 7) return { dot: 'bg-amber-500', label: `Due in ${days} days`, labelTone: 'text-amber-600 dark:text-amber-400' };
-  return { dot: 'bg-sky-400', label: `Due in ${days} days`, labelTone: 'text-sky-600 dark:text-sky-400' };
+  if (days < 0) return { dot: 'bg-danger-fill', label: `${Math.abs(days)}d overdue`, labelTone: 'text-danger' };
+  if (days === 0) return { dot: 'bg-danger-fill', label: 'Due today', labelTone: 'text-danger' };
+  if (days === 1) return { dot: 'bg-danger-fill', label: 'Due tomorrow', labelTone: 'text-danger' };
+  if (days <= 3) return { dot: 'bg-danger-fill', label: `Due in ${days} days`, labelTone: 'text-danger' };
+  if (days <= 7) return { dot: 'bg-warning-fill', label: `Due in ${days} days`, labelTone: 'text-warning' };
+  return { dot: 'bg-info-fill', label: `Due in ${days} days`, labelTone: 'text-info' };
 };
 
 export function NextActionsList({ items }: Props) {
@@ -50,7 +50,7 @@ export function NextActionsList({ items }: Props) {
 
   if (ranked.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-emerald-200/60 bg-emerald-500/5 p-6 text-center text-sm text-emerald-700 dark:text-emerald-300">
+      <div className="rounded-2xl border border-dashed border-success/25 bg-success-subtle p-6 text-center text-sm text-success">
         <CheckCircle2 className="mx-auto mb-2 h-5 w-5" aria-hidden />
         Nothing urgent right now. Everything tracked is on track.
       </div>
@@ -68,7 +68,7 @@ export function NextActionsList({ items }: Props) {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: index * 0.05 }}
-              className="group flex items-center gap-4 rounded-2xl border border-border/60 bg-card/60 px-4 py-3 transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm"
+              className="hover-lift group flex items-center gap-4 rounded-2xl border border-border/60 bg-card/60 px-4 py-3 hover:border-primary/40"
             >
               <span
                 className={cn('h-2.5 w-2.5 shrink-0 rounded-full', tone.dot)}
@@ -84,7 +84,7 @@ export function NextActionsList({ items }: Props) {
               </div>
               <div className="hidden shrink-0 text-right sm:block">
                 <p className={cn('text-xs font-semibold', tone.labelTone)}>{tone.label}</p>
-                <p className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">
+                <p className="eyebrow">
                   {item.tasksRemaining} task{item.tasksRemaining === 1 ? '' : 's'} open
                 </p>
               </div>
@@ -100,7 +100,7 @@ export function NextActionsList({ items }: Props) {
                     tasksRemaining: item.tasksRemaining
                   })
                 }
-                className="shrink-0 border-violet-300/60 bg-violet-500/5 text-violet-700 transition hover:bg-violet-500/10 dark:text-violet-300"
+                className="shrink-0 border-feature/25 bg-feature-subtle text-feature transition hover:bg-feature/15"
               >
                 <Sparkles className="mr-1.5 h-3.5 w-3.5" aria-hidden />
                 Need help

@@ -6,6 +6,7 @@ import { Check, ListChecks, Plus, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { dueLabel } from '@/lib/applications/due-label';
@@ -248,7 +249,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
   return (
     <div className="space-y-6">
       {/* ── Add task + filters ──────────────────────────────────────── */}
-      <section className="surface-card surface-card--static space-y-4 rounded-[28px] p-5">
+      <section className="surface-card space-y-4 rounded-4xl p-5">
         <div className="flex flex-wrap items-center gap-2">
           {(['open', 'done', 'all'] as const).map((f) => (
             <button
@@ -288,18 +289,21 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
             aria-label="Due date (optional)"
             className="rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
-          <select
-            value={newAppId}
-            onChange={(e) => setNewAppId(e.target.value)}
-            aria-label="Attach task to application"
-            className="rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-          >
-            {applicationOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <Select value={newAppId || ''} onValueChange={setNewAppId}>
+            {/* w-auto: the trigger's base class is w-full, which in this wrap row
+              * would claim a whole line. rounded-full/py-2 keep it the same pill
+              * height as the two inputs beside it. */}
+            <SelectTrigger aria-label="Attach task to application" className="w-auto rounded-full py-2">
+              <SelectValue placeholder="Application" />
+            </SelectTrigger>
+            <SelectContent>
+              {applicationOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button size="sm" onClick={add} disabled={!newName.trim() || !newAppId || adding}>
             <Plus className="mr-1 h-3.5 w-3.5" /> {adding ? 'Adding…' : 'Add'}
           </Button>
@@ -309,7 +313,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
       {/* ── Grouped tasks ───────────────────────────────────────────── */}
       {grouped.length === 0 ? (
         <EmptyState
-          icon={ListChecks}
+          icon={<ListChecks />}
           className="min-h-[200px]"
           title={filter === 'done' ? 'Nothing finished yet' : filter === 'open' ? 'You’re all caught up' : 'No tasks tracked'}
           description={filter === 'open' ? 'Add a task above or check the done tab.' : 'Switch filter to see other tasks.'}
@@ -342,7 +346,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
                           exit={{ opacity: 0, x: 12 }}
                           className={cn(
                             'group flex items-center gap-3 rounded-2xl border bg-card/60 px-4 py-3 transition',
-                            done ? 'border-emerald-200/60 dark:border-emerald-500/20' : 'border-border'
+                            done ? 'border-success/25' : 'border-border'
                           )}
                         >
                           <button
@@ -354,7 +358,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
                             className={cn(
                               'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition',
                               done
-                                ? 'border-emerald-500 bg-emerald-500 text-white'
+                                ? 'border-success bg-success-fill text-success-foreground'
                                 : 'border-border bg-background hover:border-primary'
                             )}
                           >
@@ -369,16 +373,16 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
                             {task.name}
                           </p>
                           {task.status === 'doing' ? (
-                            <span className="shrink-0 rounded-full border border-sky-200/60 bg-sky-500/10 px-2.5 py-0.5 text-[0.6875rem] font-semibold text-sky-600 dark:border-sky-500/20 dark:text-sky-400">
+                            <span className="shrink-0 rounded-full border border-info/25 bg-info-subtle px-2.5 py-0.5 text-label font-semibold text-info">
                               In progress
                             </span>
                           ) : null}
                           {due ? (
                             <span
                               className={cn(
-                                'shrink-0 rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold',
+                                'shrink-0 rounded-full border px-2.5 py-0.5 text-label font-semibold',
                                 due.urgent
-                                  ? 'border-rose-200/60 bg-rose-500/10 text-rose-600 dark:border-rose-500/20 dark:text-rose-400'
+                                  ? 'border-danger/25 bg-danger-subtle text-danger'
                                   : 'border-border bg-muted/50 text-foreground'
                               )}
                             >

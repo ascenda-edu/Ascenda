@@ -4,6 +4,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DURATION, EASE } from '@/lib/motion';
 
 interface FacetGroupProps {
   title: string;
@@ -28,7 +29,7 @@ export function FacetGroup({ title, activeCount = 0, defaultOpen = true, childre
         <span className="flex items-center gap-2">
           <span className="text-sm font-semibold text-foreground">{title}</span>
           {activeCount > 0 ? (
-            <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 text-[11px] font-semibold text-primary tabular-nums">
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 text-label font-semibold text-primary-ink tabular-nums">
               {activeCount}
             </span>
           ) : null}
@@ -46,7 +47,9 @@ export function FacetGroup({ title, activeCount = 0, defaultOpen = true, childre
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+            // Symmetric on purpose: a disclosure closing is the same mechanism running
+            // backwards, so it should not be quicker than opening it.
+            transition={{ duration: DURATION.fast, ease: EASE }}
             className="overflow-hidden"
           >
             <div className="pb-4">{children}</div>

@@ -169,7 +169,7 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }
   };
 
   return (
-    <div className="surface-card surface-card--static space-y-4 rounded-[28px] p-6 text-sm">
+    <div className="surface-card space-y-4 rounded-4xl p-6 text-sm">
       <div>
         <Label htmlFor="document-upload">Upload document</Label>
         <p className="text-xs text-muted-foreground">PDF, DOCX up to 20 MB.</p>
@@ -179,7 +179,7 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[26px] border border-dashed p-8 text-center transition ${
+        className={`group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border border-dashed p-8 text-center transition ${
           isDragActive
             ? 'border-primary bg-primary/5'
             : 'border-border bg-muted/60 hover:border-muted-foreground hover:bg-card'
@@ -204,7 +204,7 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }
         {status ?? 'No document selected yet.'}
       </p>
       {error ? (
-        <p className="text-xs text-rose-600 dark:text-rose-400" role="alert">
+        <p className="text-xs text-danger" role="alert">
           {error}
         </p>
       ) : null}
@@ -224,7 +224,7 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }
                   href={item.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-[0.6875rem] uppercase tracking-[0.3em] text-muted-foreground hover:text-foreground"
+                  className="eyebrow hover:text-foreground"
                 >
                   View
                 </a>

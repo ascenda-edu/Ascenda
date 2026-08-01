@@ -67,7 +67,7 @@ export function SegmentedControl({ options, value, onChange, ariaLabel }: Segmen
               <motion.span
                 layoutId={`${groupId}-active`}
                 transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                className="absolute inset-0 rounded-full bg-primary shadow-sm"
+                className="absolute inset-0 rounded-full bg-primary shadow-e-1"
                 aria-hidden
               />
             ) : null}

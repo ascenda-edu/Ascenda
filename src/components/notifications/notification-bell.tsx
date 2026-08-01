@@ -25,10 +25,10 @@ const isSafeHref = (href?: string | null): href is string =>
   !!href && href.startsWith('/') && !href.startsWith('//');
 
 const KIND_TONE: Record<string, string> = {
-  help_request: 'bg-violet-500/10 text-violet-700 dark:text-violet-300',
-  help_accepted: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-  deck_assignment: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
-  default: 'bg-sky-500/10 text-sky-700 dark:text-sky-300'
+  help_request: 'bg-feature-subtle text-feature',
+  help_accepted: 'bg-success-subtle text-success',
+  deck_assignment: 'bg-warning-subtle text-warning',
+  default: 'bg-info-subtle text-info'
 };
 
 const formatRelative = (iso: string): string => {
@@ -112,11 +112,11 @@ export const NotificationBell = ({ className }: { className?: string }) => {
         aria-expanded={open}
         aria-controls={open ? 'notification-bell-panel' : undefined}
         title="Notifications"
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Bell className="h-4 w-4" aria-hidden />
         {unreadCount > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[0.625rem] font-semibold text-white shadow-sm">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-danger-fill px-1 text-label font-semibold text-danger-foreground shadow-e-1">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         ) : null}
@@ -132,12 +132,12 @@ export const NotificationBell = ({ className }: { className?: string }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.14 }}
-            className="absolute right-0 top-[calc(100%+8px)] z-[60] w-80 overflow-hidden rounded-2xl border border-border bg-card text-foreground shadow-xl backdrop-blur-lg sm:w-96"
+            className="absolute right-0 top-[calc(100%+8px)] z-panel w-80 overflow-hidden rounded-2xl border border-border bg-card text-foreground shadow-e-4 backdrop-blur-lg sm:w-96"
           >
             <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
               <div>
                 <p className="text-sm font-semibold">Notifications</p>
-                <p className="text-[0.6875rem] text-muted-foreground">
+                <p className="text-label text-muted-foreground">
                   {unreadCount === 0 ? 'All caught up' : `${unreadCount} unread`}
                 </p>
               </div>
@@ -145,7 +145,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
                 <button
                   type="button"
                   onClick={markAllRead}
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[0.6875rem] font-medium text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-label font-medium text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
                 >
                   <CheckCheck className="h-3 w-3" />
                   Mark all read
@@ -187,7 +187,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
                             </p>
                             <span
                               className={cn(
-                                'shrink-0 rounded-full px-2 py-0.5 text-[0.625rem] font-medium uppercase tracking-[0.15em]',
+                                'shrink-0 rounded-full px-2 py-0.5 text-label font-medium uppercase tracking-[0.15em]',
                                 tone
                               )}
                             >
@@ -197,7 +197,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
                           {notif.body ? (
                             <p className="mt-0.5 truncate text-xs text-muted-foreground">{notif.body}</p>
                           ) : null}
-                          <p className="mt-1 text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground/70">
+                          <p className="mt-1 text-label uppercase tracking-[0.2em] text-muted-foreground/70">
                             {formatRelative(notif.created_at)}
                           </p>
                         </div>

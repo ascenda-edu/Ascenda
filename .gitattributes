@@ -1,2 +1,1 @@
-supabase/imports/programs.csv filter=lfs diff=lfs merge=lfs -text
 supabase/imports/*.csv filter=lfs diff=lfs merge=lfs -text

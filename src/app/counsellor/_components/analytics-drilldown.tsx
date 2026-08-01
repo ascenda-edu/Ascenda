@@ -124,8 +124,10 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
 
   return (
     <AnimatePresence>
+      {/* z-modal is the app's modal layer (see ui/dialog.tsx). At z-50 this tied with
+          the navbar and lost to the chat panel (z-panel), which painted over it. */}
       {data && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 sm:p-6">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -148,7 +150,7 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
             transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-            className="relative z-10 flex max-h-[min(85vh,720px)] w-full max-w-2xl flex-col overflow-hidden rounded-[24px] border border-border bg-background shadow-[0_24px_80px_rgba(0,0,0,0.15)] outline-none"
+            className="relative z-raised flex max-h-[min(85vh,720px)] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-border bg-background shadow-e-4 outline-none"
           >
             {/* ── Accent bar ──────────────────────────────────────────────────── */}
             <div className={cn('h-1 w-full', data.accentColor)} />
@@ -194,8 +196,8 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search students..."
-                    className="w-full rounded-xl border border-border bg-muted/30 py-2.5 pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                    placeholder="Search students…"
+                    className="form-input rounded-xl py-2.5 pl-9 pr-4"
                   />
                   {search && (
                     <button
@@ -211,7 +213,7 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
 
             {/* ── Count indicator ─────────────────────────────────────────────── */}
             <div className="mx-6 mb-2 flex items-center justify-between">
-              <p className="text-[0.6875rem] font-medium uppercase tracking-widest text-muted-foreground">
+              <p className="eyebrow">
                 {filtered.length === data.items.length
                   ? `${data.items.length} student${data.items.length !== 1 ? 's' : ''}`
                   : `${filtered.length} of ${data.items.length} students`
@@ -248,7 +250,7 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
                           className={cn(
                             'flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition',
                             isExpanded
-                              ? 'bg-muted/60 shadow-sm'
+                              ? 'bg-muted/60 shadow-e-1'
                               : 'hover:bg-muted/40'
                           )}
                         >
@@ -265,7 +267,7 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
                               </span>
                               {badge && (
                                 <span className={cn(
-                                  'shrink-0 rounded-full px-2 py-0.5 text-[0.625rem] font-bold',
+                                  'shrink-0 rounded-full px-2 py-0.5 text-label font-bold',
                                   badge.color
                                 )}>
                                   {badge.label}
@@ -337,7 +339,7 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
                                 {/* View profile link */}
                                 <Link
                                   href={`/counsellor/students/${student.id}`}
-                                  className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-medium text-primary-foreground transition hover:-translate-y-0.5 hover:shadow-md"
+                                  className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-medium text-primary-foreground hover-lift"
                                 >
                                   View full profile
                                   <ArrowUpRight className="h-3 w-3" />

@@ -30,20 +30,20 @@ export const StepRoadmap = ({ steps, stepCompletion, initialStep }: StepRoadmapP
             <Link
               href={'/profile/wizard?step=' + step.key}
               className={cn(
-                'flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all hover:-translate-y-0.5',
+                'flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-transform hover:-translate-y-0.5',
                 isCurrent
-                  ? 'bg-primary text-primary-foreground shadow-md'
+                  ? 'bg-primary text-primary-foreground shadow-e-2'
                   : isComplete
-                    ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-200/50'
+                    ? 'bg-success-subtle text-success border border-success/25'
                     : 'bg-muted/60 text-muted-foreground border border-border/50'
               )}
             >
               <span className={cn(
-                'flex h-5 w-5 items-center justify-center rounded-full text-[0.625rem] font-bold',
+                'flex h-5 w-5 items-center justify-center rounded-full text-label font-bold',
                 isCurrent
                   ? 'bg-primary-foreground/20 text-primary-foreground'
                   : isComplete
-                    ? 'bg-emerald-500/20 text-emerald-600'
+                    ? 'bg-success-fill text-success-foreground'
                     : 'bg-border text-muted-foreground'
               )}>
                 {isComplete ? '\u2713' : idx + 1}

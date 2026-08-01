@@ -2,8 +2,17 @@
 
 import { useState, useTransition } from 'react';
 import Papa from 'papaparse';
+import { Upload } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { trackEvent } from '@/lib/analytics';
 import { useToast } from '@/components/ui/toast';
 
@@ -15,6 +24,7 @@ export const ImportPanel = () => {
   const [status, setStatus] = useState<string>('Awaiting upload');
   const [rowCount, setRowCount] = useState<number>(0);
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
+  const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isParsing, startParsing] = useTransition();
   const [isSyncing, setIsSyncing] = useState(false);
@@ -24,6 +34,7 @@ export const ImportPanel = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setFileName(file.name);
     setError(null);
     setStatus('Parsing…');
     startParsing(() => {
@@ -78,39 +89,69 @@ export const ImportPanel = () => {
   };
 
   return (
-    <div className="space-y-4 rounded-[28px] border border-border bg-card p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-colors">
+    // `surface-card` instead of a hand-rolled card: this one carried
+    // `shadow-e-3`, the popover step, on a static page panel.
+    <div className="surface-card space-y-4">
       <div className="space-y-2">
-        <h2 className="text-2xl font-semibold">Import catalog data</h2>
+        <h2 className="font-heading text-xl font-semibold tracking-tight text-foreground">Import catalog data</h2>
         <p className="text-sm text-muted-foreground">
           Upload CSV exports to refresh the universities, programs, requirements, or deadlines catalog.
         </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="template">Dataset</Label>
-        <select
-          id="template"
-          className="form-input w-full text-sm text-foreground"
+        {/* `name` belongs on the Root — Radix mirrors the value into a hidden
+            native select so form submission keeps working. */}
+        <Select
+          name="template"
           value={template}
           disabled={isParsing || isSyncing}
-          onChange={(event) => setTemplate(event.target.value as Template)}
+          onValueChange={(value) => setTemplate(value as Template)}
         >
-          {templates.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id="template">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {templates.map((item) => (
+              <SelectItem key={item} value={item}>
+                {item}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="csv-upload">Upload CSV</Label>
+        {/* The input itself is `sr-only`, not `hidden`: it stays focusable, and
+            the label picks the ring up through `peer-focus-visible` so keyboard
+            users see the same affordance mouse users do. The dashed dropzone
+            matches components/applications/document-uploader.tsx. */}
         <input
           id="csv-upload"
           type="file"
           accept=".csv"
           disabled={isParsing || isSyncing}
           onChange={handleFile}
-          className="text-sm text-muted-foreground file:mr-4 file:rounded-2xl file:border file:border-border file:bg-muted/60 file:px-4 file:py-2 file:text-foreground"
+          className="peer sr-only"
         />
+        <label
+          htmlFor="csv-upload"
+          className={cn(
+            'flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-muted/60 p-6 text-center transition-colors',
+            'peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background',
+            isParsing || isSyncing
+              ? 'cursor-not-allowed opacity-50'
+              : 'cursor-pointer hover:border-muted-foreground hover:bg-card'
+          )}
+        >
+          <Upload className="h-5 w-5 text-muted-foreground" aria-hidden />
+          <span className="text-sm font-semibold text-foreground">
+            {fileName ?? 'Choose a CSV file'}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            One row per {template} record, with a header row.
+          </span>
+        </label>
       </div>
       <p className="text-sm text-muted-foreground" aria-busy={isParsing || isSyncing}>
         Status: {status}
@@ -123,7 +164,7 @@ export const ImportPanel = () => {
         </div>
       )}
       {error ? (
-        <p className="text-xs text-red-500" role="alert">
+        <p className="text-xs text-destructive" role="alert">
           {error}
         </p>
       ) : null}

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { FileText, FileEdit, Folder, type LucideIcon } from 'lucide-react';
 import { DocumentUploader } from './document-uploader';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export interface DocumentManagerApp {
   id: string;
@@ -49,7 +50,7 @@ export function DocumentsManager({ applications, documents }: DocumentsManagerPr
         <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-5 py-4 text-sm text-muted-foreground">
           Add an application first — documents attach to a specific application so your counsellor can see them in
           context. Start one from your{' '}
-          <a href="/university-search/shortlist" className="font-semibold text-primary hover:underline">
+          <a href="/university-search/shortlist" className="font-semibold text-primary-ink hover:underline">
             shortlist
           </a>
           .
@@ -59,25 +60,25 @@ export function DocumentsManager({ applications, documents }: DocumentsManagerPr
           <label htmlFor="doc-application" className="text-xs font-semibold text-foreground">
             Attach to application
           </label>
-          <select
-            id="doc-application"
-            value={selected}
-            onChange={(event) => setSelected(event.target.value)}
-            className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:max-w-md"
-          >
-            {applications.map((app) => (
-              <option key={app.id} value={app.id}>
-                {app.label}
-              </option>
-            ))}
-          </select>
+          <Select value={selected || ''} onValueChange={setSelected}>
+            <SelectTrigger id="doc-application" className="sm:max-w-md">
+              <SelectValue placeholder="Choose an application" />
+            </SelectTrigger>
+            <SelectContent>
+              {applications.map((app) => (
+                <SelectItem key={app.id} value={app.id}>
+                  {app.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <DocumentUploader applicationId={selected} onUploaded={() => router.refresh()} />
         </div>
       )}
 
       {documents.length === 0 ? (
         <EmptyState
-          icon={FileText}
+          icon={<FileText />}
           title="No documents yet"
           description="Upload a transcript, essay, or certificate above and it'll show up here."
         />
@@ -90,7 +91,7 @@ export function DocumentsManager({ applications, documents }: DocumentsManagerPr
               key={doc.id}
               className="flex items-center gap-4 rounded-2xl border border-border/60 bg-background/60 px-5 py-4"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary" aria-hidden>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary-ink" aria-hidden>
                 <DocIcon className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
@@ -107,7 +108,7 @@ export function DocumentsManager({ applications, documents }: DocumentsManagerPr
                     href={doc.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground transition hover:text-foreground"
+                    className="eyebrow transition hover:text-foreground"
                   >
                     View
                   </a>

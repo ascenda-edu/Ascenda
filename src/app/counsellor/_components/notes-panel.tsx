@@ -4,31 +4,34 @@ import { useState } from 'react';
 import { MessageSquare, Flag, RefreshCw, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CounsellorNote } from '@/lib/counsellor/types';
+import { NOTE_VISUAL } from '@/lib/theme/categories';
 
 interface NotesPanelProps {
   notes: CounsellorNote[];
   studentId: string;
 }
 
+// Colours from NOTE_VISUAL (the note tone system of record); the icons stay local
+// because this composer uses RefreshCw for updates rather than the shared arrow.
 const TYPE_CONFIG = {
   session: {
     icon: MessageSquare,
-    color: 'text-violet-600',
-    bg: 'bg-violet-500/10',
+    color: NOTE_VISUAL.session.text,
+    bg: NOTE_VISUAL.session.bg,
     label: 'Session note',
     helper: 'Notes from a 1:1 meeting (what was discussed, next steps).'
   },
   flag: {
     icon: Flag,
-    color: 'text-amber-600',
-    bg: 'bg-amber-500/10',
+    color: NOTE_VISUAL.flag.text,
+    bg: NOTE_VISUAL.flag.bg,
     label: 'Flag',
     helper: 'Mark a concern that needs follow-up (missed deadlines, at-risk signals).'
   },
   update: {
     icon: RefreshCw,
-    color: 'text-sky-600',
-    bg: 'bg-sky-500/10',
+    color: NOTE_VISUAL.update.text,
+    bg: NOTE_VISUAL.update.bg,
     label: 'Update',
     helper: 'Quick FYI — status change, new doc, parent contact, etc.'
   }
@@ -76,14 +79,14 @@ export const NotesPanel = ({ notes: seedNotes, studentId }: NotesPanelProps) => 
   return (
     <div className="space-y-6">
       {/* New note composer */}
-      <div className="surface-card surface-card--static space-y-3">
+      <div className="surface-card space-y-3">
         <div>
           <p className="text-sm font-semibold text-foreground">Add note</p>
           <p className="text-xs text-muted-foreground">Pick a type so this note shows up in the right place later.</p>
         </div>
 
         {/* Type selector */}
-        <div className="flex items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-sm">
+        <div className="flex items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-e-1">
           {(['session', 'flag', 'update'] as const).map((type) => {
             const cfg = TYPE_CONFIG[type];
             return (
@@ -94,7 +97,7 @@ export const NotesPanel = ({ notes: seedNotes, studentId }: NotesPanelProps) => 
                 className={cn(
                   'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition',
                   noteType === type
-                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    ? 'bg-primary text-primary-foreground shadow-e-1'
                     : 'text-muted-foreground hover:text-foreground'
                 )}
               >
@@ -111,14 +114,14 @@ export const NotesPanel = ({ notes: seedNotes, studentId }: NotesPanelProps) => 
           onChange={(e) => setNewNote(e.target.value)}
           placeholder="Write your note here…"
           rows={3}
-          className="w-full resize-none rounded-2xl border border-border bg-background p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          className="form-input resize-none p-3"
         />
 
         <div className="flex justify-end">
           <button
             onClick={addNote}
             disabled={!newNote.trim() || saving}
-            className="flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-e-1 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <PlusCircle className="h-4 w-4" />
             {saving ? 'Saving…' : 'Save note'}
@@ -138,7 +141,7 @@ export const NotesPanel = ({ notes: seedNotes, studentId }: NotesPanelProps) => 
               </div>
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className={cn('rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold', cfg.bg, cfg.color)}>
+                  <span className={cn('rounded-full border px-2 py-0.5 text-label font-semibold', cfg.bg, cfg.color)}>
                     {cfg.label}
                   </span>
                   <span className="text-xs text-muted-foreground">{formatDate(note.date)}</span>
@@ -149,7 +152,7 @@ export const NotesPanel = ({ notes: seedNotes, studentId }: NotesPanelProps) => 
           );
         })}
         {notes.length === 0 && (
-          <div className="rounded-[28px] border border-dashed border-border bg-muted/40 p-8 text-center">
+          <div className="rounded-4xl border border-dashed border-border bg-muted/40 p-8 text-center">
             <p className="text-sm text-muted-foreground">No notes yet. Add your first note above.</p>
           </div>
         )}

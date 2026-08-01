@@ -33,16 +33,16 @@ export interface UniversityCardProps {
 }
 
 const RING_STROKE: Record<string, string> = {
-    strong: 'stroke-emerald-500',
-    solid: 'stroke-amber-500',
-    risk: 'stroke-orange-500',
+    strong: 'stroke-success',
+    solid: 'stroke-warning',
+    risk: 'stroke-danger',
     unknown: 'stroke-muted-foreground/40',
 };
 
 const RING_TEXT: Record<string, string> = {
-    strong: 'text-emerald-700 dark:text-emerald-300',
-    solid: 'text-amber-700 dark:text-amber-300',
-    risk: 'text-orange-700 dark:text-orange-300',
+    strong: 'text-success',
+    solid: 'text-warning',
+    risk: 'text-danger',
     unknown: 'text-muted-foreground',
 };
 
@@ -73,7 +73,7 @@ function FitRing({ value, tone, size = 40 }: { value: number; tone: string; size
             </svg>
             <span
                 className={cn(
-                    'absolute inset-0 flex items-center justify-center text-[10px] font-semibold tabular-nums',
+                    'absolute inset-0 flex items-center justify-center text-label font-semibold tabular-nums',
                     RING_TEXT[tone] ?? RING_TEXT.unknown
                 )}
             >
@@ -87,11 +87,11 @@ function FitRing({ value, tone, size = 40 }: { value: number; tone: string; size
 // bare text stack. Tone is a stable hash of the name; hues from the app's
 // status palette.
 const MONOGRAM_TONES = [
-    'bg-sky-500/10 text-sky-700 dark:text-sky-300',
-    'bg-violet-500/10 text-violet-700 dark:text-violet-300',
-    'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-    'bg-amber-500/10 text-amber-700 dark:text-amber-300',
-    'bg-rose-500/10 text-rose-700 dark:text-rose-300',
+    'bg-info-subtle text-info',
+    'bg-feature-subtle text-feature',
+    'bg-success-subtle text-success',
+    'bg-warning-subtle text-warning',
+    'bg-danger-subtle text-danger',
 ];
 
 const MONOGRAM_STOP_WORDS = new Set(['of', 'the', 'and', 'for', 'at', 'de', 'la']);
@@ -114,9 +114,7 @@ const monogramToneFor = (name: string): string => {
 function Stat({ label, value }: { label: string; value?: string | null }) {
     return (
         <div className="min-w-0">
-            <dt className="text-[0.625rem] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                {label}
-            </dt>
+            <dt className="eyebrow">{label}</dt>
             <dd
                 className="mt-0.5 truncate text-xs font-semibold tabular-nums text-foreground"
                 title={value ?? undefined}
@@ -166,7 +164,7 @@ export function UniversityCard({
             <div
                 className={cn(
                     sizeClass,
-                    'relative shrink-0 overflow-hidden rounded-xl border border-border bg-white shadow-sm dark:border-white/10'
+                    'relative shrink-0 overflow-hidden rounded-xl border border-border bg-white shadow-e-1 dark:border-white/10'
                 )}
             >
                 <Image src={logoUrl} alt={`${name} logo`} fill className="object-contain p-1" sizes="44px" />
@@ -197,7 +195,7 @@ export function UniversityCard({
             fitScore={fitScore ?? null}
             labelVariant={trackingLabelVariant}
             variant="ghost"
-            className="h-8 w-8 text-muted-foreground shadow-none hover:translate-y-0 hover:text-primary hover:shadow-none"
+            className="h-8 w-8 text-muted-foreground shadow-none hover:translate-y-0 hover:text-primary-ink hover:shadow-none"
             iconOnly
         />
     ) : null;
@@ -234,7 +232,7 @@ export function UniversityCard({
 
     if (isCompact) {
         return (
-            <article className="group relative flex h-full items-center gap-3.5 rounded-2xl border border-border bg-card p-4 shadow-sm transition-[box-shadow,border-color] duration-200 focus-within:ring-2 focus-within:ring-ring hover:border-primary/30 hover:shadow-md dark:border-white/10">
+            <article className="group relative flex h-full items-center gap-3.5 rounded-2xl border border-border bg-card p-4 shadow-e-1 transition-[box-shadow,border-color] duration-200 focus-within:ring-2 focus-within:ring-ring hover:border-primary/30 hover:shadow-e-2 dark:border-white/10">
                 {logoTile('sm')}
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-3">
@@ -274,7 +272,7 @@ export function UniversityCard({
     const hasStats = Boolean(tuitionLabel || durationLabel || levelLabel);
 
     return (
-        <article className="group relative flex h-full flex-col rounded-2xl border border-border bg-card p-5 shadow-sm transition-[box-shadow,border-color] duration-200 focus-within:ring-2 focus-within:ring-ring hover:border-primary/30 hover:shadow-md dark:border-white/10">
+        <article className="group relative flex h-full flex-col rounded-2xl border border-border bg-card p-5 shadow-e-1 transition-[box-shadow,border-color] duration-200 focus-within:ring-2 focus-within:ring-ring hover:border-primary/30 hover:shadow-e-2 dark:border-white/10">
             {/* Visual anchors: logo/monogram left, fit ring + bookmark right */}
             <div className="flex items-start justify-between gap-3">
                 {logoTile('default')}
@@ -304,13 +302,13 @@ export function UniversityCard({
                     {highlights.slice(0, 3).map((highlight) => (
                         <span
                             key={highlight}
-                            className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-[0.6875rem] font-medium text-foreground/80 dark:bg-muted/30"
+                            className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-label font-medium text-foreground/80 dark:bg-muted/30"
                         >
                             {highlight}
                         </span>
                     ))}
                     {highlights.length > 3 && (
-                        <span className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-[0.6875rem] font-medium text-muted-foreground dark:bg-muted/30">
+                        <span className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-label font-medium text-muted-foreground dark:bg-muted/30">
                             +{highlights.length - 3}
                         </span>
                     )}
@@ -323,19 +321,13 @@ export function UniversityCard({
                     {reasons.map((reason, idx) => {
                         const isBlocking = reason.includes('below requirement') || reason.includes('missing');
                         return (
-                            <li key={idx} className="flex items-start gap-1.5 text-[0.6875rem] leading-snug">
+                            <li key={idx} className="flex items-start gap-1.5 text-label leading-snug">
                                 {isBlocking ? (
-                                    <AlertTriangle className="mt-px h-3 w-3 shrink-0 text-rose-500" aria-hidden />
+                                    <AlertTriangle className="mt-px h-3 w-3 shrink-0 text-danger" aria-hidden />
                                 ) : (
-                                    <CheckCircle2 className="mt-px h-3 w-3 shrink-0 text-emerald-500" aria-hidden />
+                                    <CheckCircle2 className="mt-px h-3 w-3 shrink-0 text-success" aria-hidden />
                                 )}
-                                <span
-                                    className={
-                                        isBlocking
-                                            ? 'text-rose-700 dark:text-rose-300'
-                                            : 'text-emerald-700 dark:text-emerald-300'
-                                    }
-                                >
+                                <span className={isBlocking ? 'text-danger' : 'text-success'}>
                                     {reason}
                                 </span>
                             </li>

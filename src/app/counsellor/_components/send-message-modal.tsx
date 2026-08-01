@@ -163,14 +163,14 @@ export function SendMessageModal({
           type="button"
           onClick={() => handleOpenChange(false)}
           aria-label="Close"
-          className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          className="absolute right-4 top-4 z-raised flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
         >
           <X className="h-4 w-4" />
         </button>
 
         {/* Header */}
         <div className="border-b border-border px-7 py-5">
-          <div className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-primary">
+          <div className="eyebrow-accent flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
             {REASON_LABEL[reason]}
           </div>
@@ -193,7 +193,7 @@ export function SendMessageModal({
               type="text"
               value={subject}
               onChange={(event) => setSubject(event.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="form-input rounded-xl py-2.5"
             />
           </div>
 
@@ -202,7 +202,7 @@ export function SendMessageModal({
               <label htmlFor="sm-body" className="text-xs font-semibold text-foreground">
                 Message
               </label>
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-primary">
+              <span className="eyebrow-accent inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5">
                 <Sparkles className="h-3 w-3" aria-hidden />
                 AI draft
               </span>
@@ -212,9 +212,9 @@ export function SendMessageModal({
               value={body}
               onChange={(event) => setBody(event.target.value)}
               rows={10}
-              className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm leading-relaxed focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="form-input resize-y rounded-xl leading-relaxed"
             />
-            <p className="text-[0.6875rem] text-muted-foreground">
+            <p className="text-label text-muted-foreground">
               Edit anything before sending. {student.firstName} sees this verbatim.
             </p>
           </div>
@@ -233,8 +233,8 @@ export function SendMessageModal({
 
         {/* Discard confirmation — themed in-modal, replaces window.confirm */}
         {showDiscardConfirm ? (
-          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-[inherit] bg-background/80 p-6 backdrop-blur-sm">
-            <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-xl">
+          <div className="absolute inset-0 z-sticky flex items-center justify-center rounded-[inherit] bg-background/80 p-6 backdrop-blur-sm">
+            <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-e-4">
               <p className="text-sm font-semibold text-foreground">Discard this message?</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Your edits to this draft will be lost.

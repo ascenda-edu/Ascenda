@@ -374,7 +374,7 @@ export function IntelligentSearchBar({
             <div className={cn(
                 "relative flex w-full items-center gap-3",
                 variant === 'default'
-                    ? "rounded-full border border-border bg-background px-6 py-3 shadow-[0_18px_35px_rgba(15,23,42,0.08)] focus-within:border-foreground/60"
+                    ? "rounded-full border border-border bg-background px-6 py-3 shadow-e-3 focus-within:border-foreground/60"
                     : "relative"
             )}>
                 <Search className={cn(
@@ -423,7 +423,7 @@ export function IntelligentSearchBar({
                     role="listbox"
                     aria-label="Search suggestions"
                     className={cn(
-                        "absolute left-0 right-0 z-50 mt-2 overflow-hidden rounded-2xl border border-border bg-card shadow-lg dark:border-white/10",
+                        "absolute left-0 right-0 z-panel mt-2 overflow-hidden rounded-2xl border border-border bg-card shadow-e-3 dark:border-white/10",
                         variant === 'default' ? "top-full" : "top-full"
                     )}
                 >
@@ -436,7 +436,7 @@ export function IntelligentSearchBar({
                             <div className="max-h-[360px] divide-y divide-border overflow-y-auto">
                                 {suggestions.programs.length > 0 && (
                                     <div role="group" aria-label="Programs">
-                                        <p className="px-3 pt-2 text-[0.625rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Programs</p>
+                                        <p className="eyebrow px-3 pt-2">Programs</p>
                                         <ul className="p-1" role="presentation">
                                             {suggestions.programs.map((item, index) => (
                                                 <li key={`program-${item.id}`} role="presentation">
@@ -466,7 +466,7 @@ export function IntelligentSearchBar({
                                 )}
                                 {suggestions.universities.length > 0 && (
                                     <div role="group" aria-label="Universities">
-                                        <p className="px-3 pt-2 text-[0.625rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Universities</p>
+                                        <p className="eyebrow px-3 pt-2">Universities</p>
                                         <ul className="p-1" role="presentation">
                                             {suggestions.universities.map((item, index) => {
                                                 const flatIndex = suggestions.programs.length + index;
@@ -504,7 +504,7 @@ export function IntelligentSearchBar({
                                 <div className="space-y-3">
                                     {recentSearches.length > 0 && (
                                         <div role="group" aria-label="Recent searches">
-                                            <p className="px-1 text-[0.625rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Recent searches</p>
+                                            <p className="eyebrow px-1">Recent searches</p>
                                             <ul className="mt-1 grid gap-1 md:grid-cols-2" role="presentation">
                                                 {recentSearches.map((item, index) => (
                                                     <li key={`recent-${item.id}`} role="presentation">
@@ -528,7 +528,7 @@ export function IntelligentSearchBar({
                                                                 )}
                                                                 {item.location && <span className="text-xs text-muted-foreground">{item.location}</span>}
                                                             </div>
-                                                            <span className="rounded-full bg-muted px-2 py-0.5 text-[0.625rem] text-muted-foreground">Recent</span>
+                                                            <span className="rounded-full bg-muted px-2 py-0.5 text-label text-muted-foreground">Recent</span>
                                                         </button>
                                                     </li>
                                                 ))}
@@ -537,7 +537,7 @@ export function IntelligentSearchBar({
                                     )}
                                     {(trendingSuggestions.programs.length > 0 || trendingSuggestions.universities.length > 0) && (
                                         <div role="group" aria-label="Trending">
-                                            <p className="px-1 text-[0.625rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Trending</p>
+                                            <p className="eyebrow px-1">Trending</p>
                                             <div className="grid gap-2 md:grid-cols-2" role="presentation">
                                                 {trendingSuggestions.programs.map((item, index) => {
                                                     const flatIndex = recentSearches.length + index;
@@ -560,8 +560,8 @@ export function IntelligentSearchBar({
                                                             {item.university && (
                                                                 <span className="text-xs text-muted-foreground">{item.university}</span>
                                                             )}
-                                                            {item.location && <span className="text-[0.6875rem] text-muted-foreground">{item.location}</span>}
-                                                            <span className="mt-1 inline-flex w-fit rounded-full bg-background px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">Program</span>
+                                                            {item.location && <span className="text-label text-muted-foreground">{item.location}</span>}
+                                                            <span className="eyebrow mt-1 inline-flex w-fit rounded-full bg-background px-2 py-0.5">Program</span>
                                                         </button>
                                                     );
                                                 })}
@@ -583,8 +583,8 @@ export function IntelligentSearchBar({
                                                             )}
                                                         >
                                                             <span className="font-semibold text-foreground">{item.name}</span>
-                                                            {item.location && <span className="text-[0.6875rem] text-muted-foreground">{item.location}</span>}
-                                                            <span className="mt-1 inline-flex w-fit rounded-full bg-background px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">University</span>
+                                                            {item.location && <span className="text-label text-muted-foreground">{item.location}</span>}
+                                                            <span className="eyebrow mt-1 inline-flex w-fit rounded-full bg-background px-2 py-0.5">University</span>
                                                         </button>
                                                     );
                                                 })}

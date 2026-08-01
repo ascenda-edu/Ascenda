@@ -55,11 +55,14 @@ export const useToast = () => {
   return context;
 };
 
+// Tone tokens, not palette literals. `danger` (not `destructive`) is the status
+// tone: `destructive` is reserved for destructive ACTIONS, and an error toast is
+// feedback. Both tones are AA-verified in each theme, so no `dark:` variants.
 const toneClass = (variant?: ToastVariant) =>
   variant === 'success'
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'
+    ? 'border-success/25 bg-success-subtle text-success'
     : variant === 'error'
-      ? 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200'
+      ? 'border-danger/25 bg-danger-subtle text-danger'
       : 'border-border bg-card text-foreground';
 
 const resolveDuration = (toast: Toast) => {
@@ -83,7 +86,7 @@ const ToastCard = ({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
   return (
     <div
       className={cn(
-        'pointer-events-auto flex min-w-[240px] max-w-sm items-start gap-3 rounded-2xl border p-4 shadow-xl',
+        'pointer-events-auto flex min-w-[240px] max-w-sm items-start gap-3 rounded-2xl border p-4 shadow-e-4',
         toneClass(toast.variant)
       )}
       role={toast.variant === 'error' ? 'alert' : 'status'}
@@ -105,7 +108,10 @@ const ToastCard = ({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
 
 const ToastViewport = ({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: string) => void }) => {
   return (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col gap-3 sm:bottom-6 sm:right-6">
+    // z-toast (300), not z-50: at z-50 the viewport sat BEHIND the help thread
+    // drawer (z-modal) that raises most of these toasts, so success/error
+    // feedback was invisible exactly when it mattered.
+    <div className="pointer-events-none fixed bottom-4 right-4 z-toast flex flex-col gap-3 sm:bottom-6 sm:right-6">
       {toasts.map((toast) => (
         <ToastCard key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}

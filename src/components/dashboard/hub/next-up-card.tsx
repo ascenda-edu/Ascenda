@@ -15,40 +15,43 @@ export interface HubFocusItem {
   tone: HubFocusTone;
 }
 
+// Legacy tone names kept as the public HubFocusTone union (the dashboard passes
+// them by name); each maps onto the semantic tone token, so no `dark:` variants
+// are needed — the token flips itself. See lib/theme/categories.ts.
 const TONE = {
   rose: {
-    chip: 'bg-rose-500/10 text-rose-600 dark:text-rose-300',
-    heroBg: 'border-rose-300/50 bg-rose-500/[0.04]',
-    accent: 'border-l-rose-400',
-    dot: 'bg-rose-500'
+    chip: 'bg-danger-subtle text-danger',
+    heroBg: 'border-danger/25 bg-danger/3',
+    accent: 'border-l-danger',
+    dot: 'bg-danger-fill'
   },
   amber: {
-    chip: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
-    heroBg: 'border-amber-300/50 bg-amber-500/[0.04]',
-    accent: 'border-l-amber-400',
-    dot: 'bg-amber-500'
+    chip: 'bg-warning-subtle text-warning',
+    heroBg: 'border-warning/25 bg-warning/3',
+    accent: 'border-l-warning',
+    dot: 'bg-warning-fill'
   },
   emerald: {
-    chip: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-    heroBg: 'border-emerald-300/50 bg-emerald-500/[0.04]',
-    accent: 'border-l-emerald-400',
-    dot: 'bg-emerald-500'
+    chip: 'bg-success-subtle text-success',
+    heroBg: 'border-success/25 bg-success/3',
+    accent: 'border-l-success',
+    dot: 'bg-success-fill'
   },
   sky: {
-    chip: 'bg-sky-500/10 text-sky-700 dark:text-sky-300',
-    heroBg: 'border-sky-300/50 bg-sky-500/[0.04]',
-    accent: 'border-l-sky-400',
-    dot: 'bg-sky-500'
+    chip: 'bg-info-subtle text-info',
+    heroBg: 'border-info/25 bg-info/3',
+    accent: 'border-l-info',
+    dot: 'bg-info-fill'
   },
   violet: {
-    chip: 'bg-violet-500/10 text-violet-700 dark:text-violet-300',
-    heroBg: 'border-violet-300/50 bg-violet-500/[0.04]',
-    accent: 'border-l-violet-400',
-    dot: 'bg-violet-500'
+    chip: 'bg-feature-subtle text-feature',
+    heroBg: 'border-feature/25 bg-feature/3',
+    accent: 'border-l-feature',
+    dot: 'bg-feature-fill'
   },
   primary: {
-    chip: 'bg-primary/10 text-primary',
-    heroBg: 'border-primary/30 bg-primary/[0.04]',
+    chip: 'bg-primary/10 text-primary-ink',
+    heroBg: 'border-primary/30 bg-primary/3',
     accent: 'border-l-primary/60',
     dot: 'bg-primary'
   }
@@ -69,7 +72,7 @@ export function NextUpCard({ items }: { items: HubFocusItem[] }) {
           <Link
             href={hero.href}
             className={cn(
-              'group flex items-center gap-4 rounded-2xl border border-l-4 p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-5',
+              'hover-lift group flex items-center gap-4 rounded-2xl border border-l-4 p-4 shadow-e-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-5',
               TONE[hero.tone].heroBg,
               TONE[hero.tone].accent,
               // A lone action fills the cell instead of leaving dead space.
@@ -79,7 +82,7 @@ export function NextUpCard({ items }: { items: HubFocusItem[] }) {
             <div className="min-w-0 flex-1">
               <span
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold',
+                  'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-label font-semibold',
                   TONE[hero.tone].chip
                 )}
               >
@@ -90,7 +93,7 @@ export function NextUpCard({ items }: { items: HubFocusItem[] }) {
               <p className="mt-1 text-sm text-muted-foreground">{hero.detail}</p>
             </div>
             <span
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-background text-foreground shadow-sm transition-transform group-hover:translate-x-1"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-background text-foreground shadow-e-1 transition-transform group-hover:translate-x-1"
               aria-hidden
             >
               <ArrowRight className="h-4 w-4" />
@@ -104,14 +107,14 @@ export function NextUpCard({ items }: { items: HubFocusItem[] }) {
               <li key={item.id}>
                 <Link
                   href={item.href}
-                  className="group flex items-center gap-3 rounded-xl border border-border/70 bg-background/60 p-3 transition-all hover:-translate-y-px hover:border-primary/20 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="hover-lift group flex items-center gap-3 rounded-xl border border-border/70 bg-background/60 p-3 hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-[0.6875rem] font-bold text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-label font-bold text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary-ink">
                     {index + 2}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-x-2">
-                      <span className={cn('rounded-full px-2 py-px text-[0.625rem] font-semibold', TONE[item.tone].chip)}>
+                      <span className={cn('rounded-full px-2 py-px text-label font-semibold', TONE[item.tone].chip)}>
                         {item.label}
                       </span>
                       <p className="truncate text-sm font-semibold text-foreground">{item.title}</p>
@@ -119,7 +122,7 @@ export function NextUpCard({ items }: { items: HubFocusItem[] }) {
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">{item.detail}</p>
                   </div>
                   <ArrowRight
-                    className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30 transition-all group-hover:translate-x-0.5 group-hover:text-primary/60"
+                    className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-primary-ink/60"
                     aria-hidden
                   />
                 </Link>

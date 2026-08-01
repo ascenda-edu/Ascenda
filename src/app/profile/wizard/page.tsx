@@ -65,11 +65,11 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-16 pt-20 sm:px-6 lg:px-10">
-        <div className="flex flex-wrap items-center justify-between gap-4 relative z-[100] pointer-events-auto">
+        <div className="flex flex-wrap items-center justify-between gap-4 relative z-overlay pointer-events-auto">
           <div className="flex items-center gap-2">
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-200 cursor-pointer"
             >
               <Home className="w-4 h-4" />
               Dashboard
@@ -77,13 +77,13 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
             <div className="w-px h-4 bg-border/50" />
             <Link
               href="/profile"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-200 cursor-pointer"
             >
               <User className="w-4 h-4" />
               Back to profile
             </Link>
           </div>
-          <Button asChild size="sm" variant="secondary" className="gap-2 rounded-xl shadow-sm">
+          <Button asChild size="sm" variant="secondary" className="gap-2 rounded-xl shadow-e-1">
             <a href="/api/profile/export" download>
               <Download className="w-4 h-4" />
               Download CSV
@@ -103,7 +103,7 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
           ]}
         />
 
-        <div className="surface-card surface-card--static rounded-[28px] p-6">
+        <div className="surface-card rounded-4xl p-6">
           <StudentIntakeForm initialStep={initialStep} initialPayload={initialPayload} />
         </div>
       </div>

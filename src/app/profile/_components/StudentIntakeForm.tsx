@@ -7,6 +7,7 @@ import {
   Trash2, PlusCircle, Info, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { PROFILE_STEPS } from '@/lib/profile/steps';
 import { cn } from '@/lib/utils';
@@ -192,6 +193,22 @@ const buildEmptySubject = (programmeType: ProgrammeType | ''): SubjectRowState =
   grade_value: '',
 });
 
+/**
+ * An empty row to append to `existing`. IB allows exactly 3 HL, so once three HL rows are
+ * present the next blank row must default to SL — `buildEmptySubject` alone always says HL,
+ * which meant a saved IB profile with fewer than 6 subjects hydrated as 4–6 HL rows and
+ * failed its own "IB requires 3 Higher Level subjects" check before the student typed a thing.
+ */
+const buildNextSubject = (
+  programmeType: ProgrammeType | '',
+  existing: SubjectRowState[]
+): SubjectRowState => {
+  const base = buildEmptySubject(programmeType);
+  if (programmeType !== 'IB') return base;
+  const hlCount = existing.filter((s) => s.level === 'HL').length;
+  return { ...base, level: hlCount < 3 ? 'HL' : 'SL' };
+};
+
 const buildDefaultSubjects = (programmeType: ProgrammeType | ''): SubjectRowState[] => {
   if (programmeType === 'IB') {
     return Array.from({ length: 6 }, (_, i) => ({ subject_name: '', level: i < 3 ? 'HL' : 'SL', grade_value: '' }));
@@ -277,7 +294,25 @@ const isValidDraft = (d: unknown): d is IntakeDraft => {
 // ─── Reusable field components ────────────────────────────────────────────────
 
 const inputCls = 'flex h-11 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-0 transition-[color,border-color,box-shadow] duration-150';
-const selectCls = inputCls + ' cursor-pointer';
+// SelectTrigger's default size clones the global `.form-input` (46px, rounded-2xl).
+// This wizard predates that class and uses `inputCls` (44px, rounded-xl), so every
+// trigger is nudged onto the input shape — a select and a text field share a grid
+// row here, and a 2px/4px-of-radius mismatch between them is visible.
+// Radix forbids an item with value='' , but these fields are OPTIONAL and their
+// native predecessors had a selectable `<option value="">` — so a user could set a
+// value and then take it back. A placeholder alone is not a substitute: it only
+// shows while the field is empty and can never be re-chosen. This sentinel restores
+// that path, mapped back to '' at the boundary so the submitted payload is unchanged.
+const CLEAR = '__clear';
+
+// NOTE the Selects below bind `value={state || ''}`, NOT `|| undefined`. Radix decides
+// controlled-ness with `prop !== undefined`, so `undefined` flips the Select to
+// UNCONTROLLED — and on the way back from a real value to '' it then renders its stale
+// internal value. Net effect: picking "Not specified" saved null but kept displaying
+// the old option. An unmatched '' on the ROOT is fine and shows the placeholder; only
+// SelectItem forbids ''.
+
+const selectTriggerCls = 'h-11 rounded-xl';
 
 /** Stable DOM id for a validation error message, so inputs can point at it via aria-describedby. */
 const fieldErrorId = (key: string) => `intake-error-${key.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
@@ -328,7 +363,7 @@ function SectionTitle({ label, hint, why }: { label: string; hint?: string; why?
           aria-expanded={open}
           aria-haspopup="true"
           onClick={() => setOpen((v) => !v)}
-          className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-0.5"
+          className="flex items-center gap-1 text-label text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-0.5"
         >
           <Info className="w-3.5 h-3.5" />
           Why we ask
@@ -336,7 +371,7 @@ function SectionTitle({ label, hint, why }: { label: string; hint?: string; why?
         </button>
       ) : null}
       {open && why ? (
-        <div className="absolute right-0 mt-6 w-56 text-xs bg-popover border border-border rounded-xl p-3 shadow-lg z-10 text-muted-foreground leading-relaxed">
+        <div className="absolute right-0 mt-6 w-56 text-xs bg-popover border border-border rounded-xl p-3 shadow-e-3 z-raised text-muted-foreground leading-relaxed">
           {why}
         </div>
       ) : null}
@@ -429,7 +464,7 @@ function CountryCombobox({
         <ul
           id={listboxId}
           role="listbox"
-          className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-background shadow-lg overflow-hidden max-h-52 overflow-y-auto"
+          className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-background shadow-e-3 overflow-hidden max-h-52 overflow-y-auto"
         >
           {filtered.map((c, index) => (
             <li key={c} id={optionId(index)} role="option" aria-selected={index === highlight}>
@@ -470,7 +505,7 @@ function Chip({
       className={cn(
         'group flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-150',
         selected
-          ? 'bg-primary/8 border-primary text-primary shadow-sm'
+          ? 'bg-primary/8 border-primary text-primary-ink shadow-e-1'
           : 'bg-background border-border text-foreground hover:border-primary/40 hover:bg-muted/50',
         disabled && !selected && 'opacity-40 cursor-not-allowed hover:border-border hover:bg-background'
       )}
@@ -480,9 +515,9 @@ function Chip({
           {emoji ? <span>{emoji}</span> : null}
           {label}
         </span>
-        {selected && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+        {selected && <Check className="w-3.5 h-3.5 text-primary-ink shrink-0" />}
       </span>
-      {description ? <span className="text-[0.6875rem] text-muted-foreground font-normal leading-snug">{description}</span> : null}
+      {description ? <span className="text-label text-muted-foreground font-normal leading-snug">{description}</span> : null}
     </button>
   );
 }
@@ -568,7 +603,7 @@ function SubjectCombobox({
         <ul
           id={listboxId}
           role="listbox"
-          className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-background shadow-lg overflow-hidden max-h-52 overflow-y-auto"
+          className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-background shadow-e-3 overflow-hidden max-h-52 overflow-y-auto"
         >
           {filtered.map((s, index) => (
             <li key={s} id={optionId(index)} role="option" aria-selected={index === highlight}>
@@ -717,7 +752,7 @@ export const StudentIntakeForm = ({
         level: s.level ?? (prog === 'IB' ? 'HL' : 'A_LEVEL'),
         grade_value: typeof s.grade_value === 'number' ? String(s.grade_value) : s.grade_value ?? '',
       }));
-      while (mapped.length < minRows) mapped.push(buildEmptySubject(prog));
+      while (mapped.length < minRows) mapped.push(buildNextSubject(prog, mapped));
       return mapped;
     });
     setAdmissionsTests(
@@ -929,20 +964,32 @@ export const StudentIntakeForm = ({
     }
   }, [englishRequired, englishTestType]);
 
+  // Suggest the admissions tests a chosen cluster implies — once per cluster change.
+  //
+  // `admissionsTests` is deliberately NOT a dependency: this effect WRITES that state,
+  // so depending on it makes the effect re-trigger itself. Two separate bugs came out of
+  // that. (1) The updater used to return `[...prev]` unconditionally — a fresh reference
+  // every run — so the effect fed itself forever: "Maximum update depth exceeded", and a
+  // wizard that never finished rendering for any student without a 'NONE' row. (2) Even
+  // returning `prev` when nothing changed, a suggested row could never be REMOVED:
+  // deselecting the LNAT chip changed `admissionsTests`, which re-ran the effect, which
+  // added LNAT straight back. Keying only on the cluster list fixes both — the current
+  // rows are read inside the updater, where they don't create a feedback loop.
   useEffect(() => {
     const wantsLaw = academicInput.intended_clusters.includes('law');
     const wantsMed = academicInput.intended_clusters.includes('medicine_dentistry');
-    const alreadyNone = admissionsTests.some((t) => t.test_type === 'NONE');
-    if (alreadyNone) return;
+    if (!wantsLaw && !wantsMed) return;
     setAdmissionsTests((prev) => {
-      const next = [...prev];
-      if (wantsLaw && !next.some((t) => t.test_type === 'LNAT'))
-        next.push({ test_type: 'LNAT', status: '', score_numeric: '', percentile: '' });
-      if (wantsMed && !next.some((t) => t.test_type === 'UCAT'))
-        next.push({ test_type: 'UCAT', status: '', score_numeric: '', percentile: '' });
-      return next;
+      if (prev.some((t) => t.test_type === 'NONE')) return prev; // "no tests" is an explicit choice
+      const additions: typeof prev = [];
+      if (wantsLaw && !prev.some((t) => t.test_type === 'LNAT'))
+        additions.push({ test_type: 'LNAT', status: '', score_numeric: '', percentile: '' });
+      if (wantsMed && !prev.some((t) => t.test_type === 'UCAT'))
+        additions.push({ test_type: 'UCAT', status: '', score_numeric: '', percentile: '' });
+      if (additions.length === 0) return prev; // same reference — no re-render, no loop
+      return [...prev, ...additions];
     });
-  }, [academicInput.intended_clusters, admissionsTests]);
+  }, [academicInput.intended_clusters]);
 
   const showEnglishScore = englishRequired !== 'no' && ['IELTS', 'TOEFL', 'DUOLINGO'].includes(englishTestType);
   const showAdmissionsTests =
@@ -1013,7 +1060,7 @@ export const StudentIntakeForm = ({
   const updateSubject = (i: number, key: keyof SubjectRowState, value: string) =>
     setSubjects((prev) => { const next = [...prev]; next[i] = { ...next[i], [key]: value }; return next; });
   const addSubject = () =>
-    setSubjects((prev) => prev.length >= getMaxSubjects(programmeType) ? prev : [...prev, buildEmptySubject(programmeType)]);
+    setSubjects((prev) => prev.length >= getMaxSubjects(programmeType) ? prev : [...prev, buildNextSubject(programmeType, prev)]);
   const removeSubject = (i: number) =>
     setSubjects((prev) => prev.filter((_, idx) => idx !== i));
 
@@ -1188,8 +1235,11 @@ export const StudentIntakeForm = ({
         e['academic_input.subject_list.hl'] = 'IB requires 3 Higher Level subjects.';
     }
     if (programmeType === 'A_LEVEL') {
+      const max = getMaxSubjects('A_LEVEL');
       if (filled.length < 3) e['academic_input.subject_list'] = 'A-levels require at least 3 subjects.';
-      if (filled.length > 6) e['academic_input.subject_list'] = 'A-levels are limited to 6 subjects.';
+      // Keep the ceiling tied to getMaxSubjects — the Add button and the section hint both
+      // use it, and this message used to claim 6 while the UI capped the rows at 4.
+      else if (filled.length > max) e['academic_input.subject_list'] = `A-levels are limited to ${max} subjects.`;
     }
     subjects.forEach((s, i) => {
       if (!s.subject_name.trim()) e[`academic_input.subject_list.${i}.subject_name`] = 'Subject is required.';
@@ -1242,19 +1292,24 @@ export const StudentIntakeForm = ({
 
   /** Scroll the first errored field into view and focus its input. */
   const focusFirstError = useCallback((errs: Record<string, string>, delay = 50) => {
-    if (Object.keys(errs).length === 0) return;
+    const keys = Object.keys(errs);
+    if (keys.length === 0) return;
     window.setTimeout(() => {
       const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-field]'));
-      const exact = nodes.find((node) => {
+      // A node is a candidate if its key IS an error key, or PREFIXES one — the latter
+      // covers group-level messages hung off a container (subject_list → subject_list.hl).
+      const matches = nodes.filter((node) => {
         const key = node.getAttribute('data-field');
-        return !!key && key in errs;
+        return !!key && (key in errs || keys.some((k) => k.startsWith(`${key}.`)));
       });
-      // Fall back to a container whose key prefixes an error key (e.g. subject_list → subject_list.hl)
-      const target = exact ?? nodes.find((node) => {
-        const key = node.getAttribute('data-field');
-        return !!key && Object.keys(errs).some((k) => k.startsWith(`${key}.`));
-      });
-      if (!target) return;
+      if (matches.length === 0) return;
+      // Containers match every row error nested inside them, so in document order the
+      // `subject_list` wrapper always precedes the row that is actually wrong. Prefer the
+      // most specific candidate: the first one that doesn't enclose another candidate.
+      // Without this, a "6 subjects required" group error stole focus for row 1's name
+      // field while the empty row further down was the thing needing attention.
+      const target = matches.find((node) => !matches.some((other) => other !== node && node.contains(other)))
+        ?? matches[0];
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const focusable = target.querySelector<HTMLElement>('input, select, textarea, button');
       (focusable ?? target).focus({ preventScroll: true });
@@ -1341,7 +1396,9 @@ export const StudentIntakeForm = ({
     6: false,
   }), [validateStep1, validateStep2, validateStep3, activities, lifestylePreference]);
 
-  const progressPct = Math.round(((currentStep - 1) / TOTAL_STEPS) * 100);
+  // Divided by the number of TRANSITIONS (TOTAL_STEPS - 1), not the number of steps:
+  // over TOTAL_STEPS the bar topped out at 83% on the final Review step.
+  const progressPct = Math.round(((currentStep - 1) / (TOTAL_STEPS - 1)) * 100);
 
   /** aria-invalid / aria-describedby props for an errored input. */
   const a11yError = (key: string) =>
@@ -1357,12 +1414,12 @@ export const StudentIntakeForm = ({
 
         {/* ── Sidebar ── */}
         <aside className="w-full lg:w-64 lg:sticky lg:top-24 h-fit shrink-0">
-          <div className="rounded-2xl border border-border/60 bg-background p-4 space-y-1 shadow-sm">
+          <div className="rounded-2xl border border-border/60 bg-background p-4 space-y-1 shadow-e-1">
             {/* Progress bar */}
             <div className="mb-4 px-1">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[0.625rem] font-semibold uppercase tracking-widest text-muted-foreground">Progress</span>
-                <span className="text-[0.625rem] font-bold text-primary">{progressPct}%</span>
+                <span className="eyebrow">Progress</span>
+                <span className="text-label font-bold text-primary-ink">{progressPct}%</span>
               </div>
               <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                 <motion.div
@@ -1384,18 +1441,18 @@ export const StudentIntakeForm = ({
                   type="button"
                   onClick={() => goToStep(stepNum)}
                   className={cn(
-                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 text-sm',
+                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors duration-150 text-sm',
                     isCurrent
-                      ? 'bg-primary/8 text-primary font-semibold'
+                      ? 'bg-primary/8 text-primary-ink font-semibold'
                       : isDone
-                        ? 'text-emerald-600 hover:bg-muted/50'
+                        ? 'text-success hover:bg-muted/50'
                         : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                   )}
                 >
                   <span className={cn(
-                    'flex h-6 w-6 items-center justify-center rounded-lg text-[0.6875rem] font-bold shrink-0',
+                    'flex h-6 w-6 items-center justify-center rounded-lg text-label font-bold shrink-0',
                     isCurrent ? 'bg-primary text-primary-foreground'
-                      : isDone ? 'bg-emerald-500/15 text-emerald-600'
+                      : isDone ? 'bg-success-subtle text-success'
                         : 'bg-muted text-muted-foreground'
                   )}>
                     {isDone && !isCurrent ? <Check className="w-3 h-3" /> : stepNum}
@@ -1410,14 +1467,14 @@ export const StudentIntakeForm = ({
               type="button"
               onClick={() => goToStep(TOTAL_STEPS)}
               className={cn(
-                'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 text-sm',
+                'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors duration-150 text-sm',
                 currentStep === TOTAL_STEPS
-                  ? 'bg-primary/8 text-primary font-semibold'
+                  ? 'bg-primary/8 text-primary-ink font-semibold'
                   : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
               )}
             >
               <span className={cn(
-                'flex h-6 w-6 items-center justify-center rounded-lg text-[0.6875rem] font-bold shrink-0',
+                'flex h-6 w-6 items-center justify-center rounded-lg text-label font-bold shrink-0',
                 currentStep === TOTAL_STEPS ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
               )}>
                 <Check className="w-3 h-3" />
@@ -1429,7 +1486,7 @@ export const StudentIntakeForm = ({
               <button
                 type="button"
                 onClick={restoreSavedProfile}
-                className="w-full mt-2 py-2 px-3 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
+                className="w-full mt-2 py-2 px-3 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
               >
                 Restore last save
               </button>
@@ -1551,7 +1608,7 @@ export const StudentIntakeForm = ({
                         <p className="text-xs text-muted-foreground mt-0.5">Add more than one if applicable.</p>
                       </div>
                       <button type="button" onClick={addNationality}
-                        className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors">
+                        className="text-xs font-semibold text-primary-ink hover:text-primary-ink/80 transition-colors">
                         + Add another
                       </button>
                     </div>
@@ -1681,24 +1738,38 @@ export const StudentIntakeForm = ({
                     </label>
                     <label className="space-y-1.5">
                       <span className="text-sm font-medium text-muted-foreground">School type <span className="text-xs">(optional)</span></span>
-                      <select className={selectCls} value={academicInput.school_type}
-                        onChange={(e) => updateAcademicInput('school_type', e.target.value)}>
-                        <option value="">Select…</option>
-                        {SCHOOL_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
+                      {/* `|| undefined` so an empty value shows the placeholder —
+                        * Radix treats '' as a real (and illegal) item value. */}
+                      <Select value={academicInput.school_type || ''}
+                        onValueChange={(v) => updateAcademicInput('school_type', v === CLEAR ? '' : v)}>
+                        <SelectTrigger aria-label="School type" className={selectTriggerCls}>
+                          <SelectValue placeholder="Select…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={CLEAR}>Not specified</SelectItem>
+                          {SCHOOL_TYPE_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </label>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <label className="space-y-1.5" data-field="academic_input.graduation_year">
                       <span className="text-sm font-medium">Graduation year</span>
-                      <select className={cn(selectCls, errors['academic_input.graduation_year'] && 'border-destructive')}
-                        {...a11yError('academic_input.graduation_year')}
-                        value={academicInput.graduation_year}
-                        onChange={(e) => updateAcademicInput('graduation_year', e.target.value)}>
-                        <option value="">Select…</option>
-                        {GRADUATION_YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-                      </select>
+                      <Select value={academicInput.graduation_year || ''}
+                        onValueChange={(v) => updateAcademicInput('graduation_year', v === CLEAR ? '' : v)}>
+                        <SelectTrigger
+                          aria-label="Graduation year"
+                          {...a11yError('academic_input.graduation_year')}
+                          className={cn(selectTriggerCls, errors['academic_input.graduation_year'] && 'border-destructive')}>
+                          <SelectValue placeholder="Select…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {/* GRADUATION_YEARS is number[]; the state field is a string. */}
+                          <SelectItem value={CLEAR}>Not specified</SelectItem>
+                          {GRADUATION_YEARS.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                       <FieldError msg={errors['academic_input.graduation_year']} id={fieldErrorId('academic_input.graduation_year')} />
                     </label>
                     <label className="space-y-1.5">
@@ -1773,7 +1844,7 @@ export const StudentIntakeForm = ({
                         type="button"
                         disabled={subjects.length >= getMaxSubjects(programmeType)}
                         onClick={addSubject}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/8 text-primary text-xs font-semibold hover:bg-primary/15 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/8 text-primary-ink text-xs font-semibold hover:bg-primary/15 transition-[background-color,opacity] disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <PlusCircle className="w-3.5 h-3.5" />
                         Add
@@ -1782,9 +1853,9 @@ export const StudentIntakeForm = ({
 
                     {/* Column headers */}
                     <div className="hidden md:grid md:grid-cols-12 gap-3 px-1 pb-1">
-                      <div className="md:col-span-5 text-[0.625rem] uppercase tracking-widest font-semibold text-muted-foreground">Subject</div>
-                      <div className="md:col-span-3 text-[0.625rem] uppercase tracking-widest font-semibold text-muted-foreground">Level</div>
-                      <div className="md:col-span-3 text-[0.625rem] uppercase tracking-widest font-semibold text-muted-foreground">Grade</div>
+                      <div className="md:col-span-5 eyebrow">Subject</div>
+                      <div className="md:col-span-3 eyebrow">Level</div>
+                      <div className="md:col-span-3 eyebrow">Grade</div>
                     </div>
 
                     <div className="space-y-3" data-field="academic_input.subject_list">
@@ -1801,16 +1872,20 @@ export const StudentIntakeForm = ({
                           </div>
                           <div className="md:col-span-3">
                             <label className="md:hidden text-xs font-medium text-muted-foreground mb-1 block">Level</label>
-                            <select
-                              className={selectCls}
+                            <Select
                               value={subj.level}
-                              onChange={(e) => updateSubject(i, 'level', e.target.value)}
+                              onValueChange={(v) => updateSubject(i, 'level', v)}
                               disabled={programmeType === 'A_LEVEL'}
                             >
-                              {programmeType === 'IB'
-                                ? <><option value="HL">HL</option><option value="SL">SL</option></>
-                                : <option value="A_LEVEL">A-level</option>}
-                            </select>
+                              <SelectTrigger aria-label={`Level for subject ${i + 1}`} className={selectTriggerCls}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {programmeType === 'IB'
+                                  ? <><SelectItem value="HL">HL</SelectItem><SelectItem value="SL">SL</SelectItem></>
+                                  : <SelectItem value="A_LEVEL">A-level</SelectItem>}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="md:col-span-3" data-field={`academic_input.subject_list.${i}.grade_value`}>
                             <label className="md:hidden text-xs font-medium text-muted-foreground mb-1 block">Grade</label>
@@ -1818,18 +1893,25 @@ export const StudentIntakeForm = ({
                               ? <input type="number" min={1} max={7} className={cn(inputCls, errors[`academic_input.subject_list.${i}.grade_value`] && 'border-destructive')}
                                   {...a11yError(`academic_input.subject_list.${i}.grade_value`)}
                                   value={subj.grade_value} onChange={(e) => updateSubject(i, 'grade_value', e.target.value)} placeholder="1–7" />
-                              : <select className={cn(selectCls, errors[`academic_input.subject_list.${i}.grade_value`] && 'border-destructive')}
-                                  {...a11yError(`academic_input.subject_list.${i}.grade_value`)}
-                                  value={subj.grade_value} onChange={(e) => updateSubject(i, 'grade_value', e.target.value)}>
-                                  <option value="">Grade…</option>
-                                  {A_LEVEL_GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
-                                </select>
+                              : <Select value={subj.grade_value || ''}
+                                  onValueChange={(v) => updateSubject(i, 'grade_value', v === CLEAR ? '' : v)}>
+                                  <SelectTrigger
+                                    aria-label={`Grade for subject ${i + 1}`}
+                                    {...a11yError(`academic_input.subject_list.${i}.grade_value`)}
+                                    className={cn(selectTriggerCls, errors[`academic_input.subject_list.${i}.grade_value`] && 'border-destructive')}>
+                                    <SelectValue placeholder="Grade…" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value={CLEAR}>Not specified</SelectItem>
+                                    {A_LEVEL_GRADES.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
                             }
                             <FieldError msg={errors[`academic_input.subject_list.${i}.grade_value`]} id={fieldErrorId(`academic_input.subject_list.${i}.grade_value`)} />
                           </div>
                           <div className="md:col-span-1 flex items-end justify-end md:justify-center pb-0.5">
                             <button type="button" onClick={() => removeSubject(i)}
-                              className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all">
+                              className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -1845,7 +1927,7 @@ export const StudentIntakeForm = ({
                         <span className="text-xs text-muted-foreground font-medium">Predicted from subjects:</span>
                         <span className={cn(
                           'text-sm font-bold',
-                          ibSubjectSum >= 35 ? 'text-emerald-600' : ibSubjectSum >= 28 ? 'text-amber-600' : 'text-foreground'
+                          ibSubjectSum >= 35 ? 'text-success' : ibSubjectSum >= 28 ? 'text-warning' : 'text-foreground'
                         )}>
                           {ibSubjectSum}/42
                         </span>
@@ -1888,19 +1970,29 @@ export const StudentIntakeForm = ({
                         </label>
                         <label className="space-y-1.5">
                           <span className="text-sm font-medium text-muted-foreground">TOK grade <span className="text-xs">(optional)</span></span>
-                          <select className={selectCls} value={academicInput.ib_tok_grade}
-                            onChange={(e) => updateAcademicInput('ib_tok_grade', e.target.value)}>
-                            <option value="">Select…</option>
-                            {IB_GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
-                          </select>
+                          <Select value={academicInput.ib_tok_grade || ''}
+                            onValueChange={(v) => updateAcademicInput('ib_tok_grade', v === CLEAR ? '' : v)}>
+                            <SelectTrigger aria-label="TOK grade" className={selectTriggerCls}>
+                              <SelectValue placeholder="Select…" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={CLEAR}>Not specified</SelectItem>
+                              {IB_GRADES.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
                         </label>
                         <label className="space-y-1.5">
                           <span className="text-sm font-medium text-muted-foreground">EE grade <span className="text-xs">(optional)</span></span>
-                          <select className={selectCls} value={academicInput.ib_ee_grade}
-                            onChange={(e) => updateAcademicInput('ib_ee_grade', e.target.value)}>
-                            <option value="">Select…</option>
-                            {IB_GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
-                          </select>
+                          <Select value={academicInput.ib_ee_grade || ''}
+                            onValueChange={(v) => updateAcademicInput('ib_ee_grade', v === CLEAR ? '' : v)}>
+                            <SelectTrigger aria-label="EE grade" className={selectTriggerCls}>
+                              <SelectValue placeholder="Select…" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={CLEAR}>Not specified</SelectItem>
+                              {IB_GRADES.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
                         </label>
                         <label className="space-y-1.5">
                           <span className="text-sm font-medium text-muted-foreground">EE subject <span className="text-xs">(optional)</span></span>
@@ -1948,13 +2040,19 @@ export const StudentIntakeForm = ({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                         <label className="space-y-1.5" data-field="academic_input.english_test_type">
                           <span className="text-sm font-medium">Test type</span>
-                          <select
-                            className={cn(selectCls, errors['academic_input.english_test_type'] && 'border-destructive')}
-                            {...a11yError('academic_input.english_test_type')}
-                            value={englishTestType}
-                            onChange={(e) => setEnglishTestType(e.target.value as EnglishTestType)}>
-                            {ENGLISH_TEST_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                          </select>
+                          <Select
+                            value={englishTestType || ''}
+                            onValueChange={(v) => setEnglishTestType(v as EnglishTestType)}>
+                            <SelectTrigger
+                              aria-label="Test type"
+                              {...a11yError('academic_input.english_test_type')}
+                              className={cn(selectTriggerCls, errors['academic_input.english_test_type'] && 'border-destructive')}>
+                              <SelectValue placeholder="Select…" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ENGLISH_TEST_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
                           <FieldError msg={errors['academic_input.english_test_type']} id={fieldErrorId('academic_input.english_test_type')} />
                         </label>
                         <div className="space-y-1.5" data-field="academic_input.english_status">
@@ -2202,7 +2300,7 @@ export const StudentIntakeForm = ({
 
                     {activityRows.length < 10 && (
                       <button type="button"
-                        className="mt-1 flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                        className="mt-1 flex items-center gap-1.5 text-sm font-medium text-primary-ink hover:text-primary-ink/80 transition-colors"
                         onClick={addActivityRow}>
                         <PlusCircle className="w-4 h-4" aria-hidden />
                         Add activity
@@ -2331,7 +2429,7 @@ export const StudentIntakeForm = ({
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">Personal information</p>
                       <button type="button" onClick={() => setCurrentStep(1)}
-                        className="text-xs text-primary hover:text-primary/80 transition-colors font-medium">Edit</button>
+                        className="text-xs text-primary-ink hover:text-primary-ink/80 transition-colors font-medium">Edit</button>
                     </div>
                     <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
                       <div><span className="text-muted-foreground">Name</span><br />{[personalInfo.first_name, personalInfo.last_name].filter(Boolean).join(' ') || '—'}</div>
@@ -2346,7 +2444,7 @@ export const StudentIntakeForm = ({
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">Studies</p>
                       <button type="button" onClick={() => setCurrentStep(2)}
-                        className="text-xs text-primary hover:text-primary/80 transition-colors font-medium">Edit</button>
+                        className="text-xs text-primary-ink hover:text-primary-ink/80 transition-colors font-medium">Edit</button>
                     </div>
                     <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
                       <div><span className="text-muted-foreground">Programme</span><br />{programmeType || '—'}</div>
@@ -2361,12 +2459,18 @@ export const StudentIntakeForm = ({
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">Grades & tests</p>
                       <button type="button" onClick={() => setCurrentStep(3)}
-                        className="text-xs text-primary hover:text-primary/80 transition-colors font-medium">Edit</button>
+                        className="text-xs text-primary-ink hover:text-primary-ink/80 transition-colors font-medium">Edit</button>
                     </div>
                     <div className="text-sm space-y-1">
                       <p><span className="text-muted-foreground">Subjects:</span> {subjects.filter((s) => s.subject_name.trim()).length}</p>
-                      {programmeType === 'IB' && academicInput.ib_total_points ?
-                        <p><span className="text-muted-foreground">IB points:</span> {academicInput.ib_total_points}</p> : null}
+                      {/* `ibSubjectSum`, not `academicInput.ib_total_points`: the total is
+                        * DERIVED from the subject grades (buildPayload submits ibSubjectSum),
+                        * and nothing in the UI writes ib_total_points — it only ever holds the
+                        * value hydrated from the last save. Reading it here made the review
+                        * screen quote a stale total that contradicted the grades just entered. */}
+                      {programmeType === 'IB' && ibSubjectSum ?
+                        <p><span className="text-muted-foreground">IB points:</span> {ibSubjectSum}/42
+                          {academicInput.ib_core_points ? ` + ${academicInput.ib_core_points} core` : null}</p> : null}
                       <p><span className="text-muted-foreground">English:</span> {englishRequired ? { yes: 'Required', no: 'Not required', not_sure: 'Not sure' }[englishRequired] ?? '—' : '—'}</p>
                     </div>
                   </SectionCard>
@@ -2376,7 +2480,7 @@ export const StudentIntakeForm = ({
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">Activities</p>
                       <button type="button" onClick={() => setCurrentStep(4)}
-                        className="text-xs text-primary hover:text-primary/80 transition-colors font-medium">Edit</button>
+                        className="text-xs text-primary-ink hover:text-primary-ink/80 transition-colors font-medium">Edit</button>
                     </div>
                     <div className="text-sm space-y-1">
                       {activities.commitment_level ? <p><span className="text-muted-foreground">Commitment:</span> {COMMITMENT_OPTIONS.find((o) => o.value === activities.commitment_level)?.label}</p> : null}
@@ -2392,7 +2496,7 @@ export const StudentIntakeForm = ({
                       className={cn(
                         'rounded-xl px-4 py-3 text-sm font-medium',
                         submitted
-                          ? 'bg-emerald-500/10 text-emerald-600'
+                          ? 'bg-success-subtle text-success'
                           : statusIsError
                             ? 'bg-destructive/10 text-destructive border border-destructive/30'
                             : 'bg-muted text-muted-foreground'
@@ -2405,7 +2509,7 @@ export const StudentIntakeForm = ({
                     <div className="flex justify-center pt-2">
                       <a
                         href="/matches"
-                        className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all"
+                        className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-e-1 hover:bg-primary/90 transition-colors"
                       >
                         Get me to my matches →
                       </a>

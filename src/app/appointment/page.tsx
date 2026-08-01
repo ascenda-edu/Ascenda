@@ -7,50 +7,53 @@ import { DashboardShell } from '@/components/layout/shell';
 import { PageHero } from '@/components/layout/page-hero';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useSupabase } from '@/hooks/useSupabase';
 import { insertHelpRequest } from '@/lib/demo/help-request-client';
 import { DEMO_COUNSELLOR } from '@/lib/demo/counsellor';
 
-type TopicTone = 'sky' | 'violet' | 'rose' | 'emerald';
+// Tone tokens (see globals.css) — each is AA-verified in both themes, so no
+// `dark:` variants are needed.
+type TopicTone = 'info' | 'feature' | 'danger' | 'success';
 const TOPIC_TONE: Record<TopicTone, { swatch: string; activeBorder: string; text: string; chip: string }> = {
-  sky: {
-    swatch:
-      'flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/10 text-sky-600 ring-1 ring-sky-500/20 dark:text-sky-400',
-    activeBorder: 'border-sky-300/60 bg-sky-500/5 dark:border-sky-500/30',
-    text: 'text-sky-600 dark:text-sky-400',
-    chip: 'bg-sky-500/10 text-sky-600 border border-sky-200/60 dark:text-sky-400 dark:border-sky-500/20'
+  info: {
+    swatch: 'flex h-9 w-9 items-center justify-center rounded-xl bg-info-subtle text-info ring-1 ring-info/25',
+    activeBorder: 'border-info/30 bg-info/5',
+    text: 'text-info',
+    chip: 'bg-info-subtle text-info border border-info/25'
   },
-  violet: {
-    swatch:
-      'flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/10 text-violet-600 ring-1 ring-violet-500/20 dark:text-violet-400',
-    activeBorder: 'border-violet-300/60 bg-violet-500/5 dark:border-violet-500/30',
-    text: 'text-violet-600 dark:text-violet-400',
-    chip:
-      'bg-violet-500/10 text-violet-600 border border-violet-200/60 dark:text-violet-400 dark:border-violet-500/20'
+  feature: {
+    swatch: 'flex h-9 w-9 items-center justify-center rounded-xl bg-feature-subtle text-feature ring-1 ring-feature/25',
+    activeBorder: 'border-feature/30 bg-feature/5',
+    text: 'text-feature',
+    chip: 'bg-feature-subtle text-feature border border-feature/25'
   },
-  rose: {
-    swatch:
-      'flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 ring-1 ring-rose-500/20 dark:text-rose-400',
-    activeBorder: 'border-rose-300/60 bg-rose-500/5 dark:border-rose-500/30',
-    text: 'text-rose-600 dark:text-rose-400',
-    chip: 'bg-rose-500/10 text-rose-600 border border-rose-200/60 dark:text-rose-400 dark:border-rose-500/20'
+  danger: {
+    swatch: 'flex h-9 w-9 items-center justify-center rounded-xl bg-danger-subtle text-danger ring-1 ring-danger/25',
+    activeBorder: 'border-danger/30 bg-danger/5',
+    text: 'text-danger',
+    chip: 'bg-danger-subtle text-danger border border-danger/25'
   },
-  emerald: {
-    swatch:
-      'flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20 dark:text-emerald-400',
-    activeBorder: 'border-emerald-300/60 bg-emerald-500/5 dark:border-emerald-500/30',
-    text: 'text-emerald-600 dark:text-emerald-400',
-    chip:
-      'bg-emerald-500/10 text-emerald-600 border border-emerald-200/60 dark:text-emerald-400 dark:border-emerald-500/20'
+  success: {
+    swatch: 'flex h-9 w-9 items-center justify-center rounded-xl bg-success-subtle text-success ring-1 ring-success/25',
+    activeBorder: 'border-success/30 bg-success/5',
+    text: 'text-success',
+    chip: 'bg-success-subtle text-success border border-success/25'
   }
 };
 
 const TOPICS: { id: string; label: string; icon: LucideIcon; tone: TopicTone }[] = [
-  { id: 'university-choice', label: 'University choice', icon: Users, tone: 'sky' },
-  { id: 'applications', label: 'Applications & essays', icon: MessageSquare, tone: 'violet' },
-  { id: 'interview-prep', label: 'Interview prep', icon: Video, tone: 'rose' },
-  { id: 'general', label: 'General check-in', icon: CalendarPlus, tone: 'emerald' }
+  { id: 'university-choice', label: 'University choice', icon: Users, tone: 'info' },
+  { id: 'applications', label: 'Applications & essays', icon: MessageSquare, tone: 'feature' },
+  { id: 'interview-prep', label: 'Interview prep', icon: Video, tone: 'danger' },
+  { id: 'general', label: 'General check-in', icon: CalendarPlus, tone: 'success' }
 ];
 
 const TIMES = ['09:00', '11:00', '13:00', '15:00', '17:00'];
@@ -151,22 +154,22 @@ export default function AppointmentPage() {
             </>
           }
         />
-        <div className="surface-card surface-card--static mt-6">
+        <div className="surface-card mt-6">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-success-subtle text-success ring-1 ring-success/25">
               <Check className="h-5 w-5" />
             </div>
             <div className="space-y-2">
               <p className="text-base font-semibold text-foreground">Got it — {DEMO_COUNSELLOR.firstName} has your request</p>
               <p className="text-sm text-muted-foreground">
                 We&apos;ve sent your preferred time to {DEMO_COUNSELLOR.firstName}. Her reply will appear in your{' '}
-                <Link href="/inbox" className="font-semibold text-primary hover:underline">
+                <Link href="/inbox" className="font-semibold text-primary-ink hover:underline">
                   inbox
                 </Link>{' '}
                 — watch for the confirmation there.
               </p>
               <div className="rounded-xl bg-muted/40 p-4 text-sm text-foreground">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Notes shared with your counsellor</p>
+                <p className="eyebrow">Notes shared with your counsellor</p>
                 <p className="mt-1">{notes || '— No additional notes —'}</p>
               </div>
             </div>
@@ -193,9 +196,9 @@ export default function AppointmentPage() {
       />
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-        <section className="surface-card surface-card--static space-y-4">
+        <section className="surface-card space-y-4">
           <div>
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Topic</p>
+            <p className="eyebrow">Topic</p>
             <p className="text-sm text-muted-foreground">What would you like to discuss?</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -226,15 +229,15 @@ export default function AppointmentPage() {
           </div>
         </section>
 
-        <section className="surface-card surface-card--static space-y-4">
+        <section className="surface-card space-y-4">
           <div>
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">When works for you?</p>
+            <p className="eyebrow">When works for you?</p>
             <p className="text-sm text-muted-foreground">Pick a preferred date, time, and meeting length.</p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Date</span>
+              <span className="eyebrow">Date</span>
               <input
                 type="date"
                 value={date}
@@ -244,22 +247,27 @@ export default function AppointmentPage() {
                 className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </label>
-            <label className="block space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Duration</span>
-              <select
-                value={duration}
-                onChange={(event) => setDuration(event.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {DURATIONS.map((value) => (
-                  <option key={value} value={value}>{value}</option>
-                ))}
-              </select>
-            </label>
+            {/* A div, not a label: the trigger is a button, which takes its
+                accessible name from its contents rather than from a wrapping
+                label — hence the aria-label. The overrides match the date input
+                beside it (rounded-xl, px-3 py-2) so the pair still reads as one row. */}
+            <div className="block space-y-1.5">
+              <span className="eyebrow">Duration</span>
+              <Select value={duration} onValueChange={setDuration}>
+                <SelectTrigger aria-label="Duration" className="rounded-xl px-3 py-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DURATIONS.map((value) => (
+                    <SelectItem key={value} value={value}>{value}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Preferred time</span>
+            <span className="eyebrow">Preferred time</span>
             <div className="flex flex-wrap gap-2">
               {TIMES.map((value) => {
                 const active = time === value;
@@ -285,12 +293,9 @@ export default function AppointmentPage() {
           </div>
         </section>
 
-        <section className="surface-card surface-card--static space-y-3">
+        <section className="surface-card space-y-3">
           <div>
-            <label
-              htmlFor="appointment-notes"
-              className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground"
-            >
+            <label htmlFor="appointment-notes" className="eyebrow">
               Notes for your counsellor
             </label>
             <p className="text-sm text-muted-foreground">Optional — anything specific you want to cover?</p>

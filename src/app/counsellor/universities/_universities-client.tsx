@@ -21,6 +21,13 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { getBrowserSupabaseClient } from '@/lib/supabase/client';
 import { filterVisiblePrograms } from '@/lib/catalog/visibility';
 import type { CounsellorDeck, DeckCard } from '@/lib/counsellor/decks';
@@ -500,13 +507,13 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
   return (
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
       {/* ── Search panel ── */}
-      <section className="surface-card surface-card--static space-y-4">
+      <section className="surface-card space-y-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/10 text-sky-600 ring-1 ring-sky-500/15 dark:text-sky-300">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-info-subtle text-info ring-1 ring-info/25">
             <Search className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Catalogue</p>
+            <p className="eyebrow">Catalogue</p>
             <h2 className="font-heading text-lg font-bold text-foreground">Find universities</h2>
           </div>
         </div>
@@ -519,20 +526,28 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
               onChange={(e) => setQuery(e.target.value)}
               aria-label="Search universities or programmes"
               placeholder="Search universities or programmes…"
-              className="w-full rounded-full border border-border bg-background/60 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+              className="form-input rounded-full py-2.5 pl-10 pr-4"
             />
           </div>
-          <select
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            aria-label="Filter by country"
-            className="rounded-full border border-border bg-background/60 px-4 py-2.5 text-sm outline-none transition focus:border-primary/50"
-          >
-            <option value="">All countries</option>
-            {countries.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          {/* 'all' is a sentinel: the search effect treats '' as "no country
+              filter", and Radix refuses an empty item value. Mapped at the edge
+              so the query logic below is untouched. */}
+          <Select value={country || 'all'} onValueChange={(v) => setCountry(v === 'all' ? '' : v)}>
+            <SelectTrigger
+              aria-label="Filter by country"
+              className="w-auto rounded-full py-2.5"
+            >
+              <SelectValue placeholder="All countries" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All countries</SelectItem>
+              {/* filter(Boolean): the list is catalogue data, and a blank country
+                  would throw inside Radix rather than render an empty row. */}
+              {countries.filter(Boolean).map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="min-h-[200px] space-y-2">
@@ -541,7 +556,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
               <Loader2 className="h-4 w-4 animate-spin" /> Searching the catalogue…
             </div>
           ) : results.length === 0 ? (
-            <div className="rounded-[28px] border border-dashed border-border bg-muted/40 p-10 text-center">
+            <div className="rounded-4xl border border-dashed border-border bg-muted/40 p-10 text-center">
               <Sparkles className="mx-auto mb-2 h-5 w-5 text-muted-foreground" />
               <p className="text-sm font-medium text-foreground">
                 {searchFailed
@@ -585,7 +600,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                         className={cn(
                           'flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition hover:-translate-y-0.5',
                           inDeck
-                            ? 'cursor-default border-emerald-200/60 bg-emerald-500/10 text-emerald-600'
+                            ? 'cursor-default border-success/25 bg-success-subtle text-success'
                             : 'border-border bg-background/60 text-foreground hover:border-primary/50'
                         )}
                       >
@@ -603,14 +618,14 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
       {/* ── Deck rail ── */}
       <aside className="space-y-4">
         {/* Deck library */}
-        <section className="surface-card surface-card--static space-y-3">
+        <section className="surface-card space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/10 text-violet-600 ring-1 ring-violet-500/15 dark:text-violet-300">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-feature-subtle text-feature ring-1 ring-feature/25">
                 <Layers className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Library</p>
+                <p className="eyebrow">Library</p>
                 <h2 className="font-heading text-lg font-bold text-foreground">Your decks</h2>
               </div>
             </div>
@@ -631,13 +646,13 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden"
               >
-                <div className="space-y-3 rounded-[24px] border border-border/60 bg-muted/30 p-4">
+                <div className="space-y-3 rounded-3xl border border-border/60 bg-muted/30 p-4">
                   <input
                     value={newDeckName}
                     onChange={(e) => setNewDeckName(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && createDeck()}
                     placeholder='Deck name — e.g. "UK Reach Raid"'
-                    className="w-full rounded-full border border-border bg-background/60 px-4 py-2 text-sm outline-none focus:border-primary/50"
+                    className="form-input rounded-full py-2"
                   />
                   <div className="flex items-center gap-1.5" role="radiogroup" aria-label="Deck emblem">
                     {DECK_EMOJI.map((emoji) => (
@@ -649,7 +664,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                         onClick={() => setNewDeckEmoji(emoji)}
                         className={cn(
                           'flex h-8 w-8 items-center justify-center rounded-full text-base transition',
-                          newDeckEmoji === emoji ? 'bg-primary/15 ring-2 ring-primary/40' : 'hover:bg-muted'
+                          newDeckEmoji === emoji ? 'bg-primary/20 ring-2 ring-primary/40' : 'hover:bg-muted'
                         )}
                       >
                         {emoji}
@@ -700,7 +715,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
 
         {/* Selected deck detail */}
         {selectedDeck && (
-          <section className="surface-card surface-card--static space-y-4">
+          <section className="surface-card space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 <span className="text-2xl">{selectedDeck.theme.emoji ?? '🗡️'}</span>
@@ -715,14 +730,14 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                 type="button"
                 onClick={() => setDeckPendingDelete(selectedDeck)}
                 aria-label={`Delete deck ${selectedDeck.name}`}
-                className="rounded-full p-2 text-muted-foreground transition hover:bg-rose-500/10 hover:text-rose-600"
+                className="rounded-full p-2 text-muted-foreground transition hover:bg-danger-subtle hover:text-danger"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
 
             {selectedDeck.cards.length === 0 ? (
-              <p className="rounded-[28px] border border-dashed border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+              <p className="rounded-4xl border border-dashed border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
                 Empty deck — add programmes from the search results.
               </p>
             ) : (
@@ -751,7 +766,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                             type="button"
                             onClick={() => removeCard(selectedDeck.id, card)}
                             aria-label={`Remove ${card.university} from deck`}
-                            className="rounded-full p-1 text-muted-foreground transition hover:bg-rose-500/10 hover:text-rose-600"
+                            className="rounded-full p-1 text-muted-foreground transition hover:bg-danger-subtle hover:text-danger"
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -761,7 +776,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                             type="button"
                             onClick={() => cycleRarity(selectedDeck.id, card)}
                             title="Change rarity"
-                            className={cn('flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold transition hover:-translate-y-0.5', rarity.badge)}
+                            className={cn('flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-label font-semibold transition hover:-translate-y-0.5', rarity.badge)}
                           >
                             {Array.from({ length: rarity.stars }).map((_, i) => (
                               <Star key={i} className="h-2.5 w-2.5 fill-current" />
@@ -772,7 +787,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                             type="button"
                             onClick={() => cycleFit(selectedDeck.id, card)}
                             title="Change fit"
-                            className={cn('rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold transition hover:-translate-y-0.5', fit.badge)}
+                            className={cn('rounded-full border px-2.5 py-0.5 text-label font-semibold transition hover:-translate-y-0.5', fit.badge)}
                           >
                             {fit.label}
                           </button>
@@ -787,14 +802,14 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
             {/* Assignees */}
             <div className="space-y-2 border-t border-border/60 pt-4">
               <div className="flex items-center justify-between">
-                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="eyebrow flex items-center gap-1.5">
                   <Users className="h-3.5 w-3.5" /> On this quest
                 </p>
                 <button
                   type="button"
                   onClick={() => setAssignOpen(true)}
                   disabled={selectedDeck.cards.length === 0}
-                  className="flex items-center gap-1.5 rounded-full bg-violet-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:-translate-y-0.5 hover:bg-violet-500 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-full bg-feature-fill px-3.5 py-1.5 text-xs font-semibold text-feature-foreground transition hover:-translate-y-0.5 hover:bg-feature-fill/90 disabled:opacity-50"
                 >
                   <Send className="h-3 w-3" /> Assign to students
                 </button>
@@ -806,14 +821,14 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                   {selectedDeck.assignees.map((a) => (
                     <span
                       key={a.assignmentId}
-                      className="flex items-center gap-1.5 rounded-full border border-violet-200/60 bg-violet-500/10 py-1 pl-2.5 pr-1.5 text-xs font-medium text-violet-700 dark:text-violet-300"
+                      className="flex items-center gap-1.5 rounded-full border border-feature/25 bg-feature-subtle py-1 pl-2.5 pr-1.5 text-xs font-medium text-feature"
                     >
                       {a.flag} {a.name}
                       <button
                         type="button"
                         onClick={() => unassign(selectedDeck.id, a.assignmentId)}
                         aria-label={`Unassign ${a.name}`}
-                        className="rounded-full p-0.5 transition hover:bg-violet-500/20"
+                        className="rounded-full p-0.5 transition hover:bg-feature/20"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -833,7 +848,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
             onClick={() => setAssignOpen(false)}
           >
             <motion.div
@@ -846,7 +861,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
               role="dialog"
               aria-modal="true"
               aria-label={`Assign deck ${selectedDeck.name}`}
-              className="w-full max-w-md rounded-[28px] border border-border bg-card p-6 shadow-xl outline-none"
+              className="w-full max-w-md rounded-4xl border border-border bg-card p-6 shadow-e-4 outline-none"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-4 flex items-start justify-between">
@@ -881,7 +896,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                           type="checkbox"
                           checked={assignSelection.has(s.id)}
                           onChange={() => toggleAssign(s.id)}
-                          className="h-4 w-4 rounded border-border accent-violet-600"
+                          className="h-4 w-4 rounded border-border accent-feature"
                         />
                         <span className="text-base">{s.flag}</span>
                         <span className="flex-1 text-sm font-medium text-foreground">{s.name}</span>
@@ -897,14 +912,14 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                 onChange={(e) => setAssignMessage(e.target.value)}
                 placeholder="Optional message — shows in their quest log"
                 rows={2}
-                className="mt-3 w-full resize-none rounded-2xl border border-border bg-background/60 px-4 py-2.5 text-sm outline-none focus:border-primary/50"
+                className="form-input mt-3 resize-none py-2.5"
               />
 
               <button
                 type="button"
                 onClick={assignDeck}
                 disabled={assignSelection.size === 0 || isAssigning}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-violet-500 disabled:opacity-50"
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-feature-fill px-4 py-2.5 text-sm font-semibold text-feature-foreground transition hover:-translate-y-0.5 hover:bg-feature-fill/90 disabled:opacity-50"
               >
                 {isAssigning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 Send quest to {assignSelection.size || 'selected'} student{assignSelection.size === 1 ? '' : 's'}
@@ -921,7 +936,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
             onClick={() => !isDeletingDeck && setDeckPendingDelete(null)}
           >
             <motion.div
@@ -934,7 +949,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
               role="dialog"
               aria-modal="true"
               aria-label={`Delete deck ${deckPendingDelete.name}`}
-              className="w-full max-w-sm rounded-[28px] border border-border bg-card p-6 shadow-xl outline-none"
+              className="w-full max-w-sm rounded-4xl border border-border bg-card p-6 shadow-e-4 outline-none"
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="font-heading text-lg font-bold text-foreground">
@@ -956,7 +971,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                   type="button"
                   onClick={confirmDeleteDeck}
                   disabled={isDeletingDeck}
-                  className="flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-rose-500 disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-full bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground transition hover:-translate-y-0.5 hover:bg-destructive/90 disabled:opacity-50"
                 >
                   {isDeletingDeck ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                   Delete deck

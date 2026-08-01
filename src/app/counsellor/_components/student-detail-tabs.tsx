@@ -1,10 +1,18 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, Clock as ClockIcon, BookOpen, MapPin, GraduationCap, Target, FileText } from 'lucide-react';
 import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
 import { parseLocalDate } from '@/lib/utils/dates';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
+import {
+  TIER_VISUAL,
+  APPLICATION_STATUS_VISUAL,
+  type FitTier,
+  type ApplicationStatusTone
+} from '@/lib/theme/categories';
 import { NotesPanel } from './notes-panel';
 import { PortfolioBalance } from './portfolio-balance';
 import { EvolutionTimeline } from '@/components/profile/evolution-timeline';
@@ -26,17 +34,30 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'timeline', label: 'Timeline' }
 ];
 
-const TIER_COLORS = {
-  Reach: { pill: 'border-rose-200/60 bg-rose-500/10 text-rose-600 dark:text-rose-400', dot: 'bg-rose-500' },
-  Match: { pill: 'border-amber-200/60 bg-amber-500/10 text-amber-600 dark:text-amber-400', dot: 'bg-amber-500' },
-  Safe: { pill: 'border-emerald-200/60 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' }
+// Tier + status colours are projections of the tone system of record
+// (lib/theme/categories.ts) rather than a fourth private palette. `text` is a
+// first-class field so nothing has to recover a colour by string-parsing `pill`.
+const tierStyle = (tier: FitTier) => {
+  const v = TIER_VISUAL[tier];
+  return { pill: cn(v.border, v.bg, v.text), dot: v.bar, text: v.text };
 };
 
-const APP_STATUS = {
-  planning: { label: 'Planning', color: 'text-muted-foreground bg-muted/60 border-border' },
-  in_progress: { label: 'In Progress', color: 'text-sky-600 bg-sky-500/10 border-sky-200/60 dark:border-sky-500/20' },
-  submitted: { label: 'Submitted', color: 'text-violet-600 bg-violet-500/10 border-violet-200/60 dark:border-violet-500/20' },
-  decision: { label: 'Decision', color: 'text-emerald-600 bg-emerald-500/10 border-emerald-200/60 dark:border-emerald-500/20' }
+const TIER_COLORS: Record<'Reach' | 'Match' | 'Safe', ReturnType<typeof tierStyle>> = {
+  Reach: tierStyle('reach'),
+  Match: tierStyle('match'),
+  Safe: tierStyle('safety')
+};
+
+const statusStyle = (status: ApplicationStatusTone) => {
+  const v = APPLICATION_STATUS_VISUAL[status];
+  return cn(v.text, v.bg, v.border);
+};
+
+const APP_STATUS: Record<ApplicationStatusTone, { label: string; color: string }> = {
+  planning: { label: 'Planning', color: statusStyle('planning') },
+  in_progress: { label: 'In Progress', color: statusStyle('in_progress') },
+  submitted: { label: 'Submitted', color: statusStyle('submitted') },
+  decision: { label: 'Decision', color: statusStyle('decision') }
 };
 
 function formatDate(iso: string) {
@@ -54,7 +75,27 @@ const resolveTab = (id: string): Tab => {
 
 export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps) => {
   const [tabParam, setTabParam] = useSearchParamState('tab', 'overview');
-  const active = resolveTab(tabParam);
+  const urlTab = resolveTab(tabParam);
+  // The URL is a deep-link MIRROR, not the source of truth for the tab.
+  //
+  // Driving `value` straight off the search param made every tab switch wait for
+  // a `router.replace` round-trip — and this page is `force-dynamic`, so that is
+  // a real server request. Radix activates on focus, so arrow-keying across the
+  // row left the focused tab and the `aria-selected` tab disagreeing for the
+  // length of that round-trip (measured 0.5–1s in dev), and a fast sweep dropped
+  // every intermediate activation. Every panel's data is already in props, so
+  // nothing about the switch actually needs the server.
+  const [active, setActive] = useState(urlTab);
+  // Re-sync when the URL changes from OUTSIDE this component: a deep link,
+  // back/forward, or the document board's `?tab=documents` link. Passing the
+  // same string back is a no-op re-render bail in React, not a loop.
+  useEffect(() => { setActive(urlTab); }, [urlTab]);
+
+  const selectTab = (next: string) => {
+    setActive(resolveTab(next));
+    setTabParam(next);
+  };
+
   const matches = student.matches;
 
   const reachCount = matches.filter((m) => m.tier === 'Reach').length;
@@ -62,44 +103,35 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
   const safeCount = matches.filter((m) => m.tier === 'Safe').length;
 
   return (
-    <div className="space-y-6">
-      {/* Tab nav */}
-      <nav role="tablist" aria-label="Student detail sections" className="flex items-center gap-2 overflow-x-auto scrollbar-none rounded-[28px] border border-border bg-card px-3 sm:px-4 py-2.5 sm:py-3 shadow-[0_20px_45px_rgba(15,23,42,0.08)]">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            role="tab"
-            aria-selected={active === tab.id}
-            onClick={() => setTabParam(tab.id)}
-            className={cn(
-              'shrink-0 rounded-full border px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold transition hover:bg-muted/80',
-              active === tab.id
-                ? 'border-primary bg-primary text-primary-foreground shadow-[0_10px_30px_rgba(15,23,42,0.25)]'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {tab.label}
-            {tab.id === 'notes' && student.notes.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[0.6875rem] font-bold text-primary">
-                {student.notes.length}
-              </span>
-            )}
-            {tab.id === 'matches' && matches.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[0.6875rem] font-bold text-primary">
-                {matches.length}
-              </span>
-            )}
-          </button>
-        ))}
-      </nav>
+    // Radix supplies the tablist/tab/tabpanel wiring, aria-controls and
+    // arrow-key handling this row used to declare `role="tablist"` without.
+    <Tabs value={active} onValueChange={selectTab}>
+      <TabsList aria-label="Student detail sections">
+        {TABS.map((tab) => {
+          const count = tab.id === 'notes'
+            ? student.notes.length
+            : tab.id === 'matches'
+              ? matches.length
+              : 0;
+          return (
+            <TabsTrigger key={tab.id} value={tab.id}>
+              {tab.label}
+              {count > 0 && (
+                <span className="ml-1.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-label font-bold text-primary-ink">
+                  {count}
+                </span>
+              )}
+            </TabsTrigger>
+          );
+        })}
+      </TabsList>
 
-      {/* Overview tab */}
-      {active === 'overview' && (
+      <TabsContent value="overview">
         <div className="grid gap-4 md:grid-cols-2">
           {/* Personal info */}
-          <div className="surface-card surface-card--static space-y-4">
+          <div className="surface-card space-y-4">
             <div className="flex items-center gap-2">
-              <GraduationCap className="h-5 w-5 text-primary" />
+              <GraduationCap className="h-5 w-5 text-primary-ink" />
               <p className="font-semibold text-foreground">Personal Info</p>
             </div>
             <dl className="space-y-3 text-sm">
@@ -120,9 +152,9 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
           </div>
 
           {/* Match summary */}
-          <div className="surface-card surface-card--static space-y-4">
+          <div className="surface-card space-y-4">
             <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" />
+              <Target className="h-5 w-5 text-primary-ink" />
               <p className="font-semibold text-foreground">Match Summary</p>
             </div>
             {matches.length > 0 ? (
@@ -140,13 +172,17 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
                   ))}
                 </div>
                 <div className="space-y-2">
-                  {matches.slice(0, 3).map((m) => {
+                  {/* Index in the key: a cohort's matches legitimately repeat a
+                      university+programme pair (two catalogue rows for the same
+                      course), and the pair alone collided — React warned and was
+                      free to drop rows. */}
+                  {matches.slice(0, 3).map((m, i) => {
                     const tc = TIER_COLORS[m.tier];
                     return (
-                      <div key={`${m.university}-${m.program}`} className="flex items-center gap-2 text-sm">
+                      <div key={`${m.university}-${m.program}-${i}`} className="flex items-center gap-2 text-sm">
                         <span className={cn('h-2 w-2 shrink-0 rounded-full', tc.dot)} />
                         <span className="flex-1 truncate text-foreground">{m.university}</span>
-                        <span className={cn('shrink-0 text-xs font-semibold', tc.pill.split(' ').find(c => c.startsWith('text')))}>{m.score}</span>
+                        <span className={cn('shrink-0 text-xs font-semibold', tc.text)}>{m.score}</span>
                       </div>
                     );
                   })}
@@ -161,18 +197,18 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
           </div>
 
           {/* Career aspiration */}
-          <div className="surface-card surface-card--static space-y-3">
+          <div className="surface-card space-y-3">
             <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
+              <FileText className="h-5 w-5 text-primary-ink" />
               <p className="font-semibold text-foreground">Career Aspiration</p>
             </div>
             <p className="text-sm text-muted-foreground">{student.academic.careerAspiration}</p>
           </div>
 
           {/* Lifestyle */}
-          <div className="surface-card surface-card--static space-y-3">
+          <div className="surface-card space-y-3">
             <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-primary" />
+              <MapPin className="h-5 w-5 text-primary-ink" />
               <p className="font-semibold text-foreground">Preferences</p>
             </div>
             <dl className="space-y-2 text-sm">
@@ -198,13 +234,12 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
             )}
           </div>
         </div>
-      )}
+      </TabsContent>
 
-      {/* Academic tab */}
-      {active === 'academic' && (
+      <TabsContent value="academic">
         <div className="grid gap-4 md:grid-cols-2">
           {/* Grades */}
-          <div className="surface-card surface-card--static space-y-4">
+          <div className="surface-card space-y-4">
             <p className="font-semibold text-foreground">Grades & Scores</p>
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between">
@@ -214,20 +249,20 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
               {student.academic.programmeType === 'IB' ? (
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">IB Points</dt>
-                  <dd className="font-bold text-primary">{student.academic.ibPoints ?? '—'} / 45</dd>
+                  <dd className="font-bold text-primary-ink">{student.academic.ibPoints ?? '—'} / 45</dd>
                 </div>
               ) : (
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">A-Level Grades</dt>
-                  <dd className="font-bold text-primary">{student.academic.aLevelGrades ?? '—'}</dd>
+                  <dd className="font-bold text-primary-ink">{student.academic.aLevelGrades ?? '—'}</dd>
                 </div>
               )}
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">English status</dt>
                 <dd className={cn('font-semibold',
-                  student.academic.englishStatus === 'met' ? 'text-emerald-600'
-                    : student.academic.englishStatus === 'booked' ? 'text-amber-600'
-                      : 'text-red-500'
+                  student.academic.englishStatus === 'met' ? 'text-success'
+                    : student.academic.englishStatus === 'booked' ? 'text-warning'
+                      : 'text-danger'
                 )}>
                   {student.academic.englishStatus === 'met' ? '✓ Met' : student.academic.englishStatus === 'booked' ? '⏳ Booked' : '✗ Missing'}
                 </dd>
@@ -236,7 +271,7 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
           </div>
 
           {/* Subjects */}
-          <div className="surface-card surface-card--static space-y-3">
+          <div className="surface-card space-y-3">
             <p className="font-semibold text-foreground">Subjects</p>
             <div className="flex flex-wrap gap-1.5">
               {student.academic.subjects.map((s) => (
@@ -248,7 +283,7 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
           </div>
 
           {/* Admissions tests */}
-          <div className="surface-card surface-card--static space-y-3">
+          <div className="surface-card space-y-3">
             <p className="font-semibold text-foreground">Admissions Tests</p>
             {student.academic.admissionsTests.length > 0 ? (
               <div className="space-y-2">
@@ -256,20 +291,20 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
                   <div key={t.type} className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/60 px-4 py-3 text-sm">
                     <div className="flex items-center gap-2">
                       {t.status === 'taken' ? (
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        <CheckCircle2 className="h-4 w-4 text-success" />
                       ) : t.status === 'booked' ? (
-                        <ClockIcon className="h-4 w-4 text-amber-600" />
+                        <ClockIcon className="h-4 w-4 text-warning" />
                       ) : (
-                        <XCircle className="h-4 w-4 text-red-500" />
+                        <XCircle className="h-4 w-4 text-danger" />
                       )}
                       <span className="font-semibold text-foreground">{t.type}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {t.score != null && <span className="font-bold text-primary">{t.score}</span>}
+                      {t.score != null && <span className="font-bold text-primary-ink">{t.score}</span>}
                       <span className={cn('rounded-full px-2 py-0.5 text-xs font-semibold',
-                        t.status === 'taken' ? 'bg-emerald-500/10 text-emerald-600'
-                          : t.status === 'booked' ? 'bg-amber-500/10 text-amber-600'
-                            : 'bg-red-500/10 text-red-500'
+                        t.status === 'taken' ? 'bg-success-subtle text-success'
+                          : t.status === 'booked' ? 'bg-warning-subtle text-warning'
+                            : 'bg-danger-subtle text-danger'
                       )}>
                         {t.status}
                       </span>
@@ -283,21 +318,20 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
           </div>
 
           {/* Fields */}
-          <div className="surface-card surface-card--static space-y-3">
+          <div className="surface-card space-y-3">
             <p className="font-semibold text-foreground">Fields of Interest</p>
             <div className="flex flex-wrap gap-2">
               {student.academic.clusters.map((c) => (
-                <span key={c} className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                <span key={c} className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary-ink">
                   {c.replace(/_/g, ' ')}
                 </span>
               ))}
             </div>
           </div>
         </div>
-      )}
+      </TabsContent>
 
-      {/* Matches tab */}
-      {active === 'matches' && (
+      <TabsContent value="matches">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
@@ -320,9 +354,10 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
                       <p className="text-sm font-semibold text-foreground">{tier} — {tierMatches.length} program{tierMatches.length !== 1 ? 's' : ''}</p>
                     </div>
                     <div className="space-y-2">
-                      {tierMatches.map((m) => (
+                      {/* Index in the key — see the Match Summary list above. */}
+                      {tierMatches.map((m, i) => (
                         <div
-                          key={`${m.university}-${m.program}`}
+                          key={`${m.university}-${m.program}-${i}`}
                           className="flex items-center gap-4 rounded-2xl border border-border/60 bg-background/60 px-5 py-4"
                         >
                           <div className="flex-1 space-y-0.5">
@@ -330,14 +365,14 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
                             <p className="text-sm text-muted-foreground">{m.program} · {m.country}</p>
                           </div>
                           <div className="text-right">
-                            <p className={cn('text-xl font-bold tabular-nums', tc.pill.split(' ').find(c => c.startsWith('text')))}>{m.score}</p>
+                            <p className={cn('text-xl font-bold tabular-nums', tc.text)}>{m.score}</p>
                             <div className="mt-1 h-1 w-16 overflow-hidden rounded-full bg-muted/60">
                               <div
-                                className={cn('h-1 rounded-full bg-current', tc.pill.split(' ').find(c => c.startsWith('text')))}
+                                className={cn('h-1 rounded-full bg-current', tc.text)}
                                 style={{ width: `${m.score}%` }}
                               />
                             </div>
-                            <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">fit score</p>
+                            <p className="mt-0.5 text-label text-muted-foreground">fit score</p>
                           </div>
                           <span className={cn('rounded-full border px-3 py-1 text-xs font-semibold', tc.pill)}>{tier}</span>
                         </div>
@@ -347,7 +382,7 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
                 );
               })}
               {matches.length === 0 && (
-                <div className="rounded-[28px] border border-dashed border-border bg-muted/40 p-12 text-center">
+                <div className="rounded-4xl border border-dashed border-border bg-muted/40 p-12 text-center">
                   <BookOpen className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
                   <p className="font-semibold text-foreground">No matches generated</p>
                   <p className="mt-1 text-sm text-muted-foreground">Complete the student profile to generate matches.</p>
@@ -355,10 +390,9 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
               )}
           </>
         </div>
-      )}
+      </TabsContent>
 
-      {/* Applications tab */}
-      {active === 'applications' && (
+      <TabsContent value="applications">
         <div className="space-y-4">
           <PortfolioBalance student={student} />
           {student.applications.length > 0 ? (
@@ -388,21 +422,21 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
               })}
             </div>
           ) : (
-            <div className="rounded-[28px] border border-dashed border-border bg-muted/40 p-12 text-center">
+            <div className="rounded-4xl border border-dashed border-border bg-muted/40 p-12 text-center">
               <FileText className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
               <p className="font-semibold text-foreground">No applications yet</p>
               <p className="mt-1 text-sm text-muted-foreground">This student hasn&apos;t started any applications.</p>
             </div>
           )}
         </div>
-      )}
+      </TabsContent>
 
-      {/* Notes tab */}
-      {active === 'notes' && <NotesPanel notes={student.notes} studentId={student.id} />}
+      <TabsContent value="notes">
+        <NotesPanel notes={student.notes} studentId={student.id} />
+      </TabsContent>
 
-      {/* Timeline tab */}
-      {active === 'timeline' && (
-        <div className="surface-card surface-card--static space-y-4">
+      <TabsContent value="timeline">
+        <div className="surface-card space-y-4">
           <div>
             <p className="font-semibold text-foreground">Profile Evolution</p>
             <p className="text-sm text-muted-foreground">How this student&apos;s goals and interests have evolved over time.</p>
@@ -412,7 +446,7 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
             studentName={`${student.personal.firstName} ${student.personal.lastName}`}
           />
         </div>
-      )}
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 };

@@ -1,24 +1,76 @@
-// Single source of truth for the counsellor analytics colour rotation.
-// FieldChart (analytics-charts.tsx) uses the bar/barHover columns; the custom
-// widget charts also need text/card tints for their stacked and kpi layouts.
-// Keep every class literal spelled out so Tailwind's scanner picks them up.
+// Chart colour for the counsellor analytics.
+//
+// ── The rule ───────────────────────────────────────────────────────────────────
+// A BAR CHART USES ONE ACCENT. Identity comes from the row label, which every bar
+// in this app already carries. Use `CHART_ACCENT`.
+//
+// Multi-hue categorical palettes were tried and rejected: five saturated hues
+// (indigo/amber/sky/crimson/emerald) read as a circus beside an indigo brand, and
+// the eight-hue rotation before that was worse — it put two blues and two greens
+// on screen together (indigo↔violet measured ΔE 1.3 under protanopia, emerald↔teal
+// 4.9 with normal colour vision), so its 7th and 8th slots carried no information
+// at all. Colour was doing decoration, not work.
+//
+// `CHART_SERIES` is the fallback for STACKED / SEGMENTED bars only, where adjacent
+// segments inside one bar genuinely must be told apart. It is a monochrome ramp of
+// the brand hue — see globals.css for the step values and why dark mode uses a
+// different, compressed range.
+//
+// ── Two things not to break ────────────────────────────────────────────────────
+// 1. Stacked segments need a 2px surface-coloured gap between them. Adjacent ramp
+//    steps are only 1.3–1.5:1 apart, which is the ceiling for a single hue across
+//    five steps; the GAP is what separates them, not the colour delta.
+// 2. Labels wear ink, never the series colour. No label colour clears 4.5:1 across
+//    a set of fills — that was already proven when the palette was multi-hue (the
+//    sky slot measured 4.10 on white and 4.24 on ink, failing both) — so values sit
+//    beside the mark, not on it.
+
+/** The single accent for bar charts. Row labels carry identity. */
+export const CHART_ACCENT = {
+  bar: 'bg-primary',
+  barHover: 'hover:bg-primary/85',
+  /** Values and labels wear ink, never the mark colour. */
+  text: 'text-foreground',
+  card: 'border-primary/25 bg-primary/10',
+  cardHover: 'hover:border-primary/45'
+} as const;
+
 export interface ChartPaletteEntry {
+  /** Solid mark fill. */
   bar: string;
+  /** Hover state for an interactive mark. */
   barHover: string;
+  /** Text colour for values/labels. An ink token by design — see note above. */
   text: string;
+  /** Tinted card surface + border for KPI tiles. */
   card: string;
   cardHover: string;
 }
 
-export const CHART_PALETTE: ChartPaletteEntry[] = [
-  { bar: 'bg-violet-500/70', barHover: 'hover:bg-violet-500/90', text: 'text-violet-700 dark:text-violet-300', card: 'border-violet-200/60 bg-violet-500/10 dark:border-violet-500/20', cardHover: 'hover:border-violet-300/80 dark:hover:border-violet-400/40' },
-  { bar: 'bg-sky-500/70', barHover: 'hover:bg-sky-500/90', text: 'text-sky-700 dark:text-sky-300', card: 'border-sky-200/60 bg-sky-500/10 dark:border-sky-500/20', cardHover: 'hover:border-sky-300/80 dark:hover:border-sky-400/40' },
-  { bar: 'bg-emerald-500/70', barHover: 'hover:bg-emerald-500/90', text: 'text-emerald-700 dark:text-emerald-300', card: 'border-emerald-200/60 bg-emerald-500/10 dark:border-emerald-500/20', cardHover: 'hover:border-emerald-300/80 dark:hover:border-emerald-400/40' },
-  { bar: 'bg-amber-500/70', barHover: 'hover:bg-amber-500/90', text: 'text-amber-700 dark:text-amber-300', card: 'border-amber-200/60 bg-amber-500/10 dark:border-amber-500/20', cardHover: 'hover:border-amber-300/80 dark:hover:border-amber-400/40' },
-  { bar: 'bg-rose-500/70', barHover: 'hover:bg-rose-500/90', text: 'text-rose-700 dark:text-rose-300', card: 'border-rose-200/60 bg-rose-500/10 dark:border-rose-500/20', cardHover: 'hover:border-rose-300/80 dark:hover:border-rose-400/40' },
-  { bar: 'bg-indigo-500/70', barHover: 'hover:bg-indigo-500/90', text: 'text-indigo-700 dark:text-indigo-300', card: 'border-indigo-200/60 bg-indigo-500/10 dark:border-indigo-500/20', cardHover: 'hover:border-indigo-300/80 dark:hover:border-indigo-400/40' },
-  { bar: 'bg-teal-500/70', barHover: 'hover:bg-teal-500/90', text: 'text-teal-700 dark:text-teal-300', card: 'border-teal-200/60 bg-teal-500/10 dark:border-teal-500/20', cardHover: 'hover:border-teal-300/80 dark:hover:border-teal-400/40' },
-  { bar: 'bg-orange-500/70', barHover: 'hover:bg-orange-500/90', text: 'text-orange-700 dark:text-orange-300', card: 'border-orange-200/60 bg-orange-500/10 dark:border-orange-500/20', cardHover: 'hover:border-orange-300/80 dark:hover:border-orange-400/40' }
+/**
+ * Monochrome brand ramp, for STACKED / SEGMENTED bars only.
+ * Ordering is meaningful (light→dark reads small→large), so sort unordered
+ * categories by value before using this or you imply a ranking that isn't there.
+ */
+export const CHART_SERIES: ChartPaletteEntry[] = [
+  { bar: 'bg-series-1', barHover: 'hover:bg-series-1/85', text: 'text-foreground', card: 'border-series-1/25 bg-series-1/10', cardHover: 'hover:border-series-1/45' },
+  { bar: 'bg-series-2', barHover: 'hover:bg-series-2/85', text: 'text-foreground', card: 'border-series-2/25 bg-series-2/10', cardHover: 'hover:border-series-2/45' },
+  { bar: 'bg-series-3', barHover: 'hover:bg-series-3/85', text: 'text-foreground', card: 'border-series-3/25 bg-series-3/10', cardHover: 'hover:border-series-3/45' },
+  { bar: 'bg-series-4', barHover: 'hover:bg-series-4/85', text: 'text-foreground', card: 'border-series-4/25 bg-series-4/10', cardHover: 'hover:border-series-4/45' },
+  { bar: 'bg-series-5', barHover: 'hover:bg-series-5/85', text: 'text-foreground', card: 'border-series-5/25 bg-series-5/10', cardHover: 'hover:border-series-5/45' }
 ];
 
-export const chartPaletteAt = (idx: number): ChartPaletteEntry => CHART_PALETTE[idx % CHART_PALETTE.length];
+/** Kept as an alias so existing imports keep working. */
+export const CHART_PALETTE = CHART_SERIES;
+
+/** Number of distinct ramp steps. Past this, fold into "Other". */
+export const CHART_PALETTE_SIZE = CHART_SERIES.length;
+
+/**
+ * Ramp step for segment `idx` of a stacked bar.
+ *
+ * NOTE: wraps on overflow, so a 6-segment bar reuses step 1. Kept deliberately
+ * narrow — the real fix is an "Other" bucket in the chart components. Every
+ * consumer prints a visible label, so a repeated step is cosmetic, not misleading.
+ */
+export const chartPaletteAt = (idx: number): ChartPaletteEntry => CHART_SERIES[idx % CHART_SERIES.length];

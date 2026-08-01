@@ -5,11 +5,15 @@ import { CalendarClock, CalendarPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
 import { parseLocalDate } from '@/lib/utils/dates';
+import { DEADLINE_VISUAL } from '@/lib/theme/categories';
 import { buildDeadlinesIcs } from '@/lib/parent/ics';
 import type { ChildDeadline } from '@/lib/parent/types';
 
 // Urgency-grouped deadline list (counsellor deadline-monitor idiom) with an
 // all-day .ics export so parents can mirror the dates into their own calendar.
+//
+// The four buckets below are exactly DEADLINE_VISUAL's urgency bands
+// (lib/theme/categories), so the tone comes from there rather than a local map.
 
 const longDateFormatter = new Intl.DateTimeFormat('en-GB', {
   weekday: 'short',
@@ -32,27 +36,29 @@ const groupDeadlines = (deadlines: ChildDeadline[]): Group[] =>
       key: 'overdue',
       title: 'Passed',
       detail: 'Already gone by — worth a check-in if unexpected',
-      tone: 'text-rose-600 dark:text-rose-300',
+      tone: DEADLINE_VISUAL.overdue.text,
       items: deadlines.filter((d) => d.daysUntil < 0),
     },
     {
       key: 'week',
       title: 'This week',
       detail: 'Within 7 days',
-      tone: 'text-amber-700 dark:text-amber-300',
+      tone: DEADLINE_VISUAL['this-week'].text,
       items: deadlines.filter((d) => d.daysUntil >= 0 && d.daysUntil <= 7),
     },
     {
       key: 'month',
       title: 'This month',
       detail: '8–30 days out',
-      tone: 'text-sky-700 dark:text-sky-300',
+      tone: DEADLINE_VISUAL['this-month'].text,
       items: deadlines.filter((d) => d.daysUntil > 7 && d.daysUntil <= 30),
     },
     {
       key: 'later',
       title: 'Further out',
       detail: 'More than a month away',
+      // Deliberately neutral rather than DEADLINE_VISUAL.later (success): nothing is
+      // "good" about a distant deadline here, it's just quiet.
       tone: 'text-muted-foreground',
       items: deadlines.filter((d) => d.daysUntil > 30),
     },
@@ -68,7 +74,7 @@ export function DeadlineGroups({
   if (deadlines.length === 0) {
     return (
       <EmptyState
-        icon={CalendarClock}
+        icon={<CalendarClock />}
         title="No deadlines yet"
         description={`Deadlines appear once ${childName.split(/\s+/)[0]} is tracking applications with dated milestones.`}
       />
@@ -94,7 +100,7 @@ export function DeadlineGroups({
         <button
           type="button"
           onClick={exportIcs}
-          className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold text-foreground shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+          className="hover-lift inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold text-foreground shadow-e-1"
         >
           <CalendarPlus className="h-3.5 w-3.5" aria-hidden />
           Add to my calendar (.ics)
@@ -102,11 +108,11 @@ export function DeadlineGroups({
       </div>
 
       {groups.map((group, groupIndex) => (
-        <section key={group.key} className="surface-card surface-card--static">
+        <section key={group.key} className="surface-card">
           <div className="relative z-10">
             <div className="mb-4 flex items-baseline justify-between gap-3">
               <div>
-                <p className={cn('text-[0.6875rem] font-semibold uppercase tracking-[0.3em]', group.tone)}>
+                <p className={cn('eyebrow', group.tone)}>
                   {group.title}
                 </p>
                 <p className="text-xs text-muted-foreground">{group.detail}</p>

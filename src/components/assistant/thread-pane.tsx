@@ -110,7 +110,7 @@ export function ThreadPane({
   };
 
   return (
-    <div className="flex h-[calc(100vh-220px)] min-h-[480px] flex-col overflow-hidden rounded-[24px] border border-border bg-card">
+    <div className="flex h-[calc(100vh-220px)] min-h-[480px] flex-col overflow-hidden rounded-3xl border border-border bg-card">
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-border px-4 py-3">
         <p className="truncate font-heading text-sm font-semibold text-foreground">{title}</p>
@@ -142,9 +142,9 @@ export function ThreadPane({
                 >
                   <div
                     className={cn(
-                      'max-w-[85%] break-words rounded-[16px] px-3.5 py-2.5 text-[0.8125rem] leading-relaxed',
+                      'max-w-[85%] break-words rounded-2xl px-3.5 py-2.5 text-body-sm leading-relaxed',
                       msg.error
-                        ? 'border border-rose-300/60 bg-rose-500/10 text-rose-700 dark:border-rose-500/30 dark:text-rose-300'
+                        ? 'border border-danger/25 bg-danger-subtle text-danger'
                         : msg.role === 'user'
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-muted/60 text-foreground'
@@ -156,7 +156,7 @@ export function ThreadPane({
                         <button
                           onClick={onRetry}
                           disabled={isStreaming}
-                          className="inline-flex items-center gap-1 rounded-full border border-rose-300/60 px-2.5 py-1 text-[0.6875rem] font-semibold text-rose-700 transition hover:bg-rose-500/10 disabled:opacity-50 dark:border-rose-500/40 dark:text-rose-300"
+                          className="inline-flex items-center gap-1 rounded-full border border-danger/25 px-2.5 py-1 text-label font-semibold text-danger transition hover:bg-danger-subtle disabled:opacity-50"
                         >
                           <RotateCcw className="h-3 w-3" />
                           Retry
@@ -168,7 +168,7 @@ export function ThreadPane({
                           {isStreamingThis && statusLabel && (
                             <div className="mb-1.5 flex items-center gap-1.5">
                               <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                              <span className="text-[0.6875rem] text-muted-foreground">{statusLabel}</span>
+                              <span className="text-label text-muted-foreground">{statusLabel}</span>
                             </div>
                           )}
                           <MessageContent content={msg.content} mode={mode} onLinkClick={() => {}} />
@@ -223,7 +223,7 @@ export function ThreadPane({
                         className={cn(
                           'flex h-6 w-6 items-center justify-center rounded-full transition-colors',
                           msg.rating === 1
-                            ? 'text-emerald-600 dark:text-emerald-400'
+                            ? 'text-success'
                             : 'text-muted-foreground/60 hover:bg-muted hover:text-foreground'
                         )}
                       >
@@ -236,7 +236,7 @@ export function ThreadPane({
                         className={cn(
                           'flex h-6 w-6 items-center justify-center rounded-full transition-colors',
                           msg.rating === -1
-                            ? 'text-rose-600 dark:text-rose-400'
+                            ? 'text-danger'
                             : 'text-muted-foreground/60 hover:bg-muted hover:text-foreground'
                         )}
                       >
@@ -253,7 +253,7 @@ export function ThreadPane({
               <div className="flex justify-end">
                 <button
                   onClick={onResend}
-                  className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[0.6875rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-label font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   <RotateCcw className="h-3 w-3" />
                   No reply recorded — resend
@@ -268,11 +268,11 @@ export function ThreadPane({
       {/* Composer */}
       <form onSubmit={handleFormSubmit} className="border-t border-border bg-card px-3 py-2.5">
         {coolingDown && (
-          <p className="mb-1.5 text-center text-[0.6875rem] text-muted-foreground" role="status">
+          <p className="mb-1.5 text-center text-label text-muted-foreground" role="status">
             Message limit reached — you can send again in {cooldownRemaining}s
           </p>
         )}
-        <div className="flex items-end gap-2 rounded-[18px] border border-border bg-background px-3 py-1.5 transition-colors focus-within:border-primary/40">
+        <div className="flex items-end gap-2 rounded-2xl border border-border bg-background px-3 py-1.5 transition-[border-color,box-shadow] focus-within:border-primary focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background">
           <AutoResizeTextarea
             value={input}
             onChange={onInputChange}
@@ -284,7 +284,11 @@ export function ThreadPane({
             <button
               type="button"
               onClick={onStop}
-              className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-foreground transition-[transform] hover:-translate-y-0.5"
+              // Own focus ring: the wrapper's `focus-within` fires for any child, so
+              // without this, tabbing here highlighted the whole composer as though
+              // the textarea had focus. Same fix in chat/chatbot-widget.tsx, which
+              // duplicates this composer markup verbatim.
+              className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-foreground transition-[transform,box-shadow] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-label="Stop generating"
               title="Stop generating"
             >
@@ -294,7 +298,7 @@ export function ThreadPane({
             <button
               type="submit"
               disabled={!input.trim() || coolingDown}
-              className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[transform,opacity] hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
+              className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[transform,opacity,box-shadow] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-40 disabled:hover:translate-y-0"
               aria-label="Send message"
             >
               <Send className="h-3.5 w-3.5" />

@@ -8,21 +8,21 @@ const TONE: Record<
 > = {
   open: {
     icon: Check,
-    pillClass: 'border-emerald-200/60 bg-emerald-500/10 dark:border-emerald-500/20',
-    iconClass: 'text-emerald-600 dark:text-emerald-400',
-    labelClass: 'text-emerald-700 dark:text-emerald-300'
+    pillClass: 'border-success/25 bg-success-subtle',
+    iconClass: 'text-success',
+    labelClass: 'text-success'
   },
   limited: {
     icon: AlertTriangle,
-    pillClass: 'border-amber-200/60 bg-amber-500/10 dark:border-amber-500/20',
-    iconClass: 'text-amber-600 dark:text-amber-400',
-    labelClass: 'text-amber-700 dark:text-amber-300'
+    pillClass: 'border-warning/25 bg-warning-subtle',
+    iconClass: 'text-warning',
+    labelClass: 'text-warning'
   },
   closed: {
     icon: XCircle,
-    pillClass: 'border-rose-200/60 bg-rose-500/10 dark:border-rose-500/20',
-    iconClass: 'text-rose-600 dark:text-rose-400',
-    labelClass: 'text-rose-700 dark:text-rose-300'
+    pillClass: 'border-danger/25 bg-danger-subtle',
+    iconClass: 'text-danger',
+    labelClass: 'text-danger'
   }
 };
 

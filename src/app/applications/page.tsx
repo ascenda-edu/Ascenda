@@ -2,12 +2,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { DashboardShell } from '@/components/layout/shell';
 import { PageHero } from '@/components/layout/page-hero';
 import { Button } from '@/components/ui/button';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
-import { SectionNav } from '@/components/layout/section-nav';
-import { PLANNER_SECTION_ITEMS } from '@/components/layout/navigation';
+import { AnimatedSection } from '@/components/layout/animated-section';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ClipboardCheck } from 'lucide-react';
 import { NextActionsList, type NextActionItem } from '@/components/applications/next-actions-list';
@@ -93,8 +91,7 @@ export default async function ApplicationsPage() {
 
   if (appRecords.length === 0) {
     return (
-      <DashboardShell>
-        <SectionNav items={PLANNER_SECTION_ITEMS} />
+      <>
         <PageHero
           tone="student"
           eyebrow="Your applications"
@@ -114,7 +111,7 @@ export default async function ApplicationsPage() {
           }
         />
         <EmptyState
-          icon={ClipboardCheck}
+          icon={<ClipboardCheck />}
           title="No applications yet — let's pick a first one"
           description="Add a program from your shortlist and we'll line up the tasks, deadlines, and documents for you."
           action={
@@ -124,7 +121,7 @@ export default async function ApplicationsPage() {
           }
           hint="Don't have a shortlist yet? Browse your matches instead."
         />
-      </DashboardShell>
+      </>
     );
   }
 
@@ -229,8 +226,7 @@ export default async function ApplicationsPage() {
     : 'Nothing urgent right now';
 
   return (
-    <DashboardShell>
-      <SectionNav items={PLANNER_SECTION_ITEMS} />
+    <>
 
       <PageHero
         tone="student"
@@ -258,34 +254,34 @@ export default async function ApplicationsPage() {
 
       <div className="space-y-6 sm:space-y-8">
         {/* ── What's next ───────────────────────────────────────── */}
-        <section className="space-y-3">
+        <AnimatedSection className="space-y-3" as="section">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+              <p className="eyebrow">
                 What&apos;s next
               </p>
-              <h2 className="text-xl font-semibold text-foreground">Your top three this week</h2>
+              <h2 className="text-foreground">Your top three this week</h2>
             </div>
             <Button asChild size="sm" variant="ghost">
               <Link href="/applications/tasks">All tasks →</Link>
             </Button>
           </div>
           <NextActionsList items={nextActionItems} />
-        </section>
+        </AnimatedSection>
 
         {/* ── All applications ──────────────────────────────────── */}
-        <section className="space-y-3">
+        <AnimatedSection className="space-y-3" as="section" delay={0.06}>
           <div>
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+            <p className="eyebrow">
               All applications
             </p>
-            <h2 className="text-xl font-semibold text-foreground">
+            <h2 className="text-foreground">
               {appRecords.length} tracked · in-progress first, submitted at the bottom
             </h2>
           </div>
           <ApplicationList rows={applicationRows} />
-        </section>
+        </AnimatedSection>
       </div>
-    </DashboardShell>
+    </>
   );
 }

@@ -8,6 +8,7 @@ import { PageHero } from '@/components/layout/page-hero';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useShortlist } from '@/components/university-search/shortlist-store';
 import { DECK_FIT, DECK_RARITY } from '@/lib/counsellor/deck-theme';
 import type { StudentQuestDeck } from '@/lib/counsellor/decks';
@@ -85,32 +86,29 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
 
         {decks.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-3">
-            <StatCard label="Quests cleared" value={`${totals.cleared}/${totals.quests}`} icon={CheckCircle2} tone="text-emerald-500" />
-            <StatCard label="Active decks" value={String(totals.decks)} icon={Scroll} tone="text-violet-500" />
+            <StatCard label="Quests cleared" value={`${totals.cleared}/${totals.quests}`} icon={CheckCircle2} tone="text-success" />
+            <StatCard label="Active decks" value={String(totals.decks)} icon={Scroll} tone="text-feature" />
             <StatCard
               label="Progress"
               value={totals.quests ? `${Math.round((totals.cleared / totals.quests) * 100)}%` : '—'}
               icon={Swords}
-              tone="text-sky-500"
+              tone="text-info"
             />
           </div>
         )}
       </header>
 
       {decks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border bg-muted/40 px-8 py-16 text-center">
-          <div className="mb-4 rounded-full bg-violet-500/10 p-4">
-            <Scroll className="h-6 w-6 text-violet-500" aria-hidden />
-          </div>
-          <h3 className="text-lg font-semibold text-foreground">No quests yet</h3>
-          <p className="mt-2 max-w-md text-sm text-muted-foreground">
-            When your counsellor assigns you a deck of universities, it shows up here as a quest log. In the meantime,
-            keep exploring on your own.
-          </p>
-          <Button asChild size="sm" className="mt-4">
-            <Link href="/university-search/search">Explore universities</Link>
-          </Button>
-        </div>
+        <EmptyState
+          icon={<Scroll />}
+          title="No quests yet"
+          description="When your counsellor assigns you a deck of universities, it shows up here as a quest log. In the meantime, keep exploring on your own."
+          action={
+            <Button asChild size="sm">
+              <Link href="/university-search/search">Explore universities</Link>
+            </Button>
+          }
+        />
       ) : (
         <div className="space-y-8">
           {decks.map((deck) => {
@@ -140,14 +138,14 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
                       <Card
                         key={quest.programId}
                         className={cn(
-                          'border transition hover:-translate-y-px hover:shadow-md',
-                          isStarted && 'border-emerald-300/60 bg-emerald-500/[0.03]'
+                          'border hover-lift',
+                          isStarted && 'border-success/25 bg-success/3'
                         )}
                       >
                         <CardHeader className="space-y-2 pb-3">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                              <p className="eyebrow">
                                 {quest.country || 'Location TBC'}
                               </p>
                               <p className="truncate text-base font-semibold text-foreground" title={quest.university}>
@@ -164,14 +162,14 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
                             </span>
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className={cn('rounded-full border px-2.5 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.18em]', fit.badge)}>
+                            <span className={cn('rounded-full border px-2.5 py-0.5 text-label font-semibold uppercase tracking-[0.18em]', fit.badge)}>
                               {fit.label}
                             </span>
-                            <span className={cn('rounded-full border px-2.5 py-0.5 text-[0.625rem] font-semibold', rarity.badge)}>
+                            <span className={cn('rounded-full border px-2.5 py-0.5 text-label font-semibold', rarity.badge)}>
                               {rarity.label}
                             </span>
                             {isStarted && (
-                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-0.5 text-[0.625rem] font-semibold text-emerald-600 dark:text-emerald-300">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-success/25 bg-success-subtle px-2.5 py-0.5 text-label font-semibold text-success">
                                 <CheckCircle2 className="h-3 w-3" aria-hidden /> Cleared
                               </span>
                             )}
@@ -197,7 +195,7 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
                               className={cn(
                                 'gap-1.5',
                                 isShortlisted &&
-                                  'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20'
+                                  'bg-success-subtle text-success hover:bg-success/20'
                               )}
                               disabled={isShortlisted}
                               onClick={() => saveToShortlist(quest.programId, quest.courseName, quest.university, quest.country)}
@@ -243,7 +241,7 @@ function StatCard({
   return (
     <Card className="border-dashed border-border/70">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <span className="text-xs uppercase tracking-[0.3em] text-muted-foreground">{label}</span>
+        <span className="eyebrow">{label}</span>
         <Icon className={cn('h-5 w-5', tone)} aria-hidden />
       </CardHeader>
       <CardContent>

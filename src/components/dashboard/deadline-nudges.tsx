@@ -11,24 +11,24 @@ import type { DeadlineNudge, NudgeUrgency } from '@/lib/data/student-demo-data';
 const URGENCY_CONFIG: Record<NudgeUrgency, { icon: typeof Bell; color: string; bg: string; border: string; ring: string }> = {
   critical: {
     icon: AlertTriangle,
-    color: 'text-rose-600 dark:text-rose-400',
-    bg: 'bg-rose-500/10',
-    border: 'border-rose-200/60 dark:border-rose-500/20',
-    ring: 'ring-rose-500/20'
+    color: 'text-danger',
+    bg: 'bg-danger-subtle',
+    border: 'border-danger/25',
+    ring: 'ring-danger/25'
   },
   warning: {
     icon: Bell,
-    color: 'text-amber-600 dark:text-amber-400',
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-200/60 dark:border-amber-500/20',
-    ring: 'ring-amber-500/20'
+    color: 'text-warning',
+    bg: 'bg-warning-subtle',
+    border: 'border-warning/25',
+    ring: 'ring-warning/25'
   },
   info: {
     icon: Info,
-    color: 'text-sky-600 dark:text-sky-400',
-    bg: 'bg-sky-500/10',
-    border: 'border-sky-200/60 dark:border-sky-500/20',
-    ring: 'ring-sky-500/20'
+    color: 'text-info',
+    bg: 'bg-info-subtle',
+    border: 'border-info/25',
+    ring: 'ring-info/25'
   }
 };
 
@@ -59,8 +59,8 @@ export function DeadlineNudges({ nudges }: DeadlineNudgesProps) {
 
   if (visible.length === 0) {
     return (
-      <div className="rounded-2xl border border-emerald-200/60 bg-emerald-500/5 px-5 py-6 text-center dark:border-emerald-500/20">
-        <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">All caught up!</p>
+      <div className="rounded-2xl border border-success/25 bg-success-subtle px-5 py-6 text-center">
+        <p className="text-sm font-semibold text-success">All caught up!</p>
         <p className="mt-1 text-xs text-muted-foreground">No urgent reminders right now.</p>
       </div>
     );
@@ -70,9 +70,9 @@ export function DeadlineNudges({ nudges }: DeadlineNudgesProps) {
     <div className="space-y-4">
       {/* Summary */}
       {criticalCount > 0 && (
-        <div className="flex items-center gap-2 rounded-2xl border border-rose-200/60 bg-rose-500/5 px-4 py-3 dark:border-rose-500/20">
-          <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0" />
-          <p className="text-sm text-rose-600 dark:text-rose-400">
+        <div className="flex items-center gap-2 rounded-2xl border border-danger/25 bg-danger-subtle px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-danger shrink-0" />
+          <p className="text-sm text-danger">
             <span className="font-semibold">{criticalCount}</span> critical{' '}
             {criticalCount === 1 ? 'item needs' : 'items need'} your attention
           </p>
@@ -101,7 +101,7 @@ export function DeadlineNudges({ nudges }: DeadlineNudgesProps) {
                 animate="show"
                 exit="exit"
                 className={cn(
-                  'relative rounded-2xl border p-4 transition-all',
+                  'relative rounded-2xl border p-4 transition-colors',
                   cfg.border, cfg.bg
                 )}
               >
@@ -121,12 +121,12 @@ export function DeadlineNudges({ nudges }: DeadlineNudgesProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="text-sm font-semibold text-foreground">{nudge.title}</p>
-                      <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-bold tabular-nums', cfg.color, cfg.bg)}>
+                      <span className={cn('rounded-full px-2 py-0.5 text-label font-bold tabular-nums', cfg.color, cfg.bg)}>
                         {days <= 0 ? 'Overdue' : `${days}d`}
                       </span>
                     </div>
                     {nudge.university && (
-                      <p className="text-[0.6875rem] font-semibold text-muted-foreground mb-1">{nudge.university}</p>
+                      <p className="text-label font-semibold text-muted-foreground mb-1">{nudge.university}</p>
                     )}
                     <p className="text-[0.8125rem] text-muted-foreground/90 leading-relaxed">{nudge.description}</p>
                     <Link

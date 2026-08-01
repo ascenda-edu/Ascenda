@@ -17,6 +17,7 @@ export default async function CounsellorOutcomesPage() {
   return (
     <div className="space-y-6">
       <PageHero
+          tone="counsellor"
         eyebrow="Counsellor"
         title="Outcome tracking"
         description="Acceptances, rejections, waitlists, and pending responses across the cohort."

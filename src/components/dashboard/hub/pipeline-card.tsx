@@ -11,10 +11,10 @@ export interface PipelineStage {
 }
 
 const STAGE_COLOR: Record<string, { bar: string; dot: string }> = {
-  planning: { bar: 'bg-slate-400 dark:bg-slate-500', dot: 'bg-slate-400 dark:bg-slate-500' },
-  in_progress: { bar: 'bg-sky-500', dot: 'bg-sky-500' },
-  submitted: { bar: 'bg-emerald-500', dot: 'bg-emerald-500' },
-  decision: { bar: 'bg-amber-500', dot: 'bg-amber-500' },
+  planning: { bar: 'bg-muted-foreground/50', dot: 'bg-muted-foreground/50' },
+  in_progress: { bar: 'bg-info-fill', dot: 'bg-info-fill' },
+  submitted: { bar: 'bg-success-fill', dot: 'bg-success-fill' },
+  decision: { bar: 'bg-warning-fill', dot: 'bg-warning-fill' },
   enrolled: { bar: 'bg-primary', dot: 'bg-primary' }
 };
 
@@ -31,7 +31,7 @@ export function PipelineCard({ stages }: { stages: PipelineStage[] }) {
       eyebrow="Pipeline"
       title="Applications"
       icon={ClipboardCheck}
-      iconClassName="bg-sky-500/10 text-sky-600 ring-sky-500/15 dark:text-sky-300"
+      iconClassName="bg-info-subtle text-info ring-info/25"
       action={total > 0 ? { label: 'Open board', href: '/applications' } : undefined}
     >
       {total === 0 ? (
@@ -50,7 +50,7 @@ export function PipelineCard({ stages }: { stages: PipelineStage[] }) {
             {active.map((stage) => (
               <div
                 key={stage.key}
-                className={cn('h-full rounded-full transition-all', STAGE_COLOR[stage.key]?.bar ?? 'bg-primary')}
+                className={cn('h-full rounded-full transition-[width]', STAGE_COLOR[stage.key]?.bar ?? 'bg-primary')}
                 style={{ width: `${Math.max((stage.count / total) * 100, 6)}%` }}
               />
             ))}

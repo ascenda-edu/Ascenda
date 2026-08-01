@@ -23,6 +23,7 @@ export default async function CounsellorDeadlinesPage() {
   return (
     <div className="space-y-6">
       <PageHero
+          tone="counsellor"
         eyebrow="Counsellor"
         highlight={`${allDeadlines.length} total`}
         title="Deadline monitor"

@@ -25,6 +25,7 @@ export default async function CounsellorUniversitiesPage() {
   return (
     <div className="space-y-6">
       <PageHero
+          tone="counsellor"
         eyebrow="Counsellor"
         highlight={`${decks.length} deck${decks.length === 1 ? '' : 's'}`}
         title="University decks"

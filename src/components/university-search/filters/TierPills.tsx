@@ -26,7 +26,7 @@ export function TierPills({ selected, onToggle }: TierPillsProps) {
             className={cn(
               'flex h-11 min-h-[44px] items-center rounded-full border px-4 text-sm font-medium transition-[transform,box-shadow,border-color,color,background-color] duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
               isSelected
-                ? 'border-primary bg-primary/10 text-primary'
+                ? 'border-primary bg-primary/10 text-primary-ink'
                 : 'border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
           >

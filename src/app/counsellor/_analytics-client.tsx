@@ -10,6 +10,8 @@ import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
 import type { CohortStats } from '@/lib/counsellor/data';
 import { STAGE_COLORS } from '@/lib/counsellor/stage-colors';
+import { COMPLETION_VISUAL, TIER_VISUAL } from '@/lib/theme/categories';
+import { CHART_ACCENT, CHART_SERIES } from './_components/chart-palette';
 import {
   ProgrammeSplit,
   IbDistribution,
@@ -110,7 +112,10 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
     setDrilldown({
       title: `${label} Students`,
       subtitle: `${group.length} student${group.length !== 1 ? 's' : ''} enrolled in the ${label} programme`,
-      accentColor: programme === 'IB' ? 'bg-violet-500' : 'bg-sky-500',
+      // Ramp steps 1 and 4 — the two segments `ProgrammeSplit` actually paints.
+      // This used to be feature/info, so clicking the indigo IB segment opened a
+      // violet-accented drill-down and the A-Level one turned blue.
+      accentColor: programme === 'IB' ? CHART_SERIES[0].bar : CHART_SERIES[3].bar,
       summaryStats: [
         { label: 'students', value: String(group.length) },
         { label: 'avg completion', value: `${avgCompletion}%` },
@@ -120,9 +125,9 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         student: s,
         detail: s.academic.subjects.slice(0, 3).join(', '),
         badge: programme === 'IB' && s.academic.ibPoints
-          ? { label: `${s.academic.ibPoints} pts`, color: 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300' }
+          ? { label: `${s.academic.ibPoints} pts`, color: 'bg-feature-subtle text-feature' }
           : s.academic.aLevelGrades
-            ? { label: s.academic.aLevelGrades, color: 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300' }
+            ? { label: s.academic.aLevelGrades, color: 'bg-info-subtle text-info' }
             : undefined
       }))
     });
@@ -146,7 +151,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
       items: group.map((s) => ({
         student: s,
         detail: s.academic.subjects.slice(0, 3).join(', '),
-        badge: { label: `${s.academic.ibPoints} pts`, color: 'bg-primary/10 text-primary' }
+        badge: { label: `${s.academic.ibPoints} pts`, color: 'bg-primary/10 text-primary-ink' }
       }))
     });
   };
@@ -157,7 +162,10 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
     setDrilldown({
       title: field.label,
       subtitle: `${group.length} student${group.length !== 1 ? 's' : ''} interested in this field`,
-      accentColor: 'bg-violet-500',
+      // `FieldChart` paints every row with the single bar accent, so the
+      // drill-down wears it too. It was `bg-feature-fill`, which made all ten
+      // indigo rows open a violet panel.
+      accentColor: CHART_ACCENT.bar,
       summaryStats: [
         { label: 'students', value: String(group.length) },
         { label: 'IB', value: String(ibCount) },
@@ -166,7 +174,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
       items: group.map((s) => ({
         student: s,
         detail: s.academic.careerAspiration,
-        badge: { label: s.academic.programmeType === 'IB' ? 'IB' : 'A-Level', color: s.academic.programmeType === 'IB' ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300' : 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300' }
+        badge: { label: s.academic.programmeType === 'IB' ? 'IB' : 'A-Level', color: s.academic.programmeType === 'IB' ? 'bg-feature-subtle text-feature' : 'bg-info-subtle text-info' }
       }))
     });
   };
@@ -180,7 +188,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         items.push({
           student: s,
           detail: matchingApps.map((a) => `${a.university} — ${a.program}`).join(' · '),
-          badge: { label: `${matchingApps.length} app${matchingApps.length !== 1 ? 's' : ''}`, color: 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300' }
+          badge: { label: `${matchingApps.length} app${matchingApps.length !== 1 ? 's' : ''}`, color: 'bg-info-subtle text-info' }
         });
       }
     });
@@ -214,7 +222,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         items.push({
           student: s,
           detail: matchingMatches.map((m) => `${m.university} (${m.score}%)`).join(' · '),
-          badge: { label: `${matchingMatches.length} match${matchingMatches.length !== 1 ? 'es' : ''}`, color: tier === 'reach' ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300' : tier === 'match' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' }
+          badge: { label: `${matchingMatches.length} match${matchingMatches.length !== 1 ? 'es' : ''}`, color: tier === 'reach' ? 'bg-danger-subtle text-danger' : tier === 'match' ? 'bg-warning-subtle text-warning' : 'bg-success-subtle text-success' }
         });
       }
     });
@@ -226,7 +234,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
     setDrilldown({
       title: `${label} Tier`,
       subtitle: `${items.length} student${items.length !== 1 ? 's' : ''} with ${label}-tier matches`,
-      accentColor: tier === 'reach' ? 'bg-rose-500' : tier === 'match' ? 'bg-amber-500' : 'bg-emerald-500',
+      accentColor: tier === 'reach' ? TIER_VISUAL.reach.bar : tier === 'match' ? TIER_VISUAL.match.bar : TIER_VISUAL.safety.bar,
       summaryStats: [
         { label: 'students', value: String(items.length) },
         { label: 'matches', value: String(totalTierMatches) },
@@ -238,17 +246,19 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
 
   const handleCompletionSelect = (bucket: { label: string; min: number; max: number }) => {
     const group = students.filter((s) => s.profile.completionPct >= bucket.min && s.profile.completionPct <= bucket.max);
+    // Completion bands are COMPLETION_VISUAL's (full / high / mid / low) rather
+    // than a second copy of the same four colours.
     const colorMap: Record<string, string> = {
-      '100%': 'bg-emerald-500',
-      '75–99%': 'bg-sky-500',
-      '50–74%': 'bg-amber-500',
-      '<50%': 'bg-red-500'
+      '100%': COMPLETION_VISUAL.full.bar,
+      '75–99%': COMPLETION_VISUAL.high.bar,
+      '50–74%': COMPLETION_VISUAL.mid.bar,
+      '<50%': COMPLETION_VISUAL.low.bar
     };
     const badgeColorMap: Record<string, string> = {
-      '100%': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
-      '75–99%': 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300',
-      '50–74%': 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
-      '<50%': 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300'
+      '100%': `${COMPLETION_VISUAL.full.bg} ${COMPLETION_VISUAL.full.text}`,
+      '75–99%': `${COMPLETION_VISUAL.high.bg} ${COMPLETION_VISUAL.high.text}`,
+      '50–74%': `${COMPLETION_VISUAL.mid.bg} ${COMPLETION_VISUAL.mid.text}`,
+      '<50%': `${COMPLETION_VISUAL.low.bg} ${COMPLETION_VISUAL.low.text}`
     };
     const avgPct = group.length ? Math.round(group.reduce((a, s) => a + s.profile.completionPct, 0) / group.length) : 0;
     setDrilldown({
@@ -262,7 +272,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
       items: group.map((s) => ({
         student: s,
         detail: `Missing: ${['personal', 'academic', 'subjects', 'lifestyle'].filter((step) => !s.profile.stepsComplete.includes(step as any)).join(', ') || 'None'}`,
-        badge: { label: `${s.profile.completionPct}%`, color: badgeColorMap[bucket.label] ?? 'bg-primary/10 text-primary' }
+        badge: { label: `${s.profile.completionPct}%`, color: badgeColorMap[bucket.label] ?? 'bg-primary/10 text-primary-ink' }
       }))
     });
   };
@@ -274,11 +284,11 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         setDrilldown({
           title: 'Profile Gaps',
           subtitle: `${group.length} student${group.length !== 1 ? 's' : ''} with incomplete profiles`,
-          accentColor: 'bg-amber-500',
+          accentColor: 'bg-warning-fill',
           items: group.map((s) => ({
             student: s,
             detail: `${s.profile.completionPct}% complete — missing: ${['personal', 'academic', 'subjects', 'lifestyle'].filter((step) => !s.profile.stepsComplete.includes(step as any)).join(', ') || 'flags only'}`,
-            badge: { label: `${s.profile.completionPct}%`, color: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' }
+            badge: { label: `${s.profile.completionPct}%`, color: 'bg-warning-subtle text-warning' }
           }))
         });
         break;
@@ -288,13 +298,13 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         setDrilldown({
           title: 'UK-Bound Students',
           subtitle: `${group.length} student${group.length !== 1 ? 's' : ''} targeting the United Kingdom`,
-          accentColor: 'bg-violet-500',
+          accentColor: 'bg-feature-fill',
           items: group.map((s) => {
             const ukMatches = s.matches.filter((m) => m.country === 'UK');
             return {
               student: s,
               detail: ukMatches.map((m) => m.university).join(', '),
-              badge: { label: `${ukMatches.length} UK`, color: 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300' }
+              badge: { label: `${ukMatches.length} UK`, color: 'bg-feature-subtle text-feature' }
             };
           })
         });
@@ -305,13 +315,13 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         setDrilldown({
           title: 'Submitted Applications',
           subtitle: `${group.length} student${group.length !== 1 ? 's' : ''} with submitted applications`,
-          accentColor: 'bg-emerald-500',
+          accentColor: 'bg-success-fill',
           items: group.map((s) => {
             const submitted = s.applications.filter((a) => a.status === 'submitted');
             return {
               student: s,
               detail: submitted.map((a) => `${a.university} — ${a.program}`).join(' · '),
-              badge: { label: `${submitted.length} sent`, color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' }
+              badge: { label: `${submitted.length} sent`, color: 'bg-success-subtle text-success' }
             };
           })
         });
@@ -330,14 +340,14 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
             items.push({
               student: s,
               detail: urgentDeadlines.map((d) => `${d.university} — ${parseLocalDate(d.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`).join(' · '),
-              badge: { label: `${urgentDeadlines.length} due`, color: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300' }
+              badge: { label: `${urgentDeadlines.length} due`, color: 'bg-danger-subtle text-danger' }
             });
           }
         });
         setDrilldown({
           title: 'Deadlines This Week',
           subtitle: `${items.length} student${items.length !== 1 ? 's' : ''} with upcoming deadlines`,
-          accentColor: 'bg-red-500',
+          accentColor: 'bg-danger-fill',
           items
         });
         break;
@@ -350,14 +360,14 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
             items.push({
               student: s,
               detail: reachMatches.map((m) => `${m.university} (${m.score}%)`).join(' · '),
-              badge: { label: `${reachMatches.length} reach`, color: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300' }
+              badge: { label: `${reachMatches.length} reach`, color: 'bg-danger-subtle text-danger' }
             });
           }
         });
         setDrilldown({
           title: 'Reach-Tier Matches',
           subtitle: `${items.length} student${items.length !== 1 ? 's' : ''} with Reach-tier matches`,
-          accentColor: 'bg-rose-500',
+          accentColor: 'bg-danger-fill',
           items
         });
         break;
@@ -369,7 +379,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         setDrilldown({
           title: 'Safe-Tier Coverage',
           subtitle: `${withSafe.length} of ${students.length} students have a Safe option`,
-          accentColor: 'bg-sky-500',
+          accentColor: 'bg-info-fill',
           items: all.map((s) => {
             const hasSafe = s.matches.some((m) => m.tier === 'Safe');
             const safeMatches = s.matches.filter((m) => m.tier === 'Safe');
@@ -379,8 +389,8 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
                 ? safeMatches.map((m) => m.university).join(', ')
                 : 'No Safe-tier options — consider adding safety schools',
               badge: hasSafe
-                ? { label: `${safeMatches.length} safe`, color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' }
-                : { label: 'At risk', color: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300' }
+                ? { label: `${safeMatches.length} safe`, color: 'bg-success-subtle text-success' }
+                : { label: 'At risk', color: 'bg-danger-subtle text-danger' }
             };
           })
         });
@@ -402,7 +412,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
           ? undefined
           : {
               label: `${details.length} ${details.length === 1 ? meta.unitSingular : meta.unitPlural}`,
-              color: 'bg-primary/10 text-primary'
+              color: 'bg-primary/10 text-primary-ink'
             }
     }));
     setDrilldown({
@@ -489,6 +499,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
   return (
     <div className="space-y-6">
       <PageHero
+          tone="counsellor"
         eyebrow="Counsellor"
         highlight="Deep dive"
         title="Cohort analytics"
@@ -553,60 +564,60 @@ function InsightsContent({
       label: 'Profile gaps',
       value: `${stats.flagged} student${stats.flagged !== 1 ? 's' : ''}`,
       detail: 'have incomplete profiles affecting match quality',
-      color: 'text-amber-600',
-      bg: 'bg-amber-500/10',
-      border: 'border-amber-200/50 dark:border-amber-500/20',
-      hoverBorder: 'hover:border-amber-300/80 dark:hover:border-amber-400/40'
+      color: 'text-warning',
+      bg: 'bg-warning-subtle',
+      border: 'border-warning/25',
+      hoverBorder: 'hover:border-warning/50'
     },
     {
       key: 'top_destination',
       label: 'Top destination',
       value: 'United Kingdom',
       detail: 'is the #1 preferred study destination across the cohort',
-      color: 'text-violet-600',
-      bg: 'bg-violet-500/10',
-      border: 'border-violet-200/50 dark:border-violet-500/20',
-      hoverBorder: 'hover:border-violet-300/80 dark:hover:border-violet-400/40'
+      color: 'text-feature',
+      bg: 'bg-feature-subtle',
+      border: 'border-feature/25',
+      hoverBorder: 'hover:border-feature/50'
     },
     {
       key: 'submission_rate',
       label: 'Submission rate',
       value: `${Math.round((totalSubmittedApps / (totalApps || 1)) * 100)}%`,
       detail: 'of all applications have been submitted',
-      color: 'text-emerald-600',
-      bg: 'bg-emerald-500/10',
-      border: 'border-emerald-200/50 dark:border-emerald-500/20',
-      hoverBorder: 'hover:border-emerald-300/80 dark:hover:border-emerald-400/40'
+      color: 'text-success',
+      bg: 'bg-success-subtle',
+      border: 'border-success/25',
+      hoverBorder: 'hover:border-success/50'
     },
     {
       key: 'deadlines_week',
       label: 'Deadlines this week',
       value: String(stats.deadlinesThisWeek),
       detail: `deadline${stats.deadlinesThisWeek !== 1 ? 's' : ''} require immediate attention`,
-      color: 'text-red-500',
-      bg: 'bg-red-500/10',
-      border: 'border-red-200/50 dark:border-red-500/20',
-      hoverBorder: 'hover:border-red-300/80 dark:hover:border-red-400/40'
+      color: 'text-danger',
+      bg: 'bg-danger-subtle',
+      border: 'border-danger/25',
+      hoverBorder: 'hover:border-danger/50'
     },
     {
       key: 'reach_apps',
       label: 'Reach applications',
       value: `${totalReachMatches}`,
       detail: 'Reach-tier matches across cohort — worth monitoring closely',
-      color: 'text-rose-600',
-      bg: 'bg-rose-500/10',
-      border: 'border-rose-200/50 dark:border-rose-500/20',
-      hoverBorder: 'hover:border-rose-300/80 dark:hover:border-rose-400/40'
+      color: TIER_VISUAL.reach.text,
+      bg: TIER_VISUAL.reach.bg,
+      border: TIER_VISUAL.reach.border,
+      hoverBorder: 'hover:border-danger/50'
     },
     {
       key: 'safe_coverage',
       label: 'Safe coverage',
       value: `${safeCoverageCount} / ${stats.total}`,
       detail: 'students have at least one Safe-tier option',
-      color: 'text-sky-600',
-      bg: 'bg-sky-500/10',
-      border: 'border-sky-200/50 dark:border-sky-500/20',
-      hoverBorder: 'hover:border-sky-300/80 dark:hover:border-sky-400/40'
+      color: 'text-info',
+      bg: 'bg-info-subtle',
+      border: 'border-info/25',
+      hoverBorder: 'hover:border-info/50'
     }
   ];
 
@@ -616,7 +627,7 @@ function InsightsContent({
         <button
           key={key}
           onClick={() => onInsightClick(key)}
-          className={`rounded-2xl border px-4 py-4 text-left transition hover:-translate-y-0.5 hover:shadow-md cursor-pointer ${bg} ${border} ${hoverBorder}`}
+          className={`rounded-2xl border px-4 py-4 text-left hover-lift cursor-pointer ${bg} ${border} ${hoverBorder}`}
         >
           <p className={`text-lg font-bold ${color}`}>{value}</p>
           <p className="text-xs font-semibold text-foreground">{label}</p>

@@ -28,6 +28,7 @@ export default async function CounsellorStudentsPage(props: Props) {
   return (
     <div className="space-y-6">
       <PageHero
+          tone="counsellor"
         eyebrow="Counsellor"
         highlight={`${stats.total} students`}
         title="Student roster"

@@ -36,7 +36,7 @@ function FactorBar({ label, value, muted }: { label: string; value: number; mute
     <div className="flex items-center gap-2">
       <span
         className={cn(
-          'w-[72px] shrink-0 text-[0.625rem]',
+          'w-[72px] shrink-0 text-label',
           muted ? 'text-muted-foreground/60' : 'text-muted-foreground'
         )}
       >
@@ -50,7 +50,7 @@ function FactorBar({ label, value, muted }: { label: string; value: number; mute
       </div>
       <span
         className={cn(
-          'w-7 shrink-0 text-right text-[0.625rem] tabular-nums',
+          'w-7 shrink-0 text-right text-label tabular-nums',
           muted ? 'text-muted-foreground/60' : 'text-muted-foreground'
         )}
       >
@@ -70,7 +70,7 @@ function MatchCard({ item, mode }: { item: MatchHit; mode: ChatMode }) {
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold text-foreground">{item.course}</p>
-          <p className="truncate text-[0.6875rem] text-muted-foreground">{item.university}</p>
+          <p className="truncate text-label text-muted-foreground">{item.university}</p>
         </div>
         <span className="shrink-0 text-xs font-semibold tabular-nums text-foreground">
           {clamp(item.score)}%
@@ -99,7 +99,7 @@ function MatchCard({ item, mode }: { item: MatchHit; mode: ChatMode }) {
     </>
   );
 
-  const shared = 'block rounded-[14px] border border-border bg-background p-2.5';
+  const shared = 'block rounded-xl border border-border bg-background p-2.5';
 
   if (mode === 'student') {
     return (
@@ -107,7 +107,7 @@ function MatchCard({ item, mode }: { item: MatchHit; mode: ChatMode }) {
         href={`/course/${encodeURIComponent(item.id)}`}
         className={cn(
           shared,
-          'transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-sm'
+          'transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-e-1'
         )}
       >
         {inner}

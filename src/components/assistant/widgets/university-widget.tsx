@@ -16,7 +16,7 @@ import type { ChatMode } from '@/lib/chat/prompts';
 import type { UniversityHit } from '@/lib/chat/widgets';
 
 const StatChip = ({ children }: { children: React.ReactNode }) => (
-  <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[0.625rem] font-medium text-muted-foreground">
+  <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-label font-medium text-muted-foreground">
     {children}
   </span>
 );
@@ -51,17 +51,17 @@ function UniversityCard({ item, mode }: { item: UniversityHit; mode: ChatMode })
 
   const programs = item.programs.slice(0, 3);
   const rowShared =
-    'flex items-center gap-2 rounded-[10px] border border-border bg-muted/30 px-2 py-1.5';
+    'flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-2 py-1.5';
 
   return (
-    <div className="rounded-[14px] border border-border bg-background p-2.5">
+    <div className="rounded-xl border border-border bg-background p-2.5">
       <div className="flex items-center gap-2">
         <span className="shrink-0 text-base leading-none" aria-hidden>
           {flagEmoji(null, item.country)}
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold text-foreground">{item.name}</p>
-          {meta ? <p className="truncate text-[0.6875rem] text-muted-foreground">{meta}</p> : null}
+          {meta ? <p className="truncate text-label text-muted-foreground">{meta}</p> : null}
         </div>
       </div>
 
@@ -72,11 +72,11 @@ function UniversityCard({ item, mode }: { item: UniversityHit; mode: ChatMode })
           {programs.map((p) => {
             const inner = (
               <>
-                <span className="min-w-0 flex-1 truncate text-[0.6875rem] font-medium text-foreground">
+                <span className="min-w-0 flex-1 truncate text-label font-medium text-foreground">
                   {p.course}
                 </span>
                 {p.level ? (
-                  <span className="shrink-0 text-[0.625rem] text-muted-foreground">{p.level}</span>
+                  <span className="shrink-0 text-label text-muted-foreground">{p.level}</span>
                 ) : null}
               </>
             );
@@ -87,7 +87,7 @@ function UniversityCard({ item, mode }: { item: UniversityHit; mode: ChatMode })
                   href={`/university-search/university/${encodeURIComponent(p.id)}`}
                   className={cn(
                     rowShared,
-                    'transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-sm'
+                    'transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-e-1'
                   )}
                 >
                   {inner}

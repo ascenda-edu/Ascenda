@@ -17,6 +17,7 @@ export default async function CounsellorDocumentsPage() {
   return (
     <div className="space-y-6">
       <PageHero
+          tone="counsellor"
         eyebrow="Counsellor"
         highlight={overdue > 0 ? `${overdue} overdue` : 'All on track'}
         title="Document management"

@@ -31,14 +31,14 @@ export function QuickLinks() {
       label: 'Explore universities',
       description: 'Search 119k+ programmes worldwide',
       icon: Search,
-      iconClassName: 'bg-sky-500/10 text-sky-600 ring-sky-500/15 dark:text-sky-300'
+      iconClassName: 'bg-info-subtle text-info ring-info/25'
     },
     {
       href: '/shortlist',
       label: 'Shortlist',
       description: 'Programmes you have saved',
       icon: Heart,
-      iconClassName: 'bg-rose-500/10 text-rose-600 ring-rose-500/15 dark:text-rose-300',
+      iconClassName: 'bg-danger-subtle text-danger ring-danger/25',
       count: shortlistReady ? shortlistItems.length : null
     },
     {
@@ -46,14 +46,14 @@ export function QuickLinks() {
       label: 'Scholarships',
       description: 'Funding that fits your profile',
       icon: Award,
-      iconClassName: 'bg-amber-500/10 text-amber-700 ring-amber-500/15 dark:text-amber-300'
+      iconClassName: 'bg-warning-subtle text-warning ring-warning/25'
     },
     {
       href: '/toolbox',
       label: 'Toolbox',
       description: 'Essay workshop & practice tools',
       icon: Sparkles,
-      iconClassName: 'bg-violet-500/10 text-violet-600 ring-violet-500/15 dark:text-violet-300'
+      iconClassName: 'bg-feature-subtle text-feature ring-feature/25'
     }
   ];
 
@@ -78,7 +78,7 @@ export function QuickLinks() {
           <Item key={link.href} {...(reduced ? {} : { variants: childFade })}>
             <Link
               href={link.href}
-              className="group flex h-full items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/10"
+              className="surface-card hover-lift group flex h-full items-center gap-3 !p-4 hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <div
                 className={cn(
@@ -92,7 +92,7 @@ export function QuickLinks() {
                 <div className="flex items-center gap-2">
                   <p className="truncate text-sm font-semibold text-foreground">{link.label}</p>
                   {typeof link.count === 'number' ? (
-                    <span className="rounded-full bg-muted px-1.5 py-px text-[0.625rem] font-bold tabular-nums text-muted-foreground">
+                    <span className="rounded-full bg-muted px-1.5 py-px text-label font-bold tabular-nums text-muted-foreground">
                       {link.count}
                     </span>
                   ) : null}

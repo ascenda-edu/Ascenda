@@ -26,9 +26,9 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 ];
 
 const STATUS_PILL: Record<HelpRequestStatus, { label: string; tone: string }> = {
-  open: { label: 'Open', tone: 'border-violet-200/60 bg-violet-500/10 text-violet-700 dark:text-violet-300' },
-  accepted: { label: 'In progress', tone: 'border-amber-200/60 bg-amber-500/10 text-amber-700 dark:text-amber-300' },
-  resolved: { label: 'Resolved', tone: 'border-emerald-200/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' }
+  open: { label: 'Open', tone: 'border-feature/25 bg-feature-subtle text-feature' },
+  accepted: { label: 'In progress', tone: 'border-warning/25 bg-warning-subtle text-warning' },
+  resolved: { label: 'Resolved', tone: 'border-success/25 bg-success-subtle text-success' }
 };
 
 export function CounsellorInbox() {
@@ -98,21 +98,25 @@ export function CounsellorInbox() {
     <div className="space-y-4">
       {/* Toolbar: filters + search */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div role="tablist" aria-label="Filter conversations" className="flex flex-wrap gap-1.5">
+        {/* Filter chips, NOT a tab set: they narrow one list in place rather
+            than switching between panels, so they carry `aria-pressed` toggles
+            in a labelled group. They used to claim role="tablist"/role="tab"
+            with no tabpanel and no aria-controls, which promises a screen
+            reader a panel switch that never happens. */}
+        <div role="group" aria-label="Filter conversations" className="flex flex-wrap gap-1.5">
           {FILTERS.map((f) => {
             const isActive = filter === f.key;
             const count = counts[f.key];
             return (
               <button
                 key={f.key}
-                role="tab"
-                aria-selected={isActive}
+                aria-pressed={isActive}
                 type="button"
                 onClick={() => setFilter(f.key)}
                 className={cn(
                   'rounded-full px-3 py-1.5 text-xs font-semibold transition',
                   isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    ? 'bg-primary text-primary-foreground shadow-e-1'
                     : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                 )}
               >
@@ -133,7 +137,7 @@ export function CounsellorInbox() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search student or subject…"
-            className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-3 text-xs focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="form-input rounded-full py-2 pl-9 pr-3 text-xs"
           />
         </div>
       </div>
@@ -145,7 +149,7 @@ export function CounsellorInbox() {
           ))}
         </div>
       ) : visible.length === 0 ? (
-        <div className="rounded-[28px] border border-dashed border-border bg-muted/40 p-12 text-center">
+        <div className="rounded-4xl border border-dashed border-border bg-muted/40 p-12 text-center">
           <Inbox className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
           <p className="font-semibold text-foreground">
             {query.trim() || filter !== 'open' ? 'No conversations match' : 'No open conversations'}
@@ -176,14 +180,14 @@ export function CounsellorInbox() {
                     type="button"
                     onClick={() => openRequest(request.id)}
                     className={cn(
-                      'group flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-0.5 hover:shadow-sm',
+                      'group flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left hover-lift',
                       isUnread ? 'border-primary/30 bg-primary/5' : 'border-border bg-card hover:bg-muted/40'
                     )}
                   >
                     <span
                       className={cn(
                         'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
-                        isUnread ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
+                        isUnread ? 'bg-primary/20 text-primary-ink' : 'bg-muted text-muted-foreground'
                       )}
                       aria-hidden
                     >
@@ -195,11 +199,11 @@ export function CounsellorInbox() {
                           {item.studentName}
                         </p>
                         {isUnread ? (
-                          <span className="shrink-0 rounded-full bg-primary px-1.5 text-[0.625rem] font-bold leading-4 text-primary-foreground tabular-nums">
+                          <span className="shrink-0 rounded-full bg-primary px-1.5 text-label font-bold leading-4 text-primary-foreground tabular-nums">
                             {item.unreadCount}
                           </span>
                         ) : null}
-                        <span className="ml-auto shrink-0 text-[0.6875rem] text-muted-foreground tabular-nums">
+                        <span className="ml-auto shrink-0 text-label text-muted-foreground tabular-nums">
                           {formatRelativeTime(item.lastMessageAt)}
                         </span>
                       </div>
@@ -215,11 +219,11 @@ export function CounsellorInbox() {
                         )}
                       </p>
                       <div className="flex items-center gap-2 pt-0.5">
-                        <span className={cn('rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold', pill.tone)}>
+                        <span className={cn('rounded-full border px-2 py-0.5 text-label font-semibold', pill.tone)}>
                           {pill.label}
                         </span>
                         {request.university ? (
-                          <span className="truncate text-[0.6875rem] text-muted-foreground">
+                          <span className="truncate text-label text-muted-foreground">
                             {request.university}
                             {request.program ? ` · ${request.program}` : ''}
                           </span>

@@ -36,7 +36,7 @@ export const Sidebar = () => {
   return (
     <aside
       className={cn(
-        'sticky top-28 hidden self-start rounded-2xl border border-border bg-card text-foreground shadow-sm transition-[width] duration-200 md:block dark:border-white/10 dark:bg-card',
+        'sticky top-28 hidden self-start rounded-2xl border border-border bg-card text-foreground shadow-e-1 transition-[width] duration-200 md:block dark:border-white/10 dark:bg-card',
         collapsed ? 'w-16 p-2' : 'w-60 p-3'
       )}
       aria-label="Primary navigation"
@@ -44,7 +44,7 @@ export const Sidebar = () => {
     >
       <div className={cn('flex items-center', collapsed ? 'justify-center' : 'justify-between px-1 pb-2')}>
         {!collapsed ? (
-          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Menu</span>
+          <span className="eyebrow">Menu</span>
         ) : null}
         <button
           type="button"
@@ -93,7 +93,10 @@ export const Sidebar = () => {
           title={collapsed ? 'Sign out' : undefined}
           aria-label={collapsed ? 'Sign out' : undefined}
           className={cn(
-            'flex h-9 w-full items-center rounded-lg text-sm font-medium text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive',
+            // ring-ring, not ring-destructive: every other sidebar item uses the
+            // shared focus ring, and a focus indicator that changes colour by
+            // row reads as a state change rather than "you are here".
+            'flex h-9 w-full items-center rounded-lg text-sm font-medium text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             collapsed ? 'justify-center px-0' : 'gap-3 px-3'
           )}
         >
@@ -107,20 +110,25 @@ export const Sidebar = () => {
           <div className="flex items-center gap-2.5">
             <div className="relative shrink-0">
               <div
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-primary text-[0.6875rem] font-bold text-white shadow-sm"
+                // from-primary to-accent, matching the byte-identical avatar in
+                // dashboard/hub/counsellor-card.tsx. A gradient can only carry one
+                // text colour, so BOTH stops have to clear it: white on `feature` in
+                // dark mode measures 3.54:1 and fails, while primary (5.01) and
+                // accent (4.65) both pass in both themes.
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-label font-bold text-primary-foreground shadow-e-1"
                 aria-hidden
               >
                 {counsellorInitials}
               </div>
               <span
-                className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-emerald-500"
+                className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-success-fill"
                 aria-hidden
               />
               <span className="sr-only">Available today</span>
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold leading-tight text-foreground">{DEMO_COUNSELLOR.fullName}</p>
-              <p className="text-[0.6875rem] text-muted-foreground">Your counsellor · usually replies same-day</p>
+              <p className="text-label text-muted-foreground">Your counsellor · usually replies same-day</p>
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
@@ -128,7 +136,7 @@ export const Sidebar = () => {
           </p>
           <Link
             href="/appointment"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            className="hover-lift inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-e-1"
           >
             <CalendarPlus className="h-3.5 w-3.5" />
             Book a chat with {DEMO_COUNSELLOR.firstName}

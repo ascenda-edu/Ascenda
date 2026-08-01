@@ -1,9 +1,12 @@
+import { PageHeroSkeleton } from '@/components/layout/page-hero-skeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 
+// Mirrors `counsellor/students/page.tsx`: hero with an eyebrow and four stat
+// tiles, then the search/filter bar and the roster card grid.
 export default function StudentsLoading() {
   return (
     <div className="space-y-6">
-      <Skeleton className="h-20 rounded-2xl" />
+      <PageHeroSkeleton stats={4} />
       {/* Search bar */}
       <Skeleton className="h-14 rounded-2xl" />
       {/* Card grid */}

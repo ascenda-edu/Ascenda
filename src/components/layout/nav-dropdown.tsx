@@ -6,6 +6,13 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isNavActive, type NavItem } from './navigation';
+import {
+  NavIndicator,
+  NAV_PILL,
+  NAV_PILL_ACTIVE,
+  NAV_PILL_IDLE,
+  TOP_NAV_INDICATOR,
+} from './nav-link';
 
 interface NavDropdownProps {
   label: string;
@@ -21,7 +28,12 @@ interface NavDropdownProps {
 }
 
 // A single top-bar pill that opens a small menu of related destinations.
-// Styled to match NavLink so grouped and ungrouped pills read as one row.
+// Styled to match NavLink so grouped and ungrouped pills read as one row — the
+// shell classes are literally NavLink's, imported rather than copied, and the
+// active indicator is NavLink's too: one shared `layoutId` for the whole bar, so
+// the fill slides between a grouped pill and an ungrouped one as if the row were
+// a single control. That's why the indicator id there is a module constant and
+// not a `useId` — see the note in nav-link.tsx.
 export const NavDropdown = ({ label, items }: NavDropdownProps) => {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -67,16 +79,18 @@ export const NavDropdown = ({ label, items }: NavDropdownProps) => {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
-        className={cn(
-          'inline-flex items-center gap-1 rounded-full px-3 py-1 border border-transparent transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-          groupActive
-            ? 'border border-primary bg-primary text-primary-foreground shadow-sm'
-            : 'hover:bg-foreground/5 hover:text-foreground'
-        )}
+        className={cn(NAV_PILL, 'gap-1', groupActive ? NAV_PILL_ACTIVE : NAV_PILL_IDLE)}
       >
-        <span>{label}</span>
+        {groupActive ? <NavIndicator layoutId={TOP_NAV_INDICATOR} /> : null}
+        {/* Both children need their own stacking position: the indicator is an
+            absolutely-positioned sibling, so it paints over anything static
+            regardless of DOM order — label and chevron alike. */}
+        <span className="relative z-raised">{label}</span>
         <ChevronDown
-          className={cn('h-3.5 w-3.5 transition-transform duration-200', open && 'rotate-180')}
+          className={cn(
+            'relative z-raised h-3.5 w-3.5 transition-transform duration-200',
+            open && 'rotate-180'
+          )}
           aria-hidden
         />
       </button>
@@ -86,7 +100,7 @@ export const NavDropdown = ({ label, items }: NavDropdownProps) => {
           id={menuId}
           role="menu"
           aria-label={label}
-          className="absolute left-1/2 top-full z-50 mt-2 w-48 -translate-x-1/2 rounded-2xl border border-border bg-card/95 p-1.5 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-card/90"
+          className="absolute left-1/2 top-full z-50 mt-2 w-48 -translate-x-1/2 rounded-2xl border border-border bg-card/95 p-1.5 shadow-e-4 backdrop-blur-xl dark:border-white/10 dark:bg-card/90"
         >
           {items.map((item) => {
             const Icon = item.icon;
@@ -96,6 +110,7 @@ export const NavDropdown = ({ label, items }: NavDropdownProps) => {
                 key={item.href}
                 href={item.href}
                 role="menuitem"
+                aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
                   active

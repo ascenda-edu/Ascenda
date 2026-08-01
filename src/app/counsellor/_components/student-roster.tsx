@@ -52,10 +52,17 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
   const [filtersOpen, setFiltersOpen] = useState(!!(initialProgramme || initialField || initialFlagFilter));
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // Bail when the param already says what we would write. Two reasons, both real:
+  // on mount `query` is seeded FROM `qParam`, so a deep link like `?q=ahmed` used to
+  // fire a redundant router.replace immediately; and on "Reset all filters" this
+  // debounce fired 250ms AFTER the batched reset, re-read the pre-reset URL, and put
+  // every cleared param back (measured: the URL ended one param different from where
+  // it started). A component must not have two independent writers for its params.
   useEffect(() => {
+    if (query === qParam) return;
     const t = setTimeout(() => setQueryParam(query), 250);
     return () => clearTimeout(t);
-  }, [query, setQueryParam]);
+  }, [query, qParam, setQueryParam]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -143,7 +150,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
             exit={{ opacity: 0, height: 0 }}
             className="flex items-center gap-2 overflow-hidden"
           >
-            <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold text-primary">
+            <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold text-primary-ink">
               <Filter className="h-3 w-3" />
               Showing {filterLabel} students
               <button
@@ -155,7 +162,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                 <X className="h-3 w-3" />
               </button>
             </div>
-            <p className="text-[0.6875rem] text-muted-foreground italic">
+            <p className="text-label text-muted-foreground italic">
               Click the chart again to reset
             </p>
           </motion.div>
@@ -167,7 +174,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
             exit={{ opacity: 0, height: 0 }}
             className="flex items-center gap-2 overflow-hidden"
           >
-            <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold capitalize text-primary">
+            <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold capitalize text-primary-ink">
               <Filter className="h-3 w-3" />
               Field: {fieldFilter.replace(/_/g, ' ')}
               <button
@@ -184,7 +191,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
       </AnimatePresence>
 
       {/* Search + filter bar */}
-      <div className="panel flex flex-col gap-3 rounded-2xl px-4 py-3 sm:flex-row sm:items-center">
+      <div className="surface-toolbar flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <label htmlFor="student-roster-search" className="sr-only">
@@ -197,9 +204,9 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
             placeholder="Search by name, school, nationality…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="form-input rounded-full py-2 pl-9 pr-12"
           />
-          <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-border bg-muted px-1.5 py-0.5 text-[0.625rem] font-mono text-muted-foreground sm:inline-block">
+          <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-border bg-muted px-1.5 py-0.5 text-label font-mono text-muted-foreground sm:inline-block">
             /
           </kbd>
         </div>
@@ -223,10 +230,10 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
 
       {/* Expanded filters */}
       {filtersOpen && (
-        <div className="surface-card surface-card--static grid grid-cols-2 gap-4 md:grid-cols-3">
+        <div className="surface-card grid grid-cols-2 gap-4 md:grid-cols-3">
           {/* Sort */}
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Sort by</p>
+            <p className="eyebrow">Sort by</p>
             <div className="flex flex-col gap-1">
               {SORT_OPTS.map(({ key, label }) => (
                 <button
@@ -235,7 +242,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                   aria-pressed={sortKey === key}
                   className={cn(
                     'rounded-xl px-3 py-1.5 text-left text-sm transition',
-                    sortKey === key ? 'bg-primary/10 font-semibold text-primary' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    sortKey === key ? 'bg-primary/10 font-semibold text-primary-ink' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                   )}
                 >
                   {label}
@@ -246,7 +253,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
 
           {/* Programme */}
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Programme</p>
+            <p className="eyebrow">Programme</p>
             <div className="flex flex-col gap-1">
               {(['all', 'IB', 'A_LEVEL'] as ProgrammeFilter[]).map((val) => (
                 <button
@@ -255,7 +262,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                   aria-pressed={programme === val}
                   className={cn(
                     'rounded-xl px-3 py-1.5 text-left text-sm transition',
-                    programme === val ? 'bg-primary/10 font-semibold text-primary' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    programme === val ? 'bg-primary/10 font-semibold text-primary-ink' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                   )}
                 >
                   {val === 'all' ? 'All' : val === 'IB' ? 'IB' : 'A-Level'}
@@ -266,7 +273,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
 
           {/* Flags */}
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Status</p>
+            <p className="eyebrow">Status</p>
             <div className="flex flex-col gap-1">
               {(['all', 'flagged', 'clear'] as FlagFilter[]).map((val) => (
                 <button
@@ -275,7 +282,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                   aria-pressed={flagFilter === val}
                   className={cn(
                     'rounded-xl px-3 py-1.5 text-left text-sm transition',
-                    flagFilter === val ? 'bg-primary/10 font-semibold text-primary' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    flagFilter === val ? 'bg-primary/10 font-semibold text-primary-ink' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                   )}
                 >
                   {val === 'all' ? 'All students' : val === 'flagged' ? 'Needs attention' : 'On track'}
@@ -309,7 +316,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
           </AnimatePresence>
         </motion.div>
       ) : (
-        <div className="rounded-[28px] border border-dashed border-border bg-muted/40 p-12 text-center">
+        <div className="rounded-4xl border border-dashed border-border bg-muted/40 p-12 text-center">
           <p className="text-base font-semibold text-foreground">No students match these filters</p>
           <p className="mt-1 text-sm text-muted-foreground">Adjust the search, programme, or status filter.</p>
           {(hasExternalFilter || query || programme !== 'all' || flagFilter !== 'all') && (
@@ -317,6 +324,10 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
               onClick={() => {
                 onClearExternalFilter?.();
                 setQuery('');
+                // Clear the param in THIS tick alongside the others so all five
+                // batch into one navigation. Leaving it to the debounce meant a
+                // second navigation 250ms later that undid this one.
+                setQueryParam('');
                 setProgramme('all');
                 setFlagFilter('all');
                 setFieldFilter('');

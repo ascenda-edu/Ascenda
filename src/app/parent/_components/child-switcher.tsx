@@ -89,7 +89,7 @@ export function ChildSwitcher({
         <ul
           role="listbox"
           aria-label="Switch child"
-          className="absolute left-0 top-full z-20 mt-1 min-w-[180px] overflow-hidden rounded-xl border border-border bg-card py-1 shadow-md"
+          className="absolute left-0 top-full z-sticky mt-1 min-w-[180px] overflow-hidden rounded-xl border border-border bg-card py-1 shadow-e-2"
         >
           {linkedChildren.map((child) => (
             <li key={child.profileId} role="presentation">

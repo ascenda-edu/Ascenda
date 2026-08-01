@@ -34,7 +34,7 @@ export const SubjectGradeTable = ({ value, onChange }: SubjectGradeTableProps) =
       {value.map((row, index) => (
         <div key={index} className="grid form-grid grid-cols-1 sm:grid-cols-4 sm:items-end">
           <div className="form-field">
-            <Label className="form-label" htmlFor={`subject-${index}`}>
+            <Label htmlFor={`subject-${index}`}>
               Subject
             </Label>
             <Input
@@ -45,7 +45,7 @@ export const SubjectGradeTable = ({ value, onChange }: SubjectGradeTableProps) =
             />
           </div>
           <div className="form-field">
-            <Label className="form-label" htmlFor={`level-${index}`}>
+            <Label htmlFor={`level-${index}`}>
               Level
             </Label>
             <Input
@@ -56,7 +56,7 @@ export const SubjectGradeTable = ({ value, onChange }: SubjectGradeTableProps) =
             />
           </div>
           <div className="form-field">
-            <Label className="form-label" htmlFor={`score-${index}`}>
+            <Label htmlFor={`score-${index}`}>
               Score
             </Label>
             <Input

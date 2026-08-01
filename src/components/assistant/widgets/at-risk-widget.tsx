@@ -49,11 +49,11 @@ function AtRiskRow({ item, mode }: { item: AtRiskHit; mode: ChatMode }) {
           {URGENCY_LABEL[item.urgency]}
         </span>
       </div>
-      <p className="mt-1 line-clamp-2 text-[0.6875rem] text-muted-foreground">{item.reason}</p>
+      <p className="mt-1 line-clamp-2 text-label text-muted-foreground">{item.reason}</p>
     </>
   );
 
-  const shared = 'block rounded-[14px] border border-border bg-background p-2.5';
+  const shared = 'block rounded-xl border border-border bg-background p-2.5';
 
   if (mode === 'counsellor') {
     return (
@@ -61,7 +61,7 @@ function AtRiskRow({ item, mode }: { item: AtRiskHit; mode: ChatMode }) {
         href={`/counsellor/students/${encodeURIComponent(item.id)}`}
         className={cn(
           shared,
-          'transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-sm'
+          'transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-e-1'
         )}
       >
         {inner}

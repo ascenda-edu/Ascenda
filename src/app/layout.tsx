@@ -68,9 +68,13 @@ export default function RootLayout({
         outfit.variable,
         inter.variable
       )}>
+        {/* `fixed`, not `absolute`: anchored to the document, focusing the skip
+            link after any scroll revealed it 4rem above the current viewport —
+            i.e. off screen, which is the one thing a skip link must never be.
+            z-overlay clears the fixed navbar (z-50) and the chat panel. */}
         <a
           href="#main-content"
-          className="absolute left-4 top-4 -translate-y-16 rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground shadow focus-visible:translate-y-0 z-50"
+          className="fixed left-4 top-4 z-overlay -translate-y-16 rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground shadow-e-2 transition-transform focus-visible:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           Skip to content
         </a>

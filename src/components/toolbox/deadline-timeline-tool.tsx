@@ -4,15 +4,17 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CalendarClock, Filter, LayoutGrid, List, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import { stagger, cardFade } from '@/lib/motion';
 import type { TimelineDeadline, TimelineDeadlineType } from '@/lib/data/student-demo-data';
 
 const TYPE_CONFIG: Record<TimelineDeadlineType, { color: string; bg: string; dot: string; label: string }> = {
-  submission: { color: 'text-primary', bg: 'bg-primary/10 border-primary/30', dot: 'bg-primary', label: 'Submission' },
-  exam: { color: 'text-amber-500', bg: 'bg-amber-500/10 border-amber-300/40', dot: 'bg-amber-500', label: 'Exam' },
-  interview: { color: 'text-rose-500', bg: 'bg-rose-500/10 border-rose-300/40', dot: 'bg-rose-500', label: 'Interview' },
-  document: { color: 'text-sky-500', bg: 'bg-sky-500/10 border-sky-300/40', dot: 'bg-sky-500', label: 'Document' },
+  submission: { color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/30', dot: 'bg-primary', label: 'Submission' },
+  exam: { color: 'text-warning', bg: 'bg-warning-subtle border-warning/25', dot: 'bg-warning-fill', label: 'Exam' },
+  interview: { color: 'text-danger', bg: 'bg-danger-subtle border-danger/25', dot: 'bg-danger-fill', label: 'Interview' },
+  document: { color: 'text-info', bg: 'bg-info-subtle border-info/25', dot: 'bg-info-fill', label: 'Document' },
 };
 
 const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -27,9 +29,9 @@ function formatLocalYmd(d: Date): string {
 }
 
 function urgencyColor(days: number): string {
-  if (days <= 0) return 'text-rose-600 bg-rose-500/10';
-  if (days <= 3) return 'text-rose-600 bg-rose-500/10';
-  if (days <= 7) return 'text-amber-600 bg-amber-500/10';
+  if (days <= 0) return 'text-danger bg-danger-subtle';
+  if (days <= 3) return 'text-danger bg-danger-subtle';
+  if (days <= 7) return 'text-warning bg-warning-subtle';
   return 'text-muted-foreground bg-muted/30';
 }
 
@@ -113,14 +115,14 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-rose-200/60 bg-rose-500/5 p-4 flex items-start gap-3"
+          className="rounded-2xl border border-danger/25 bg-danger-subtle p-4 flex items-start gap-3"
         >
-          <AlertCircle className="h-5 w-5 text-rose-500 shrink-0 mt-0.5" />
+          <AlertCircle className="h-5 w-5 text-danger shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-rose-600">{overdueDeadlines.length} overdue deadline{overdueDeadlines.length !== 1 ? 's' : ''}</p>
+            <p className="text-sm font-semibold text-danger">{overdueDeadlines.length} overdue deadline{overdueDeadlines.length !== 1 ? 's' : ''}</p>
             <div className="flex flex-wrap gap-2 mt-1.5">
               {overdueDeadlines.map((d) => (
-                <span key={d.id} className="text-xs text-rose-600/80">{d.title} ({Math.abs(daysUntilMap.get(d.id) ?? daysUntil(d.date))}d ago)</span>
+                <span key={d.id} className="text-xs text-danger/80">{d.title} ({Math.abs(daysUntilMap.get(d.id) ?? daysUntil(d.date))}d ago)</span>
               ))}
             </div>
           </div>
@@ -130,7 +132,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
       {/* Focus cards: next 14 days */}
       {focusDeadlines.length > 0 && (
         <div className="space-y-3">
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Next 14 days</p>
+          <p className="eyebrow">Next 14 days</p>
           <motion.div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" variants={stagger} initial="hidden" animate="show">
             {focusDeadlines.map((d) => {
               const cfg = TYPE_CONFIG[d.type];
@@ -141,12 +143,12 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                   type="button"
                   variants={cardFade}
                   whileHover={{ scale: 1.02, y: -2 }}
-                  className={cn('w-full text-left rounded-2xl border p-4 space-y-2 cursor-pointer transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2', cfg.bg)}
+                  className={cn('w-full text-left rounded-2xl border p-4 space-y-2 cursor-pointer transition-shadow hover:shadow-e-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2', cfg.bg)}
                   onClick={() => setSelectedDeadline(selectedDeadline === d.id ? null : d.id)}
                 >
                   <div className="flex items-center justify-between">
-                    <span className={cn('rounded-full px-2.5 py-0.5 text-[0.625rem] font-semibold uppercase', cfg.bg, cfg.color)}>{cfg.label}</span>
-                    <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-bold', urgencyColor(days))}>
+                    <span className={cn('rounded-full px-2.5 py-0.5 text-label font-semibold uppercase', cfg.bg, cfg.color)}>{cfg.label}</span>
+                    <span className={cn('rounded-full px-2 py-0.5 text-label font-bold', urgencyColor(days))}>
                       {days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`}
                     </span>
                   </div>
@@ -155,7 +157,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                   {/* Urgency bar */}
                   <div className="h-1 rounded-full bg-muted/30 overflow-hidden">
                     <motion.div
-                      className={cn('h-full rounded-full', days <= 3 ? 'bg-rose-500' : days <= 7 ? 'bg-amber-500' : 'bg-emerald-500')}
+                      className={cn('h-full rounded-full', days <= 3 ? 'bg-danger-fill' : days <= 7 ? 'bg-warning-fill' : 'bg-success-fill')}
                       initial={{ width: '100%' }}
                       animate={{ width: `${Math.max(100 - (days / 14) * 100, 5)}%` }}
                       transition={{ duration: 0.5 }}
@@ -190,6 +192,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
               <button
                 key={type}
                 onClick={() => setFilterType(filterType === type ? null : type)}
+                aria-pressed={filterType === type}
                 className={cn(
                   'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
                   filterType === type ? cn(cfg.bg, cfg.color, 'border') : 'bg-muted/50 text-muted-foreground hover:bg-muted'
@@ -201,24 +204,35 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
             );
           })}
         </div>
-        <select
-          value={filterUniversity ?? ''}
-          onChange={(e) => setFilterUniversity(e.target.value || null)}
-          className="rounded-full border border-border bg-background px-3 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        {/* 'all' is a sentinel: Radix rejects an empty item value, and "all
+          * universities" is a real choice rather than a placeholder. Mapped back
+          * to null here so the filter logic below is untouched. */}
+        <Select
+          value={filterUniversity ?? 'all'}
+          onValueChange={(value) => setFilterUniversity(value === 'all' ? null : value)}
         >
-          <option value="">All universities</option>
-          {universities.map((u) => <option key={u} value={u}>{u}</option>)}
-        </select>
+          {/* w-auto: the trigger is w-full by default, which would take a whole
+            * line of this wrap row. */}
+          <SelectTrigger size="sm" aria-label="Filter by university" className="w-auto">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All universities</SelectItem>
+            {universities.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+          </SelectContent>
+        </Select>
 
         <div className="ml-auto flex gap-1 surface-subcard p-1 rounded-xl">
           <button
             onClick={() => setViewMode('timeline')}
+            aria-pressed={viewMode === 'timeline'}
             className={cn('flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium transition-colors', viewMode === 'timeline' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
           >
             <List className="h-3.5 w-3.5" /> Timeline
           </button>
           <button
             onClick={() => setViewMode('calendar')}
+            aria-pressed={viewMode === 'calendar'}
             className={cn('flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium transition-colors', viewMode === 'calendar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
           >
             <LayoutGrid className="h-3.5 w-3.5" /> Calendar
@@ -245,7 +259,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
           {/* Day headers */}
           <div className="grid grid-cols-7 gap-1">
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
-              <div key={d} className="text-center text-[0.625rem] font-semibold uppercase tracking-wider text-muted-foreground py-1">
+              <div key={d} className="eyebrow text-center py-1">
                 {d}
               </div>
             ))}
@@ -275,8 +289,8 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                   )}
                 >
                   <p className={cn(
-                    'text-[0.6875rem] font-medium',
-                    isToday ? 'text-primary font-bold' : 'text-muted-foreground'
+                    'text-label font-medium',
+                    isToday ? 'text-primary-ink font-bold' : 'text-muted-foreground'
                   )}>
                     {date.getDate()}
                   </p>
@@ -286,7 +300,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                       return (
                         <div
                           key={d.id}
-                          className={cn('rounded px-1 py-0.5 text-[0.5625rem] font-medium truncate', cfg.bg, cfg.color)}
+                          className={cn('rounded px-1 py-0.5 text-label font-medium truncate', cfg.bg, cfg.color)}
                           title={`${d.title} — ${d.university}`}
                         >
                           {d.title}
@@ -294,7 +308,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                       );
                     })}
                     {dayDeadlines.length > 2 && (
-                      <p className="text-[0.5625rem] text-muted-foreground pl-1">+{dayDeadlines.length - 2} more</p>
+                      <p className="text-label text-muted-foreground pl-1">+{dayDeadlines.length - 2} more</p>
                     )}
                   </div>
                 </button>
@@ -325,7 +339,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                     return (
                       <div key={d.id} className={cn('rounded-xl border p-3 space-y-1', cfg.bg)}>
                         <div className="flex items-center gap-2">
-                          <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-semibold', cfg.bg, cfg.color)}>{cfg.label}</span>
+                          <span className={cn('rounded-full px-2 py-0.5 text-label font-semibold', cfg.bg, cfg.color)}>{cfg.label}</span>
                           <span className="text-sm font-semibold text-foreground">{d.title}</span>
                         </div>
                         <p className="text-xs text-muted-foreground">{d.university}</p>
@@ -346,8 +360,8 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
           {grouped.map(([month, items]) => (
             <div key={month}>
               <div className="flex items-center gap-3 mb-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{month}</p>
-                <span className="rounded-full bg-muted/50 px-2 py-0.5 text-[0.625rem] font-medium text-muted-foreground">{items.length} items</span>
+                <p className="eyebrow">{month}</p>
+                <span className="rounded-full bg-muted/50 px-2 py-0.5 text-label font-medium text-muted-foreground">{items.length} items</span>
                 <div className="flex-1 h-px bg-border/50" />
               </div>
               <div className="relative border-l-2 border-border pl-6 space-y-4">
@@ -363,13 +377,13 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                       whileHover={{ x: 4 }}
                     >
                       {/* Dot on timeline */}
-                      <div className={cn('absolute -left-[31px] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-background shadow-sm', cfg.dot)} />
-                      <div className="space-y-1.5 surface-subcard p-3 rounded-xl hover:shadow-md transition-shadow">
+                      <div className={cn('absolute -left-[31px] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-background shadow-e-1', cfg.dot)} />
+                      <div className="space-y-1.5 surface-subcard p-3 rounded-xl hover:shadow-e-2 transition-shadow">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-semibold text-foreground">{d.title}</span>
-                          <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-semibold', cfg.bg, cfg.color)}>{cfg.label}</span>
+                          <span className={cn('rounded-full px-2 py-0.5 text-label font-semibold', cfg.bg, cfg.color)}>{cfg.label}</span>
                           {days >= 0 && days <= 7 && (
-                            <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-bold', urgencyColor(days))}>
+                            <span className={cn('rounded-full px-2 py-0.5 text-label font-bold', urgencyColor(days))}>
                               {days === 0 ? 'Today!' : days === 1 ? 'Tomorrow' : `${days} days left`}
                             </span>
                           )}
@@ -393,10 +407,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
       )}
 
       {filtered.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-border p-12 text-center space-y-3">
-          <CalendarClock className="h-8 w-8 mx-auto text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">No deadlines match your filters.</p>
-        </div>
+        <EmptyState icon={<CalendarClock />} title="No deadlines match your filters" />
       )}
     </div>
   );

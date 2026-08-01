@@ -20,10 +20,12 @@ interface InboxListProps {
   profileId: string;
 }
 
+// Tone tokens (globals.css): info = open/in-flight, warning = pending work,
+// success = done. AA-verified in both themes, so no `dark:` variants.
 const STATUS_PILL: Record<HelpRequest['status'], { label: string; tone: string }> = {
-  open: { label: 'Open', tone: 'border-sky-200/60 bg-sky-500/10 text-sky-700 dark:text-sky-300' },
-  accepted: { label: 'In progress', tone: 'border-amber-200/60 bg-amber-500/10 text-amber-700 dark:text-amber-300' },
-  resolved: { label: 'Resolved', tone: 'border-emerald-200/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' }
+  open: { label: 'Open', tone: 'border-info/25 bg-info-subtle text-info' },
+  accepted: { label: 'In progress', tone: 'border-warning/25 bg-warning-subtle text-warning' },
+  resolved: { label: 'Resolved', tone: 'border-success/25 bg-success-subtle text-success' }
 };
 
 export function InboxList({ profileId }: InboxListProps) {
@@ -145,7 +147,7 @@ export function InboxList({ profileId }: InboxListProps) {
   if (requests.length === 0) {
     return (
       <EmptyState
-        icon={Inbox}
+        icon={<Inbox />}
         title="No messages yet"
         description="When you raise a help request — or your counsellor reaches out — it’ll land here."
       />
@@ -173,7 +175,7 @@ export function InboxList({ profileId }: InboxListProps) {
             <div
               className={cn(
                 'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
-                isUnread ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
+                isUnread ? 'bg-primary/15 text-primary-ink' : 'bg-muted text-muted-foreground'
               )}
             >
               <MessageSquare className="h-4 w-4" />
@@ -184,21 +186,21 @@ export function InboxList({ profileId }: InboxListProps) {
                   {req.subject}
                 </p>
                 {isUnread ? (
-                  <span className="rounded-full bg-primary px-1.5 text-[0.625rem] font-bold leading-4 text-primary-foreground">
+                  <span className="rounded-full bg-primary px-1.5 text-label font-bold leading-4 text-primary-foreground">
                     {unread}
                   </span>
                 ) : null}
               </div>
               <p className="line-clamp-2 text-xs text-muted-foreground">{req.body}</p>
               <div className="flex items-center gap-2 pt-0.5">
-                <span className="text-[0.6875rem] text-muted-foreground">{initiatorLabel(req)}</span>
-                <span className="text-[0.6875rem] text-muted-foreground/60">·</span>
-                <span className={cn('rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold', status.tone)}>
+                <span className="text-label text-muted-foreground">{initiatorLabel(req)}</span>
+                <span className="text-label text-muted-foreground/60">·</span>
+                <span className={cn('rounded-full border px-2 py-0.5 text-label font-semibold', status.tone)}>
                   {status.label}
                 </span>
               </div>
             </div>
-            <span className="shrink-0 text-[0.6875rem] text-muted-foreground tabular-nums">
+            <span className="shrink-0 text-label text-muted-foreground tabular-nums">
               {formatRelativeTime(req.created_at)}
             </span>
           </button>

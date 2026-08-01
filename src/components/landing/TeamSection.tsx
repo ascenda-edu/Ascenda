@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Bot, Briefcase, Check, Clock3, FileText, Heart, Home, Sparkles, TrendingUp, Users, Wallet } from 'lucide-react';
 import { AnimatedSection } from '@/components/layout/animated-section';
 import { cn } from '@/lib/utils';
+import { DURATION, EASE } from '@/lib/motion';
 import { AppFrame, ProgressRing } from './product-widgets';
 import { FunnelChart, MonitorRow } from './mock-viz';
 
@@ -63,7 +64,7 @@ export function TeamSection() {
                         initial={{ opacity: 0, y: 24 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, amount: 0.25 }}
-                        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                        transition={{ duration: DURATION.base, ease: EASE }}
                     >
                         <div className="relative">
                         <RoleBadge icon={Users} label="Counsellors" className="border-violet-500/30 text-violet-700 dark:text-violet-300" />
@@ -129,7 +130,7 @@ export function TeamSection() {
                         initial={{ opacity: 0, scale: 0.9 }}
                         whileInView={{ opacity: 1, scale: 1 }}
                         viewport={{ once: true, amount: 0.25 }}
-                        transition={{ duration: 0.45, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
+                        transition={{ duration: DURATION.base, delay: 0.05, ease: EASE }}
                     >
                         <span
                             className="h-6 w-0 border-l border-dashed border-violet-400/40 md:h-0 md:w-5 md:border-l-0 md:border-t"
@@ -168,7 +169,7 @@ export function TeamSection() {
                         initial={{ opacity: 0, y: 24 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, amount: 0.25 }}
-                        transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                        transition={{ duration: DURATION.base, delay: 0.1, ease: EASE }}
                     >
                         <div className="relative">
                         <RoleBadge icon={Heart} label="Parents" className="border-sky-500/30 text-sky-700 dark:text-sky-300" />

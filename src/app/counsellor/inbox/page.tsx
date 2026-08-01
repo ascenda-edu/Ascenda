@@ -10,6 +10,7 @@ export default function CounsellorInboxPage() {
   return (
     <div className="space-y-6">
       <PageHero
+          tone="counsellor"
         eyebrow="Counsellor"
         title="Inbox"
         description="Every conversation with your students — help requests, replies and check-ins."

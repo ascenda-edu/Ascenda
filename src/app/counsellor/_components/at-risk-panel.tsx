@@ -10,17 +10,17 @@ import { stagger, cardFade } from '@/lib/motion';
 import type { AtRiskAlert, RiskType, RiskUrgency } from '@/lib/counsellor/types';
 
 const RISK_CONFIG: Record<RiskType, { icon: typeof AlertTriangle; label: string; color: string; bg: string }> = {
-  essay_not_started: { icon: FileX, label: 'Essay not started', color: 'text-rose-600', bg: 'bg-rose-500/10' },
-  missing_documents: { icon: FileX, label: 'Missing documents', color: 'text-amber-600', bg: 'bg-amber-500/10' },
-  stalled_application: { icon: Clock, label: 'Stalled application', color: 'text-amber-600', bg: 'bg-amber-500/10' },
-  low_completion: { icon: UserX, label: 'Low completion', color: 'text-rose-600', bg: 'bg-rose-500/10' },
-  deadline_approaching: { icon: Timer, label: 'Deadline approaching', color: 'text-rose-600', bg: 'bg-rose-500/10' },
+  essay_not_started: { icon: FileX, label: 'Essay not started', color: 'text-danger', bg: 'bg-danger-subtle' },
+  missing_documents: { icon: FileX, label: 'Missing documents', color: 'text-warning', bg: 'bg-warning-subtle' },
+  stalled_application: { icon: Clock, label: 'Stalled application', color: 'text-warning', bg: 'bg-warning-subtle' },
+  low_completion: { icon: UserX, label: 'Low completion', color: 'text-danger', bg: 'bg-danger-subtle' },
+  deadline_approaching: { icon: Timer, label: 'Deadline approaching', color: 'text-danger', bg: 'bg-danger-subtle' },
 };
 
 const URGENCY_CONFIG: Record<RiskUrgency, { color: string; bg: string; label: string }> = {
-  critical: { color: 'text-rose-600', bg: 'bg-rose-500', label: 'Critical' },
-  high: { color: 'text-amber-600', bg: 'bg-amber-500', label: 'High' },
-  medium: { color: 'text-sky-600', bg: 'bg-sky-500', label: 'Medium' },
+  critical: { color: 'text-danger', bg: 'bg-danger-fill', label: 'Critical' },
+  high: { color: 'text-warning', bg: 'bg-warning-fill', label: 'High' },
+  medium: { color: 'text-info', bg: 'bg-info-fill', label: 'Medium' },
 };
 
 interface AtRiskPanelProps {
@@ -44,7 +44,7 @@ export function AtRiskPanel({ alerts }: AtRiskPanelProps) {
 
   if (alerts.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-emerald-200/60 bg-emerald-500/5 p-6 text-center text-sm text-emerald-600">
+      <div className="rounded-2xl border border-dashed border-success/25 bg-success-subtle p-6 text-center text-sm text-success">
         All students are on track. No at-risk flags detected.
       </div>
     );
@@ -105,13 +105,13 @@ export function AtRiskPanel({ alerts }: AtRiskPanelProps) {
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm">{alert.flagEmoji}</span>
                       <span className="text-sm font-semibold text-foreground">{alert.studentName}</span>
-                      <span className={cn('rounded-full px-2 py-0.5 text-[0.625rem] font-semibold', risk.bg, risk.color)}>{risk.label}</span>
+                      <span className={cn('rounded-full px-2 py-0.5 text-label font-semibold', risk.bg, risk.color)}>{risk.label}</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">{alert.description}</p>
-                    <p className="text-[0.625rem] text-muted-foreground/70 mt-0.5">{alert.suggestedAction}</p>
+                    <p className="text-label text-muted-foreground/70 mt-0.5">{alert.suggestedAction}</p>
                   </div>
 
-                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-[color,transform] shrink-0" />
                 </Link>
               </motion.div>
             );

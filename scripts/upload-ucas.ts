@@ -126,7 +126,21 @@ const main = async () => {
     delete (clone as any).course_name;
     return clone;
   });
-  const programs = uniqueByKey(readCsv(path.join(dir, 'programs.csv')), 'id');
+  // programs.csv is no longer tracked (see .gitignore — import CSVs are untracked;
+  // it was removed in `chore: drop supabase/imports/programs.csv from the repo`).
+  // Without this guard `readCsv` dies on a bare ENOENT that says nothing about how
+  // to get the file back. The sibling upload-all-countries.ts already guards this way.
+  const programsPath = path.join(dir, 'programs.csv');
+  if (!fs.existsSync(programsPath)) {
+    console.error(
+      `Required file not found: ${programsPath}\n` +
+        `It is deliberately untracked. Either pass --dir <folder> pointing at a local copy, ` +
+        `or restore it with: git revert e199f41 && git lfs pull`
+    );
+    process.exit(1);
+  }
+
+  const programs = uniqueByKey(readCsv(programsPath), 'id');
   const requirements = uniqueByKey(readCsv(path.join(dir, 'program_requirements.csv')), 'program_id');
 
   console.log(`Upserting ${universities.length} universities...`);

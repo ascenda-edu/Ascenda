@@ -1,72 +1,106 @@
-import type { Variants } from 'framer-motion';
+import type { Transition, Variants } from 'framer-motion';
 
-/* ─── Landing page variants (hidden → visible) ───────────────────────────── */
+/**
+ * The app's motion vocabulary. ONE easing curve, ONE set of state names.
+ *
+ * Before this there were four competing vocabularies:
+ *   landing-preview/section-reveal   [0.22, 1, 0.36, 1]        32px / 0.5s
+ *   lib/motion.ts                    [0.25, 0.46, 0.45, 0.94]  20px / 0.5s
+ *   layout/page-hero.tsx             [0.25, 0.46, 0.45, 0.94]   6px / 0.18s
+ *   course/CoursePageClient          tailwindcss-animate        16px / 0.5s
+ *
+ * ...and this file used TWO state-name conventions at once: `hidden → visible` for
+ * the landing variants and `hidden → show` for the app ones, which meant you had to
+ * know which half of an 80-line file a variant came from to use it.
+ *
+ * The curve is the landing page's, because that page is the quality bar the rest of
+ * the app is being brought up to. It's a strong ease-out: quick to leave, slow to
+ * settle, which reads as "the content arrived" rather than "something is sliding".
+ * The old curve was near-symmetric and, at PageHero's 6px over 180ms, below the
+ * threshold where movement reads as anything but a flicker.
+ *
+ * State names are `hidden → show` throughout (that was the majority convention:
+ * ~57 usages against 2).
+ *
+ * Five variants are gone as dead code: scaleIn, blockFade, slideRight, popIn and
+ * blurIn all had zero call sites.
+ */
 
-/** Standard fade-in for landing/marketing sections */
-export const fadeIn: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] } },
-};
+/** The single easing curve. Cubic-bezier, strong ease-out. */
+export const EASE: Transition['ease'] = [0.22, 1, 0.36, 1];
 
-/** Scale-up reveal for hero elements */
-export const scaleIn: Variants = {
-  hidden: { opacity: 0, scale: 0.95, y: 10 },
-  visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] } },
-};
+/**
+ * The one sanctioned exception to `EASE`: an overshoot curve (y peaks above 1, so the
+ * value passes its target and settles back). It exists for small elements that pop
+ * INTO existence at a new scale — the assistant's floating trigger button and the
+ * search filter chips. On those, the overshoot is the whole point: it reads as the
+ * thing announcing itself, which is the difference between a chip "appearing" and a
+ * chip "being added".
+ *
+ * Only ever use it on scale-up entrances of small elements. On an exit to scale 0 it
+ * drives the value negative before settling, and on anything card-sized or larger it
+ * reads as wobble. Entrances pop, exits use `EASE`.
+ */
+export const EASE_POP: Transition['ease'] = [0.34, 1.56, 0.64, 1];
 
-/* ─── App variants (hidden → show) ───────────────────────────────────────── */
+/**
+ * Travel distances. Two amplitudes, one curve — matched to content density rather
+ * than invented per component. A marketing section can afford 32px of travel; a
+ * dashboard card in a dense grid cannot, and reads as noise if it tries.
+ */
+export const TRAVEL = { app: 16, section: 32 } as const;
 
-/** Fade-up entrance for sections and cards */
+/** Durations. Entrances settle; exits are faster, so dismissal feels responsive. */
+export const DURATION = { fast: 0.25, base: 0.4, slow: 0.5, exit: 0.2 } as const;
+
+/* ─── Entrances ───────────────────────────────────────────────────────────── */
+
+/** The default entrance for app sections and cards. */
 export const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] } },
+  hidden: { opacity: 0, y: TRAVEL.app },
+  show: { opacity: 1, y: 0, transition: { duration: DURATION.base, ease: EASE } }
 };
 
-/** Container that staggers its children */
+/** Larger-amplitude entrance for full-width marketing/landing sections. */
+export const fadeUpSection: Variants = {
+  hidden: { opacity: 0, y: TRAVEL.section },
+  show: { opacity: 1, y: 0, transition: { duration: DURATION.slow, ease: EASE } }
+};
+
+/** Container that staggers its children. Pair with `childFade` or `cardFade`. */
 export const stagger: Variants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
+  show: { transition: { staggerChildren: 0.05, delayChildren: 0.04 } }
 };
 
-/** Child fade for staggered grids (pairs with stagger) */
+/** Child entrance for staggered grids and lists. */
 export const childFade: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] } },
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: DURATION.fast, ease: EASE } }
 };
 
-/** Card entrance with subtle scale */
+/**
+ * Card entrance with a touch of scale. Kept distinct from `childFade` because the
+ * scale reads as "this is a surface" rather than "this is a line of content".
+ */
 export const cardFade: Variants = {
-  hidden: { opacity: 0, y: 14, scale: 0.98 },
-  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] } },
+  hidden: { opacity: 0, y: 12, scale: 0.98 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { duration: DURATION.base, ease: EASE } },
+  exit: { opacity: 0, scale: 0.98, transition: { duration: DURATION.exit, ease: EASE } }
 };
 
-/** Horizontal slide-in for list items */
+/** Horizontal entrance for list rows that slide in from the leading edge. */
 export const itemSlide: Variants = {
   hidden: { opacity: 0, x: -12 },
-  show: { opacity: 1, x: 0, transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] } },
+  show: { opacity: 1, x: 0, transition: { duration: DURATION.fast, ease: EASE } }
 };
 
-/** Block entrance/exit for masonry grids */
-export const blockFade: Variants = {
-  hidden: { opacity: 0, scale: 0.95, y: 8 },
-  show: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] } },
-  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.15 } },
-};
-
-/** Slide-in from right for panels and drawers */
-export const slideRight: Variants = {
-  hidden: { opacity: 0, x: 20 },
-  show: { opacity: 1, x: 0, transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] } },
-};
-
-/** Pop-in for badges, counts, and small elements */
-export const popIn: Variants = {
-  hidden: { opacity: 0, scale: 0.8 },
-  show: { opacity: 1, scale: 1, transition: { duration: 0.3, ease: [0.34, 1.56, 0.64, 1] } },
-};
-
-/** Blur-in for hero-style reveals */
-export const blurIn: Variants = {
-  hidden: { opacity: 0, filter: 'blur(8px)', y: 10 },
-  visible: { opacity: 1, filter: 'blur(0px)', y: 0, transition: { duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] } },
+/**
+ * Legacy alias. Two landing files still say `fadeIn` with a `visible` state; this
+ * keeps them working on the unified curve without a rename churn through the
+ * marketing pages. Prefer `fadeUpSection` in new code.
+ */
+export const fadeIn: Variants = {
+  hidden: { opacity: 0, y: TRAVEL.section },
+  visible: { opacity: 1, y: 0, transition: { duration: DURATION.slow, ease: EASE } }
 };

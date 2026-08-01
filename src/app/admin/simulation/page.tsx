@@ -1,7 +1,18 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { DashboardShell } from '@/components/layout/shell';
+import { PageHero } from '@/components/layout/page-hero';
+import { FlaskConical } from 'lucide-react';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
+import { EmptyState } from '@/components/ui/empty-state';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table';
 
 export const metadata: Metadata = { title: 'Algorithm Simulation — Admin' };
 
@@ -36,21 +47,23 @@ type BatchSummary = {
 
 function tierColor(result: string | null) {
   if (!result) return 'bg-muted text-muted-foreground';
-  if (result === 'Safety') return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400';
-  if (result === 'Target') return 'bg-sky-500/10 text-sky-700 dark:text-sky-300';
-  if (result === 'Reach') return 'bg-amber-500/10 text-amber-700 dark:text-amber-400';
-  if (result.startsWith('Best:')) return 'bg-violet-500/10 text-violet-700 dark:text-violet-300';
-  return 'bg-rose-500/10 text-rose-600 dark:text-rose-400';
+  if (result === 'Safety') return 'bg-success-subtle text-success';
+  if (result === 'Target') return 'bg-info-subtle text-info';
+  if (result === 'Reach') return 'bg-warning-subtle text-warning';
+  if (result.startsWith('Best:')) return 'bg-feature-subtle text-feature';
+  return 'bg-danger-subtle text-danger';
 }
 
+// The tone system has five steps, so the old orange 'Borderline' step folds onto
+// danger — the band name is printed next to the colour, so no information is lost.
 function bandColor(band: string | null) {
   if (!band) return 'text-muted-foreground';
-  if (band === 'Exceptional') return 'text-violet-600 dark:text-violet-400 font-semibold';
-  if (band === 'Very strong') return 'text-sky-600 dark:text-sky-400 font-semibold';
-  if (band === 'Strong') return 'text-emerald-600 dark:text-emerald-400';
-  if (band === 'Solid') return 'text-amber-600 dark:text-amber-400';
-  if (band === 'Borderline') return 'text-orange-600 dark:text-orange-400';
-  return 'text-rose-600 dark:text-rose-400';
+  if (band === 'Exceptional') return 'text-feature font-semibold';
+  if (band === 'Very strong') return 'text-info font-semibold';
+  if (band === 'Strong') return 'text-success';
+  if (band === 'Solid') return 'text-warning';
+  if (band === 'Borderline') return 'text-danger';
+  return 'text-danger';
 }
 
 export default async function SimulationPage() {
@@ -95,66 +108,68 @@ export default async function SimulationPage() {
   const batches = Array.from(runMap.values())
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+  // The shell and the section nav live in layout.tsx so they survive navigation
+  // between the two admin routes.
   return (
-    <DashboardShell>
-      <div className="py-8 space-y-10">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Algorithm Simulation</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Validates scoring + matching against real-world admission outcomes. A PASS means the algorithm
-            classified the student&apos;s actual school as Safety, Target, or Reach.
-          </p>
-        </div>
-
+    <>
+      <PageHero
+        tone="counsellor"
+        eyebrow="Admin"
+        title="Algorithm simulation"
+        description="Validates scoring + matching against real-world admission outcomes. A PASS means the algorithm classified the student's actual school as Safety, Target, or Reach."
+        breadcrumbs={<Breadcrumbs />}
+        stats={[{ label: 'Runs recorded', value: String(batches.length) }]}
+      />
+      <div className="space-y-10">
         {batches.length === 0 && (
-          <div className="rounded-lg border border-dashed border-border p-12 text-center">
-            <p className="text-muted-foreground">No simulation results yet.</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Run: <code className="bg-muted px-1 rounded">npx tsx scripts/simulate-profiles.ts batch_10</code>
-            </p>
-          </div>
+          <EmptyState
+            icon={<FlaskConical />}
+            title="No simulation results yet"
+            description="Run a batch to validate the scoring and matching algorithm against real admission outcomes."
+            hint="npx tsx scripts/simulate-profiles.ts batch_10"
+          />
         )}
 
         {batches.map(batch => (
           <div key={batch.run_id} className="space-y-4">
             {/* Batch header */}
-            <div className="flex items-center gap-4">
-              <h2 className="text-lg font-semibold text-foreground capitalize">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <h2 className="font-heading text-lg font-semibold capitalize tracking-tight text-foreground">
                 {batch.batch_label.replace('_', ' ')}
               </h2>
               <span className="text-sm text-muted-foreground">
                 {new Date(batch.created_at).toLocaleString()} · run {batch.run_id.slice(0, 8)}
               </span>
               <div className={`ml-auto flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold tabular-nums
-                ${batch.passRate >= 80 ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' :
-                  batch.passRate >= 60 ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                ${batch.passRate >= 80 ? 'bg-success-subtle text-success' :
+                  batch.passRate >= 60 ? 'bg-warning-subtle text-warning' : 'bg-danger-subtle text-danger'}`}>
                 {batch.passed}/{batch.total} pass · {batch.passRate}%
               </div>
             </div>
 
             {/* Summary stats */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
                 { label: 'Total profiles', value: batch.total },
                 { label: 'Pass rate', value: `${batch.passRate}%` },
                 { label: 'Safety / Target', value: batch.rows.filter(r => r.algorithm_result === 'Safety' || r.algorithm_result === 'Target').length },
                 { label: 'Reach', value: batch.rows.filter(r => r.algorithm_result === 'Reach').length },
               ].map(stat => (
-                <div key={stat.label} className="rounded-lg border border-border bg-card px-4 py-3">
+                <div key={stat.label} className="surface-stat p-4 sm:p-4">
                   <div className="text-xs text-muted-foreground">{stat.label}</div>
-                  <div className="text-xl font-bold text-foreground tabular-nums mt-0.5">{stat.value}</div>
+                  <div className="mt-0.5 text-xl font-bold tabular-nums text-foreground">{stat.value}</div>
                 </div>
               ))}
             </div>
 
             {/* Findings */}
             {batch.rows.filter(r => !r.validation_pass).length > 0 && (
-              <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-4 py-3">
-                <p className="text-sm font-medium text-amber-700 dark:text-amber-300 mb-1">
+              <div className="rounded-lg bg-warning-subtle border border-warning/25 px-4 py-3">
+                <p className="text-sm font-medium text-warning mb-1">
                   ⚠ Failures ({batch.rows.filter(r => !r.validation_pass).length}) — Algorithm calibration findings:
                 </p>
                 {batch.rows.filter(r => !r.validation_pass).map(r => (
-                  <p key={r.id} className="text-xs text-amber-700 dark:text-amber-400">
+                  <p key={r.id} className="text-xs text-warning">
                     • <strong>{r.profile_name}</strong> (IB equiv {r.student_ib_equivalent}) →{' '}
                     {r.actual_university}: result was <em>{r.algorithm_result ?? 'Not found'}</em>
                   </p>
@@ -162,65 +177,66 @@ export default async function SimulationPage() {
               </div>
             )}
 
-            {/* Results table */}
-            <div className="rounded-lg border border-border overflow-hidden">
-              <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/40 border-b border-border">
-                  <tr>
-                    <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Profile</th>
-                    <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Type</th>
-                    <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">IB equiv</th>
-                    <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Score / Band</th>
-                    <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Actual school</th>
-                    <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Country</th>
-                    <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Result</th>
-                    <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Chance</th>
-                    <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Pass</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60 bg-card">
+            {/* Results table. The `Table` primitive keeps a min-width floor, so
+                on a narrow viewport these nine columns scroll instead of being
+                crushed into slivers; the card is the surface (a table is content,
+                not a card) with its own padding zeroed so rows run edge to edge. */}
+            <div className="surface-card !p-0">
+              <Table className="min-w-[60rem]" containerClassName="max-h-[70vh]">
+                <TableHeader sticky>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead scope="col">Profile</TableHead>
+                    <TableHead scope="col">Type</TableHead>
+                    <TableHead scope="col" numeric>IB equiv</TableHead>
+                    <TableHead scope="col">Score / Band</TableHead>
+                    <TableHead scope="col">Actual school</TableHead>
+                    <TableHead scope="col">Country</TableHead>
+                    <TableHead scope="col">Result</TableHead>
+                    <TableHead scope="col" numeric>Chance</TableHead>
+                    <TableHead scope="col" className="text-center">Pass</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {batch.rows.map(row => (
-                    <tr key={row.id} className={row.validation_pass ? '' : 'bg-rose-500/5'}>
-                      <td className="px-4 py-3 font-medium text-foreground">{row.profile_name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{row.programme_type}</td>
-                      <td className="px-4 py-3 text-foreground tabular-nums">{row.student_ib_equivalent ?? '—'}</td>
-                      <td className="px-4 py-3">
-                        <span className="text-foreground tabular-nums">{row.student_score ?? '—'}</span>
+                    <TableRow key={row.id} className={row.validation_pass ? '' : 'bg-danger/5'}>
+                      <TableCell className="font-medium text-foreground">{row.profile_name}</TableCell>
+                      <TableCell className="text-muted-foreground">{row.programme_type}</TableCell>
+                      <TableCell numeric className="text-foreground">{row.student_ib_equivalent ?? '—'}</TableCell>
+                      <TableCell>
+                        <span className="text-foreground">{row.student_score ?? '—'}</span>
                         {row.student_band && (
                           <span className={`ml-2 text-xs ${bandColor(row.student_band)}`}>
                             {row.student_band}
                           </span>
                         )}
-                      </td>
-                      <td className="px-4 py-3 text-foreground max-w-[200px] truncate" title={row.actual_university}>
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate text-foreground" title={row.actual_university}>
                         {row.actual_university}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">{row.actual_country}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${tierColor(row.algorithm_result)}`}>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{row.actual_country}</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex rounded-lg px-2 py-0.5 text-xs font-medium ${tierColor(row.algorithm_result)}`}>
                           {row.algorithm_result ?? 'Not found'}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-foreground tabular-nums">
+                      </TableCell>
+                      <TableCell numeric className="text-foreground">
                         {row.chance_percent != null ? `${row.chance_percent}%` : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-center">
+                      </TableCell>
+                      <TableCell className="text-center">
                         {row.validation_pass ? (
-                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
+                          <span className="font-bold text-success" title="Pass">✓</span>
                         ) : (
-                          <span className="text-rose-500 font-bold">✗</span>
+                          <span className="font-bold text-danger" title="Fail">✗</span>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-              </div>
+                </TableBody>
+              </Table>
             </div>
           </div>
         ))}
       </div>
-    </DashboardShell>
+    </>
   );
 }

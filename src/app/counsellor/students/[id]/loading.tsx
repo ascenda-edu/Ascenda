@@ -1,19 +1,32 @@
+import { PageHeroSkeleton } from '@/components/layout/page-hero-skeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 
+/**
+ * Mirrors `counsellor/students/[id]/page.tsx`: hero with breadcrumbs, an
+ * eyebrow, four stat tiles and actions (message button + flag badges), then the
+ * `StudentDetailTabs` toolbar row and its two-column panel.
+ *
+ * No `SectionNav` here — `counsellor/layout.tsx` owns that row for every counsellor
+ * route, and a loading file renders inside its layout.
+ */
 export default function StudentDetailLoading() {
   return (
     <div className="space-y-6">
-      {/* Breadcrumb */}
-      <Skeleton className="h-5 w-56 rounded-full" />
-      {/* Header card */}
-      <Skeleton className="h-40 rounded-2xl" />
-      {/* Tab nav */}
-      <Skeleton className="h-14 rounded-2xl" />
-      {/* Content grid */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-48 rounded-2xl" />
-        ))}
+      <PageHeroSkeleton breadcrumbs eyebrow stats={4} actions />
+
+      {/* StudentDetailTabs: the TabsList toolbar row, then the active panel
+          (TabsContent supplies the `mt-6` between them). */}
+      <div>
+        <div className="surface-toolbar flex items-center gap-2 rounded-4xl px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-8 w-24 shrink-0 rounded-lg" />
+          ))}
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-48 rounded-2xl" />
+          ))}
+        </div>
       </div>
     </div>
   );

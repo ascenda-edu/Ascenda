@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { APPLICATION_STATUS_VISUAL, type ApplicationStatusTone } from '@/lib/theme/categories';
 import type { CohortStats } from './types';
 
 interface ApplicationFunnelProps {
@@ -9,11 +10,20 @@ interface ApplicationFunnelProps {
   onNavigateStage?: (stage: 'planning' | 'inProgress' | 'submitted' | 'decision') => void;
 }
 
+// Stage colours are APPLICATION_STATUS_VISUAL's, so this funnel can no longer drift
+// from the kanban board and the analytics stage chart (they disagreed on all four
+// stages before — see lib/counsellor/stage-colors.ts). The selected ring is
+// `primary` for every stage: it means "you picked this", not "this stage is blue".
+const stage = (key: 'planning' | 'inProgress' | 'submitted' | 'decision', tone: ApplicationStatusTone, label: string) => {
+  const v = APPLICATION_STATUS_VISUAL[tone];
+  return { key, label, color: v.bg, text: v.text, border: v.border, active: 'ring-2 ring-primary ring-offset-2' };
+};
+
 const STAGES = [
-  { key: 'planning' as const, label: 'Planning', color: 'bg-muted', text: 'text-muted-foreground', border: 'border-border', active: 'ring-2 ring-primary ring-offset-2' },
-  { key: 'inProgress' as const, label: 'In Progress', color: 'bg-sky-500/20', text: 'text-sky-700 dark:text-sky-400', border: 'border-sky-200/60 dark:border-sky-500/30', active: 'ring-2 ring-sky-500 ring-offset-2' },
-  { key: 'submitted' as const, label: 'Submitted', color: 'bg-violet-500/15', text: 'text-violet-700 dark:text-violet-400', border: 'border-violet-200/60 dark:border-violet-500/30', active: 'ring-2 ring-violet-500 ring-offset-2' },
-  { key: 'decision' as const, label: 'Decision', color: 'bg-emerald-500/15', text: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-200/60 dark:border-emerald-500/30', active: 'ring-2 ring-emerald-500 ring-offset-2' }
+  stage('planning', 'planning', 'Planning'),
+  stage('inProgress', 'in_progress', 'In Progress'),
+  stage('submitted', 'submitted', 'Submitted'),
+  stage('decision', 'decision', 'Decision')
 ];
 
 export const ApplicationFunnel = ({ funnel, totalStudents, activeStage, onSelectStage, onNavigateStage }: ApplicationFunnelProps) => {
@@ -32,7 +42,7 @@ export const ApplicationFunnel = ({ funnel, totalStudents, activeStage, onSelect
           <div
             key={key}
             className={cn(
-              "relative space-y-1 transition-all",
+              "relative space-y-1 transition-[transform,opacity,filter]",
               onSelectStage && "hover:opacity-80",
               isSelected ? "scale-[1.02]" : "opacity-60 grayscale-[0.5]"
             )}
@@ -57,7 +67,7 @@ export const ApplicationFunnel = ({ funnel, totalStudents, activeStage, onSelect
                     type="button"
                     onClick={() => onNavigateStage(key)}
                     aria-label={`View ${label} stage students`}
-                    className="relative z-10 text-[0.625rem] text-primary hover:underline underline-offset-2 font-medium"
+                    className="relative z-raised text-label text-primary-ink hover:underline underline-offset-2 font-medium"
                   >
                     View →
                   </button>
@@ -65,11 +75,11 @@ export const ApplicationFunnel = ({ funnel, totalStudents, activeStage, onSelect
               </div>
             </div>
             <div className={cn(
-              "h-7 overflow-hidden rounded-xl border border-border/50 bg-muted/40 transition-all",
+              "h-7 overflow-hidden rounded-xl border border-border/50 bg-muted/40 transition-shadow",
               isSelected && active
             )}>
               <div
-                className={`flex h-full items-center rounded-xl border px-3 text-xs font-semibold transition-all duration-700 ${color} ${border} ${text}`}
+                className={`flex h-full items-center rounded-xl border px-3 text-xs font-semibold transition-[width] duration-700 ${color} ${border} ${text}`}
                 style={{ width: `${Math.max(barWidth, count > 0 ? 8 : 0)}%` }}
               >
                 {count > 0 && count}

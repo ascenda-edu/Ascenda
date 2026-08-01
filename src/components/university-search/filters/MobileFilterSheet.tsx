@@ -24,7 +24,7 @@ export function MobileFilterSheet({ open, onClose, children, activeFilterCount, 
               <button
                 type="button"
                 onClick={onClearAll}
-                className="rounded-full px-2 py-1 text-sm font-medium text-primary transition-colors cursor-pointer hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="rounded-full px-2 py-1 text-sm font-medium text-primary-ink transition-colors cursor-pointer hover:text-primary-ink/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 Clear all
               </button>

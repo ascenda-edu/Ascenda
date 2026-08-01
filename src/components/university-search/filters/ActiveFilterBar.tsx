@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { FilterPill } from '@/components/university-search/filter-pill';
+import { DURATION, EASE, EASE_POP } from '@/lib/motion';
 
 interface ActiveFilterBarProps {
   chips: { key: string; label: string; onRemove: () => void }[];
@@ -19,8 +20,10 @@ export function ActiveFilterBar({ chips, onClearAll }: ActiveFilterBarProps) {
             key={chip.key}
             layout
             initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1, transition: { duration: 0.25, ease: [0.34, 1.56, 0.64, 1] } }}
-            exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.12, ease: [0.25, 0.46, 0.45, 0.94] } }}
+            // A chip pops in with overshoot — it reads as "filter added", not "filter
+            // appeared". Removal is plain: EASE_POP on the way out would bulge first.
+            animate={{ opacity: 1, scale: 1, transition: { duration: DURATION.fast, ease: EASE_POP } }}
+            exit={{ opacity: 0, scale: 0.8, transition: { duration: DURATION.exit, ease: EASE } }}
           >
             <FilterPill label={chip.label} onRemove={chip.onRemove} />
           </motion.div>

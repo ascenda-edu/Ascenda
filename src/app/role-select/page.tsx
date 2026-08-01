@@ -13,20 +13,20 @@ const ROLES = [
     label: 'Student',
     description: 'Track applications, explore universities, and manage your admissions journey.',
     icon: GraduationCap,
-    accent: 'sky',
+    accent: 'info',
     href: '/dashboard',
     badge: 'Applicant workspace',
-    badgeColor: 'bg-sky-500/10 text-sky-600 dark:text-sky-400'
+    badgeColor: 'bg-info-subtle text-info'
   },
   {
     id: 'counsellor',
     label: 'Counsellor',
     description: 'Monitor your cohort, track student progress, and manage deadlines at scale.',
     icon: Briefcase,
-    accent: 'violet',
+    accent: 'feature',
     href: '/counsellor',
     badge: 'Professional dashboard',
-    badgeColor: 'bg-violet-500/10 text-violet-600 dark:text-violet-400'
+    badgeColor: 'bg-feature-subtle text-feature'
   }
 ] as const;
 
@@ -132,8 +132,8 @@ export default function RoleSelectPage() {
         transition={{ duration: 0.4 }}
         className="mb-10 text-center"
       >
-        <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-3 py-1 text-xs font-medium shadow-sm backdrop-blur">
-          <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
+        <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-3 py-1 text-xs font-medium shadow-e-1 backdrop-blur">
+          <span className="h-2 w-2 rounded-full bg-success-fill" aria-hidden />
           Welcome to Ascenda
         </p>
         <h1 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -159,29 +159,27 @@ export default function RoleSelectPage() {
               onClick={() => handleSelect(role)}
               disabled={loading}
               className={cn(
-                'group relative flex flex-col items-start gap-4 rounded-2xl border bg-card/80 p-6 text-left shadow-sm backdrop-blur transition-all duration-200',
-                'hover:-translate-y-1 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                role.accent === 'violet'
-                  ? 'hover:border-violet-400/60 hover:ring-1 hover:ring-violet-400/20'
-                  : 'hover:border-sky-400/60 hover:ring-1 hover:ring-sky-400/20',
-                isSelected && role.accent === 'violet' && 'border-violet-400/60 ring-1 ring-violet-400/30',
-                isSelected && role.accent === 'sky' && 'border-sky-400/60 ring-1 ring-sky-400/30',
+                'group relative flex flex-col items-start gap-4 rounded-2xl border bg-card/80 p-6 text-left shadow-e-1 backdrop-blur',
+                'hover-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                role.accent === 'feature'
+                  ? 'hover:border-feature/60 hover:ring-1 hover:ring-feature/20'
+                  : 'hover:border-info/60 hover:ring-1 hover:ring-info/20',
+                isSelected && role.accent === 'feature' && 'border-feature/60 ring-1 ring-feature/30',
+                isSelected && role.accent === 'info' && 'border-info/60 ring-1 ring-info/30',
                 isOther && 'opacity-40'
               )}
             >
               <div
                 className={cn(
                   'flex h-11 w-11 items-center justify-center rounded-2xl',
-                  role.accent === 'violet'
-                    ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400'
-                    : 'bg-sky-500/10 text-sky-600 dark:text-sky-400'
+                  role.accent === 'feature' ? 'bg-feature-subtle text-feature' : 'bg-info-subtle text-info'
                 )}
               >
                 <Icon className="h-5 w-5" aria-hidden />
               </div>
 
               <div className="flex-1 space-y-1">
-                <span className={cn('inline-block rounded-full px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-widest', role.badgeColor)}>
+                <span className={cn('inline-block rounded-full px-2 py-0.5 text-label font-semibold uppercase tracking-widest', role.badgeColor)}>
                   {role.badge}
                 </span>
                 <p className="text-lg font-semibold leading-tight text-foreground">{role.label}</p>
@@ -191,9 +189,7 @@ export default function RoleSelectPage() {
               <span
                 className={cn(
                   'flex items-center gap-1 text-sm font-medium transition-colors',
-                  role.accent === 'violet'
-                    ? 'text-violet-600 group-hover:text-violet-700 dark:text-violet-400'
-                    : 'text-sky-600 group-hover:text-sky-700 dark:text-sky-400'
+                  role.accent === 'feature' ? 'text-feature' : 'text-info'
                 )}
               >
                 {isSelected && loading ? (

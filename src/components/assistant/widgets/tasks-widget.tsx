@@ -26,12 +26,12 @@ function TaskMeta({ item }: { item: TaskHit }) {
   // Shared relative-due copy so the widget matches the /applications/tasks board.
   const due = dueLabel(item.dueDate);
   return (
-    <p className="truncate text-[0.625rem] text-muted-foreground">
+    <p className="truncate text-label text-muted-foreground">
       {item.application}
       {due ? (
         <>
           {' · '}
-          <span className={due.urgent ? 'font-semibold text-rose-600 dark:text-rose-400' : undefined}>
+          <span className={due.urgent ? 'font-semibold text-danger' : undefined}>
             {due.label}
           </span>
         </>
@@ -74,7 +74,7 @@ export function TasksWidget({ items, mode }: { items: TaskHit[]; mode: ChatMode 
       variants={cardFade}
       initial="hidden"
       animate="show"
-      className="rounded-[14px] border border-border bg-background p-2.5"
+      className="rounded-xl border border-border bg-background p-2.5"
     >
       <div className="divide-y divide-border">
         {items.map((item) => {
@@ -92,7 +92,7 @@ export function TasksWidget({ items, mode }: { items: TaskHit[]; mode: ChatMode 
                   className={cn(
                     'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition',
                     done
-                      ? 'border-emerald-500 bg-emerald-500 text-white'
+                      ? 'border-success bg-success-fill text-success-foreground'
                       : 'border-border bg-background hover:border-primary'
                   )}
                 >
@@ -103,7 +103,7 @@ export function TasksWidget({ items, mode }: { items: TaskHit[]; mode: ChatMode 
                   aria-hidden
                   className={cn(
                     'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2',
-                    done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-border'
+                    done ? 'border-success bg-success-fill text-success-foreground' : 'border-border'
                   )}
                 >
                   {done ? <Check className="h-3.5 w-3.5" /> : null}
@@ -112,7 +112,7 @@ export function TasksWidget({ items, mode }: { items: TaskHit[]; mode: ChatMode 
               <div className="min-w-0 flex-1">
                 <p
                   className={cn(
-                    'truncate text-[0.6875rem] font-medium text-foreground',
+                    'truncate text-label font-medium text-foreground',
                     done && 'text-muted-foreground line-through'
                   )}
                 >
