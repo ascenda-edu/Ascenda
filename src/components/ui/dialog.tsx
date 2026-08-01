@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
  * `open` — but Trigger/Close are exported now that they're free.
  */
 
-type DialogAlign = 'center' | 'left';
+type DialogAlign = 'center' | 'left' | 'right' | 'top';
 
 // Only `align` needs sharing, and only downward to DialogContent, so this stays a
 // bare value context rather than the object the old implementation needed for its
@@ -27,9 +27,14 @@ const DialogAlignContext = React.createContext<DialogAlign>('center');
 interface DialogProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root> {
     /**
      * Placement of the dialog surface. `'center'` (default) is the classic
-     * modal; `'left'` turns it into a full-height slide-over anchored to the
-     * left edge. Purely presentational — focus-trap, scroll-lock, Escape and
-     * scrim behaviour are identical for both.
+     * modal; `'left'` / `'right'` turn it into a full-height slide-over anchored
+     * to that edge; `'top'` is the command-palette drop (top-anchored, centred
+     * horizontally). Purely presentational — focus-trap, scroll-lock, Escape and
+     * scrim behaviour are identical for all four.
+     *
+     * Each non-centre alignment carries a sensible default width
+     * (`left` 360px, `right` `max-w-xl`, `top` `max-w-xl`); override with
+     * `className` on `DialogContent`, which wins through `cn()`.
      */
     align?: DialogAlign;
 }
@@ -57,7 +62,7 @@ export const DialogContent = React.forwardRef<
     DialogContentProps
 >(({ className, children, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => {
     const align = React.useContext(DialogAlignContext);
-    const isLeft = align === 'left';
+    const isSlideOver = align === 'left' || align === 'right';
 
     // Radix restores focus to its own DialogTrigger on close. Nothing here uses
     // one — every consumer drives `open` from a button elsewhere in the tree — so
@@ -85,7 +90,10 @@ export const DialogContent = React.forwardRef<
             <div
                 className={cn(
                     'pointer-events-none fixed inset-0 z-modal flex',
-                    isLeft ? 'items-stretch justify-start' : 'items-center justify-center p-4 sm:p-6'
+                    align === 'left' && 'items-stretch justify-start',
+                    align === 'right' && 'items-stretch justify-end',
+                    align === 'top' && 'items-start justify-center p-4 pt-20 sm:pt-24',
+                    align === 'center' && 'items-center justify-center p-4 sm:p-6'
                 )}
             >
                 <DialogPrimitive.Content
@@ -113,17 +121,34 @@ export const DialogContent = React.forwardRef<
                         // it takes focus on open so screen readers land inside it.
                         // Every interactive element within keeps its own ring.
                         'focus:outline-none',
-                        isLeft
-                            ? cn(
-                                'h-full w-[min(88vw,360px)] max-w-full border-y-0 border-l-0',
-                                'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-left-full',
-                                'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-left-full'
-                            )
-                            : cn(
-                                'w-full max-w-lg rounded-xl sm:rounded-2xl',
-                                'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-bottom-2',
-                                'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-bottom-2'
-                            ),
+                        // A slide-over is full-height and flush to its edge, so the
+                        // border on the three touching sides would render as a hairline
+                        // against the viewport — only the inner edge keeps one.
+                        isSlideOver && 'h-full border-y-0',
+                        align === 'left' &&
+                        cn(
+                            'w-[min(88vw,360px)] max-w-full border-l-0',
+                            'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-left-full',
+                            'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-left-full'
+                        ),
+                        align === 'right' &&
+                        cn(
+                            'w-full max-w-xl border-r-0',
+                            'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-right-full',
+                            'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-right-full'
+                        ),
+                        align === 'top' &&
+                        cn(
+                            'w-full max-w-xl rounded-xl sm:rounded-2xl',
+                            'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-4',
+                            'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-top-4'
+                        ),
+                        align === 'center' &&
+                        cn(
+                            'w-full max-w-lg rounded-xl sm:rounded-2xl',
+                            'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-bottom-2',
+                            'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-bottom-2'
+                        ),
                         TIMING,
                         className
                     )}

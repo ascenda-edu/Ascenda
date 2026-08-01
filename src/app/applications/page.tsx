@@ -11,6 +11,7 @@ import { ClipboardCheck } from 'lucide-react';
 import { NextActionsList, type NextActionItem } from '@/components/applications/next-actions-list';
 import { ApplicationList, type ApplicationRow } from '@/components/applications/application-list';
 import { daysUntil } from '@/lib/utils/dates';
+import { loadApplicationBoard, loadTierByProgram } from '@/lib/data/applications';
 
 export const metadata: Metadata = {
   title: 'Applications'
@@ -26,68 +27,17 @@ export default async function ApplicationsPage() {
     redirect('/login');
   }
 
-  const { data: applications } = await supabase
-    .from('applications')
-    .select(`
-      id,
-      status,
-      notes,
-      program_id,
-      program:programs(
-        id,
-        name:course_name,
-        level:study_level,
-        universities(name,country),
-        deadlines(
-          id,
-          name,
-          deadline_date,
-          intake,
-          program_id
-        )
-      ),
-      application_checklist(
-        id,
-        task_name,
-        status,
-        due_date,
-        application_id
-      )
-    `)
-    .eq('profile_id', user.id);
-
-  type ChecklistRecord = {
-    id: string;
-    task_name: string;
-    status: 'todo' | 'doing' | 'done';
-    due_date?: string | null;
-    application_id?: string | null;
-  };
-
-  type DeadlineRecord = {
-    id: string;
-    name: string;
-    deadline_date?: string | null;
-    intake?: string | null;
-    program_id: string;
-  };
-
-  type ApplicationRecord = {
-    id: string;
-    status: string;
-    notes?: string | null;
-    program_id: string;
-    program?: {
-      id: string;
-      name?: string | null;
-      level?: string | null;
-      universities?: { name?: string | null; country?: string | null } | null;
-      deadlines?: DeadlineRecord[] | null;
-    } | null;
-    application_checklist?: ChecklistRecord[] | null;
-  };
-
-  const appRecords = ((applications ?? []) as ApplicationRecord[]) ?? [];
+  // The board's ONE source of applications — same select string and same row
+  // type the parent portal reads (src/lib/data/columns.ts).
+  //
+  // This used to be `const { data: applications } = await supabase…`, with the
+  // error unbound. A failed query therefore produced `data === null`, which fell
+  // through to `appRecords.length === 0` and rendered the "No applications yet —
+  // let's pick a first one" empty state below to a student with a full board.
+  // An RLS change, a renamed column or a timeout all looked exactly like "has
+  // never applied anywhere", and nothing was logged. `loadApplicationBoard`
+  // unwraps: the failure is logged and thrown to this route's error boundary.
+  const appRecords = await loadApplicationBoard(supabase, user.id);
 
   if (appRecords.length === 0) {
     return (
@@ -128,20 +78,15 @@ export default async function ApplicationsPage() {
   // ─── Tier lookup from student_matches ──────────────────────────────────
   // student_matches encodes tier (Reach / Match / Safe) inside breakdown JSON.
   // Map program_id → tier so application rows can wear the right badge.
-  const programIds = appRecords.map((app) => app.program_id);
-  const { data: matchRows } = await supabase
-    .from('student_matches')
-    .select('program_id, breakdown')
-    .eq('profile_id', user.id)
-    .in('program_id', programIds);
-
-  const tierByProgramId = new Map<string, 'Reach' | 'Match' | 'Safe'>();
-  for (const row of (matchRows ?? []) as Array<{ program_id: string; breakdown: Record<string, unknown> | null }>) {
-    const tier = row.breakdown?.tier;
-    if (tier === 'Reach' || tier === 'Match' || tier === 'Safe') {
-      tierByProgramId.set(row.program_id, tier);
-    }
-  }
+  //
+  // Soft on purpose (see loadTierByProgram): a missing badge degrades a row the
+  // student can still use; a thrown error takes the whole board down. Unlike
+  // before, the failure is now logged instead of silently dropping every badge.
+  const tierByProgramId = await loadTierByProgram(
+    supabase,
+    user.id,
+    appRecords.map((app) => app.program_id)
+  );
 
   // ─── Helpers ──────────────────────────────────────────────────────────
   // deadline_date / due_date are date-only strings — parse them as LOCAL dates

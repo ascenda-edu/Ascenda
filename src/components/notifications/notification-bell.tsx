@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge, type BadgeVariant } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useHelpDrawer } from '@/components/help/help-drawer-provider';
 import type { Notification } from '@/lib/types/demo-tables';
@@ -24,11 +26,13 @@ const extractHelpRequestId = (href?: string | null): string | null => {
 const isSafeHref = (href?: string | null): href is string =>
   !!href && href.startsWith('/') && !href.startsWith('//');
 
-const KIND_TONE: Record<string, string> = {
-  help_request: 'bg-feature-subtle text-feature',
-  help_accepted: 'bg-success-subtle text-success',
-  deck_assignment: 'bg-warning-subtle text-warning',
-  default: 'bg-info-subtle text-info'
+// Semantic Badge variants, not class bundles — the pill geometry now lives in
+// exactly one place (ui/badge.tsx) and this table says only what the tone MEANS.
+const KIND_TONE: Record<string, BadgeVariant> = {
+  help_request: 'feature',
+  help_accepted: 'success',
+  deck_assignment: 'warning',
+  default: 'info'
 };
 
 const formatRelative = (iso: string): string => {
@@ -49,6 +53,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const prevUnreadRef = useRef(unreadCount);
   const [announcement, setAnnouncement] = useState('');
 
@@ -86,6 +91,39 @@ export const NotificationBell = ({ className }: { className?: string }) => {
     return () => document.removeEventListener('keydown', handle);
   }, [open]);
 
+  // ── Why this is NOT a Dialog ────────────────────────────────────────────────
+  // This is a POPOVER: it is anchored to the bell, it does not cover the page,
+  // and the page behind it stays live. Porting it to ui/dialog.tsx would trap
+  // focus, lock body scroll and mark the rest of the app `aria-hidden` for a
+  // dropdown — heavier than the interaction deserves and a regression in feel.
+  // The correct non-modal semantics are instead: `role="dialog"` WITHOUT
+  // `aria-modal` (which would be a lie — nothing is trapped), the trigger's
+  // `aria-haspopup="dialog"` + `aria-expanded` + `aria-controls`, focus moved
+  // into the panel on open, Escape restoring focus to the bell, and the panel
+  // closing when focus leaves it (below) so it can never sit open and orphaned
+  // behind the user's caret. A future @radix-ui/react-popover would supersede
+  // all of this — it is NOT currently a dependency (docs/audit/09, LOW-14).
+  useEffect(() => {
+    if (!open) return;
+    // Land inside the panel rather than leaving the caret on the trigger, so a
+    // screen-reader user is placed in the thing that just appeared.
+    panelRef.current?.focus();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = (event: FocusEvent) => {
+      const next = event.relatedTarget as Node | null;
+      // relatedTarget is null when focus leaves the document entirely (tab-away
+      // to browser chrome) — keep the panel open in that case.
+      if (!next || wrapperRef.current?.contains(next)) return;
+      setOpen(false);
+    };
+    const node = wrapperRef.current;
+    node?.addEventListener('focusout', handle);
+    return () => node?.removeEventListener('focusout', handle);
+  }, [open]);
+
   const handleItemClick = (notif: Notification) => {
     if (!notif.read_at) markRead(notif.id);
     setOpen(false);
@@ -103,6 +141,18 @@ export const NotificationBell = ({ className }: { className?: string }) => {
       <span className="sr-only" role="status" aria-live="polite">
         {announcement}
       </span>
+      {/* KEPT as a native `title=`, deliberately.
+          docs/audit/09-design-system.md MED-10 says to convert the `title=`
+          attributes that carry information available nowhere else and to leave
+          the genuinely supplementary ones. This one is supplementary twice over:
+          the button already has an aria-label (so AT users are covered) and a
+          bell icon needs no gloss. Converting it was measured: this component
+          renders in the navbar on every authenticated route, and pulling
+          TooltipContent in makes @radix-ui/react-tooltip's Popper/floating-ui
+          live code — **+9 kB gzip on every one of them**, for one hover hint.
+          The two deck chips in counsellor/universities/_universities-client.tsx
+          ARE converted, because there the tooltip is the only signal that the
+          chip is clickable. */}
       <button
         ref={buttonRef}
         type="button"
@@ -125,14 +175,16 @@ export const NotificationBell = ({ className }: { className?: string }) => {
       <AnimatePresence>
         {open ? (
           <motion.div
+            ref={panelRef}
             id="notification-bell-panel"
             role="dialog"
             aria-label="Notifications"
+            tabIndex={-1}
             initial={{ opacity: 0, y: -6, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.14 }}
-            className="absolute right-0 top-[calc(100%+8px)] z-panel w-80 overflow-hidden rounded-2xl border border-border bg-card text-foreground shadow-e-4 backdrop-blur-lg sm:w-96"
+            className="absolute right-0 top-[calc(100%+8px)] z-panel w-80 overflow-hidden rounded-2xl border border-border bg-card text-foreground shadow-e-4 outline-none backdrop-blur-lg sm:w-96"
           >
             <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
               <div>
@@ -155,10 +207,13 @@ export const NotificationBell = ({ className }: { className?: string }) => {
 
             <div className="max-h-[60vh] overflow-y-auto overscroll-contain">
               {items.length === 0 ? (
-                <div className="px-4 py-8 text-center">
-                  <Bell className="mx-auto h-5 w-5 text-muted-foreground/60" aria-hidden />
-                  <p className="mt-2 text-sm text-muted-foreground">No notifications yet</p>
-                </div>
+                <EmptyState
+                  size="inline"
+                  icon={<Bell />}
+                  title="No notifications yet"
+                  description="Replies, accepted requests and new quests land here."
+                  className="m-3"
+                />
               ) : (
                 <ul className="divide-y divide-border/60">
                   {items.map((notif) => {
@@ -185,14 +240,13 @@ export const NotificationBell = ({ className }: { className?: string }) => {
                             >
                               {notif.title}
                             </p>
-                            <span
-                              className={cn(
-                                'shrink-0 rounded-full px-2 py-0.5 text-label font-medium uppercase tracking-[0.15em]',
-                                tone
-                              )}
+                            <Badge
+                              variant={tone}
+                              size="sm"
+                              className="shrink-0 font-medium uppercase tracking-[0.15em]"
                             >
                               {notif.kind.replaceAll('_', ' ')}
-                            </span>
+                            </Badge>
                           </div>
                           {notif.body ? (
                             <p className="mt-0.5 truncate text-xs text-muted-foreground">{notif.body}</p>

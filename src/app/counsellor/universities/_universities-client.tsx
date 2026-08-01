@@ -5,7 +5,7 @@
 // a rarity + fit), and assigning a deck sends the student a "quest"
 // notification via the trg_deck_assignment_notify DB trigger.
 
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Layers,
@@ -20,6 +20,16 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toast';
 import {
   Select,
@@ -64,61 +74,10 @@ const DECK_EMOJI = ['🗡️', '🛡️', '🐉', '🏰', '✨', '🔮', '🏹',
 const sanitize = (value: string) => value.replace(/[(),%_]/g, ' ').replace(/\s+/g, ' ').trim();
 const UNI_STOP_WORDS = new Set(['university', 'college', 'institute', 'school', 'of', 'the', 'and']);
 
-// Mirrors the focusable-element query used by the shared Dialog primitive and
-// analytics-drilldown so hand-rolled overlays trap focus, close on Escape, and
-// restore focus to the trigger — the same three behaviours.
-const FOCUSABLE =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-function useModalA11y(open: boolean, onClose: () => void) {
-  const modalRef = useRef<HTMLDivElement | null>(null);
-  const previouslyFocused = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (open) {
-      previouslyFocused.current = document.activeElement as HTMLElement | null;
-      const node = modalRef.current;
-      const target = node?.querySelector<HTMLElement>(FOCUSABLE) ?? node;
-      target?.focus();
-    } else {
-      previouslyFocused.current?.focus?.();
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [open, onClose]);
-
-  const onKeyDown = (event: ReactKeyboardEvent) => {
-    if (event.key !== 'Tab') return;
-    const node = modalRef.current;
-    if (!node) return;
-    const focusables = Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-      (el) => el.offsetParent !== null
-    );
-    if (focusables.length === 0) {
-      event.preventDefault();
-      return;
-    }
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    const active = document.activeElement;
-    if (event.shiftKey && active === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && active === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-
-  return { modalRef, onKeyDown };
-}
+// NOTE: the private `useModalA11y` hook that used to live here (its own FOCUSABLE
+// query, Tab trap, Escape listener and focus-restore ref, never exported and never
+// reused) is gone. Both overlays are `ui/dialog.tsx` now, which is the one place
+// those behaviours are allowed to be implemented.
 
 export function UniversitiesClient({ initialDecks, roster }: Props) {
   const { showToast } = useToast();
@@ -428,12 +387,12 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
   const [assignMessage, setAssignMessage] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
 
-  const closeAssign = useCallback(() => setAssignOpen(false), []);
+  // A delete that is mid-flight must not be dismissable — the row is already
+  // being written. Radix routes Escape, scrim clicks and DialogClose through
+  // onOpenChange, so that one guard now covers all three.
   const closeDelete = useCallback(() => {
     setDeckPendingDelete((prev) => (isDeletingDeck ? prev : null));
   }, [isDeletingDeck]);
-  const assign = useModalA11y(assignOpen && !!selectedDeck, closeAssign);
-  const remove = useModalA11y(!!deckPendingDelete, closeDelete);
 
   const assignableRoster = useMemo(() => {
     const assigned = new Set(selectedDeck?.assignees.map((a) => a.profileId) ?? []);
@@ -556,23 +515,24 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
               <Loader2 className="h-4 w-4 animate-spin" /> Searching the catalogue…
             </div>
           ) : results.length === 0 ? (
-            <div className="rounded-4xl border border-dashed border-border bg-muted/40 p-10 text-center">
-              <Sparkles className="mx-auto mb-2 h-5 w-5 text-muted-foreground" />
-              <p className="text-sm font-medium text-foreground">
-                {searchFailed
+            <EmptyState
+              icon={<Sparkles />}
+              title={
+                searchFailed
                   ? 'Search hit a snag'
                   : hasSearched
                     ? 'No programmes matched'
-                    : 'Search the catalogue to collect cards'}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {searchFailed
+                    : 'Search the catalogue to collect cards'
+              }
+              description={
+                searchFailed
                   ? 'The catalogue could not be reached — tweak the query to retry.'
                   : hasSearched
                     ? 'Try a broader query or a different country.'
-                    : 'Find a programme, add it to a deck, then assign the deck to students as a quest.'}
-              </p>
-            </div>
+                    : 'Find a programme, add it to a deck, then assign the deck to students as a quest.'
+              }
+              className="rounded-4xl"
+            />
           ) : (
             <ul className="divide-y divide-border/60">
               <AnimatePresence initial={false}>
@@ -737,9 +697,12 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
             </div>
 
             {selectedDeck.cards.length === 0 ? (
-              <p className="rounded-4xl border border-dashed border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
-                Empty deck — add programmes from the search results.
-              </p>
+              <EmptyState
+                size="inline"
+                icon={<Layers />}
+                title="Empty deck"
+                description="Add programmes to it from the search results on the left."
+              />
             ) : (
               <ul className="space-y-2">
                 <AnimatePresence initial={false}>
@@ -771,26 +734,52 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                             <X className="h-3.5 w-3.5" />
                           </button>
                         </div>
+                        {/* These two chips are Badges that happen to be buttons, so
+                            they take the pill geometry via `asChild` and their colour
+                            from DECK_RARITY/DECK_FIT (class-string tables in
+                            src/lib that do not yet emit BadgeVariant — hence
+                            `variant="bare"`). The native `title=` they used to carry
+                            was the ONLY signal that a rarity chip is clickable, and a
+                            native title has no touch and no keyboard trigger — it is a
+                            real Tooltip now. */}
                         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => cycleRarity(selectedDeck.id, card)}
-                            title="Change rarity"
-                            className={cn('flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-label font-semibold transition hover:-translate-y-0.5', rarity.badge)}
-                          >
-                            {Array.from({ length: rarity.stars }).map((_, i) => (
-                              <Star key={i} className="h-2.5 w-2.5 fill-current" />
-                            ))}
-                            {rarity.label}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => cycleFit(selectedDeck.id, card)}
-                            title="Change fit"
-                            className={cn('rounded-full border px-2.5 py-0.5 text-label font-semibold transition hover:-translate-y-0.5', fit.badge)}
-                          >
-                            {fit.label}
-                          </button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                asChild
+                                variant="bare"
+                                className={cn(
+                                  'text-label transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                  rarity.badge
+                                )}
+                              >
+                                <button type="button" onClick={() => cycleRarity(selectedDeck.id, card)}>
+                                  {Array.from({ length: rarity.stars }).map((_, i) => (
+                                    <Star key={i} className="h-2.5 w-2.5 fill-current" />
+                                  ))}
+                                  {rarity.label}
+                                </button>
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>Change rarity</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                asChild
+                                variant="bare"
+                                className={cn(
+                                  'text-label transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                  fit.badge
+                                )}
+                              >
+                                <button type="button" onClick={() => cycleFit(selectedDeck.id, card)}>
+                                  {fit.label}
+                                </button>
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>Change fit</TooltipContent>
+                          </Tooltip>
                         </div>
                       </motion.li>
                     );
@@ -842,145 +831,115 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
       </aside>
 
       {/* ── Assign modal ── */}
-      <AnimatePresence>
-        {assignOpen && selectedDeck && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-            onClick={() => setAssignOpen(false)}
-          >
-            <motion.div
-              ref={assign.modalRef}
-              tabIndex={-1}
-              onKeyDown={assign.onKeyDown}
-              initial={{ opacity: 0, scale: 0.96, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              role="dialog"
-              aria-modal="true"
-              aria-label={`Assign deck ${selectedDeck.name}`}
-              className="w-full max-w-md rounded-4xl border border-border bg-card p-6 shadow-e-4 outline-none"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="mb-4 flex items-start justify-between">
-                <div>
-                  <h3 className="font-heading text-lg font-bold text-foreground">
-                    {selectedDeck.theme.emoji ?? '🗡️'} Assign “{selectedDeck.name}”
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Students get a quest notification and see the deck on their dashboard.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAssignOpen(false)}
-                  aria-label="Close"
-                  className="rounded-full p-2 text-muted-foreground transition hover:bg-muted"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+      <Dialog open={assignOpen && Boolean(selectedDeck)} onOpenChange={setAssignOpen}>
+        {selectedDeck && (
+          <DialogContent className="max-w-md rounded-4xl bg-card p-6">
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <DialogTitle className="font-heading text-lg font-bold text-foreground">
+                  {selectedDeck.theme.emoji ?? '🗡️'} Assign “{selectedDeck.name}”
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Students get a quest notification and see the deck on their dashboard.
+                </DialogDescription>
               </div>
-
-              {assignableRoster.length === 0 ? (
-                <p className="rounded-2xl border border-dashed border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
-                  Every student in your cohort already has this deck.
-                </p>
-              ) : (
-                <ul className="max-h-64 space-y-1 overflow-y-auto">
-                  {assignableRoster.map((s) => (
-                    <li key={s.id}>
-                      <label className="flex cursor-pointer items-center gap-3 rounded-2xl px-3 py-2 transition hover:bg-muted/60">
-                        <input
-                          type="checkbox"
-                          checked={assignSelection.has(s.id)}
-                          onChange={() => toggleAssign(s.id)}
-                          className="h-4 w-4 rounded border-border accent-feature"
-                        />
-                        <span className="text-base">{s.flag}</span>
-                        <span className="flex-1 text-sm font-medium text-foreground">{s.name}</span>
-                        <span className="text-xs tabular-nums text-muted-foreground">{s.completionPct}%</span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <textarea
-                value={assignMessage}
-                onChange={(e) => setAssignMessage(e.target.value)}
-                placeholder="Optional message — shows in their quest log"
-                rows={2}
-                className="form-input mt-3 resize-none py-2.5"
-              />
-
-              <button
-                type="button"
-                onClick={assignDeck}
-                disabled={assignSelection.size === 0 || isAssigning}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-feature-fill px-4 py-2.5 text-sm font-semibold text-feature-foreground transition hover:-translate-y-0.5 hover:bg-feature-fill/90 disabled:opacity-50"
+              <DialogClose
+                aria-label="Close"
+                className="rounded-full p-2 text-muted-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {isAssigning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                Send quest to {assignSelection.size || 'selected'} student{assignSelection.size === 1 ? '' : 's'}
-              </button>
-            </motion.div>
-          </motion.div>
+                <X className="h-4 w-4" />
+              </DialogClose>
+            </div>
+
+            {assignableRoster.length === 0 ? (
+              <EmptyState
+                size="inline"
+                icon={<Users />}
+                title="Everyone already has this deck"
+                description="Every student in your cohort has been assigned it."
+              />
+            ) : (
+              <ul className="max-h-64 space-y-1 overflow-y-auto">
+                {assignableRoster.map((s) => (
+                  <li key={s.id}>
+                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl px-3 py-2 transition hover:bg-muted/60">
+                      <input
+                        type="checkbox"
+                        checked={assignSelection.has(s.id)}
+                        onChange={() => toggleAssign(s.id)}
+                        className="h-4 w-4 rounded border-border accent-feature"
+                      />
+                      <span className="text-base">{s.flag}</span>
+                      <span className="flex-1 text-sm font-medium text-foreground">{s.name}</span>
+                      <span className="text-xs tabular-nums text-muted-foreground">{s.completionPct}%</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <label htmlFor="deck-assign-message" className="sr-only">
+              Optional message for the quest log
+            </label>
+            <textarea
+              id="deck-assign-message"
+              value={assignMessage}
+              onChange={(e) => setAssignMessage(e.target.value)}
+              placeholder="Optional message — shows in their quest log"
+              rows={2}
+              className="form-input mt-3 resize-none py-2.5"
+            />
+
+            <button
+              type="button"
+              onClick={assignDeck}
+              disabled={assignSelection.size === 0 || isAssigning}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-feature-fill px-4 py-2.5 text-sm font-semibold text-feature-foreground transition hover:-translate-y-0.5 hover:bg-feature-fill/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+            >
+              {isAssigning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Send quest to {assignSelection.size || 'selected'} student{assignSelection.size === 1 ? '' : 's'}
+            </button>
+          </DialogContent>
         )}
-      </AnimatePresence>
+      </Dialog>
 
       {/* ── Delete deck confirmation — themed, replaces window.confirm ── */}
-      <AnimatePresence>
+      <Dialog
+        open={Boolean(deckPendingDelete)}
+        onOpenChange={(next) => {
+          if (!next) closeDelete();
+        }}
+      >
         {deckPendingDelete && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-            onClick={() => !isDeletingDeck && setDeckPendingDelete(null)}
-          >
-            <motion.div
-              ref={remove.modalRef}
-              tabIndex={-1}
-              onKeyDown={remove.onKeyDown}
-              initial={{ opacity: 0, scale: 0.96, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              role="dialog"
-              aria-modal="true"
-              aria-label={`Delete deck ${deckPendingDelete.name}`}
-              className="w-full max-w-sm rounded-4xl border border-border bg-card p-6 shadow-e-4 outline-none"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="font-heading text-lg font-bold text-foreground">
-                Delete “{deckPendingDelete.name}”?
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Students assigned to this deck will lose the quest. This can’t be undone.
-              </p>
-              <div className="mt-5 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDeckPendingDelete(null)}
-                  disabled={isDeletingDeck}
-                  className="rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted/60 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmDeleteDeck}
-                  disabled={isDeletingDeck}
-                  className="flex items-center gap-2 rounded-full bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground transition hover:-translate-y-0.5 hover:bg-destructive/90 disabled:opacity-50"
-                >
-                  {isDeletingDeck ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  Delete deck
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
+          <DialogContent className="max-w-sm rounded-4xl bg-card p-6">
+            <DialogTitle className="font-heading text-lg font-bold text-foreground">
+              Delete “{deckPendingDelete.name}”?
+            </DialogTitle>
+            <DialogDescription className="mt-1 text-sm text-muted-foreground">
+              Students assigned to this deck will lose the quest. This can’t be undone.
+            </DialogDescription>
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeDelete}
+                disabled={isDeletingDeck}
+                className="rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteDeck}
+                disabled={isDeletingDeck}
+                className="flex items-center gap-2 rounded-full bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground transition hover:-translate-y-0.5 hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+              >
+                {isDeletingDeck ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Delete deck
+              </button>
+            </div>
+          </DialogContent>
         )}
-      </AnimatePresence>
+      </Dialog>
     </div>
   );
 }

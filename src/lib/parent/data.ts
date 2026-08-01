@@ -17,36 +17,31 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/types/database';
-import { buildStepCompletion, type ProfileRecordGroup } from '@/lib/profile/completion';
+import { buildStepCompletion, COMPLETION_COLUMNS, type ProfileRecordGroup } from '@/lib/profile/completion';
 import { PROFILE_STEPS } from '@/lib/profile/steps';
 import { daysUntil } from '@/lib/utils/dates';
 import { nameMap } from '@/lib/counsellor/data';
+import { loadApplicationBoard, loadTierByProgram } from '@/lib/data/applications';
+import { APPLICATION_SUMMARY_SELECT, type ApplicationBoardRow, type ApplicationSummaryRow } from '@/lib/data/columns';
+// The three hand-copied `unwrap` definitions (here, counsellor/data.ts,
+// counsellor/decks.ts) collapse into this one. Same disposition as before —
+// throw, so a dropped policy or network failure surfaces in the parent
+// section's error boundary rather than rendering as "all caught up" — but the
+// thrown DataError no longer interpolates the driver's message, which named
+// tables and policies. The detail goes to the structured log instead.
+import { unwrap } from '@/lib/data/errors';
 import type {
   ChildApplication,
   ChildApplicationStatus,
   ChildDeadline,
   ChildOverview,
   LinkedChild,
-  MatchTier,
   ParentRelationship,
   ParentThread,
   ProgrammeCostLine,
 } from '@/lib/parent/types';
 
 type Client = SupabaseClient<Database>;
-
-// Throw instead of silently treating a failed query as an empty table — a
-// dropped policy or network failure must surface in the parent section's
-// error boundary, not render as "all caught up".
-const unwrap = <T,>(
-  res: { data: T | null; error: { message?: string } | null },
-  label: string
-): T | null => {
-  if (res.error) {
-    throw new Error(`parent data: ${label} query failed — ${res.error.message ?? 'unknown error'}`);
-  }
-  return res.data;
-};
 
 const asRelationship = (value: string | null | undefined): ParentRelationship =>
   value === 'Mother' || value === 'Father' ? value : 'Guardian';
@@ -65,7 +60,7 @@ export const resolveLinkedChildIds = async (
       .select('student_profile_id, status')
       .eq('parent_profile_id', parentUserId)
       .eq('status', 'active'),
-    'guardian_links'
+    'parent.guardian_links'
   ) ?? []) as Array<{ student_profile_id: string }>;
   return [...new Set(rows.map((r) => r.student_profile_id))];
 };
@@ -82,7 +77,7 @@ export const loadLinkedChildren = async (
       .select('student_profile_id, relationship, status')
       .eq('parent_profile_id', parentUserId)
       .eq('status', 'active'),
-    'guardian_links'
+    'parent.guardian_links'
   ) ?? []) as Array<{ student_profile_id: string; relationship: string | null }>;
   if (rows.length === 0) return [];
 
@@ -109,78 +104,13 @@ export const pickActiveChild = (
   children.find((c) => c.profileId === requestedId) ?? children[0] ?? null;
 
 // ── shared child queries ─────────────────────────────────────────────────────
-
-type AppRecord = {
-  id: string;
-  status: string;
-  program_id: string;
-  program?: {
-    id: string;
-    name?: string | null;
-    universities?: { name?: string | null; country?: string | null } | null;
-    deadlines?: Array<{
-      id: string;
-      name: string;
-      deadline_date?: string | null;
-      intake?: string | null;
-      program_id: string;
-    }> | null;
-  } | null;
-  application_checklist?: Array<{
-    id: string;
-    task_name: string;
-    status: 'todo' | 'doing' | 'done';
-    due_date?: string | null;
-  }> | null;
-};
-
-// Nested applications query — same shape the student board uses
-// (src/app/applications/page.tsx), scoped to the linked child.
-const fetchChildApplications = async (supabase: Client, childId: string): Promise<AppRecord[]> => {
-  const rows = unwrap(
-    await supabase
-      .from('applications')
-      .select(
-        `
-        id,
-        status,
-        program_id,
-        program:programs(
-          id,
-          name:course_name,
-          universities(name,country),
-          deadlines(id, name, deadline_date, intake, program_id)
-        ),
-        application_checklist(id, task_name, status, due_date)
-      `
-      )
-      .eq('profile_id', childId),
-    'applications'
-  );
-  return ((rows ?? []) as unknown as AppRecord[]) ?? [];
-};
-
-const fetchTierByProgram = async (
-  supabase: Client,
-  childId: string,
-  programIds: string[]
-): Promise<Map<string, MatchTier>> => {
-  const map = new Map<string, MatchTier>();
-  if (programIds.length === 0) return map;
-  const rows = (unwrap(
-    await supabase
-      .from('student_matches')
-      .select('program_id, breakdown')
-      .eq('profile_id', childId)
-      .in('program_id', programIds),
-    'student_matches'
-  ) ?? []) as Array<{ program_id: string; breakdown: Record<string, unknown> | null }>;
-  for (const row of rows) {
-    const tier = row.breakdown?.tier;
-    if (tier === 'Reach' || tier === 'Match' || tier === 'Safe') map.set(row.program_id, tier);
-  }
-  return map;
-};
+//
+// This file used to declare its own `AppRecord` interface and its own copy of
+// the nested applications query, with a comment claiming it was the "same shape
+// the student board uses". It was not: it omitted `notes`, `level` and the
+// checklist's `application_id`, so a parent and their child were reading two
+// different versions of the same row. Both now call `loadApplicationBoard`,
+// which owns the one select string and the one row type.
 
 const safeDaysUntil = (value?: string | null): number | null => {
   if (!value) return null;
@@ -188,7 +118,7 @@ const safeDaysUntil = (value?: string | null): number | null => {
   return Number.isNaN(days) ? null : days;
 };
 
-const deadlinesFromApps = (apps: AppRecord[]): ChildDeadline[] => {
+const deadlinesFromApps = (apps: ApplicationBoardRow[]): ChildDeadline[] => {
   const out: ChildDeadline[] = [];
   for (const app of apps) {
     for (const d of app.program?.deadlines ?? []) {
@@ -223,23 +153,23 @@ export const loadChildOverview = async (
 ): Promise<ChildOverview> => {
   const childId = child.profileId;
   const [apps, personalRes, academicRes, lifestyleRes, subjectsRes, noteRes] = await Promise.all([
-    fetchChildApplications(supabase, childId),
+    loadApplicationBoard(supabase, childId),
     supabase
       .from('student_personal_information')
-      .select('first_name,last_name,email,nationality,resident_country')
+      .select(COMPLETION_COLUMNS.personal)
       .eq('profile_id', childId)
       .maybeSingle(),
-    // english_status included so a "Not sure" English answer (english_required
-    // = null) doesn't cap the parent-visible completion at 80% — see the
-    // academic_details comment in lib/profile/completion.ts.
+    // COMPLETION_COLUMNS, not a hand-written list: omitting `english_status`
+    // is what capped a "Not sure" English answer at 80% and locked students out
+    // of the app from middleware. See the constant's own docblock.
     supabase
       .from('student_academic_input')
-      .select('programme_type,school_name,school_country,graduation_year,intended_clusters,english_required,english_status')
+      .select(COMPLETION_COLUMNS.academicInput)
       .eq('profile_id', childId)
       .maybeSingle(),
     supabase
       .from('student_lifestyle_preference')
-      .select('extracurricular_interests')
+      .select(COMPLETION_COLUMNS.lifestyle)
       .eq('profile_id', childId)
       .maybeSingle(),
     supabase.from('student_subjects').select('id', { count: 'exact', head: true }).eq('profile_id', childId),
@@ -254,10 +184,10 @@ export const loadChildOverview = async (
 
   // Profile completion — same helper the student dashboard uses.
   const records: ProfileRecordGroup = {
-    personal: unwrap(personalRes, 'student_personal_information'),
-    academicInput: unwrap(academicRes, 'student_academic_input'),
+    personal: unwrap(personalRes, 'parent.student_personal_information'),
+    academicInput: unwrap(academicRes, 'parent.student_academic_input'),
     subjectCount: subjectsRes.count ?? 0,
-    lifestyle: unwrap(lifestyleRes, 'student_lifestyle_preference'),
+    lifestyle: unwrap(lifestyleRes, 'parent.student_lifestyle_preference'),
   };
   const stepCompletion = buildStepCompletion(records);
   const profileSteps = PROFILE_STEPS.map((step) => ({
@@ -292,7 +222,7 @@ export const loadChildOverview = async (
   const deadlines = deadlinesFromApps(apps);
   const upcoming = deadlines.filter((d) => d.daysUntil >= 0);
 
-  const noteRows = (unwrap(noteRes, 'counsellor_notes') ?? []) as Array<{
+  const noteRows = (unwrap(noteRes, 'parent.counsellor_notes') ?? []) as Array<{
     body: string;
     created_at: string;
   }>;
@@ -321,9 +251,9 @@ export const loadChildProgress = async (
   supabase: Client,
   childId: string
 ): Promise<ChildApplication[]> => {
-  const apps = await fetchChildApplications(supabase, childId);
+  const apps = await loadApplicationBoard(supabase, childId);
   if (apps.length === 0) return [];
-  const tierByProgram = await fetchTierByProgram(
+  const tierByProgram = await loadTierByProgram(
     supabase,
     childId,
     apps.map((a) => a.program_id)
@@ -340,7 +270,7 @@ export const loadChildProgress = async (
       university: app.program?.universities?.name ?? 'University',
       program: app.program?.name ?? 'Programme',
       country: app.program?.universities?.country ?? 'UK',
-      status: app.status as ChildApplicationStatus,
+      status: app.status,
       tier: tierByProgram.get(app.program_id) ?? null,
       daysUntilDeadline: safeDaysUntil(earliestDeadline ?? null),
       tasksOpen: tasks.filter((t) => t.status !== 'done').length,
@@ -355,7 +285,7 @@ export const loadChildDeadlines = async (
   supabase: Client,
   childId: string
 ): Promise<ChildDeadline[]> => {
-  const apps = await fetchChildApplications(supabase, childId);
+  const apps = await loadApplicationBoard(supabase, childId);
   return deadlinesFromApps(apps);
 };
 
@@ -377,19 +307,18 @@ export const loadChildFinances = async (
   supabase: Client,
   childId: string
 ): Promise<ProgrammeCostLine[]> => {
+  // Deliberately NOT the board shape: cost lines resolve a much wider `programs`
+  // row below, so the embed would be fetched and thrown away.
   const apps = unwrap(
-    await supabase
-      .from('applications')
-      .select('id, status, program_id')
-      .eq('profile_id', childId),
-    'applications'
-  ) as Array<{ id: string; status: string; program_id: string }> | null;
+    await supabase.from('applications').select(APPLICATION_SUMMARY_SELECT).eq('profile_id', childId),
+    'parent.applications'
+  ) as ApplicationSummaryRow[] | null;
   const appRows = apps ?? [];
   if (appRows.length === 0) return [];
 
   const programIds = [...new Set(appRows.map((a) => a.program_id))].filter(Boolean);
   const [tierByProgram, programRes] = await Promise.all([
-    fetchTierByProgram(supabase, childId, programIds),
+    loadTierByProgram(supabase, childId, programIds),
     supabase
       .from('programs')
       .select(
@@ -408,7 +337,7 @@ export const loadChildFinances = async (
   ]);
 
   const programById = new Map<string, any>(
-    ((unwrap(programRes, 'programs') ?? []) as any[]).map((row) => [row.id, row])
+    ((unwrap(programRes, 'parent.programs') ?? []) as any[]).map((row) => [row.id, row])
   );
 
   return appRows
@@ -421,7 +350,7 @@ export const loadChildFinances = async (
         university: uni?.name ?? 'University',
         program: program.course_name ?? 'Programme',
         country: uni?.country ?? 'UK',
-        status: app.status as ChildApplicationStatus,
+        status: app.status,
         tier: tierByProgram.get(app.program_id) ?? null,
         tuitionGbp: toNumber(program.yearly_international_tuition_fee_gbp),
         tuitionRaw: program.tuition_fees_international ?? null,
@@ -453,7 +382,7 @@ export const loadChildThread = async (
       .eq('student_profile_id', childId)
       .order('created_at', { ascending: true })
       .limit(1),
-    'parent_contacts'
+    'parent.parent_contacts'
   ) ?? []) as Array<{
     id: string;
     parent_name: string;
@@ -469,7 +398,7 @@ export const loadChildThread = async (
       .select('id, sender, body, template, read_at, created_at')
       .eq('contact_id', contact.id)
       .order('created_at', { ascending: true }),
-    'parent_messages'
+    'parent.parent_messages'
   ) ?? []) as Array<{
     id: string;
     sender: 'counsellor' | 'parent';

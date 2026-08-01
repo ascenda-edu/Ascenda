@@ -36,7 +36,52 @@ const selectTriggerVariants = cva(
   }
 );
 
-const Select = SelectPrimitive.Root;
+/**
+ * `SelectPrimitive.Root`, with one guard: an `onValueChange('')` is swallowed.
+ *
+ * ── The bug this fixes ──────────────────────────────────────────────────────
+ * Inside a `<form>`, Radix renders a hidden native `<select>` (`SelectBubbleInput`)
+ * so the value participates in native form submission. Its `<option>`s are
+ * registered by each `SelectItem`'s OWN effect, and the bubble input does
+ * `setValue.call(select, value); select.dispatchEvent(new Event('change'))`.
+ *
+ * On the first effect flush the option set is still empty, so assigning a value
+ * the native element does not yet know about yields `''` — and the dispatched
+ * change event hands that empty string back to the application as though the
+ * user had just chosen it.
+ *
+ * In this app that fired on the profile wizard's hydration effect, which sets
+ * every field from the saved payload on mount. `wizard/page.tsx` starts a
+ * returning student on their first INCOMPLETE step and passes the payload in, so
+ * anyone finishing their profile across two sittings was rendered onto step 2 or
+ * 3 and immediately had their saved graduation year, school type, subject levels,
+ * A-level grades, TOK/EE grades and English test type silently blanked. The
+ * wizard then refused to advance, reporting those fields as missing.
+ *
+ * ── Why swallowing '' is safe, not a papering-over ──────────────────────────
+ * Radix itself forbids an empty-string `SelectItem` value — it throws
+ * "A <Select.Item /> must have a value prop that is not an empty string."
+ * So `''` is not reachable through user interaction by construction, and every
+ * `onValueChange('')` is this artefact. Clearing a Select is still possible: a
+ * controlled parent sets `value=""` directly, which does not route through here.
+ *
+ * Applied at the wrapper so it holds for every Select in the app rather than
+ * being re-remembered per call site.
+ */
+const Select = ({
+  onValueChange,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>) => (
+  <SelectPrimitive.Root
+    {...props}
+    onValueChange={(next) => {
+      if (next === '') return;
+      onValueChange?.(next);
+    }}
+  />
+);
+Select.displayName = 'Select';
+
 const SelectGroup = SelectPrimitive.Group;
 const SelectValue = SelectPrimitive.Value;
 

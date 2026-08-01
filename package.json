@@ -25,6 +25,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:env": "jest __tests__/env.test.ts",
+    "test:intake": "jest __tests__/profile/intake-form/",
     "test:golden": "jest __tests__/scoring/",
     "test:golden:update": "UPDATE_GOLDEN=1 jest __tests__/scoring/",
     "seed": "echo 'Run supabase/schema.sql and supabase/seed.sql via Supabase SQL editor'",

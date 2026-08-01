@@ -10,26 +10,12 @@ import {
 } from '@/components/applications/documents-manager';
 import { DEMO_REC_LETTERS } from '@/lib/data/student-demo-data';
 import { AnimatedSection } from '@/components/layout/animated-section';
+import { loadApplicationLabels, loadDocumentsForApplications } from '@/lib/data/applications';
+import type { ApplicationLabelRow } from '@/lib/data/columns';
+import { logger } from '@/lib/observability/logger';
 
 export const metadata: Metadata = {
   title: 'Documents'
-};
-
-type ApplicationJoin = {
-  id: string;
-  program: {
-    name: string | null;
-    universities: { name: string | null } | null;
-  } | null;
-};
-
-type DocumentJoin = {
-  id: string;
-  name: string;
-  type: string | null;
-  storage_path: string;
-  uploaded_at: string | null;
-  application_id: string;
 };
 
 export default async function DocumentsPage() {
@@ -43,19 +29,10 @@ export default async function DocumentsPage() {
   }
 
   // ── Real applications + documents ──────────────────────────────────────
-  const { data: applicationRows, error: applicationsError } = await supabase
-    .from('applications')
-    .select('id, program:programs(name:course_name, universities(name))')
-    .eq('profile_id', user.id);
-
-  // Surface failures in the error boundary — an empty documents page for a
-  // user who has uploads reads as data loss.
-  if (applicationsError) {
-    throw new Error(`documents: applications query failed — ${applicationsError.message}`);
-  }
-
-  const apps = ((applicationRows ?? []) as unknown as ApplicationJoin[]) ?? [];
-  const appLabel = (app: ApplicationJoin) => {
+  // Both loaders unwrap: failures surface in the error boundary, because an
+  // empty documents page for a user who has uploads reads as data loss.
+  const apps = await loadApplicationLabels(supabase, user.id);
+  const appLabel = (app: ApplicationLabelRow) => {
     const uni = app.program?.universities?.name ?? 'University';
     const programme = app.program?.name ?? 'Programme';
     return `${uni} · ${programme}`;
@@ -66,16 +43,7 @@ export default async function DocumentsPage() {
   let documents: ManagedDocument[] = [];
   const appIds = apps.map((app) => app.id);
   if (appIds.length > 0) {
-    const { data: docRows, error: documentsError } = await supabase
-      .from('documents')
-      .select('id, name, type, storage_path, uploaded_at, application_id')
-      .in('application_id', appIds)
-      .order('uploaded_at', { ascending: false });
-    if (documentsError) {
-      throw new Error(`documents: documents query failed — ${documentsError.message}`);
-    }
-
-    const rows = ((docRows ?? []) as DocumentJoin[]) ?? [];
+    const rows = await loadDocumentsForApplications(supabase, appIds);
     const bucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ?? 'application-documents';
     const signedByPath = new Map<string, string>();
     if (rows.length > 0) {
@@ -84,8 +52,10 @@ export default async function DocumentsPage() {
         .createSignedUrls(rows.map((row) => row.storage_path), 60 * 60);
       if (signError) {
         // Documents still render without View links; log so a broken bucket
-        // config doesn't silently strip every link.
-        console.error('documents: signing URLs failed', signError);
+        // config doesn't silently strip every link. Same disposition as
+        // `soft()` — a named fallback (no signed URL) plus a log — but this is
+        // Storage, not PostgREST, so it does not go through that helper.
+        logger.error('documents: signing URLs failed', signError, { documentCount: rows.length });
       }
       for (const item of signed ?? []) {
         if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
