@@ -2,7 +2,7 @@
 //
 // The parent section is a read-scoped mirror of one linked child's journey:
 // progress, deadlines, finances, and the counsellor message thread. Data
-// assembly lives in src/lib/parent/data.ts; everything here is pure types.
+// assembly lives in features/parent/api/data.ts; everything here is pure types.
 
 import type { MatchTier } from '@/lib/counsellor/types';
 
@@ -68,7 +68,7 @@ export interface ChildOverview {
 }
 
 /** One programme's cost picture for /parent/finances. GBP-native; the UI
- * converts to the parent's home currency via lib/parent/currency. */
+ * converts to the parent's home currency via features/parent/model/currency. */
 export interface ProgrammeCostLine {
   programId: string;
   university: string;

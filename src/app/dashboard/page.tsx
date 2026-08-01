@@ -24,6 +24,8 @@ import { PROFILE_STEPS } from '@/lib/profile/steps';
 import { countUnreadForStudent, listInboxRequests, resolveProfileNames } from '@/lib/demo/help-request-client';
 import { DEMO_COUNSELLOR } from '@/lib/demo/counsellor';
 import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
+import { loadApplicationSummaries } from '@/lib/data/applications';
+import { soft, unwrap } from '@/lib/data/errors';
 import type { Database } from '@/lib/types/database';
 
 export const dynamic = 'force-dynamic';
@@ -31,6 +33,10 @@ export const dynamic = 'force-dynamic';
 type ChecklistRow = Database['public']['Tables']['application_checklist']['Row'];
 type ChecklistItem = Pick<ChecklistRow, 'id' | 'task_name' | 'status' | 'due_date'>;
 type DeadlineRow = Database['public']['Tables']['deadlines']['Row'];
+type MeetingItem = Pick<
+  Database['public']['Tables']['help_meetings']['Row'],
+  'title' | 'scheduled_for' | 'location' | 'status' | 'counsellor_profile_id'
+>;
 type ApplicationStatus = Database['public']['Enums']['application_status'];
 
 export const metadata: Metadata = {
@@ -71,13 +77,15 @@ export default async function DashboardPage() {
   const today = new Date().toISOString().slice(0, 10);
   const nowIso = new Date().toISOString();
 
-  const { data: applications } = await supabase
-    .from('applications')
-    .select('id, status, program_id')
-    .eq('profile_id', identity.userId);
+  // Disposition: unwrap (inside loadApplicationSummaries). This read used to
+  // discard its error, and everything below is derived from it — pipeline
+  // counts, the "Applications" hero stat, the checklist and deadline queries
+  // that key off these ids. A failed read rendered a fully-populated dashboard
+  // reading "0 applications, nothing due, all caught up".
+  const applications = await loadApplicationSummaries(supabase, identity.userId);
 
-  const applicationIds = (applications ?? []).map((app) => app.id);
-  const applicationProgramIds = (applications ?? []).map((app) => app.program_id);
+  const applicationIds = applications.map((app) => app.id);
+  const applicationProgramIds = applications.map((app) => app.program_id);
 
   const [
     checklistResponse,
@@ -100,10 +108,10 @@ export default async function DashboardPage() {
           .in('application_id', applicationIds)
           .order('due_date', { ascending: true })
           .limit(500)
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: [], error: null }),
     applicationProgramIds.length
       ? supabase.from('deadlines').select('*').in('program_id', applicationProgramIds).gte('deadline_date', today).order('deadline_date', { ascending: true }).limit(5)
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: [], error: null }),
     supabase
       .from('student_personal_information')
       .select('first_name,last_name,email,nationality,resident_country')
@@ -136,14 +144,26 @@ export default async function DashboardPage() {
         let inboxCounsellorId: string | null = null;
         let unreadFromReply = false;
         if (requests.length > 0) {
-          const { data: lastReply } = await supabase
-            .from('help_messages')
-            .select('author_profile_id')
-            .in('request_id', requests.map((request) => request.id))
-            .eq('author_role', 'counsellor')
-            .order('created_at', { ascending: false })
-            .limit(1);
-          const lastReplyAuthorId = lastReply?.[0]?.author_profile_id ?? null;
+          // Disposition: soft, fallback = no reply found. This row decides only
+          // WHOSE NAME fronts the counsellor card; the fallback path below
+          // (most recent thread owner, then the demo persona) is already the
+          // designed answer for "no counsellor reply exists", so it is an
+          // honest fallback for "we could not read the replies" too. The whole
+          // help chain is deliberately degrade-not-fail (see the .catch below),
+          // and this makes the failure visible in the log instead of silently
+          // renaming the student's counsellor.
+          const lastReply = soft<Array<{ author_profile_id: string | null }>>(
+            await supabase
+              .from('help_messages')
+              .select('author_profile_id')
+              .in('request_id', requests.map((request) => request.id))
+              .eq('author_role', 'counsellor')
+              .order('created_at', { ascending: false })
+              .limit(1),
+            'dashboard.lastCounsellorReply',
+            []
+          );
+          const lastReplyAuthorId = lastReply[0]?.author_profile_id ?? null;
           if (lastReplyAuthorId) {
             inboxCounsellorId = lastReplyAuthorId;
             unreadFromReply = true;
@@ -179,15 +199,27 @@ export default async function DashboardPage() {
       .limit(1)
   ]);
 
-  const checklist = (checklistResponse.data ?? []) as ChecklistItem[];
-  const deadlines = (deadlinesResponse.data ?? []) as DeadlineRow[];
+  // Dispositions for the parallel reads above. None of them bound `error`
+  // before; every one of them rendered a failure as an empty, confident answer.
+  //
+  // unwrap — the six reads whose empty value is a CLAIM about the student:
+  // "no tasks", "no deadlines", "profile 0% complete". There is no honest
+  // fallback for those, and the profile numbers additionally drive the
+  // onboarding nudge, so a silent failure sends a completed student back to the
+  // wizard (the `COMPLETION_COLUMNS` bug, one layer down).
+  const checklist = (unwrap(checklistResponse, 'dashboard.checklist') ?? []) as ChecklistItem[];
+  const deadlines = (unwrap(deadlinesResponse, 'dashboard.deadlines') ?? []) as DeadlineRow[];
+  const personal = unwrap(personalResponse, 'dashboard.personalInformation');
+  const academic = unwrap(academicResponse, 'dashboard.academicInput');
+  const lifestyle = unwrap(lifestyleResponse, 'dashboard.lifestylePreference');
+  const subjects = unwrap(subjectsResponse, 'dashboard.subjects') ?? [];
 
   // ── Profile completion ──────────────────────────────────────────────────
   const records: ProfileRecordGroup = {
-    personal: personalResponse.data ?? null,
-    academicInput: academicResponse.data ?? null,
-    subjectCount: subjectsResponse.data?.length ?? 0,
-    lifestyle: lifestyleResponse.data ?? null
+    personal: personal ?? null,
+    academicInput: academic ?? null,
+    subjectCount: subjects.length,
+    lifestyle: lifestyle ?? null
   };
   const stepCompletion = buildStepCompletion(records);
   const profileSteps = PROFILE_STEPS.map((step) => ({
@@ -202,9 +234,9 @@ export default async function DashboardPage() {
   // ── Pipeline ────────────────────────────────────────────────────────────
   const pipelineStages: PipelineStage[] = PIPELINE_STAGES.map((stage) => ({
     ...stage,
-    count: (applications ?? []).filter((app) => app.status === stage.key).length
+    count: applications.filter((app) => app.status === stage.key).length
   }));
-  const submittedCount = (applications ?? []).filter(
+  const submittedCount = applications.filter(
     (app) => app.status === 'submitted' || app.status === 'decision' || app.status === 'enrolled'
   ).length;
 
@@ -227,7 +259,13 @@ export default async function DashboardPage() {
   const unreadTotal = Array.from(unreadByRequest.values()).reduce((sum, count) => sum + count, 0);
   const openThreads = helpRequests.filter((request) => request.status !== 'resolved');
   const latestSubject = openThreads[0]?.subject ?? helpRequests[0]?.subject ?? null;
-  const meetingRow = meetingResponse.data?.[0] ?? null;
+  // Disposition: soft, fallback = no meeting. The only read here that belongs to
+  // the help/counsellor subsystem, whose posture on this page is already
+  // degrade-not-fail (`.catch` on the help chain above) because the hub must
+  // still render when the help_* tables are unreachable. Failing the whole
+  // dashboard over a meeting card would contradict the decision taken one line
+  // earlier for the threads it belongs to.
+  const meetingRow = soft<MeetingItem[]>(meetingResponse, 'dashboard.nextMeeting', [])[0] ?? null;
 
   // Resolve the real counsellor name for the next meeting. The counsellor side
   // runs on live Supabase data, so a second counsellor's meeting must not be
@@ -365,7 +403,7 @@ export default async function DashboardPage() {
   const primaryFocus = visibleFocus[0];
 
   // ── Hero ────────────────────────────────────────────────────────────────
-  const firstName = personalResponse.data?.first_name?.trim() ?? null;
+  const firstName = personal?.first_name?.trim() ?? null;
   const heroDescription =
     primaryFocus.id === 'focus-clear'
       ? "You're all caught up — everything you're tracking lives on this page."

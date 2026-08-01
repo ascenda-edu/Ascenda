@@ -96,6 +96,100 @@ module.exports = {
     },
 
     // ---------------------------------------------------------------------
+    // Feature slices — the target architecture, live on the pilot slice.
+    //
+    // `src/features/parent/` is the first slice migrated to the shape in
+    // docs/audit/SYNTHESIS.md section 6.1 and 01-architecture.md rules R2/R3/R4/R9:
+    //
+    //     app  ->  features/<slice>/index.ts  ->  shared
+    //
+    // These four rules are written GENERICALLY over `src/features/<slice>/`, not
+    // hardcoded to `parent`. A second slice inherits the whole fence the moment its
+    // directory exists — there is nothing to widen. They are already at error
+    // severity because the pilot is green on all four; a rule that ships as `warn`
+    // never becomes an error.
+    //
+    // NOT ENCODED YET (deliberate, both need work outside this pilot):
+    //   * R5 `shared/** may not import features/**`. src/lib/chat/context.ts imports
+    //     `@/features/parent` today — correct as an interim edge (it goes through
+    //     index.ts, which feature-internals-are-private below enforces), and it will
+    //     become a legal slice->slice edge when chat is migrated. Encoding R5 now
+    //     would be red on arrival.
+    //   * R10 `import 'server-only'` at the top of every features/*/api/** module.
+    //     The `server-only` package is not a dependency and this pass could not run
+    //     `npm install`. Until then features/parent/api/ is server-only by convention
+    //     and by the barrel constraint documented in features/parent/README.md.
+    // ---------------------------------------------------------------------
+    {
+      name: 'feature-internals-are-private',
+      comment:
+        'A slice has exactly one public surface: src/features/<slice>/index.ts. Code ' +
+        'outside src/features/ (routes, lib, components, hooks) may import that barrel ' +
+        'and nothing else — never features/<slice>/{api,model,ui,hooks}/**. This is what ' +
+        'makes the slice movable: everything reachable from outside is one file wide, so ' +
+        'its internals can be renamed, split or re-layered without a repo-wide sweep. ' +
+        'FIX: add the symbol to the slice index.ts (a deliberate, reviewable widening) ' +
+        'rather than deep-importing it. (01-architecture.md rule R2.)',
+      severity: 'error',
+      from: { pathNot: '^src/features/' },
+      to: { path: '^src/features/[^/]+/(api|model|ui|hooks)/' },
+    },
+    {
+      name: 'feature-crosses-slice-via-index',
+      comment:
+        'The same privacy rule between two slices: features/x may reach features/y only ' +
+        'through features/y/index.ts. A slice may of course import its OWN internals — ' +
+        'that is what the $1 back-reference to the importing slice exempts. ' +
+        '(01-architecture.md rule R4.)',
+      severity: 'error',
+      from: { path: '^src/features/([^/]+)/' },
+      to: {
+        path: '^src/features/[^/]+/(api|model|ui|hooks)/',
+        pathNot: '^src/features/$1/',
+      },
+    },
+    {
+      name: 'feature-not-to-app',
+      comment:
+        'A slice must not import a route module or anything else under src/app/. The ' +
+        'dependency runs the other way: app/ is routing, and it consumes the slice. A ' +
+        'slice that needs something from app/ has that thing in the wrong place — move it ' +
+        'into the slice. (01-architecture.md rules R3/R6.) Measured 0 edges on the parent ' +
+        'pilot: everything app/parent/ used to own (_lib/context.ts, _components/, and the ' +
+        'four route-local client components) moved INTO the slice, leaving app/parent/ as ' +
+        'page.tsx/layout.tsx/loading.tsx/error.tsx only.',
+      severity: 'error',
+      from: { path: '^src/features/' },
+      to: { path: '^src/app/' },
+    },
+    {
+      name: 'feature-model-is-pure',
+      comment:
+        'features/<slice>/model/** is the pure layer: domain types and total functions, ' +
+        'no I/O and no rendering. It may not import the slice\'s own api/ (Supabase, ' +
+        'next/headers) or ui/ (React). That purity is what lets model/ be unit-tested ' +
+        'with no mocks and imported from both a server and a client module — which the ' +
+        'parent slice relies on (model/active-child.ts is read by a server route handler ' +
+        'and by a client component). (01-architecture.md rule R9.)',
+      severity: 'error',
+      from: { path: '^src/features/[^/]+/model/' },
+      to: { path: '^src/features/[^/]+/(api|ui|hooks)/' },
+    },
+    {
+      name: 'feature-model-imports-no-framework',
+      comment:
+        'The runtime half of R9: model/** may not pull in React, next/* or the Supabase ' +
+        'client. Enforced separately from feature-model-is-pure because a slice can keep ' +
+        'its layers straight and still make model/ un-importable from a client component ' +
+        'by reaching for next/headers. Type-only imports are NOT exempt here on purpose — ' +
+        'a model type derived from a Supabase row type is the row shape leaking into the ' +
+        'domain, which is docs/audit/06-types-validation.md in miniature.',
+      severity: 'error',
+      from: { path: '^src/features/[^/]+/model/' },
+      to: { path: 'node_modules/(react|react-dom|next|@supabase)/' },
+    },
+
+    // ---------------------------------------------------------------------
     // Cycles
     // ---------------------------------------------------------------------
     {

@@ -12,26 +12,26 @@ import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { PROFILE_STEPS } from '@/lib/profile/steps';
 import { cn } from '@/lib/utils';
 import type {
-  AdmissionsStatus, AdmissionsTestType, EnglishStatus, EnglishTestType,
-  IntendedCluster, ProgrammeType, StudentAdmissionsTest, StudentProfilePayload, StudentSubject
+  AdmissionsTestType, EnglishStatus, EnglishTestType,
+  IntendedCluster, ProgrammeType, StudentProfilePayload
 } from '@/lib/profile/intake-types';
+import {
+  ACTIVITY_CATEGORIES, ACTIVITY_DURATIONS, ACTIVITY_LEVELS, ADMISSIONS_TEST_OPTIONS,
+  A_LEVEL_GRADES, CLUSTER_OPTIONS, COMMITMENT_OPTIONS, COUNTRY_OPTIONS,
+  ENGLISH_STATUS_OPTIONS, ENGLISH_TEST_OPTIONS, EXTRACURRICULAR_OPTIONS, GRADUATION_YEARS,
+  IB_GRADES, LEADERSHIP_OPTIONS, SCHOOL_TYPE_OPTIONS, SUBJECT_OPTIONS,
+  buildDefaultSubjects, buildNextSubject, clusterLabelMap, getMaxSubjects,
+  type ActivityRowState, type AdmissionsRowState, type EnglishRequiredState, type SubjectRowState
+} from '@/lib/profile/intake-options';
+import {
+  buildInitialAcademicInput, buildInitialActivities, buildInitialLifestylePreference,
+  buildInitialPersonalInfo, computeIbSubjectSum, formatNationalities, fromPayload,
+  shouldShowAdmissionsTests, shouldShowEnglishScore, toPayload,
+  type IntakeFormState
+} from '@/lib/profile/intake-logic';
+import { validateStep, validateStep1, validateStep2, validateStep3 } from '@/lib/profile/intake-validation';
 import { saveStudentIntake } from '../actions';
 import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type SubjectRowState = {
-  subject_name: string;
-  level: 'HL' | 'SL' | 'A_LEVEL' | 'AP';
-  grade_value: string;
-};
-type AdmissionsRowState = {
-  test_type: AdmissionsTestType;
-  status: AdmissionsStatus | '';
-  score_numeric: string;
-  percentile: string;
-};
-type EnglishRequiredState = 'yes' | 'no' | 'not_sure' | '';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -50,230 +50,15 @@ const indexForStepKey = (key: string): number => {
   return i >= 0 ? i + 1 : 1;
 };
 
-const CLUSTER_OPTIONS: { value: IntendedCluster; label: string; emoji: string }[] = [
-  { value: 'computer_science', label: 'Computer science', emoji: '💻' },
-  { value: 'maths', label: 'Mathematics', emoji: '📐' },
-  { value: 'engineering', label: 'Engineering', emoji: '⚙️' },
-  { value: 'life_sciences_biochem', label: 'Life sciences & biochem', emoji: '🧬' },
-  { value: 'medicine_dentistry', label: 'Medicine & dentistry', emoji: '🩺' },
-  { value: 'economics_quant', label: 'Economics (quant)', emoji: '📊' },
-  { value: 'business_non_quant', label: 'Business (non-quant)', emoji: '🏢' },
-  { value: 'law', label: 'Law', emoji: '⚖️' },
-  { value: 'humanities', label: 'Humanities', emoji: '📚' },
-  { value: 'creative', label: 'Creative arts', emoji: '🎨' },
-];
-
-const COUNTRY_OPTIONS: string[] = (() => {
-  const fallback = [
-    'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Australia', 'Austria',
-    'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan',
-    'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cambodia',
-    'Cameroon', 'Canada', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo', 'Costa Rica',
-    'Croatia', 'Cuba', 'Cyprus', 'Czech Republic', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'East Timor', 'Ecuador',
-    'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia', 'Fiji', 'Finland', 'France',
-    'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau',
-    'Guyana', 'Haiti', 'Honduras', 'Hong Kong', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq',
-    'Ireland', 'Israel', 'Italy', 'Ivory Coast', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati',
-    'Kosovo', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein',
-    'Lithuania', 'Luxembourg', 'Macau', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands',
-    'Mauritania', 'Mauritius', 'Mexico', 'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique',
-    'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'North Korea',
-    'North Macedonia', 'Norway', 'Oman', 'Pakistan', 'Palau', 'Palestine', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru',
-    'Philippines', 'Poland', 'Portugal', 'Qatar', 'Romania', 'Russia', 'Rwanda', 'Saint Kitts and Nevis', 'Saint Lucia',
-    'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia',
-    'Seychelles', 'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa',
-    'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 'Sweden', 'Switzerland', 'Syria', 'Taiwan',
-    'Tajikistan', 'Tanzania', 'Thailand', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan',
-    'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay',
-    'Uzbekistan', 'Vanuatu', 'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe',
-  ];
-  if (typeof Intl?.supportedValuesOf === 'function' && typeof Intl.DisplayNames === 'function') {
-    try {
-      const displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
-      const codes = (Intl as any).supportedValuesOf('region').filter((c: string) => /^[A-Z]{2}$/.test(c));
-      const names = codes.map((c: string) => displayNames.of(c) ?? '').filter(Boolean).sort((a: string, b: string) => a.localeCompare(b));
-      if (names.length > 100) return names;
-    } catch { /* fall through */ }
-  }
-  return fallback;
-})();
-
-const SCHOOL_TYPE_OPTIONS = [
-  { value: 'international_school', label: 'International school' },
-  { value: 'local_private', label: 'Local private' },
-  { value: 'state_public', label: 'State / public' },
-  { value: 'boarding', label: 'Boarding' },
-  { value: 'other', label: 'Other' },
-];
-
-const SUBJECT_OPTIONS = [
-  'Mathematics', 'Further Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science',
-  'Economics', 'Business', 'Accounting', 'Psychology', 'English Literature', 'English Language',
-  'History', 'Geography', 'Government & Politics', 'Philosophy', 'Sociology', 'Art & Design',
-  'Design Technology', 'Music', 'Theatre Studies', 'Media Studies', 'Modern Languages',
-  'Classical Studies', 'Sports Science', 'Environmental Systems', 'Other',
-];
-
-const ENGLISH_TEST_OPTIONS: { value: EnglishTestType; label: string }[] = [
-  { value: 'IELTS', label: 'IELTS' },
-  { value: 'TOEFL', label: 'TOEFL' },
-  { value: 'DUOLINGO', label: 'Duolingo' },
-  { value: 'WAIVER', label: 'Waiver / exempt' },
-  { value: 'NONE', label: 'None yet' },
-];
-
-const ENGLISH_STATUS_OPTIONS: { value: EnglishStatus; label: string }[] = [
-  { value: 'booked', label: 'Booked' },
-  { value: 'met', label: 'Met' },
-  { value: 'exceeds', label: 'Exceeds' },
-  { value: 'exceptional', label: 'Exceptional' },
-  { value: 'missing', label: 'Not started' },
-  { value: 'failed', label: 'Below req.' },
-];
-
-const ADMISSIONS_TEST_OPTIONS: { value: AdmissionsTestType; label: string }[] = [
-  { value: 'LNAT', label: 'LNAT' },
-  { value: 'UCAT', label: 'UCAT' },
-  { value: 'TMUA', label: 'TMUA' },
-  { value: 'MAT', label: 'MAT' },
-  { value: 'STEP', label: 'STEP' },
-  { value: 'ESAT', label: 'ESAT' },
-  { value: 'TSA', label: 'TSA' },
-  { value: 'NONE', label: 'None' },
-];
-
-const EXTRACURRICULAR_OPTIONS = [
-  'Sports / fitness', 'Student societies', 'Volunteering', 'Entrepreneurship',
-  'Arts / music', 'Debate / public speaking', 'Gaming / esports', 'Cultural clubs', 'Other',
-];
-
-const LEADERSHIP_OPTIONS = [
-  'Head Boy / Girl', 'Class President', 'Team Captain', 'Prefect',
-  'Club Founder', 'Student Council', 'Community Leader', 'None',
-];
-
-const ACTIVITY_CATEGORIES = [
-  'Sport', 'Music', 'Drama / Theatre', 'Debate / Model UN',
-  'Community Service', 'Academic Competition', 'Science Competition',
-  'Entrepreneurship', 'Art / Design', 'Writing / Journalism',
-  'Coding / Hackathon', 'Research Project', 'Other',
-] as const;
-
-const ACTIVITY_LEVELS = ['School', 'Regional', 'National', 'International'] as const;
-const ACTIVITY_DURATIONS = ['< 1 year', '1–2 years', '3–4 years', '5+ years'] as const;
-
-type ActivityRowState = {
-  localId: string;
-  category: string;
-  level: string;
-  duration: string;
-  highlight: string;
-};
-
-const COMMITMENT_OPTIONS = [
-  { value: 'light', label: 'Light', desc: 'A few activities, casual involvement' },
-  { value: 'moderate', label: 'Moderate', desc: '1–2 serious activities, regular commitment' },
-  { value: 'deep', label: 'Deep', desc: 'Competitive level or school-wide recognition' },
-  { value: 'exceptional', label: 'Exceptional', desc: 'National awards, publications, or elite-level' },
-];
-
-const GRADUATION_YEARS = (() => {
-  const current = new Date().getFullYear();
-  return [current - 2, current - 1, current, current + 1, current + 2, current + 3, current + 4, current + 5];
-})();
-
-const IB_GRADES = ['A', 'B', 'C', 'D', 'E'] as const;
-const A_LEVEL_GRADES = ['A*', 'A', 'B', 'C', 'D', 'E', 'U'] as const;
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const buildEmptySubject = (programmeType: ProgrammeType | ''): SubjectRowState => ({
-  subject_name: '',
-  level: programmeType === 'IB' ? 'HL' : 'A_LEVEL',
-  grade_value: '',
-});
-
-/**
- * An empty row to append to `existing`. IB allows exactly 3 HL, so once three HL rows are
- * present the next blank row must default to SL — `buildEmptySubject` alone always says HL,
- * which meant a saved IB profile with fewer than 6 subjects hydrated as 4–6 HL rows and
- * failed its own "IB requires 3 Higher Level subjects" check before the student typed a thing.
- */
-const buildNextSubject = (
-  programmeType: ProgrammeType | '',
-  existing: SubjectRowState[]
-): SubjectRowState => {
-  const base = buildEmptySubject(programmeType);
-  if (programmeType !== 'IB') return base;
-  const hlCount = existing.filter((s) => s.level === 'HL').length;
-  return { ...base, level: hlCount < 3 ? 'HL' : 'SL' };
-};
-
-const buildDefaultSubjects = (programmeType: ProgrammeType | ''): SubjectRowState[] => {
-  if (programmeType === 'IB') {
-    return Array.from({ length: 6 }, (_, i) => ({ subject_name: '', level: i < 3 ? 'HL' : 'SL', grade_value: '' }));
-  }
-  return Array.from({ length: 3 }, () => buildEmptySubject('A_LEVEL'));
-};
-
-const getMaxSubjects = (programmeType: ProgrammeType | '') => programmeType === 'A_LEVEL' ? 4 : 6;
-
-const clusterLabelMap = new Map(CLUSTER_OPTIONS.map((o) => [o.value, o.label]));
-
 // ─── Draft persistence ───────────────────────────────────────────────────────
 
 const DRAFT_KEY = 'ascenda-intake-draft';
 
-const buildInitialPersonalInfo = () => ({
-  first_name: '', last_name: '', email: '', age: '', gender: '',
-  resident_country: '', current_location_city: '', time_zone: '',
-});
-
-const buildInitialAcademicInput = () => ({
-  school_name: '', school_country: '', school_city: '', school_type: '',
-  graduation_year: '', desired_start_date: '',
-  intended_clusters: [] as IntendedCluster[], secondary_clusters: [] as IntendedCluster[],
-  career_aspiration: '',
-  ib_total_points: '', ib_core_points: '', ib_tok_grade: '', ib_ee_grade: '', ib_math_pathway: '',
-  ee_subject: '', ee_title: '', ee_summary: '',
-});
-
-const buildInitialLifestylePreference = () => ({
-  teaching_style: '', desired_location_type: [] as string[], campus_size: '',
-  extracurricular_interests: [] as string[], other_extracurriculars: '',
-});
-
-const buildInitialActivities = () => ({
-  leadership_roles: [] as string[],
-  commitment_level: '',
-  key_activities: [] as string[],
-  sat_score: '',
-  act_score: '',
-  intl_experience: [] as string[],
-  work_experience: null as boolean | null,
-  work_experience_summary: '',
-  ambition_statement: '',
-  epq_subject: '',
-  epq_title: '',
-});
-
-type IntakeDraft = {
+/** The persisted draft is the whole form state plus where the student had got to. */
+type IntakeDraft = IntakeFormState & {
   version: 1;
   savedAt: number;
   currentStep: number;
-  programmeType: ProgrammeType | '';
-  nationalities: string[];
-  subjects: SubjectRowState[];
-  admissionsTests: AdmissionsRowState[];
-  englishRequired: EnglishRequiredState;
-  englishTestType: EnglishTestType;
-  englishStatus: EnglishStatus;
-  englishScoreOverall: string;
-  personalInfo: ReturnType<typeof buildInitialPersonalInfo>;
-  academicInput: ReturnType<typeof buildInitialAcademicInput>;
-  lifestylePreference: ReturnType<typeof buildInitialLifestylePreference>;
-  activities: ReturnType<typeof buildInitialActivities>;
-  activityRows: ActivityRowState[];
 };
 
 const isValidDraft = (d: unknown): d is IntakeDraft => {
@@ -650,6 +435,8 @@ export const StudentIntakeForm = ({
   initialPayload?: StudentProfilePayload | null;
 }) => {
   const contentTopRef = useRef<HTMLDivElement | null>(null);
+  /** Pending `focusFirstError` timer — cancelled on re-entry and on unmount. */
+  const focusTimerRef = useRef<number | null>(null);
   const [stepParam, setStepParam] = useSearchParamState('step', stepKeyForIndex(initialStep), { push: true });
   const currentStep = indexForStepKey(stepParam);
   const currentStepRef = useRef(currentStep);
@@ -716,94 +503,23 @@ export const StudentIntakeForm = ({
     }
   }, []);
 
+  /** Push a saved profile into state. All of the normalisation lives in `fromPayload`. */
   const applyPayload = useCallback((payload: StudentProfilePayload) => {
-    const { personal_information: pi, academic_input: ai, lifestyle_preference: lp } = payload;
+    const next = fromPayload(payload);
     skipProgrammeResetRef.current = true;
-    setProgrammeType(ai.programme_type ?? '');
-    setPersonalInfo({
-      first_name: pi.first_name ?? '', last_name: pi.last_name ?? '', email: pi.email ?? '',
-      age: pi.age !== null && pi.age !== undefined ? String(pi.age) : '',
-      gender: pi.gender ?? '', resident_country: pi.resident_country ?? '',
-      current_location_city: pi.current_location_city ?? '', time_zone: pi.time_zone ?? '',
-    });
-    setNationalities(
-      pi.nationality ? pi.nationality.split(',').map((s) => s.trim()).filter(Boolean) : ['']
-    );
-    setAcademicInput({
-      school_name: ai.school_name ?? '', school_country: ai.school_country ?? '',
-      school_city: ai.school_city ?? '', school_type: ai.school_type ?? '',
-      graduation_year: ai.graduation_year ? String(ai.graduation_year) : '',
-      desired_start_date: ai.desired_start_date ?? '',
-      intended_clusters: ai.intended_clusters ?? [], secondary_clusters: ai.secondary_clusters ?? [],
-      career_aspiration: ai.career_aspiration ?? '',
-      ib_total_points: ai.ib_total_points !== null && ai.ib_total_points !== undefined ? String(ai.ib_total_points) : '',
-      ib_core_points: ai.ib_core_points !== null && ai.ib_core_points !== undefined ? String(ai.ib_core_points) : '',
-      ib_tok_grade: ai.ib_tok_grade ?? '', ib_ee_grade: ai.ib_ee_grade ?? '',
-      ib_math_pathway: ai.ib_math_pathway ?? '',
-      ee_subject: ai.ee_subject ?? '', ee_title: ai.ee_title ?? '', ee_summary: ai.ee_summary ?? '',
-    });
-    setSubjects(() => {
-      const prog = ai.programme_type ?? '';
-      const max = getMaxSubjects(prog);
-      const minRows = prog === 'IB' ? 6 : 3;
-      const base = ai.subject_list ?? [];
-      const mapped = base.slice(0, max).map((s) => ({
-        subject_name: s.subject_name ?? '',
-        level: s.level ?? (prog === 'IB' ? 'HL' : 'A_LEVEL'),
-        grade_value: typeof s.grade_value === 'number' ? String(s.grade_value) : s.grade_value ?? '',
-      }));
-      while (mapped.length < minRows) mapped.push(buildNextSubject(prog, mapped));
-      return mapped;
-    });
-    setAdmissionsTests(
-      (ai.admissions_tests ?? []).map((t) => ({
-        test_type: t.test_type, status: t.status,
-        score_numeric: t.score_numeric !== null && t.score_numeric !== undefined ? String(t.score_numeric) : '',
-        percentile: t.percentile !== null && t.percentile !== undefined ? String(t.percentile) : '',
-      }))
-    );
-    setEnglishRequired(
-      ai.english_required === true ? 'yes' : ai.english_required === false ? 'no' : 'not_sure'
-    );
-    setEnglishTestType(ai.english_test_type ?? 'NONE');
-    setEnglishStatus(ai.english_status ?? 'missing');
-    setEnglishScoreOverall(
-      ai.english_score_overall !== null && ai.english_score_overall !== undefined ? String(ai.english_score_overall) : ''
-    );
-    const storedLoc = lp.desired_location_type ?? '';
-    // Migrate legacy 'london' → 'capital_city'; split comma-sep multi-select
-    const locArray = storedLoc
-      ? storedLoc.split(',').map((s) => s.trim() === 'london' ? 'capital_city' : s.trim()).filter(Boolean)
-      : [];
-    setLifestylePreference({
-      teaching_style: lp.teaching_style ?? '',
-      desired_location_type: locArray,
-      campus_size: lp.campus_size ?? '',
-      extracurricular_interests: lp.extracurricular_interests ?? [],
-      other_extracurriculars: lp.other_extracurriculars ?? '',
-    });
-    setActivities({
-      leadership_roles: lp.leadership_roles ?? [],
-      commitment_level: lp.commitment_level ?? '',
-      key_activities: lp.key_activities ?? [],
-      sat_score: lp.sat_score !== null && lp.sat_score !== undefined ? String(lp.sat_score) : '',
-      act_score: lp.act_score !== null && lp.act_score !== undefined ? String(lp.act_score) : '',
-      intl_experience: lp.intl_experience ?? [],
-      work_experience: lp.work_experience ?? null,
-      work_experience_summary: lp.work_experience_summary ?? '',
-      ambition_statement: lp.ambition_statement ?? '',
-      epq_subject: (lp as any).epq_subject ?? '',
-      epq_title: (lp as any).epq_title ?? '',
-    });
-    setActivityRows(
-      (payload.activities_list ?? []).map((a) => ({
-        localId: a.id ?? Math.random().toString(36).slice(2),
-        category: a.category ?? '',
-        level: a.level ?? '',
-        duration: a.duration ?? '',
-        highlight: a.highlight ?? '',
-      }))
-    );
+    setProgrammeType(next.programmeType);
+    setPersonalInfo(next.personalInfo);
+    setNationalities(next.nationalities);
+    setAcademicInput(next.academicInput);
+    setSubjects(next.subjects);
+    setAdmissionsTests(next.admissionsTests);
+    setEnglishRequired(next.englishRequired);
+    setEnglishTestType(next.englishTestType);
+    setEnglishStatus(next.englishStatus);
+    setEnglishScoreOverall(next.englishScoreOverall);
+    setLifestylePreference(next.lifestylePreference);
+    setActivities(next.activities);
+    setActivityRows(next.activityRows);
   }, []);
 
   useEffect(() => {
@@ -991,11 +707,8 @@ export const StudentIntakeForm = ({
     });
   }, [academicInput.intended_clusters]);
 
-  const showEnglishScore = englishRequired !== 'no' && ['IELTS', 'TOEFL', 'DUOLINGO'].includes(englishTestType);
-  const showAdmissionsTests =
-    academicInput.intended_clusters.some((c) =>
-      ['law', 'medicine_dentistry', 'maths', 'engineering', 'computer_science', 'economics_quant'].includes(c)
-    ) || admissionsTests.length > 0;
+  const showEnglishScore = shouldShowEnglishScore(englishRequired, englishTestType);
+  const showAdmissionsTests = shouldShowAdmissionsTests(academicInput.intended_clusters, admissionsTests);
 
   // ── State updaters ────────────────────────────────────────────────────────
 
@@ -1064,238 +777,67 @@ export const StudentIntakeForm = ({
   const removeSubject = (i: number) =>
     setSubjects((prev) => prev.filter((_, idx) => idx !== i));
 
-  const parseNumber = useCallback((v: string) => {
-    if (!v.trim()) return null;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
-  }, []);
-
   // Dynamic IB total from subject grades (sum of numeric grades 1–7)
-  const ibSubjectSum = useMemo(() => {
-    if (programmeType !== 'IB') return null;
-    return subjects.reduce((acc, s) => {
-      const g = parseNumber(s.grade_value);
-      return g !== null && g >= 1 && g <= 7 ? acc + g : acc;
-    }, 0);
-  }, [programmeType, subjects, parseNumber]);
+  const ibSubjectSum = useMemo(
+    () => computeIbSubjectSum(programmeType, subjects), [programmeType, subjects]
+  );
 
   const formattedNationalities = useMemo(
-    () => nationalities.map((n) => n.trim()).filter(Boolean), [nationalities]
+    () => formatNationalities(nationalities), [nationalities]
   );
+
+  // ── Form state ────────────────────────────────────────────────────────────
+
+  /**
+   * Every collected value in one object, so the pure modules in `@/lib/profile/`
+   * can own the payload build and the validators. This is a VIEW over the same
+   * `useState` slices — it holds no state of its own and changes identity
+   * exactly when one of them does.
+   */
+  const formState = useMemo<IntakeFormState>(() => ({
+    programmeType, nationalities, subjects, admissionsTests,
+    englishRequired, englishTestType, englishStatus, englishScoreOverall,
+    personalInfo, academicInput, lifestylePreference, activities, activityRows,
+  }), [
+    programmeType, nationalities, subjects, admissionsTests,
+    englishRequired, englishTestType, englishStatus, englishScoreOverall,
+    personalInfo, academicInput, lifestylePreference, activities, activityRows,
+  ]);
 
   // ── Build payload ─────────────────────────────────────────────────────────
 
-  const buildPayload = useCallback((): StudentProfilePayload => {
-    const subjectList: StudentSubject[] = subjects.map((s) => ({
-      subject_name: s.subject_name.trim(),
-      level: s.level,
-      grade_value: programmeType === 'IB'
-        ? parseNumber(s.grade_value)
-        : s.grade_value.trim() ? s.grade_value.trim() : null,
-    }));
-
-    const aLevelPredicted = programmeType === 'A_LEVEL'
-      ? Object.fromEntries(
-        subjectList
-          .filter((s) => typeof s.grade_value === 'string' && s.subject_name)
-          .map((s) => [s.subject_name, s.grade_value as 'A*' | 'A' | 'B' | 'C' | 'D' | 'E' | 'U'])
-      )
-      : null;
-
-    const admissionsPayload: StudentAdmissionsTest[] = admissionsTests
-      .filter((t) => t.test_type !== 'NONE')
-      .map((t) => ({
-        test_type: t.test_type,
-        status: (t.status || 'missing') as AdmissionsStatus,
-        score_numeric: parseNumber(t.score_numeric),
-        percentile: parseNumber(t.percentile),
-      }));
-
-    return {
-      personal_information: {
-        first_name: personalInfo.first_name.trim(),
-        last_name: personalInfo.last_name.trim(),
-        email: personalInfo.email.trim(),
-        phone: null,
-        nationality: formattedNationalities.join(', '),
-        age: parseNumber(personalInfo.age),
-        gender: personalInfo.gender ? (personalInfo.gender as StudentProfilePayload['personal_information']['gender']) : null,
-        resident_country: personalInfo.resident_country.trim(),
-        current_location_city: personalInfo.current_location_city.trim() || null,
-        time_zone: personalInfo.time_zone.trim() || null,
-      },
-      academic_input: {
-        programme_type: programmeType as ProgrammeType,
-        school_name: academicInput.school_name.trim(),
-        school_country: academicInput.school_country.trim(),
-        school_city: academicInput.school_city.trim() || null,
-        school_type: academicInput.school_type ? (academicInput.school_type as StudentProfilePayload['academic_input']['school_type']) : null,
-        language_of_instruction: null,
-        graduation_year: Number(academicInput.graduation_year),
-        desired_start_date: academicInput.desired_start_date || null,
-        intended_clusters: academicInput.intended_clusters,
-        secondary_clusters: academicInput.secondary_clusters,
-        career_aspiration: academicInput.career_aspiration.trim() || null,
-        subject_list: subjectList,
-        ib_total_points: programmeType === 'IB' ? ibSubjectSum : null,
-        ib_core_points: programmeType === 'IB' ? parseNumber(academicInput.ib_core_points) : null,
-        ib_tok_grade: programmeType === 'IB' && academicInput.ib_tok_grade
-          ? (academicInput.ib_tok_grade as StudentProfilePayload['academic_input']['ib_tok_grade']) : null,
-        ib_ee_grade: programmeType === 'IB' && academicInput.ib_ee_grade
-          ? (academicInput.ib_ee_grade as StudentProfilePayload['academic_input']['ib_ee_grade']) : null,
-        ib_math_pathway: programmeType === 'IB' && academicInput.ib_math_pathway
-          ? (academicInput.ib_math_pathway as StudentProfilePayload['academic_input']['ib_math_pathway']) : null,
-        ee_subject: programmeType === 'IB' ? academicInput.ee_subject.trim() || null : null,
-        ee_title: programmeType === 'IB' ? academicInput.ee_title.trim() || null : null,
-        ee_summary: programmeType === 'IB' ? academicInput.ee_summary.trim() || null : null,
-        a_level_predicted_grades: aLevelPredicted,
-        english_required: englishRequired === 'yes' ? true : englishRequired === 'no' ? false : null,
-        english_test_type: englishTestType,
-        english_status: englishStatus,
-        english_score_overall: showEnglishScore ? parseNumber(englishScoreOverall) : null,
-        admissions_tests: admissionsPayload,
-      },
-      lifestyle_preference: {
-        teaching_style: lifestylePreference.teaching_style ? (lifestylePreference.teaching_style as StudentProfilePayload['lifestyle_preference']['teaching_style']) : null,
-        desired_location_type: (() => {
-          const arr = lifestylePreference.desired_location_type;
-          if (!arr || arr.length === 0) return null;
-          // Store comma-separated; scoring treats multi-select same as no_preference
-          return arr.join(',') as StudentProfilePayload['lifestyle_preference']['desired_location_type'];
-        })(),
-        campus_size: lifestylePreference.campus_size ? (lifestylePreference.campus_size as StudentProfilePayload['lifestyle_preference']['campus_size']) : null,
-        extracurricular_interests: lifestylePreference.extracurricular_interests,
-        other_extracurriculars: lifestylePreference.other_extracurriculars.trim() || null,
-        leadership_roles: activities.leadership_roles,
-        commitment_level: activities.commitment_level || null,
-        // Derive legacy key_activities from structured rows for backward-compat scoring
-        key_activities: activityRows.length > 0
-          ? [...new Set(activityRows.map((r) => r.category).filter(Boolean))]
-          : activities.key_activities,
-        sat_score: parseNumber(activities.sat_score),
-        act_score: parseNumber(activities.act_score),
-        // Derive intl_experience from activity levels for backward-compat scoring
-        intl_experience: activityRows.some((r) => r.level === 'National' || r.level === 'International')
-          ? ['International competition']
-          : activities.intl_experience,
-        work_experience: activities.work_experience,
-        work_experience_summary: activities.work_experience_summary.trim() || null,
-        ambition_statement: activities.ambition_statement.trim() || null,
-        epq_subject: (programmeType === 'A_LEVEL' || programmeType === 'ACT')
-          ? activities.epq_subject.trim() || null : null,
-        epq_title: (programmeType === 'A_LEVEL' || programmeType === 'ACT')
-          ? activities.epq_title.trim() || null : null,
-      } as StudentProfilePayload['lifestyle_preference'],
-      activities_list: activityRows
-        .filter((r) => r.category)
-        .map((r, i) => ({
-          category: r.category,
-          level: (r.level || null) as any,
-          duration: (r.duration || null) as any,
-          highlight: r.highlight.trim() || null,
-          sort_order: i,
-        })),
-    };
-  }, [
-    subjects, programmeType, parseNumber, admissionsTests, personalInfo,
-    formattedNationalities, academicInput, englishRequired, englishTestType,
-    englishStatus, showEnglishScore, englishScoreOverall, lifestylePreference,
-    activities, activityRows, ibSubjectSum,
-  ]);
+  const buildPayload = useCallback((): StudentProfilePayload => toPayload(formState), [formState]);
 
   // ── Validation ────────────────────────────────────────────────────────────
+  //
+  // The five validators are pure and live in `@/lib/profile/intake-validation`;
+  // `validateStep` is their switch. Steps 4 and 5 are optional and return {}.
 
-  const validateStep1 = useCallback(() => {
-    const e: Record<string, string> = {};
-    if (!personalInfo.first_name.trim()) e['personal_information.first_name'] = 'First name is required.';
-    if (!personalInfo.last_name.trim()) e['personal_information.last_name'] = 'Last name is required.';
-    if (!personalInfo.email.trim()) e['personal_information.email'] = 'Email is required.';
-    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(personalInfo.email.trim()))
-      e['personal_information.email'] = 'Enter a valid email.';
-    if (!formattedNationalities.length) e['personal_information.nationality'] = 'Add at least one nationality.';
-    if (!personalInfo.resident_country.trim()) e['personal_information.resident_country'] = 'Country of residence is required.';
-    return e;
-  }, [personalInfo, formattedNationalities]);
-
-  const validateStep2 = useCallback(() => {
-    const e: Record<string, string> = {};
-    if (!programmeType) e['academic_input.programme_type'] = 'Select IB or A-levels.';
-    if (!academicInput.school_name.trim()) e['academic_input.school_name'] = 'School name is required.';
-    if (!academicInput.school_country.trim()) e['academic_input.school_country'] = 'School country is required.';
-    if (!academicInput.graduation_year) e['academic_input.graduation_year'] = 'Graduation year is required.';
-    if (!academicInput.intended_clusters.length) e['academic_input.intended_clusters'] = 'Select at least one subject area.';
-    return e;
-  }, [programmeType, academicInput]);
-
-  const validateSubjects = useCallback((e: Record<string, string>) => {
-    const filled = subjects.filter((s) => s.subject_name.trim());
-    if (programmeType === 'IB') {
-      if (filled.length !== 6) e['academic_input.subject_list'] = 'IB requires exactly 6 subjects.';
-      if (filled.filter((s) => s.level === 'HL').length !== 3)
-        e['academic_input.subject_list.hl'] = 'IB requires 3 Higher Level subjects.';
-    }
-    if (programmeType === 'A_LEVEL') {
-      const max = getMaxSubjects('A_LEVEL');
-      if (filled.length < 3) e['academic_input.subject_list'] = 'A-levels require at least 3 subjects.';
-      // Keep the ceiling tied to getMaxSubjects — the Add button and the section hint both
-      // use it, and this message used to claim 6 while the UI capped the rows at 4.
-      else if (filled.length > max) e['academic_input.subject_list'] = `A-levels are limited to ${max} subjects.`;
-    }
-    subjects.forEach((s, i) => {
-      if (!s.subject_name.trim()) e[`academic_input.subject_list.${i}.subject_name`] = 'Subject is required.';
-      if (!s.grade_value.trim()) e[`academic_input.subject_list.${i}.grade_value`] = 'Grade is required.';
-      else if (programmeType === 'IB') {
-        const g = parseNumber(s.grade_value);
-        if (g === null || g < 1 || g > 7) e[`academic_input.subject_list.${i}.grade_value`] = '1–7 only.';
-      }
-    });
-  }, [subjects, programmeType, parseNumber]);
-
-  const validateStep3 = useCallback(() => {
-    const e: Record<string, string> = {};
-    validateSubjects(e);
-    if (programmeType === 'IB') {
-      if (!academicInput.ib_math_pathway) e['academic_input.ib_math_pathway'] = 'Maths pathway required.';
-      const cp = parseNumber(academicInput.ib_core_points);
-      if (cp !== null && (cp < 0 || cp > 3)) e['academic_input.ib_core_points'] = '0–3 only.';
-      if (academicInput.ee_summary && academicInput.ee_summary.length > 350)
-        e['academic_input.ee_summary'] = 'Under 350 characters.';
-    }
-    if (!englishRequired) e['academic_input.english_required'] = 'Select an option.';
-    if (englishRequired !== 'no') {
-      if (!englishTestType) e['academic_input.english_test_type'] = 'Select a test type.';
-      if (!englishStatus) e['academic_input.english_status'] = 'Select a status.';
-    }
-    admissionsTests.forEach((t, i) => {
-      if (t.test_type === 'NONE') return;
-      if (!t.status) e[`academic_input.admissions_tests.${i}.status`] = 'Select a status.';
-    });
-    return e;
-  }, [validateSubjects, programmeType, academicInput, parseNumber, englishRequired, englishTestType, englishStatus, admissionsTests]);
-
-  // Steps 4 & 5 are optional
-  const validateStep4 = useCallback(() => ({} as Record<string, string>), []);
-  const validateStep5 = useCallback(() => ({} as Record<string, string>), []);
-
-  const validateCurrentStep = () => {
-    switch (currentStep) {
-      case 1: return validateStep1();
-      case 2: return validateStep2();
-      case 3: return validateStep3();
-      case 4: return validateStep4();
-      case 5: return validateStep5();
-      default: return {};
-    }
-  };
+  const validateCurrentStep = () => validateStep(currentStep, formState);
 
   // ── Navigation ────────────────────────────────────────────────────────────
 
-  /** Scroll the first errored field into view and focus its input. */
+  /**
+   * Scroll the first errored field into view and focus its input.
+   *
+   * The deferral is real: after a failed `goNext` the step body may still be
+   * mid-transition, so the node we want does not exist yet. But a pending timer
+   * that outlives the component used to `.focus()` whatever `[data-field]` it
+   * could find anywhere in the live document — stealing focus from whatever had
+   * replaced this form (in tests, the NEXT test's freshly mounted tree). Two
+   * guards: only one timer is ever outstanding and unmount clears it, and the
+   * search is scoped to this form's own content subtree, which must still be
+   * connected for the callback to do anything at all.
+   */
   const focusFirstError = useCallback((errs: Record<string, string>, delay = 50) => {
     const keys = Object.keys(errs);
     if (keys.length === 0) return;
-    window.setTimeout(() => {
-      const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-field]'));
+    if (focusTimerRef.current !== null) window.clearTimeout(focusTimerRef.current);
+    focusTimerRef.current = window.setTimeout(() => {
+      focusTimerRef.current = null;
+      const root = contentTopRef.current;
+      if (!root || !root.isConnected) return;
+      const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-field]'));
       // A node is a candidate if its key IS an error key, or PREFIXES one — the latter
       // covers group-level messages hung off a container (subject_list → subject_list.hl).
       const matches = nodes.filter((node) => {
@@ -1314,6 +856,14 @@ export const StudentIntakeForm = ({
       const focusable = target.querySelector<HTMLElement>('input, select, textarea, button');
       (focusable ?? target).focus({ preventScroll: true });
     }, delay);
+  }, []);
+
+  // Cancel any pending focus hop on unmount — see `focusFirstError` above.
+  useEffect(() => () => {
+    if (focusTimerRef.current !== null) {
+      window.clearTimeout(focusTimerRef.current);
+      focusTimerRef.current = null;
+    }
   }, []);
 
   const goNext = () => {
@@ -1345,7 +895,7 @@ export const StudentIntakeForm = ({
   };
 
   const handleFinalSubmit = useCallback(() => {
-    const s1 = validateStep1(); const s2 = validateStep2(); const s3 = validateStep3();
+    const s1 = validateStep1(formState); const s2 = validateStep2(formState); const s3 = validateStep3(formState);
     const allErrors = { ...s1, ...s2, ...s3 };
     setErrors(allErrors);
     if (Object.keys(allErrors).length > 0) {
@@ -1377,7 +927,7 @@ export const StudentIntakeForm = ({
         setStatusIsError(true);
       }
     });
-  }, [validateStep1, validateStep2, validateStep3, buildPayload, focusFirstError, clearDraft, setCurrentStep]);
+  }, [formState, buildPayload, focusFirstError, clearDraft, setCurrentStep]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); handleFinalSubmit(); };
 
@@ -1388,13 +938,13 @@ export const StudentIntakeForm = ({
   // ── Step completion (for sidebar indicators) ──────────────────────────────
 
   const stepCompletion = useMemo<Record<number, boolean>>(() => ({
-    1: Object.keys(validateStep1()).length === 0,
-    2: Object.keys(validateStep2()).length === 0,
-    3: Object.keys(validateStep3()).length === 0,
+    1: Object.keys(validateStep1(formState)).length === 0,
+    2: Object.keys(validateStep2(formState)).length === 0,
+    3: Object.keys(validateStep3(formState)).length === 0,
     4: activities.leadership_roles.length > 0 || !!activities.commitment_level || activities.key_activities.length > 0,
     5: !!lifestylePreference.teaching_style || lifestylePreference.desired_location_type.length > 0 || !!lifestylePreference.campus_size,
     6: false,
-  }), [validateStep1, validateStep2, validateStep3, activities, lifestylePreference]);
+  }), [formState, activities, lifestylePreference]);
 
   // Divided by the number of TRANSITIONS (TOTAL_STEPS - 1), not the number of steps:
   // over TOTAL_STEPS the bar topped out at 83% on the final Review step.
@@ -1565,40 +1115,52 @@ export const StudentIntakeForm = ({
                 <section className="space-y-5">
                   {/* Name + email */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <label className="space-y-1.5" data-field="personal_information.first_name">
-                      <span className="text-sm font-medium">First name</span>
-                      <input
-                        type="text" autoComplete="given-name" className={cn(inputCls, errors['personal_information.first_name'] && 'border-destructive')}
-                        {...a11yError('personal_information.first_name')}
-                        value={personalInfo.first_name}
-                        onChange={(e) => updatePersonalInfo('first_name', e.target.value)}
-                        placeholder="Alex"
-                      />
+                    {/* The FieldError sits OUTSIDE the <label>. Inside it, the message
+                      * was concatenated into the input's accessible name ("First name"
+                      * became "First nameFirst name is required.") and a screen reader
+                      * re-read the whole thing on every keystroke. `a11yError` already
+                      * points aria-describedby at the message's id, which is where an
+                      * error belongs. Same shape for every errored field below. */}
+                    <div data-field="personal_information.first_name">
+                      <label className="space-y-1.5 block">
+                        <span className="text-sm font-medium">First name</span>
+                        <input
+                          type="text" autoComplete="given-name" className={cn(inputCls, errors['personal_information.first_name'] && 'border-destructive')}
+                          {...a11yError('personal_information.first_name')}
+                          value={personalInfo.first_name}
+                          onChange={(e) => updatePersonalInfo('first_name', e.target.value)}
+                          placeholder="Alex"
+                        />
+                      </label>
                       <FieldError msg={errors['personal_information.first_name']} id={fieldErrorId('personal_information.first_name')} />
-                    </label>
-                    <label className="space-y-1.5" data-field="personal_information.last_name">
-                      <span className="text-sm font-medium">Last name</span>
-                      <input
-                        type="text" autoComplete="family-name" className={cn(inputCls, errors['personal_information.last_name'] && 'border-destructive')}
-                        {...a11yError('personal_information.last_name')}
-                        value={personalInfo.last_name}
-                        onChange={(e) => updatePersonalInfo('last_name', e.target.value)}
-                        placeholder="Smith"
-                      />
+                    </div>
+                    <div data-field="personal_information.last_name">
+                      <label className="space-y-1.5 block">
+                        <span className="text-sm font-medium">Last name</span>
+                        <input
+                          type="text" autoComplete="family-name" className={cn(inputCls, errors['personal_information.last_name'] && 'border-destructive')}
+                          {...a11yError('personal_information.last_name')}
+                          value={personalInfo.last_name}
+                          onChange={(e) => updatePersonalInfo('last_name', e.target.value)}
+                          placeholder="Smith"
+                        />
+                      </label>
                       <FieldError msg={errors['personal_information.last_name']} id={fieldErrorId('personal_information.last_name')} />
-                    </label>
+                    </div>
                   </div>
-                  <label className="space-y-1.5 block" data-field="personal_information.email">
-                    <span className="text-sm font-medium">Email</span>
-                    <input
-                      type="email" autoComplete="email" inputMode="email" spellCheck={false} className={cn(inputCls, errors['personal_information.email'] && 'border-destructive')}
-                      {...a11yError('personal_information.email')}
-                      value={personalInfo.email}
-                      onChange={(e) => updatePersonalInfo('email', e.target.value)}
-                      placeholder="alex@school.com"
-                    />
+                  <div data-field="personal_information.email">
+                    <label className="space-y-1.5 block">
+                      <span className="text-sm font-medium">Email</span>
+                      <input
+                        type="email" autoComplete="email" inputMode="email" spellCheck={false} className={cn(inputCls, errors['personal_information.email'] && 'border-destructive')}
+                        {...a11yError('personal_information.email')}
+                        value={personalInfo.email}
+                        onChange={(e) => updatePersonalInfo('email', e.target.value)}
+                        placeholder="alex@school.com"
+                      />
+                    </label>
                     <FieldError msg={errors['personal_information.email']} id={fieldErrorId('personal_information.email')} />
-                  </label>
+                  </div>
 
                   {/* Nationality */}
                   <SectionCard>
@@ -1626,6 +1188,7 @@ export const StudentIntakeForm = ({
                           </div>
                           {nationalities.length > 1 && (
                             <button type="button" onClick={() => removeNationality(i)}
+                              aria-label={`Remove nationality ${i + 1}`}
                               className="p-2 text-muted-foreground hover:text-destructive transition-colors rounded-lg">
                               <X className="w-4 h-4" />
                             </button>
@@ -1637,16 +1200,20 @@ export const StudentIntakeForm = ({
 
                   {/* Country of residence + City + Age + Gender */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <label className="space-y-1.5 block" data-field="personal_information.resident_country">
-                      <span className="text-sm font-medium">Country of residence</span>
+                    {/* CountryCombobox renders its own FieldError, so a wrapping
+                      * <label> would swallow it into the input's name. Associate by
+                      * id instead. */}
+                    <div className="space-y-1.5" data-field="personal_information.resident_country">
+                      <label htmlFor="intake-resident-country" className="text-sm font-medium block">Country of residence</label>
                       <CountryCombobox
+                        id="intake-resident-country"
                         value={personalInfo.resident_country}
                         onChange={(v) => updatePersonalInfo('resident_country', v)}
                         placeholder="Search country…"
                         error={errors['personal_information.resident_country']}
                         errorId={fieldErrorId('personal_information.resident_country')}
                       />
-                    </label>
+                    </div>
                     <label className="space-y-1.5">
                       <span className="text-sm font-medium text-muted-foreground">City <span className="text-xs">(optional)</span></span>
                       <input
@@ -1708,26 +1275,29 @@ export const StudentIntakeForm = ({
 
                   {/* School */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <label className="space-y-1.5" data-field="academic_input.school_name">
-                      <span className="text-sm font-medium">School name</span>
-                      <input
-                        type="text" className={cn(inputCls, errors['academic_input.school_name'] && 'border-destructive')}
-                        {...a11yError('academic_input.school_name')}
-                        value={academicInput.school_name}
-                        onChange={(e) => updateAcademicInput('school_name', e.target.value)}
-                        placeholder="Lycée International"
-                      />
+                    <div data-field="academic_input.school_name">
+                      <label className="space-y-1.5 block">
+                        <span className="text-sm font-medium">School name</span>
+                        <input
+                          type="text" className={cn(inputCls, errors['academic_input.school_name'] && 'border-destructive')}
+                          {...a11yError('academic_input.school_name')}
+                          value={academicInput.school_name}
+                          onChange={(e) => updateAcademicInput('school_name', e.target.value)}
+                          placeholder="Lycée International"
+                        />
+                      </label>
                       <FieldError msg={errors['academic_input.school_name']} id={fieldErrorId('academic_input.school_name')} />
-                    </label>
-                    <label className="space-y-1.5 block" data-field="academic_input.school_country">
-                      <span className="text-sm font-medium">School country</span>
+                    </div>
+                    <div className="space-y-1.5" data-field="academic_input.school_country">
+                      <label htmlFor="intake-school-country" className="text-sm font-medium block">School country</label>
                       <CountryCombobox
+                        id="intake-school-country"
                         value={academicInput.school_country}
                         onChange={(v) => updateAcademicInput('school_country', v)}
                         error={errors['academic_input.school_country']}
                         errorId={fieldErrorId('academic_input.school_country')}
                       />
-                    </label>
+                    </div>
                     <label className="space-y-1.5">
                       <span className="text-sm font-medium text-muted-foreground">School city <span className="text-xs">(optional)</span></span>
                       <input
@@ -1754,8 +1324,11 @@ export const StudentIntakeForm = ({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <label className="space-y-1.5" data-field="academic_input.graduation_year">
-                      <span className="text-sm font-medium">Graduation year</span>
+                    {/* A <label> here would wrap a Radix trigger (a labelable <button>)
+                      * AND the error text. The trigger's aria-label wins today, but the
+                      * div keeps the message out of the name by construction. */}
+                    <div className="space-y-1.5" data-field="academic_input.graduation_year">
+                      <span className="text-sm font-medium block">Graduation year</span>
                       <Select value={academicInput.graduation_year || ''}
                         onValueChange={(v) => updateAcademicInput('graduation_year', v === CLEAR ? '' : v)}>
                         <SelectTrigger
@@ -1771,7 +1344,7 @@ export const StudentIntakeForm = ({
                         </SelectContent>
                       </Select>
                       <FieldError msg={errors['academic_input.graduation_year']} id={fieldErrorId('academic_input.graduation_year')} />
-                    </label>
+                    </div>
                     <label className="space-y-1.5">
                       <span className="text-sm font-medium text-muted-foreground">Preferred start date <span className="text-xs">(optional)</span></span>
                       <input
@@ -1911,6 +1484,7 @@ export const StudentIntakeForm = ({
                           </div>
                           <div className="md:col-span-1 flex items-end justify-end md:justify-center pb-0.5">
                             <button type="button" onClick={() => removeSubject(i)}
+                              aria-label={`Remove subject ${i + 1}`}
                               className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -1958,16 +1532,18 @@ export const StudentIntakeForm = ({
                         <FieldError msg={errors['academic_input.ib_math_pathway']} id={fieldErrorId('academic_input.ib_math_pathway')} />
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <label className="space-y-1.5" data-field="academic_input.ib_core_points">
-                          <span className="text-sm font-medium text-muted-foreground">Core points <span className="text-xs">(optional)</span></span>
-                          <input type="number" min={0} max={3}
-                            className={cn(inputCls, errors['academic_input.ib_core_points'] && 'border-destructive')}
-                            {...a11yError('academic_input.ib_core_points')}
-                            value={academicInput.ib_core_points}
-                            onChange={(e) => updateAcademicInput('ib_core_points', e.target.value)}
-                            placeholder="0–3" />
+                        <div data-field="academic_input.ib_core_points">
+                          <label className="space-y-1.5 block">
+                            <span className="text-sm font-medium text-muted-foreground">Core points <span className="text-xs">(optional)</span></span>
+                            <input type="number" min={0} max={3}
+                              className={cn(inputCls, errors['academic_input.ib_core_points'] && 'border-destructive')}
+                              {...a11yError('academic_input.ib_core_points')}
+                              value={academicInput.ib_core_points}
+                              onChange={(e) => updateAcademicInput('ib_core_points', e.target.value)}
+                              placeholder="0–3" />
+                          </label>
                           <FieldError msg={errors['academic_input.ib_core_points']} id={fieldErrorId('academic_input.ib_core_points')} />
-                        </label>
+                        </div>
                         <label className="space-y-1.5">
                           <span className="text-sm font-medium text-muted-foreground">TOK grade <span className="text-xs">(optional)</span></span>
                           <Select value={academicInput.ib_tok_grade || ''}
@@ -2005,16 +1581,18 @@ export const StudentIntakeForm = ({
                             onChange={(e) => updateAcademicInput('ee_title', e.target.value)} />
                         </label>
                       </div>
-                      <label className="space-y-1.5 block" data-field="academic_input.ee_summary">
-                        <span className="text-sm font-medium text-muted-foreground">EE summary <span className="text-xs">(optional, max 350 chars)</span></span>
-                        <textarea rows={3} maxLength={350}
-                          className={cn(inputCls, 'h-auto py-3 resize-y', errors['academic_input.ee_summary'] && 'border-destructive')}
-                          {...a11yError('academic_input.ee_summary')}
-                          value={academicInput.ee_summary}
-                          onChange={(e) => updateAcademicInput('ee_summary', e.target.value)}
-                          placeholder="1–3 sentences" />
+                      <div data-field="academic_input.ee_summary">
+                        <label className="space-y-1.5 block">
+                          <span className="text-sm font-medium text-muted-foreground">EE summary <span className="text-xs">(optional, max 350 chars)</span></span>
+                          <textarea rows={3} maxLength={350}
+                            className={cn(inputCls, 'h-auto py-3 resize-y', errors['academic_input.ee_summary'] && 'border-destructive')}
+                            {...a11yError('academic_input.ee_summary')}
+                            value={academicInput.ee_summary}
+                            onChange={(e) => updateAcademicInput('ee_summary', e.target.value)}
+                            placeholder="1–3 sentences" />
+                        </label>
                         <FieldError msg={errors['academic_input.ee_summary']} id={fieldErrorId('academic_input.ee_summary')} />
-                      </label>
+                      </div>
                     </>
                   ) : null}
 
@@ -2038,8 +1616,8 @@ export const StudentIntakeForm = ({
                     </div>
                     {englishRequired !== 'no' ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                        <label className="space-y-1.5" data-field="academic_input.english_test_type">
-                          <span className="text-sm font-medium">Test type</span>
+                        <div className="space-y-1.5" data-field="academic_input.english_test_type">
+                          <span className="text-sm font-medium block">Test type</span>
                           <Select
                             value={englishTestType || ''}
                             onValueChange={(v) => setEnglishTestType(v as EnglishTestType)}>
@@ -2054,7 +1632,7 @@ export const StudentIntakeForm = ({
                             </SelectContent>
                           </Select>
                           <FieldError msg={errors['academic_input.english_test_type']} id={fieldErrorId('academic_input.english_test_type')} />
-                        </label>
+                        </div>
                         <div className="space-y-1.5" data-field="academic_input.english_status">
                           <p className="text-sm font-medium">Test status</p>
                           <div className="flex flex-wrap gap-2">
@@ -2489,37 +2067,51 @@ export const StudentIntakeForm = ({
                     </div>
                   </SectionCard>
 
-                  {/* Status + CTA */}
-                  {statusMessage ? (
-                    <div
-                      role={statusIsError ? 'alert' : 'status'}
-                      className={cn(
-                        'rounded-xl px-4 py-3 text-sm font-medium',
-                        submitted
-                          ? 'bg-success-subtle text-success'
-                          : statusIsError
-                            ? 'bg-destructive/10 text-destructive border border-destructive/30'
-                            : 'bg-muted text-muted-foreground'
-                      )}
-                    >
-                      {statusMessage}
-                    </div>
-                  ) : null}
-                  {submitted ? (
-                    <div className="flex justify-center pt-2">
-                      <a
-                        href="/matches"
-                        className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-e-1 hover:bg-primary/90 transition-colors"
-                      >
-                        Get me to my matches →
-                      </a>
-                    </div>
-                  ) : null}
+                  {/* The status line and the post-save CTA both live outside this
+                    * section now — see below the AnimatePresence. */}
                 </section>
               ) : null}
 
             </motion.div>
           </AnimatePresence>
+
+          {/* ── Status line ──
+            * OUTSIDE the AnimatePresence, so it renders on every step. It used to
+            * live inside the Review step's JSX, which made one of its four
+            * messages unreachable: `restoreSavedProfile` sets "Restored last
+            * saved progress." and then sends the user to step 1, where the block
+            * did not exist. The other three ("Saving…", the save error, "Profile
+            * saved!") are only ever set from the Review step, so they still land
+            * exactly where they did — directly above the submit button. */}
+          {statusMessage ? (
+            <div
+              role={statusIsError ? 'alert' : 'status'}
+              className={cn(
+                'mt-6 rounded-xl px-4 py-3 text-sm font-medium',
+                submitted
+                  ? 'bg-success-subtle text-success'
+                  : statusIsError
+                    ? 'bg-destructive/10 text-destructive border border-destructive/30'
+                    : 'bg-muted text-muted-foreground'
+              )}
+            >
+              {statusMessage}
+            </div>
+          ) : null}
+
+          {/* Post-save CTA. Moved out with the status line so the two stay in
+            * their original order (message, then link). `submitted` is only ever
+            * set from the Review step. */}
+          {submitted ? (
+            <div className="mt-4 flex justify-center">
+              <a
+                href="/matches"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-e-1 hover:bg-primary/90 transition-colors"
+              >
+                Get me to my matches →
+              </a>
+            </div>
+          ) : null}
 
           {/* ── Navigation buttons ── */}
           <div className="mt-8 flex items-center justify-between gap-3 pt-4 border-t border-border/50">

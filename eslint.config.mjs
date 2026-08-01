@@ -66,8 +66,15 @@ const config = [
     // data layer, the API surface, middleware and server actions. A floated
     // promise in a component re-renders oddly; a floated promise in a route
     // handler silently drops a database write and still returns 200.
+    // NOTE: these are PATH globs, so moving a file OUT of one of these
+    // directories silently removes it from these rules. The parent feature-slice
+    // pilot hit exactly that — `lib/parent/data.ts` became
+    // `features/parent/api/data.ts` and quietly left `no-floating-promises`
+    // behind, with every gate still green. Any new server-side directory must be
+    // added here in the same commit that creates it.
     files: [
       'src/lib/**/*.ts',
+      'src/features/**/*.ts',
       'src/app/api/**/*.ts',
       'src/middleware.ts',
       'src/instrumentation.ts',

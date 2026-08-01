@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCheck, Loader2, MessageSquare, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
-import type { ParentThread, ParentThreadMessage } from '@/lib/parent/types';
+import type { ParentThread, ParentThreadMessage } from '../model/types';
 
 // Parent side of the parent↔counsellor thread — same bubble/receipt idiom as
 // the counsellor's view (counsellor/_components/parent-portal.tsx), with the

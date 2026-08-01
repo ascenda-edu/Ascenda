@@ -1,5 +1,5 @@
 // Parent data-access layer — assembles the /parent section's read-scoped view
-// of ONE linked child's journey. Domain types live in src/lib/parent/types.ts.
+// of ONE linked child's journey. Domain types live in features/parent/model/types.ts.
 //
 // SCOPING (the hard requirement): every loader takes a childId that must come
 // from resolveLinkedChildIds() below — the single place parent→child access is
@@ -39,7 +39,7 @@ import type {
   ParentRelationship,
   ParentThread,
   ProgrammeCostLine,
-} from '@/lib/parent/types';
+} from '../model/types';
 
 type Client = SupabaseClient<Database>;
 

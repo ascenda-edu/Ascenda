@@ -1,0 +1,5 @@
+{
+  "_readme": "Direct .from() call sites outside src/lib/data. May shrink, never grow. See scripts/check-data-layer.mjs.",
+  "total": 166,
+  "files": 45
+}

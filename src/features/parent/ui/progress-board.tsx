@@ -10,7 +10,7 @@ import {
   type CategoryVisual,
   type FitTier,
 } from '@/lib/theme/categories';
-import type { ChildApplication } from '@/lib/parent/types';
+import type { ChildApplication } from '../model/types';
 
 // Read-only mirror of the student applications board — same tier/status tone
 // families as components/applications/application-list.tsx, minus every

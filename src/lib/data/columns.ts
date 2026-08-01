@@ -21,10 +21,11 @@
  * student board uses", which it was not. A parent and their child were looking
  * at two different readings of the same row.
  *
- * Three of those four now call `lib/data/applications.ts`. `lib/chat/context.ts`
- * (plus `lib/chat/tools/student-read.ts` and `student-write.ts`, found during
- * the migration) still hand-write the embed and are the remaining work; the
- * allowlist in `__tests__/data/call-sites.test.ts` tracks them.
+ * All four now call `lib/data/applications.ts`, as do the three chat modules
+ * found during the migration (`lib/chat/context.ts` and the assistant's
+ * `student-read` / `student-write` tools, which between them held a fifth and
+ * sixth spelling). The allowlist in `__tests__/data/call-sites.test.ts` is down
+ * to this file, and may only shrink.
  *
  * A column list is part of a query's meaning, not an optimisation. There are
  * three genuinely different read shapes below (a board needs deadlines, a label

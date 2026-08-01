@@ -24,14 +24,18 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage --coverageReporters=text-summary --coverageReporters=text",
     "test:env": "jest __tests__/env.test.ts",
     "test:intake": "jest __tests__/profile/intake-form/",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install --with-deps chromium",
     "test:golden": "jest __tests__/scoring/",
     "test:golden:update": "UPDATE_GOLDEN=1 jest __tests__/scoring/",
     "seed": "echo 'Run supabase/schema.sql and supabase/seed.sql via Supabase SQL editor'",
     "seed:students": "tsx --tsconfig tsconfig.json scripts/seed-students.ts",
     "db:apply": "tsx --tsconfig tsconfig.json scripts/apply-sql.ts",
-    "supabase:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID --schema public,storage > src/lib/types/database.ts"
+    "supabase:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID --schema public,storage > src/lib/types/database.ts",
+    "lint:datalayer": "node scripts/check-data-layer.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.49.0",
@@ -68,6 +72,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "3.3.6",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/typography": "^0.5.20",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "6.2.1",

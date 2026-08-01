@@ -33,7 +33,7 @@ import { cookies } from 'next/headers';
 import { type Content } from '@google/genai';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/api/rate-limit';
-import { ACTIVE_CHILD_COOKIE } from '@/lib/parent/active-child';
+import { ACTIVE_CHILD_COOKIE } from '@/features/parent';
 import {
   getSystemPrompt,
   getToolAddendum,

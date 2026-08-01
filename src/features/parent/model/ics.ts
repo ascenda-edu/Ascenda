@@ -5,7 +5,7 @@
 // importer's UTC offset (the same gotcha lib/utils/dates.ts exists for).
 // DTEND is exclusive per RFC 5545, hence the +1 day.
 
-import type { ChildDeadline } from '@/lib/parent/types';
+import type { ChildDeadline } from './types';
 
 const escapeText = (value: string): string =>
   value

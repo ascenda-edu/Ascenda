@@ -22,3 +22,10 @@ supabase/imports/**/*.csv
 
 # Supabase CLI local state (project ref, pooler URL, versions)
 supabase/.temp/
+
+# Playwright: HTML report, per-run artifacts (traces/screenshots), and the
+# signed-in storage state written by e2e/auth.setup.e2e.ts — that last one is a
+# live session cookie and must never be committed.
+playwright-report/
+test-results/
+.playwright/

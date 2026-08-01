@@ -93,6 +93,13 @@ jobs:
         # committed baseline. See scripts/check-design-tokens.baseline.json.
         run: npm run lint:tokens
 
+      - name: Data-layer confinement
+        if: always()
+        # Ratcheting, like the token check: 166 direct .from() call sites still
+        # live outside src/lib/data, so this fails only on an INCREASE. When it
+        # reaches zero, delete the script and use a real no-restricted-syntax rule.
+        run: npm run lint:datalayer
+
       - name: Dead code (advisory)
         if: always()
         # Reports only — knip's baseline is non-zero and triaging it is Phase 4.
@@ -201,10 +208,44 @@ jobs:
         run: |
           psql -h localhost -U postgres -v ON_ERROR_STOP=1 <<'SQL'
           create extension if not exists pgcrypto;
+          -- pg_trgm lives in `extensions` on Supabase but is unqualified here;
+          -- installing it into public keeps unqualified opclass references resolvable.
+          create extension if not exists pg_trgm;
+
           create schema if not exists auth;
-          create table if not exists auth.users (id uuid primary key);
+          -- `email` is NOT optional in this stub. schema.sql:1902 and
+          -- 20260801122000 both read auth.users.email, and a SQL-language function
+          -- body is validated at CREATE time — so a bare (id uuid) table fails the
+          -- whole run with 42703 "column u.email does not exist" before a single
+          -- policy is reached. The columns here are exactly those the repo's SQL
+          -- touches; this is not an attempt to model auth.users faithfully.
+          create table if not exists auth.users (
+            id uuid primary key,
+            email text
+          );
           create or replace function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
           create or replace function auth.jwt() returns jsonb language sql stable as $$ select '{}'::jsonb $$;
+
+          -- schema.sql:1104 inserts a bucket and policies storage.objects. Without
+          -- these the run aborts at 3P01 "schema storage does not exist".
+          create schema if not exists storage;
+          create table if not exists storage.buckets (
+            id text primary key,
+            name text not null,
+            public boolean default false,
+            file_size_limit bigint,
+            allowed_mime_types text[]
+          );
+          create table if not exists storage.objects (
+            id uuid primary key default gen_random_uuid(),
+            bucket_id text references storage.buckets(id),
+            name text,
+            owner uuid,
+            created_at timestamptz default now(),
+            updated_at timestamptz default now(),
+            metadata jsonb
+          );
+
           do $$ begin create role authenticated; exception when duplicate_object then null; end $$;
           do $$ begin create role anon;          exception when duplicate_object then null; end $$;
           do $$ begin create role service_role;  exception when duplicate_object then null; end $$;
@@ -228,6 +269,69 @@ jobs:
           done
           echo "All migrations replayed twice with no error."
 
+  # ── Browser end-to-end (advisory) ──────────────────────────────────────────
+  # The gate docs/audit/13-remaining-work.md blocks the StudentIntakeForm
+  # decomposition on: jsdom cannot vouch for AnimatePresence exit timing, real
+  # focus movement, or the beforeunload draft flush, so a six-step wizard rewrite
+  # verified only in jsdom is not verified.
+  #
+  # It needs a REAL Supabase account, because /profile/wizard is behind
+  # middleware and the alternative — a test-only bypass in src/middleware.ts —
+  # would mean shipping a way to skip auth. This repo has no secrets configured,
+  # so the job checks for them first and no-ops when they are absent: a check
+  # that fails on every PR is a check someone deletes.
+  #
+  # Same "runs but is not required yet" posture as `database` below: deliberately
+  # NOT in ci-ok's `needs`. Add it there the first time it goes green with real
+  # secrets — set E2E_EMAIL / E2E_PASSWORD (a THROWAWAY account: the spec
+  # completes the wizard and saves, overwriting that account's student_* rows)
+  # plus the two NEXT_PUBLIC_SUPABASE_* vars, against a non-production project.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Are E2E secrets configured?
+        id: secrets
+        env:
+          E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+        run: |
+          if [ -n "$E2E_EMAIL" ] && [ -n "$E2E_PASSWORD" ] && [ -n "$NEXT_PUBLIC_SUPABASE_URL" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::E2E secrets are not set — skipping the browser suite. See .github/workflows/ci.yml."
+          fi
+
+      - if: steps.secrets.outputs.configured == 'true'
+        run: npm ci
+
+      - name: Install Chromium
+        if: steps.secrets.outputs.configured == 'true'
+        run: npm run test:e2e:install
+
+      - name: Playwright
+        if: steps.secrets.outputs.configured == 'true'
+        run: npm run test:e2e
+        env:
+          E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.secrets.outputs.configured == 'true'
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
   # ── Aggregate gate ─────────────────────────────────────────────────────────
   # ONE check to require in branch protection. Adding a job above never means
   # touching the protection settings again — just add it to `needs`.
@@ -236,7 +340,10 @@ jobs:
   # job is SKIPPED when a dependency fails, and GitHub counts a skipped required
   # check as PASSING.
   #
-  # `database` is deliberately NOT in `needs` yet. Its one known blocker (the
+  # `database` and `e2e` are deliberately NOT in `needs` yet — see each job's own
+  # header for what has to be true before it is added.
+  #
+  # `database`: its one known blocker (the
   # missing universities.recognition_score column) is fixed, but there is no
   # Postgres in the authoring environment, so the full replay has never actually
   # been observed green — and a required check that fails on arrival is a check

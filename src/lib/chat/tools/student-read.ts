@@ -5,6 +5,8 @@
 
 import { Type, type FunctionDeclaration } from '@google/genai';
 import { resolvePrograms } from '@/lib/counsellor/data';
+import { loadApplicationBoard } from '@/lib/data/applications';
+import { reportDataError } from '@/lib/data/errors';
 import { isMissingShortlistTable } from '@/lib/shortlist/server';
 import { daysUntil } from '@/lib/utils/dates';
 import type { ProgramHit } from '../tools';
@@ -24,22 +26,9 @@ const getMyApplicationsDeclaration: FunctionDeclaration = {
   parameters: { type: Type.OBJECT, properties: {} },
 };
 
-type AppRow = {
-  id: string;
-  status: string | null;
-  program_id: string;
-  program?: {
-    name?: string | null;
-    universities?: { name?: string | null; country?: string | null } | null;
-    deadlines?: Array<{ name: string; deadline_date?: string | null }> | null;
-  } | null;
-  application_checklist?: Array<{
-    id: string;
-    task_name: string;
-    status: 'todo' | 'doing' | 'done';
-    due_date?: string | null;
-  }> | null;
-};
+// The local `AppRow` that used to sit here was the fourth hand-written copy of
+// the applications embed — the one that DID include checklist ids and did not
+// include the programme id. Both shapes now come from lib/data/columns.ts.
 
 const getMyApplications: ReadTool = {
   kind: 'read',
@@ -49,29 +38,11 @@ const getMyApplications: ReadTool = {
   statusLabel: 'Checking your applications…',
   async execute(ctx: ToolContext): Promise<Record<string, unknown>> {
     try {
-      const { data, error } = await ctx.supabase
-        .from('applications')
-        .select(
-          `
-          id,
-          status,
-          program_id,
-          program:programs(
-            name:course_name,
-            universities(name,country),
-            deadlines(name, deadline_date)
-          ),
-          application_checklist(id, task_name, status, due_date)
-        `
-        )
-        .eq('profile_id', ctx.userId)
-        .limit(MAX_APPS);
-
-      if (error) {
-        return { error: 'Could not load your applications right now.' };
-      }
-
-      const rows = ((data ?? []) as unknown as AppRow[]) ?? [];
+      // Disposition: the loader unwraps (throws + logs); the catch below turns
+      // that into the model-facing payload this tool contract requires. An
+      // empty `applications: []` on failure would have the assistant tell a
+      // student with a full board that they are tracking nothing.
+      const rows = await loadApplicationBoard(ctx.supabase, ctx.userId, { limit: MAX_APPS });
       return {
         applications: rows.map((app) => ({
           id: app.id,
@@ -79,9 +50,9 @@ const getMyApplications: ReadTool = {
           course: app.program?.name ?? 'Programme',
           university: app.program?.universities?.name ?? 'University',
           country: app.program?.universities?.country ?? null,
-          deadlines: (app.program?.deadlines ?? [])
-            .filter((d): d is { name: string; deadline_date: string } => Boolean(d.deadline_date))
-            .map((d) => ({ name: d.name, date: d.deadline_date })),
+          deadlines: (app.program?.deadlines ?? []).flatMap((d) =>
+            d.deadline_date ? [{ name: d.name, date: d.deadline_date }] : []
+          ),
           tasks: (app.application_checklist ?? []).map((t) => ({
             id: t.id,
             task_name: t.task_name,
@@ -183,6 +154,11 @@ const getMyMatches: ReadTool = {
         .limit(limit);
 
       if (error) {
+        // Disposition: report-only. Neither `unwrap` (a throw breaks the tool
+        // stream) nor `soft` (an empty list tells the model "no matches yet",
+        // and the payload below acts on exactly that) — the tool owns its
+        // model-facing message, so only the logging half is shared.
+        reportDataError('chat.getMyMatches', error, { userId: ctx.userId });
         return { error: 'Could not load your matches right now.' };
       }
 
@@ -293,6 +269,9 @@ const getMyShortlist: ReadTool = {
             note: "Shortlist sync isn't enabled on this deployment; the user's shortlist is stored only in their browser and is not visible here. Do NOT claim it is empty — point them at the Shortlist page.",
           };
         }
+        // Report-only, as above. The missing-table branch returns before this:
+        // that one is an expected deployment posture, not a failure to log.
+        reportDataError('chat.getMyShortlist', error, { userId: ctx.userId });
         return { error: 'Could not load your shortlist right now.' };
       }
 

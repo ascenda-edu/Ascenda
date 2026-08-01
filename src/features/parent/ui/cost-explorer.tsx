@@ -20,12 +20,12 @@ import {
   formatWithHomeCurrency,
   isHomeCurrencyCode,
   type HomeCurrencyCode,
-} from '@/lib/parent/currency';
-import type { ProgrammeCostLine } from '@/lib/parent/types';
+} from '../model/currency';
+import type { ProgrammeCostLine } from '../model/types';
 
 // Per-programme cost cards + a yearly cost-of-attendance estimate, all
 // convertible to the parent's home currency. Amounts are GBP-native; the
-// conversion is a static-rate approximation (see lib/parent/currency.ts).
+// conversion is a static-rate approximation (see features/parent/model/currency.ts).
 
 // Tier tone comes from TIER_VISUAL (lib/theme/categories) — the single source of
 // truth for Reach/Match/Safety. Only the label→key mapping lives here, because the

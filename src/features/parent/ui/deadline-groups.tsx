@@ -6,8 +6,8 @@ import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
 import { parseLocalDate } from '@/lib/utils/dates';
 import { DEADLINE_VISUAL } from '@/lib/theme/categories';
-import { buildDeadlinesIcs } from '@/lib/parent/ics';
-import type { ChildDeadline } from '@/lib/parent/types';
+import { buildDeadlinesIcs } from '../model/ics';
+import type { ChildDeadline } from '../model/types';
 
 // Urgency-grouped deadline list (counsellor deadline-monitor idiom) with an
 // all-day .ics export so parents can mirror the dates into their own calendar.

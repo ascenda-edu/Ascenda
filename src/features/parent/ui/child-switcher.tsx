@@ -4,8 +4,8 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { LinkedChild } from '@/lib/parent/types';
-import { ACTIVE_CHILD_COOKIE } from '@/lib/parent/active-child';
+import type { LinkedChild } from '../model/types';
+import { ACTIVE_CHILD_COOKIE } from '../model/active-child';
 
 // Switches which linked child the /parent section shows. The selection is a
 // cookie (not localStorage) so the server components can read it; switching

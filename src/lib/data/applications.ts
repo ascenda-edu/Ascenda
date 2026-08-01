@@ -22,11 +22,13 @@ import type { MatchTier } from '@/lib/matching/match-tier';
 import {
   APPLICATION_BOARD_SELECT,
   APPLICATION_LABEL_SELECT,
+  APPLICATION_SUMMARY_SELECT,
   APPLICATION_TASKS_SELECT,
   DOCUMENT_SELECT,
   MATCH_TIER_SELECT,
   type ApplicationBoardRow,
   type ApplicationLabelRow,
+  type ApplicationSummaryRow,
   type ApplicationTasksRow,
   type DocumentRow,
   type MatchTierRow,
@@ -59,13 +61,47 @@ const castRows = <T>(rows: unknown): T[] => (rows ?? []) as T[];
  */
 export async function loadApplicationBoard(
   supabase: Client,
-  profileId: string
+  profileId: string,
+  // The assistant's `get_my_applications` tool caps its read at 20 rows so a
+  // heavy user cannot blow out the model's context. That cap is a property of
+  // ONE caller, not of the board, so it is an option here rather than a second
+  // copy of the query.
+  options?: { limit?: number }
 ): Promise<ApplicationBoardRow[]> {
+  const query = supabase
+    .from('applications')
+    .select(APPLICATION_BOARD_SELECT)
+    .eq('profile_id', profileId);
   const rows = unwrap(
-    await supabase.from('applications').select(APPLICATION_BOARD_SELECT).eq('profile_id', profileId),
+    await (options?.limit === undefined ? query : query.limit(options.limit)),
     'applications.board'
   );
   return castRows<ApplicationBoardRow>(rows);
+}
+
+/**
+ * Applications with no embeds — id, status, program_id only.
+ *
+ * The student dashboard counts these into its pipeline card and hero stats and
+ * resolves the programme side itself (deadlines are fetched separately, by
+ * program_id).
+ *
+ * Disposition: **unwrap**. Zero rows renders "0 applications / nothing in your
+ * pipeline" beside a "You're all caught up" hero — the same lie the board used
+ * to tell, on the page students actually land on.
+ */
+export async function loadApplicationSummaries(
+  supabase: Client,
+  profileId: string
+): Promise<ApplicationSummaryRow[]> {
+  const rows = unwrap(
+    await supabase
+      .from('applications')
+      .select(APPLICATION_SUMMARY_SELECT)
+      .eq('profile_id', profileId),
+    'applications.summaries'
+  );
+  return castRows<ApplicationSummaryRow>(rows);
 }
 
 /**
@@ -111,6 +147,33 @@ export async function loadApplicationLabels(
 }
 
 /**
+ * One application, by id, with just enough to name it — "Add a task to
+ * <course>". RLS scopes the row to the caller, so an id belonging to someone
+ * else comes back as no row rather than as a label.
+ *
+ * Disposition: **soft**, fallback = null. The one caller (the assistant's
+ * `create_task` confirm card) reads null as "don't draft a card at all", which
+ * is the honest response to "we cannot say what you would be confirming" —
+ * unlike the list reads above, an absent row here removes a UI affordance rather
+ * than asserting the student has nothing.
+ */
+export async function loadApplicationLabel(
+  supabase: Client,
+  applicationId: string
+): Promise<ApplicationLabelRow | null> {
+  const row = soft<unknown>(
+    await supabase
+      .from('applications')
+      .select(APPLICATION_LABEL_SELECT)
+      .eq('id', applicationId)
+      .maybeSingle(),
+    'applications.label',
+    null
+  );
+  return (row ?? null) as ApplicationLabelRow | null;
+}
+
+/**
  * Uploaded documents for a set of applications, newest first.
  *
  * Disposition: **unwrap**, for the reason above.
@@ -135,8 +198,16 @@ export async function loadDocumentsForApplications(
 /* tier lookup                                                                 */
 /* -------------------------------------------------------------------------- */
 
-/** `student_matches.breakdown` is free-form JSON; the tier is one key inside it. */
-const tierFromBreakdown = (breakdown: MatchTierRow['breakdown']): MatchTier | null => {
+/**
+ * `student_matches.breakdown` is free-form JSON; the tier is one key inside it.
+ *
+ * Exported because the counsellor cohort loader reads the same key out of the
+ * same column, then falls back to a score-derived tier when it is absent — a
+ * fallback the student/parent boards deliberately do NOT have (see
+ * `loadTierByProgram`). The EXTRACTION is shared; the fallback policy stays with
+ * the caller that owns it.
+ */
+export const tierFromBreakdown = (breakdown: MatchTierRow['breakdown']): MatchTier | null => {
   if (!breakdown || typeof breakdown !== 'object' || Array.isArray(breakdown)) return null;
   const tier = (breakdown as Record<string, unknown>).tier;
   return tier === 'Reach' || tier === 'Match' || tier === 'Safe' ? tier : null;

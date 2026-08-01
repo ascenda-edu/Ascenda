@@ -29,6 +29,10 @@
  *   soft(result, context, fallback)    → logs and returns the named fallback.
  *   ActionResult<T>                    → writes, which must not throw across an
  *                                        API or server-action boundary.
+ *   reportDataError(context, cause)    → logs only, for the caller that owns a
+ *                                        response shape of its own (the
+ *                                        assistant's tools). Not a control-flow
+ *                                        decision; see the function.
  *
  * `soft` is deliberately more typing than `unwrap`: rendering empty on failure
  * should cost a line of thought.
@@ -187,6 +191,32 @@ export const isDataError = (value: unknown): value is DataError => value instanc
  */
 const report = (error: DataError, extra?: Record<string, unknown>): void => {
   logger.error(`data: ${error.context} failed`, error, { ...error.toLogContext(), ...extra });
+};
+
+/**
+ * LOG ONLY — for the caller whose disposition is neither "throw" nor "return a
+ * fallback", because it owns a response shape of its own.
+ *
+ * The assistant's read tools are the case this exists for: a failed lookup must
+ * come back as a payload the MODEL can read (`{ error: 'Could not load your
+ * matches right now.' }`), because throwing breaks the stream and an empty array
+ * would tell the model the student has no matches. Those tools already got the
+ * control flow right and were simply losing the driver detail on the floor.
+ *
+ * This is not a fourth error convention: it is the logging half of `unwrap` /
+ * `soft` / `err` exposed on its own, so such a call site records the failure the
+ * same way and in the same format as everything else, instead of reaching for a
+ * bare `console.error`. Returns the sanitised `DataError` for callers that want
+ * its `kind`/`code`; ignoring the return value is fine.
+ */
+export const reportDataError = (
+  context: string,
+  cause?: unknown,
+  extra?: Record<string, unknown>
+): DataError => {
+  const error = new DataError(context, cause);
+  report(error, extra);
+  return error;
 };
 
 /* -------------------------------------------------------------------------- */

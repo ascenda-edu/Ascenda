@@ -14,6 +14,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/types/database';
 import { COMPLETION_COLUMNS, buildStepCompletion } from '@/lib/profile/completion';
 import { matchTierFromScore } from '@/lib/matching/match-tier';
+import { tierFromBreakdown } from '@/lib/data/applications';
+import type { MatchTierRow } from '@/lib/data/columns';
+import { unwrap } from '@/lib/data/errors';
 import { flagEmoji } from '@/lib/utils/flag';
 import { MS_PER_DAY, parseLocalDate, startOfToday } from '@/lib/utils/dates';
 import type {
@@ -41,18 +44,13 @@ type Client = SupabaseClient<Database>;
 
 const GRADE_ORDER: Record<string, number> = { 'A*': 7, A: 6, B: 5, C: 4, D: 3, E: 2, U: 1 };
 
-// Throw instead of silently treating a failed query as an empty table — a
-// dropped RLS policy or network failure must surface in the counsellor
-// section's error boundary, not render as "0 students, all clear".
-const unwrap = <T,>(
-  res: { data: T | null; error: { message?: string } | null },
-  label: string
-): T | null => {
-  if (res.error) {
-    throw new Error(`counsellor data: ${label} query failed — ${res.error.message ?? 'unknown error'}`);
-  }
-  return res.data;
-};
+// `unwrap` was defined here, and character-for-character again in decks.ts and
+// parent/data.ts. It now lives in @/lib/data/errors — same disposition (throw,
+// so a dropped RLS policy or network failure surfaces in the counsellor
+// section's error boundary instead of rendering as "0 students, all clear"),
+// plus two things the local copy did not do: it LOGS the driver detail, and it
+// keeps PostgREST's message — which names tables, columns and policies — out of
+// the error that reaches the boundary. Contexts below are `counsellor.<table>`.
 
 // The counsellor view is scoped to the seeded demo cohort. Founder/dev accounts
 // are also role='student' (so they keep their own student access) but should not
@@ -120,10 +118,22 @@ export interface OutcomeStats {
 const tierFromScore = (score: number | null | undefined): MatchTier =>
   matchTierFromScore(score) ?? 'Reach';
 
-const tierFromMatchRow = (row: { score: number | null; breakdown: unknown }): MatchTier => {
-  const t = (row.breakdown as { tier?: MatchTier } | null)?.tier;
-  return t ?? tierFromScore(row.score);
-};
+/**
+ * The stored tier, else one derived from the score.
+ *
+ * The EXTRACTION half is `tierFromBreakdown` from lib/data/applications — the
+ * same `breakdown.tier` key the student board and parent portal read. Only the
+ * fallback is local, and it is deliberately NOT pushed down into the shared
+ * loader: `loadTierByProgram` returns "no tier" when the key is absent (a badge
+ * disappears), whereas the counsellor roster must render a tier for every row,
+ * so it derives one from the score. Two different products, one parser.
+ *
+ * Behaviour note: the old local parser returned `breakdown.tier` unchecked, so a
+ * junk value ('Bogus') was passed through as if it were a MatchTier. It now
+ * falls back to the score-derived tier instead.
+ */
+const tierFromMatchRow = (row: { score: number | null; breakdown: MatchTierRow['breakdown'] }): MatchTier =>
+  tierFromBreakdown(row.breakdown) ?? tierFromScore(row.score);
 
 const mapEnglishStatus = (s: string | null | undefined): 'met' | 'missing' | 'booked' => {
   if (s === 'met' || s === 'exceeds' || s === 'exceptional') return 'met';
@@ -173,7 +183,7 @@ export const resolvePrograms = async (supabase: Client, programIds: string[]): P
       .from('programs')
       .select('id, course_name, universities(name, country)')
       .in('id', ids.slice(i, i + CHUNK));
-    for (const row of (unwrap(res, 'programs') ?? []) as any[]) {
+    for (const row of (unwrap(res, 'counsellor.programs') ?? []) as any[]) {
       const uni = Array.isArray(row.universities) ? row.universities[0] : row.universities;
       map.set(row.id, {
         courseName: row.course_name ?? 'Programme',
@@ -193,7 +203,7 @@ export const nameMap = async (supabase: Client, profileIds: string[]): Promise<M
     .from('student_personal_information')
     .select('profile_id, first_name, last_name, nationality, resident_country')
     .in('profile_id', ids);
-  for (const r of (unwrap(res, 'student names') ?? []) as Array<{
+  for (const r of (unwrap(res, 'counsellor.studentNames') ?? []) as Array<{
     profile_id: string;
     first_name: string | null;
     last_name: string | null;
@@ -245,7 +255,7 @@ const buildStudents = async (
   // 1. base profiles (students only)
   let profileQuery = supabase.from('profiles').select('id, created_at').eq('role', 'student');
   if (opts.ids && opts.ids.length > 0) profileQuery = profileQuery.in('id', opts.ids);
-  const profiles = unwrap(await profileQuery, 'profiles') ?? [];
+  const profiles = unwrap(await profileQuery, 'counsellor.profiles') ?? [];
   let ids = profiles.map((p) => p.id);
   if (opts.excludeId) ids = ids.filter((id) => id !== opts.excludeId);
   if (ids.length === 0) return [];
@@ -285,12 +295,12 @@ const buildStudents = async (
       .in('student_profile_id', ids),
   ]);
 
-  const academic = (unwrap(academicRes, 'student_academic_input') ?? []) as any[];
-  const subjects = (unwrap(subjectsRes, 'student_subjects') ?? []) as any[];
-  const lifestyle = (unwrap(lifestyleRes, 'student_lifestyle_preference') ?? []) as any[];
-  const tests = (unwrap(testsRes, 'student_admissions_tests') ?? []) as any[];
-  const apps = (unwrap(appsRes, 'applications') ?? []) as any[];
-  const notes = (unwrap(notesRes, 'counsellor_notes') ?? []) as any[];
+  const academic = (unwrap(academicRes, 'counsellor.student_academic_input') ?? []) as any[];
+  const subjects = (unwrap(subjectsRes, 'counsellor.student_subjects') ?? []) as any[];
+  const lifestyle = (unwrap(lifestyleRes, 'counsellor.student_lifestyle_preference') ?? []) as any[];
+  const tests = (unwrap(testsRes, 'counsellor.student_admissions_tests') ?? []) as any[];
+  const apps = (unwrap(appsRes, 'counsellor.applications') ?? []) as any[];
+  const notes = (unwrap(notesRes, 'counsellor.counsellor_notes') ?? []) as any[];
 
   // Matches per student, capped + ordered by score. Done per-student (not one
   // .in()) so a profile with a bloated match cache can't (a) blow past
@@ -307,7 +317,7 @@ const buildStudents = async (
         .limit(MATCH_CAP)
     )
   );
-  const matches = matchResults.flatMap((res) => (unwrap(res, 'student_matches') ?? []) as any[]);
+  const matches = matchResults.flatMap((res) => (unwrap(res, 'counsellor.student_matches') ?? []) as any[]);
 
   // 3. resolve program names/universities + applied-program deadlines
   const allProgramIds = [
@@ -323,7 +333,7 @@ const buildStudents = async (
       .from('deadlines')
       .select('id, program_id, name, deadline_date')
       .in('program_id', appliedProgramIds);
-    for (const d of (unwrap(dlsRes, 'deadlines') ?? []) as any[]) {
+    for (const d of (unwrap(dlsRes, 'counsellor.deadlines') ?? []) as any[]) {
       if (!d.deadline_date) continue;
       const arr = deadlinesByProgram.get(d.program_id) ?? [];
       arr.push({ id: d.id, name: d.name, date: d.deadline_date });
@@ -541,8 +551,11 @@ export const loadRoster = async (
 ): Promise<RosterStudent[]> => {
   // 1. base profiles (students only)
   const profiles = unwrap(
+    // `.eq('role', 'student')` — NOT 'counsellor.student'. `profiles.role` is
+    // 'student' | 'counsellor' | 'admin' (schema.sql:60), so the prefixed value
+    // matched nothing and this function returned [] for every input.
     await supabase.from('profiles').select('id').eq('role', 'student'),
-    'profiles'
+    'counsellor.profiles'
   ) ?? [];
   let ids = profiles.map((p) => p.id);
   if (opts.excludeId) ids = ids.filter((id) => id !== opts.excludeId);
@@ -576,14 +589,14 @@ export const loadRoster = async (
     supabase.from('student_lifestyle_preference').select('profile_id').in('profile_id', ids),
   ]);
   const academicById = new Map<string, any>(
-    ((unwrap(academicRes, 'student_academic_input') ?? []) as any[]).map((r) => [r.profile_id, r])
+    ((unwrap(academicRes, 'counsellor.student_academic_input') ?? []) as any[]).map((r) => [r.profile_id, r])
   );
   const subjectCounts = new Map<string, number>();
-  for (const r of (unwrap(subjectsRes, 'student_subjects') ?? []) as any[]) {
+  for (const r of (unwrap(subjectsRes, 'counsellor.student_subjects') ?? []) as any[]) {
     subjectCounts.set(r.profile_id, (subjectCounts.get(r.profile_id) ?? 0) + 1);
   }
   const lifestyleById = new Map<string, any>(
-    ((unwrap(lifestyleRes, 'student_lifestyle_preference') ?? []) as any[]).map((r) => [r.profile_id, r])
+    ((unwrap(lifestyleRes, 'counsellor.student_lifestyle_preference') ?? []) as any[]).map((r) => [r.profile_id, r])
   );
 
   return ids.map((id): RosterStudent => {
@@ -784,8 +797,11 @@ export const deriveApplicationsWithPlatform = (students: CounsellorStudent[]): E
 
 export const loadOutcomes = async (supabase: Client, opts: { excludeId?: string } = {}): Promise<CounsellorOutcome[]> => {
   const studentProfiles = unwrap(
+    // `.eq('role', 'student')` — NOT 'counsellor.student'. `profiles.role` is
+    // 'student' | 'counsellor' | 'admin' (schema.sql:60), so the prefixed value
+    // matched nothing and this function returned [] for every input.
     await supabase.from('profiles').select('id').eq('role', 'student'),
-    'profiles'
+    'counsellor.profiles'
   ) ?? [];
   let ids = studentProfiles.map((p) => p.id);
   if (opts.excludeId) ids = ids.filter((id) => id !== opts.excludeId);
@@ -831,7 +847,7 @@ export const loadOutcomes = async (supabase: Client, opts: { excludeId?: string 
     )
   );
   for (const res of matchResults) {
-    for (const m of (unwrap(res, 'student_matches') ?? []) as any[]) {
+    for (const m of (unwrap(res, 'counsellor.student_matches') ?? []) as any[]) {
       tierByKey.set(`${m.profile_id}:${m.program_id}`, tierFromMatchRow(m));
     }
   }

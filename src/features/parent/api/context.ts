@@ -5,9 +5,9 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { loadLinkedChildren, pickActiveChild } from '@/lib/parent/data';
-import { ACTIVE_CHILD_COOKIE } from '@/lib/parent/active-child';
-import type { LinkedChild } from '@/lib/parent/types';
+import { loadLinkedChildren, pickActiveChild } from './data';
+import { ACTIVE_CHILD_COOKIE } from '../model/active-child';
+import type { LinkedChild } from '../model/types';
 
 export interface ParentContext {
   supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>;

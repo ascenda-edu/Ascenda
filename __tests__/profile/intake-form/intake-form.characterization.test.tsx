@@ -49,23 +49,35 @@
  *     blocks, so the heading can land a frame before the fields — which is why
  *     step assertions use `findBy*` and why `hydrateThenGoTo` waits for both.
  *
- * BUGS FOUND WHILE WRITING THIS (reported, not fixed)
- *   F-A  Hydrating a payload from the mount effect wipes every Radix `<Select>`
- *        already on screen. Reaches real users via `profile/wizard/page.tsx:60`,
+ * BUGS FOUND WHILE WRITING THIS — ALL FIVE NOW FIXED
+ * Each was first pinned here as-is. The tests below now assert the REPAIR, so a
+ * regression re-breaks the build instead of quietly restoring the defect. The
+ * descriptions are kept because they explain what the assertion is guarding.
+ *   F-A  Hydrating a payload from the mount effect wiped every Radix `<Select>`
+ *        already on screen. Reached real users via `profile/wizard/page.tsx:60`,
  *        which routinely renders a returning student straight onto step 2 or 3.
+ *        FIXED in `src/components/ui/select.tsx` (swallows `onValueChange('')`).
  *        Pinned, with a control, in the last describe block.
- *   F-B  `focusFirstError` (:1294) schedules a 50ms `setTimeout` that nothing
- *        cancels on unmount; it then calls `.focus()` on whatever it finds in
- *        the live document. See the `afterEach` below.
- *   F-C  `restoreSavedProfile` (:1337) sets "Restored last saved progress." and
- *        navigates to step 1, but the status block only exists inside the
- *        Review step's JSX (:2493) — the message can never be seen.
- *   F-D  `FieldError` renders INSIDE the `<label>`, so an errored field's
- *        accessible name becomes "First nameFirst name is required."
- *   F-E  The nationality and subject row remove buttons have no accessible
- *        name (the activity one does: `aria-label="Remove activity"`).
+ *   F-B  `focusFirstError` scheduled a `setTimeout` that nothing cancelled on
+ *        unmount; it then called `.focus()` on whatever `[data-field]` it found
+ *        in the live document — across a test boundary, the NEXT test's tree.
+ *        FIXED: one timer at a time, cleared on unmount, and the search is
+ *        scoped to the form's own (still-connected) content subtree. Pinned in
+ *        the `focusFirstError` describe.
+ *   F-C  `restoreSavedProfile` set "Restored last saved progress." and navigated
+ *        to step 1, but the status block only existed inside the Review step's
+ *        JSX — so the message could never be seen. FIXED: the status line was
+ *        hoisted out of the Review section and now renders on every step.
+ *   F-D  `FieldError` rendered INSIDE the `<label>`, so an errored field's
+ *        accessible name became "First nameFirst name is required." FIXED: the
+ *        message is a sibling of the label and is reached via `aria-describedby`
+ *        (the `a11yError` helper). Pinned in "field errors are described…".
+ *   F-E  The nationality and subject row remove buttons had no accessible name
+ *        (the activity one does: `aria-label="Remove activity"`). FIXED: both
+ *        now carry `aria-label="Remove {nationality,subject} N"`.
  *   F-04 (from the audit) the subject level `<Select>` offers only `A_LEVEL`
- *        to every non-IB student — pinned in "conditional rendering on step 3".
+ *        to every non-IB student — STILL OPEN, pinned in "conditional rendering
+ *        on step 3".
  */
 
 import { render, screen, waitFor, within } from '@testing-library/react';
@@ -346,8 +358,9 @@ const nextButton = () => screen.getByRole('button', { name: 'Next' });
 const backButton = () => screen.getByRole('button', { name: 'Back' });
 const submitButton = () => screen.getByRole('button', { name: /Submit & see matches|Profile saved|Saving/ });
 
-/** `FieldError` renders INSIDE the `<label>`, so an errored field's label text
- *  grows to include the message. Every label lookup is therefore prefix-anchored. */
+/** Prefix-anchored label lookup. Errored fields no longer absorb their message
+ *  into the label (F-D), but plenty of labels still carry a trailing
+ *  "(optional)" or "(optional, max 350 chars)" suffix. */
 const labelled = (label: string) =>
   screen.getByLabelText(new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
 
@@ -447,12 +460,11 @@ afterEach(async () => {
   // next test's first URL write.
   window.dispatchEvent(new Event('popstate'));
 
-  // `focusFirstError` (:1294) schedules `window.setTimeout(…, 50)` and nothing
-  // cancels it on unmount, so it outlives the component and then calls
-  // `.focus()` on whatever `[data-field]` node it finds in the LIVE document.
-  // Across tests that meant a failed validation in one test stealing focus
-  // mid-keystroke in the next. Drain it here — RTL's auto-cleanup has already
-  // unmounted, so the callback finds nothing.
+  // `focusFirstError` schedules a deferred focus hop. It is now cancelled on
+  // unmount and scoped to the form's own subtree (F-B), so it can no longer
+  // reach across a test boundary — the dedicated test in the `focusFirstError`
+  // describe is what guards that. This wait just lets any in-flight timer
+  // (draft debounce, Radix transitions) settle before the next test starts.
   await new Promise((resolve) => setTimeout(resolve, 70));
 });
 
@@ -950,6 +962,74 @@ describe('focusFirstError', () => {
     const inputs = screen.getAllByPlaceholderText('Subject name');
     await waitFor(() => expect(document.activeElement).toBe(inputs[3]));
   });
+
+  it('a pending focus hop dies with the component (F-B)', async () => {
+    // Submitting a blank form from Review bounces to step 1 and schedules the
+    // hop with the LONG (600ms) delay, which is a wide enough window to unmount
+    // inside deterministically. The timer used to survive that unmount and then
+    // `.focus()` the first `[data-field]` it could find anywhere in the live
+    // document — i.e. whatever tree had replaced this one.
+    const user = setup();
+    const first = renderForm({ initialStep: 6 });
+    await user.click(submitButton());
+    first.unmount();
+
+    renderForm();
+    const email = labelled('Email');
+    email.focus();
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    // Previously: focus was stolen to the second tree's First name input.
+    expect(document.activeElement).toBe(email);
+  }, 15000);
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 2b. FIELD ERROR ↔ FIELD ASSOCIATION (F-D)
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe('field errors are described, not named (F-D)', () => {
+  it('an errored input keeps its own accessible name', async () => {
+    const user = setup();
+    renderForm();
+    await user.click(nextButton());
+    await screen.findByText('First name is required.');
+    // Was "First nameFirst name is required." — the message was rendered inside
+    // the <label>, so every screen reader re-read it on each keystroke.
+    expect(labelled('First name')).toHaveAccessibleName('First name');
+    expect(labelled('Email')).toHaveAccessibleName('Email');
+  });
+
+  it('the message is reachable from the input via aria-describedby', async () => {
+    const user = setup();
+    renderForm();
+    await user.click(nextButton());
+    await screen.findByText('First name is required.');
+    const input = labelled('First name');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAccessibleDescription('First name is required.');
+  });
+
+  it('holds for a combobox that renders its own error too', async () => {
+    const user = setup();
+    renderForm();
+    await user.click(nextButton());
+    await screen.findByText('Country of residence is required.');
+    const input = labelled('Country of residence');
+    expect(input).toHaveAccessibleName('Country of residence');
+    expect(input).toHaveAccessibleDescription('Country of residence is required.');
+  });
+
+  it('holds on step 2 and step 3 as well', async () => {
+    const user = setup();
+    renderForm();
+    await fillStep1(user);
+    await user.click(nextButton());
+    await screen.findByRole('heading', { name: 'Your studies' });
+    await user.click(nextButton());
+    await screen.findByText('School name is required.');
+    expect(labelled('School name')).toHaveAccessibleName('School name');
+    expect(labelled('School country')).toHaveAccessibleName('School country');
+  });
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -1321,13 +1401,18 @@ describe('nationality rows', () => {
     expect(rows()[1]).toHaveValue('Charlie');
   });
 
-  it('the remove control has no accessible name (F-E)', async () => {
-    // The activity rows get `aria-label="Remove activity"`; nationality and
-    // subject rows do not, so their delete buttons announce as "button".
+  it('the remove control names the row it removes (F-E)', async () => {
+    // The activity rows always had `aria-label="Remove activity"`; the
+    // nationality and subject rows had nothing, so their icon-only delete
+    // buttons announced as bare "button" — indistinguishable from each other.
     const user = setup();
     renderForm();
     await user.click(screen.getByRole('button', { name: '+ Add another' }));
-    expect(within(nationalityBox()).getAllByRole('button')[0]).toHaveAccessibleName('');
+    const removes = within(nationalityBox()).getAllByRole('button');
+    expect(removes[0]).toHaveAccessibleName('Remove nationality 1');
+    expect(removes[1]).toHaveAccessibleName('Remove nationality 2');
+    // …and each is therefore reachable by name.
+    expect(screen.getByRole('button', { name: 'Remove nationality 2' })).toBe(removes[1]);
   });
 
   it('the remove control is hidden while only one row exists', async () => {
@@ -1432,6 +1517,15 @@ describe('subject rows', () => {
     const names = screen.getAllByPlaceholderText('Subject name');
     expect(names).toHaveLength(6);
     expect(names.every((el) => (el as HTMLInputElement).value === '')).toBe(true);
+  });
+
+  it('each remove control names its row (F-E)', () => {
+    renderForm({ initialPayload: clone(IB_PAYLOAD), initialStep: 3 });
+    const removeButtons = within(subjectBox()).getAllByRole('button');
+    expect(removeButtons.map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Remove subject 1', 'Remove subject 2', 'Remove subject 3',
+      'Remove subject 4', 'Remove subject 5', 'Remove subject 6'
+    ]);
   });
 
   it('hydration does NOT reset the subject rows (skipProgrammeResetRef)', () => {
@@ -1709,12 +1803,28 @@ describe('localStorage draft', () => {
     expect(await screen.findByRole('heading', { name: 'Who are you?' })).toBeInTheDocument();
     await waitFor(() => expect(labelled('First name')).toHaveValue('Amara'));
     expect(readDraft()).toBeNull();
-    // FINDING: `restoreSavedProfile` sets a "Restored last saved progress."
-    // status AND sends the user to step 1 — but the status block only exists
-    // inside the Review step's JSX (:2493), so the message can never be seen.
-    // Pinning the dead-end as it stands.
-    expect(screen.queryByText('Restored last saved progress.')).not.toBeInTheDocument();
+    // F-C. `restoreSavedProfile` sets a "Restored last saved progress." status
+    // AND sends the user to step 1. The status block used to exist only inside
+    // the Review step's JSX, so the message was unreachable — the one visible
+    // acknowledgement of an action that silently discards the user's draft. The
+    // block now renders outside the per-step AnimatePresence.
+    expect(await screen.findByText('Restored last saved progress.')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Restored last saved progress.');
   }, 25000);
+
+  it('the restore confirmation follows the user to whatever step they land on (F-C)', async () => {
+    const user = setup();
+    renderForm({ initialPayload: clone(IB_PAYLOAD), initialStep: 3 });
+    await user.click(screen.getByRole('button', { name: 'Restore last save' }));
+    // Lands on step 1 …
+    expect(await screen.findByRole('heading', { name: 'Who are you?' })).toBeInTheDocument();
+    expect(await screen.findByText('Restored last saved progress.')).toBeInTheDocument();
+    // … and the message is still there after moving on, because the status line
+    // is no longer owned by one step's JSX.
+    await user.click(nextButton());
+    await screen.findByRole('heading', { name: 'Your studies' });
+    expect(screen.getByText('Restored last saved progress.')).toBeInTheDocument();
+  }, 15000);
 
   it('"Restore last save" is absent when there is no server payload', () => {
     renderForm();

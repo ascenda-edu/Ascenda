@@ -42,7 +42,7 @@ const MIGRATED = [
   'src/app/applications/page.tsx',
   'src/app/applications/tasks/page.tsx',
   'src/app/applications/documents/page.tsx',
-  'src/lib/parent/data.ts',
+  'src/features/parent/api/data.ts',
 ];
 
 describe('the migrated call sites go through the data layer', () => {
@@ -90,15 +90,15 @@ describe('the migrated call sites go through the data layer', () => {
 describe('the nested applications embed exists in one place', () => {
   /**
    * Files still writing `program:programs(…)` by hand. This list may only
-   * SHRINK. Each entry is a call site that has not moved onto
-   * `src/lib/data/columns.ts` yet — they are owned by other modules in this
-   * phase (the chat context and the assistant's read/write tools).
+   * SHRINK.
+   *
+   * It is now down to the module that OWNS the string. The three chat entries
+   * (`lib/chat/context.ts`, `lib/chat/tools/student-read.ts`,
+   * `lib/chat/tools/student-write.ts`) came off it when those files moved onto
+   * `loadApplicationBoard` / `loadApplicationLabel`.
    */
   const ALLOWED = new Set([
     'src/lib/data/columns.ts', // the owner
-    'src/lib/chat/context.ts',
-    'src/lib/chat/tools/student-read.ts',
-    'src/lib/chat/tools/student-write.ts',
   ]);
 
   it('is not re-hand-written anywhere new', () => {
@@ -119,9 +119,45 @@ describe('the nested applications embed exists in one place', () => {
 });
 
 describe('the copied unwrap helpers', () => {
-  it('parent/data.ts uses the shared one instead of its own', () => {
-    const source = read('src/lib/parent/data.ts');
+  /** All three copies of the identical helper the audit counted. */
+  const COPIES = [
+    'src/features/parent/api/data.ts',
+    'src/lib/counsellor/data.ts',
+    'src/lib/counsellor/decks.ts',
+  ];
+
+  it.each(COPIES)('%s uses the shared one instead of its own', (path) => {
+    const source = read(path);
     expect(source).toContain("import { unwrap } from '@/lib/data/errors'");
     expect(source).not.toMatch(/const\s+unwrap\s*=/);
+  });
+
+  it('nothing under src/lib defines a local unwrap any more', () => {
+    const offenders = walk(join(SRC, 'lib'))
+      .filter((file) => /const\s+unwrap\s*=/.test(stripComments(readFileSync(file, 'utf8'))))
+      .map((file) => relative(ROOT, file).split(/[\\/]/).join('/'));
+
+    // errors.ts declares `export function unwrap`, not `const unwrap =`.
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe('the assistant reads applications through the data layer', () => {
+  const CHAT = [
+    'src/lib/chat/context.ts',
+    'src/lib/chat/tools/student-read.ts',
+    'src/lib/chat/tools/student-write.ts',
+  ];
+
+  it.each(CHAT)('%s imports a loader rather than building the query', (path) => {
+    const source = read(path);
+    expect(source).toMatch(/from '@\/lib\/data\/(applications|columns|errors)'/);
+    for (const match of source.matchAll(/\.from\('applications'\)[\s\S]{0,80}?\.select\(([^)]*)/g)) {
+      expect(match[1]).toMatch(/APPLICATION_[A-Z_]+_SELECT/);
+    }
+  });
+
+  it.each(CHAT)('%s hand-writes no application row interface', (path) => {
+    expect(read(path)).not.toMatch(/type\s+(StudentAppRecord|AppRow|ApplicationRecord|AppRecord)\s*=/);
   });
 });

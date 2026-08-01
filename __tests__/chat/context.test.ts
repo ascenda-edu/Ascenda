@@ -16,7 +16,7 @@ jest.mock('@/lib/counsellor/data', () => ({
   ),
 }));
 
-jest.mock('@/lib/parent/data', () => ({
+jest.mock('@/features/parent', () => ({
   loadLinkedChildren: jest.fn(),
   pickActiveChild: jest.fn(),
   loadChildOverview: jest.fn(),
@@ -34,7 +34,7 @@ import {
   pickActiveChild,
   loadChildOverview,
   loadChildThread,
-} from '@/lib/parent/data';
+} from '@/features/parent';
 
 // ── student-mode supabase mock ───────────────────────────────────────────────
 
