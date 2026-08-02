@@ -81,15 +81,42 @@ to say what was applied.
 | 35 | `20260801120000_close_counsellor_access_and_split_write_policies.sql` | restores the real counsellor test, `is_admin()`, splits 3 `FOR ALL` policies | ❌ | function `is_admin` |
 | 36 | `20260801122000_counsellor_assignments.sql` | `counsellor_assignments` + relationship helpers + backfill | ❌ | table `counsellor_assignments` |
 | 37 | `20260801130000_reconcile_missing_tables.sql` | `student_activities`, `simulation_results` | ❌ *(no-op on remote — they already exist there)* | table `student_activities` |
-| 38 | `20260802100000_indexes_extensions_and_rls_gaps.sql` | `pg_trgm`, 14 FK indexes, query-shape indexes, `cities`/archive RLS, drops 4 redundant indexes | ❌ | index `idx_programs_course_name_trgm` |
+| 38 | `20260802100000_indexes_extensions_and_rls_gaps.sql` | `pg_trgm`, 14 FK indexes, query-shape indexes, `cities`/archive RLS | ❌ | index `idx_programs_course_name_trgm` |
 | 39 | `20260802110000_notification_bounds.sql` | `trg_bound_notification_payload`, `counsellor_notification_targets(uuid)`, deck message cap | ❌ | trigger `trg_bound_notification_payload` |
 | 40 | `20260802120000_student_matches_delete_policy_and_uniqueness.sql` | `matches_self_delete`, de-dup, unique index | ❌ | index `student_matches_profile_program_key` |
 | 41 | `20260802130000_erasure_audit_and_retention.sql` | `deletion_requests`, `request_account_deletion()`, `audit_log`, notification retention | ❌ | table `audit_log` |
 | 42 | `20260802140000_guardian_links_parity.sql` | student/counsellor read + admin write on `guardian_links` | ❌ | policy `guardian_links_student_read` |
+| 43 | `20260802150000_drop_redundant_indexes.sql` | drops 4 redundant indexes (split out of #38 on 2026-08-02) | ❌ | **absence** of `idx_programs_degree_type` — see note |
 
-Files 34–42 were written by the security/database audit and **none of them has
+Files 34–43 were written by the security/database audit and **none of them has
 been executed against any database.** Each carries its own header stating what it
 does, why, SAFE or BREAKING, the app change it needs, and how to reverse it.
+
+**Row 43 has no positive probe marker.** It only DROPS objects, so "applied" and
+"never written" look identical from the catalogue — `idx_programs_degree_type`
+being absent could also mean `schema.sql` never ran. It is the one row in this
+table you cannot turn into fact with a query, and it is also the one row where
+that does not matter: applying it twice, or never, produces the same database.
+
+### 2026-08-02 — the three defects a reviewer reproduced, and what changed
+
+A reviewer replayed this set against a real Postgres 16.14 cluster and found
+three defects that the authoring environment (no Postgres) could not have
+caught. All three are fixed **in the files listed above**; the fixes were
+reproduced red, then green, against the same kind of throwaway cluster.
+
+| Was | Now |
+|---|---|
+| **CRITICAL** — `20260802110000`'s gate whitelisted staff by `profiles.role` while its own fan-out also addressed the demo account **by email**. The demo is `role='student'`, so the fan-out targeted a recipient the gate rejected, and the `BEFORE INSERT` raise aborted the whole `help_requests` INSERT with 42501. Since `20260801122000`'s backfill only covers `%+seed@ascenda.demo`, the affected population was **every real student**. | One `notification_duty_pool()` function defines "counsellor-side staff"; the gate, the fan-out overload and the legacy zero-argument fan-out all read it. The migration's verification block now asserts, in both directions, that the fan-out and the gate agree — and that the gate actually *accepts* each pool member, by borrowing a transaction-local JWT claim so the assertion is not vacuous. |
+| **HIGH** — `20260802100000` indexed `shortlisted_programs` unguarded. `if not exists` guards the index, not the table, and this repo says in three places that the table may not exist remotely (row 33 below, `CLAUDE.md`, and two runtime feature-detects). Replay aborted at 42P01. | `to_regclass`-guarded, same shape as the archive tables in the same file. The verification entry is conditional but **still asserts**: if the table is present, the index must be. |
+| **HIGH** — `20260802130000`'s pre-flight counted malformed `kind` and `href` but not empty/NULL `title`, which the same gate also raises on. One such row aborted the file *after* the five audit triggers were installed. | The check counts all three, mirrors the gate exactly (`title is null or title = ''` — **not** `trim()`, see the file), and has moved to **section 0, the top of the file**, so a refusal leaves nothing behind on any apply path. |
+
+A fourth change is operational rather than a defect: `20260802100000`'s four
+`drop index` statements are now `20260802150000_drop_redundant_indexes.sql`. See
+§3 and §5.
+
+Two rules were added to §6 as a result. Both describe the shape of the bug, not
+the instance.
 
 ---
 
@@ -105,11 +132,12 @@ is now half-migrated.
  2. 20260801120000_close_counsellor_access_and_split_write_...     BREAKING  ← needs an app deploy
  3. 20260801122000_counsellor_assignments.sql                      SAFE
  4. 20260801130000_reconcile_missing_tables.sql                    SAFE      (no-op on remote)
- 5. 20260802100000_indexes_extensions_and_rls_gaps.sql             SAFE
+ 5. 20260802100000_indexes_extensions_and_rls_gaps.sql             SAFE      ← 30–60 s of blocked WRITES
  6. 20260802110000_notification_bounds.sql                         SAFE
  7. 20260802120000_student_matches_delete_policy_and_...           BREAKING  ← needs service.ts
  8. 20260802140000_guardian_links_parity.sql                       SAFE
  9. 20260802130000_erasure_audit_and_retention.sql                 SAFE      ← see note
+10. 20260802150000_drop_redundant_indexes.sql                      OPTIONAL  ← blocks READS. Quiet window.
 ```
 
 **Hard constraints, each of which will fail the replay if violated:**
@@ -120,10 +148,24 @@ is now half-migrated.
 | `20260801120000` **before** `20260801130000` | `simulation_results_admin` calls `is_admin()`, created by `120000`. This file was originally named `…100000` and would have aborted the replay. |
 | `20260801120000` **before** `20260802100000` | the archive-table policies call `is_admin()`. |
 | `20260801122000` **before** `20260802110000` | `notification_recipient_allowed()` and `counsellor_notification_targets(uuid)` both read `counsellor_assignments` (42P01 otherwise). |
+| `20260702120000` **before** `20260802110000` | **New on 2026-08-02.** `20260802110000` now `create or replace`s the ZERO-ARGUMENT `counsellor_notification_targets()` — previously it only added a one-argument overload and touched nothing that already existed. `create or replace` on a function that does not exist yet is a plain create, so this does not *fail*; it would instead leave the demo account out of the duty pool on a database built without `20260702120000`. Already applied on the remote and present in `schema.sql`, so this constrains a from-scratch build, not the remote. |
+| `auth.users.email` must exist **before** `20260802110000` | `notification_duty_pool()` is a SQL-language function and its body is validated at CREATE time (`check_function_bodies`). Against a bare `auth.users(id uuid)` stub the whole file aborts at 42703, not at call time. Real on Supabase; the CI job's problem otherwise. |
 | `20260801120000` **and** `20260801122000` **before** `20260802140000` | uses `is_admin()` **and** `writable_student_ids()`. |
 | `20260801122000` **before** `20260802130000` | `deletion_requests_self` calls `visible_student_ids()`; the audit trigger attaches to `counsellor_assignments`. |
 | `20260802100000` **before** `20260802140000` | not a hard failure — but the new `guardian_links` read policies filter on `student_profile_id`, whose index is created in `20260802100000`. Without it they work and seq-scan. |
 | **The backfill inside `20260801122000`** before the relationship-scoped policies (plan step 8, unwritten) | otherwise every counsellor loses their entire roster the moment `inDemoCohort()` is deleted. |
+
+**Note on 10 being optional and last.** `20260802150000` has **no dependency
+ordering constraint at all** — nothing in it calls a function, reads a policy or
+references a table created by any file here; all four indexes come from
+`schema.sql`. It is last for an operational reason: it is the only file in the
+set that takes **ACCESS EXCLUSIVE**, which blocks *reads* on `programs` and
+`universities`, so it wants a quiet window of its own rather than to be
+interleaved. It sets `lock_timeout = '3s'` and rolls back cleanly rather than
+holding a queue position that stalls the catalogue behind it. Applying it early,
+late, or never all produce the same database — four redundant indexes cost write
+amplification on catalogue imports and nothing else. If it fails with **55P03**,
+nothing was dropped; retry later.
 
 **Note on ordering 9 last:** `20260802130000` is listed after `140000` for
 operational reasons, not dependency ones — it installs five audit triggers, and
@@ -215,6 +257,29 @@ where schemaname = 'public' and policyname in ('programs_read_all','universities
 --   qual = '(auth.uid() IS NOT NULL)' → it silently skipped; anonymous catalogue reads do not work
 ```
 
+**Three more probes to run BEFORE applying anything.** Each corresponds to a
+migration that will abort, or silently do the wrong thing, against a remote state
+this repo cannot see. All three are read-only.
+
+```sql
+-- 1. Does shortlisted_programs exist? (row 33 is 🟡; 20260802100000 now skips
+--    its index if the answer is null, but you want to KNOW.)
+select to_regclass('public.shortlisted_programs');
+
+-- 2. Any FOR ALL / DELETE policy on profiles that schema.sql does not know
+--    about? 20260801110000's verification block ABORTS if one remains, which is
+--    fail-safe and worth keeping — but you should not discover it mid-apply.
+select policyname, cmd, roles from pg_policies
+where schemaname = 'public' and tablename = 'profiles' order by cmd, policyname;
+
+-- 3. Would 20260802130000's section 0 refuse? It counts notification rows the
+--    20260802110000 gate would reject during the expires_at backfill.
+select count(*) filter (where kind is null or kind !~ '^[a-z][a-z0-9_]{0,48}$') as bad_kind,
+       count(*) filter (where href is not null and (href !~ '^/' or href like '//%')) as bad_href,
+       count(*) filter (where title is null or title = '')                        as bad_title
+from notifications;
+```
+
 Then run the static gate, which asserts the invariants rather than listing
 objects:
 
@@ -222,11 +287,76 @@ objects:
 psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f __tests__/db/policy-invariants.sql
 ```
 
+> ⚠️ **`policy-invariants.sql` FAILS BY DESIGN on this branch**, with 6 §A1
+> bare-boolean violations (`universities_read_all`, `programs_read_all`,
+> `requirements_read_all`, `deadlines_read_all`, `application_tasks_read_all`,
+> `sources_read_all`). Those are the TARGET-posture assertions for plan step 8,
+> which is unwritten — see §5. A reviewer confirmed the count is exactly 6 with
+> all nine migrations applied. **6 is the expected number. More than 6 is a
+> finding.** Do not read this failure as a broken migration, and do not "fix" it
+> by deleting the assertions.
+
+### Behaviour, not just shape
+
+Two executable files sit next to the static gate. Neither can run in the CI
+`database` job — both need a real `auth.uid()` that reads `request.jwt.claims`,
+and the job stubs it as `select null::uuid`, under which every assertion passes
+vacuously. Run them against `supabase start` or a disposable cluster:
+
+```bash
+psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f __tests__/db/rls-negative-cases.sql
+psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f __tests__/db/notification-routing-cases.sql
+```
+
+`notification-routing-cases.sql` was added on 2026-08-02 for the CRITICAL defect
+above. Its section 2 is the exact scenario that broke — an unassigned real
+student raising a help request — and it goes red if the gate is ever narrowed
+back to `profiles.role`. Sections 3–5 exist so that fixing section 2 by widening
+the gate to `true` would be caught rather than celebrated. Both files refuse to
+run rather than report a vacuous pass.
+
 ---
 
 ## 5. Known drift and open items
 
 Everything here is a live gap, not a to-do list someone wrote optimistically.
+
+### ⛔ OPEN — the F0 privilege escalation is STILL DECLARED IN `schema.sql`
+
+**This is the highest-severity open item on this page, and it is not fixed by
+anything in `supabase/migrations/`.** It is recorded here because the person who
+found it did not own `supabase/schema.sql`; do not let it be closed by inference.
+
+`20260801110000_profiles_insert_guard.sql` closes the escalation on any database
+it is applied to. A reviewer verified that empirically: they reproduced the
+escalation on a pre-migration database, then failed to reproduce it through five
+attack vectors afterwards, including the `ON CONFLICT DO UPDATE SET role=…`
+upsert bypass. **The migration works.**
+
+`schema.sql` does not carry the fix:
+
+| Line (as of `ca8f856`) | Still says | Why it matters |
+|---|---|---|
+| `:932-933` | `create policy profiles_self_access on profiles using (auth.uid() = id) with check (auth.uid() = id);` | **No `for` clause means `FOR ALL`, which includes INSERT and DELETE.** That is the hole: `delete from profiles where id = <self>`, then `insert into profiles (id, role) values (<self>, 'admin')`. Demonstrated: `DELETE 1`, `INSERT 0 1`, `select role` → `admin`. |
+| `:1319-1320` | `create trigger trg_guard_profile_role before update on profiles` | UPDATE only. The INSERT arm — the one the escalation actually uses — is missing, exactly as it was before the audit. |
+
+So **any database provisioned from `schema.sql` alone ships the privilege
+escalation**: a preview branch, a new laptop, a restore, the CI `database` job's
+first phase. Three lesser things (`recognition_score`, `student_activities` /
+`simulation_results`, `is_admin()`) *were* backported in the same pass. The
+critical one was skipped.
+
+The correction is to transcribe `20260801110000`'s section 2 and section 3 into
+`schema.sql` verbatim: split `profiles_self_access` into a SELECT policy and an
+UPDATE policy, add `profiles_self_insert` with its `role = 'student'` check, add
+**no** DELETE policy, and change `trg_guard_profile_role` to
+`before insert or update`. Then re-run the escalation from
+`20260801110000`'s own header against a database built from `schema.sql` alone
+and confirm it fails at both the DELETE and the INSERT.
+
+Until that lands, the two lines above are the reason `schema.sql` cannot be
+called the file of record, and it is why the long-term fix below (treat it as
+generated output) is the real answer.
 
 **`schema.sql` is not the file of record it claims to be.** It has diverged in
 both directions (`docs/audit/12-database-design.md` §1.5). Still outstanding:
@@ -238,27 +368,47 @@ both directions (`docs/audit/12-database-design.md` §1.5). Still outstanding:
   by `20260802100000`** — it needs a product decision on anonymous catalogue
   browsing first.
 - `20260724100000`'s two indexes are in the migration only.
-- `20260802100000` **drops** four indexes that `schema.sql` still creates. Until
-  `schema.sql` is backported (plan step 2), a fresh database gets them back.
+- `20260802150000` **drops** four indexes that `schema.sql` still creates (it was
+  `20260802100000` until the 2026-08-02 split). Until `schema.sql` is backported
+  (plan step 2), a fresh database gets them back. That is harmless — they are
+  redundant, not wrong — and the file is guarded so re-running it just skips.
 - The long-term fix is to treat `schema.sql` as **generated output**
   (`supabase db dump`), not a hand-maintained artefact.
 
-**The CI `database` job cannot pass yet, and not because of the migrations.**
-`.github/workflows/ci.yml:193-211` stubs the Supabase-only objects, and the stub
-is incomplete in two ways that abort `schema.sql` long before any migration runs:
+**The CI `database` job cannot pass yet, and not because of the nine
+migrations.** This section previously listed two blockers (`auth.users.email`,
+the missing `storage` schema) and said fixing them was out of scope. Both have
+since been addressed in `.github/workflows/ci.yml` on this branch — and the list
+was never complete. A reviewer ran the job's exact steps against Postgres 16.14
+and found the real set:
 
-1. `create table auth.users (id uuid primary key)` has no `email` and no
-   `raw_user_meta_data` columns — but `schema.sql:1902`
-   (`counsellor_notification_targets`) and `20260801122000` both read
-   `auth.users.email`, and SQL-language function bodies are validated at CREATE
-   time. Expect `42703`.
-2. There is no `storage` schema — but `schema.sql:1104` inserts into
-   `storage.buckets` and `:1117` alters `storage.objects`.
+1. **The stub has no `create publication supabase_realtime`.** The job dies on
+   the FIRST migration:
+   `20260512120000_help_requests_and_notifications.sql:52 — ERROR: publication
+   "supabase_realtime" does not exist`. So the nine files under review are never
+   reached. `schema.sql:1506` guards its own use with
+   `if exists (select 1 from pg_publication …)`; those migrations do not.
+2. **`alter publication … add table` is not idempotent** —
+   `20260512120000:52` and `20260513120000:63` fail on pass 2 with
+   "relation … is already member of publication".
+3. **`recognition_score` is undone on replay.** `schema.sql` declares it, then
+   `20250308120000:423-427` renames `universities` → `archive_raw_universities`
+   and promotes `universities_v2`, which has no such column — so
+   `20260723120000:21` fails. Fixing this in `schema.sql` does not fix the
+   replay.
+4. **`20250308120000:429` fails on pass 2** (`relation "programs" already
+   exists`) — the catalogue normalize is not idempotent.
 
-Both need stub columns/schema added to `ci.yml` (out of scope for the audit
-branch, which does not own `.github/`). Until then the job is red for reasons
-unrelated to correctness, and it must not be added to the `ci-ok` gate — a
-required check that fails on arrival is a check someone deletes.
+**All four are PRE-EXISTING files, not the nine.** The nine replay cleanly three
+times over (verified again on 2026-08-02 after the fixes above, in both the
+`shortlisted_programs`-present and `-absent` states). The ledger's blanket
+"every migration must be idempotent" at the top of this page is a rule for NEW
+files; it is not currently true of the directory, and the job's assertion should
+either guard those three files or say honestly which files it covers.
+
+Until then the job is red for reasons unrelated to the correctness of anything
+under review, and it must not be added to the `ci-ok` gate — a required check
+that fails on arrival is a check someone deletes.
 
 **The migration plan steps that are still unwritten** (numbering follows
 `docs/audit/12-database-design.md` §4):
@@ -304,4 +454,28 @@ forgotten.
    created without `enable row level security` is readable *and writable* by the
    anon key that ships in the browser bundle, and any policies attached to it are
    inert. That is how `cities` shipped.
-7. **Update this file in the same commit.**
+7. **One definition per concept, read from one place — and assert they agree.**
+   If a gate decides who may receive something and a fan-out decides who is
+   addressed, those are the SAME SET and must be the same function. Two
+   hand-written copies of "who is staff" that disagreed by a single account
+   aborted every real student's help request (2026-08-02). Copies do not stay in
+   sync; they stay in sync until someone edits one. When a migration cannot
+   avoid two definitions, its verification block must compare them **as sets, in
+   both directions**, and fail.
+8. **A pre-flight check must mirror EVERY `raise` in what it is protecting, and
+   it must run FIRST.** `20260802130000` counted two of the three conditions its
+   trigger raises on, and it counted them halfway down the file — so the missed
+   case aborted after five triggers were already installed. Put the check at the
+   top: a refusal should cost nothing and leave nothing behind. And write the
+   predicate against the trigger's *actual* test, not a tidier one — `trim()`
+   where the trigger collapses whitespace is a false alarm, and a false alarm on
+   a migration is how the next person learns to ignore it.
+9. **Know your lock class, and state the expected duration in the header.**
+   `create index` takes SHARE and blocks writes; `drop index` takes ACCESS
+   EXCLUSIVE **on the parent table** and blocks reads. `npm run db:apply` sends a
+   file as ONE implicit transaction, so every lock is held until COMMIT — a
+   read-blocking statement anywhere in a long file makes the whole file a read
+   outage, and the FIFO lock queue means one waiting drop stalls every query
+   behind it. Put read-blocking statements in their own file with a short
+   `lock_timeout` so they back off instead of queueing the world.
+10. **Update this file in the same commit.**

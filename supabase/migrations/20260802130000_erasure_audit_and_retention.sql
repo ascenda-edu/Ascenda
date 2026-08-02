@@ -63,11 +63,22 @@
 --     been applied, trg_bound_notification_payload is attached BEFORE INSERT OR
 --     UPDATE on notifications — so section 5's expires_at backfill fires it once
 --     per existing row. Two consequences, both handled:
---       • a pre-existing row with a malformed `kind` or a non-root `href` would
---         ABORT this migration. Section 5 counts them first and tells you which.
+--       • a pre-existing row with a malformed `kind`, a non-root `href`, or an
+--         EMPTY/NULL `title` would ABORT this migration. Section 5 counts all
+--         three first and tells you which. (The title case was missed when this
+--         file was written and was demonstrated to abort it at :425, after the
+--         five audit triggers were already installed — see section 5.)
 --       • a pre-existing title/body over the cap is truncated in place by the
 --         backfill. That is the intended end state, but it is a data change, so
 --         it is stated here rather than discovered later.
+--
+--     ⚠️  HALF-APPLIED RISK IS PATH-DEPENDENT. Under `npm run db:apply` the file
+--     is atomic — scripts/apply-sql.ts:46 is a single client.query(sql), which
+--     Postgres wraps in one implicit transaction, so an abort rolls the whole
+--     file back. Under `psql -f` WITHOUT `-1` it is not: each statement commits
+--     on its own and an abort at :425 leaves the audit triggers and the
+--     expires_at column behind. Use `psql -1 -v ON_ERROR_STOP=1` if you run it
+--     that way.
 --     Neither file depends on the other; this is why the order is documented in
 --     both.
 --
@@ -91,6 +102,65 @@
 --   alter table notifications drop column if exists expires_at;
 -- Dropping audit_log destroys the audit trail. If the reason for reverting is a
 -- bug in the trigger, drop the TRIGGERS and keep the table.
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 0. PRE-FLIGHT — refuse before creating anything
+-- ─────────────────────────────────────────────────────────────────────────────
+-- ⛔ THIS BLOCK MUST STAY FIRST, AND IT MUST MIRROR EVERY `raise` IN
+--    bound_notification_payload() (20260802110000).
+--
+-- Section 5's expires_at backfill touches every row of `notifications`, which
+-- fires that gate once per row if 20260802110000 is applied. A single offending
+-- row aborts the file. It used to be checked immediately before the backfill —
+-- i.e. AFTER the five audit triggers and the expires_at column were already
+-- installed — so under `psql -f` (no -1) the file half-applied. Checking here
+-- means the refusal costs nothing and leaves nothing behind on any apply path.
+--
+-- It originally counted only `kind` and `href` and missed the THIRD raise: the
+-- empty-title check. One planted row with title = '' (no constraint forbids it
+-- today) reproduced the abort against Postgres 16.14:
+--    20260802130000_...sql:425  ERROR: notifications.title must not be empty
+--    CONTEXT: PL/pgSQL function bound_notification_payload() line 52 at RAISE
+--
+-- `title is null or title = ''`, NOT `coalesce(trim(title),'') = ''`. The gate
+-- collapses whitespace with regexp_replace(…, '\s+', ' ', 'g') BEFORE testing,
+-- which turns an all-whitespace title into a single space — not empty, does not
+-- raise. trim() here would refuse the migration over rows that would have
+-- applied fine: a false alarm on a file whose whole job is to not half-apply.
+--
+-- The gate's FOURTH raise — the recipient relationship — cannot fire here: it is
+-- guarded by `auth.uid() is not null`, and a migration carries no JWT. If you
+-- ever run this file through a session that DOES carry one, stop.
+do $$
+declare
+  bad_kind  integer;
+  bad_href  integer;
+  bad_title integer;
+begin
+  if to_regclass('public.notifications') is null then
+    return;
+  end if;
+
+  select count(*) into bad_kind from notifications
+   where kind is null or kind !~ '^[a-z][a-z0-9_]{0,48}$';
+  select count(*) into bad_href from notifications
+   where href is not null and (href !~ '^/' or href like '//%');
+  select count(*) into bad_title from notifications
+   where title is null or title = '';
+
+  if bad_kind > 0 or bad_href > 0 or bad_title > 0 then
+    raise exception
+      'refusing to apply: % notification row(s) with a malformed kind, % with a '
+      'non-root href and % with an empty title would be rejected by '
+      'trg_bound_notification_payload during section 5''s expires_at backfill. '
+      'NOTHING HAS BEEN CREATED — fix the rows and re-run. '
+      'Inspect: select id, kind, href, title from notifications '
+      'where kind is null or kind !~ ''^[a-z][a-z0-9_]{0,48}$'' '
+      'or (href is not null and (href !~ ''^/'' or href like ''//%%'')) '
+      'or title is null or title = '''';',
+      bad_kind, bad_href, bad_title;
+  end if;
+end $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 1. deletion_requests — the erasure REQUEST, not the erasure
@@ -395,29 +465,10 @@ alter table notifications
 -- with a malformed kind or href would abort the whole migration at that point,
 -- having already created the audit triggers — leaving a half-applied file.
 -- Count first, and fail with a message that names the offenders instead.
-do $$
-declare
-  bad_kind integer;
-  bad_href integer;
-begin
-  if to_regclass('public.notifications') is null then
-    return;
-  end if;
-
-  select count(*) into bad_kind from notifications
-   where kind is null or kind !~ '^[a-z][a-z0-9_]{0,48}$';
-  select count(*) into bad_href from notifications
-   where href is not null and (href !~ '^/' or href like '//%');
-
-  if bad_kind > 0 or bad_href > 0 then
-    raise exception
-      'refusing the expires_at backfill: % row(s) with a malformed kind and % with a '
-      'non-root href would be rejected by trg_bound_notification_payload mid-update. '
-      'Inspect: select id, kind, href from notifications where kind !~ ''^[a-z][a-z0-9_]{0,48}$'' '
-      'or (href is not null and (href !~ ''^/'' or href like ''//%%''));',
-      bad_kind, bad_href;
-  end if;
-end $$;
+-- The pre-flight check that protects this backfill is SECTION 0, at the top of
+-- the file — deliberately, so a refusal leaves nothing installed. Re-checking
+-- here would be redundant: nothing between there and here writes to
+-- `notifications`, and the file is applied as one unit on both apply paths.
 
 -- Idempotent: the predicate is empty on the second run.
 update notifications

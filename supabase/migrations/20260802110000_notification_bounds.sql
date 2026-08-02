@@ -16,6 +16,39 @@
 -- recipient check. See its header for the exact flow it blocks and why that
 -- flow is the finding rather than a regression.
 --
+-- ── 2026-08-02: the CRITICAL defect this file shipped with, and its fix ───────
+-- As first written, section 1 whitelisted the duty pool by `profiles.role in
+-- ('counsellor','admin')` while section 5's fan-out ALSO targeted the demo
+-- account resolved by email from auth.users. The demo account is role='student'.
+-- So the fan-out addressed a recipient its own gate then rejected, and because
+-- the gate raises from a BEFORE INSERT trigger, the whole help_requests INSERT
+-- aborted with 42501:
+--
+--   ERROR: notifications: <student> may not notify <demo> — no active
+--          counsellor_assignments or guardian_links edge, and the recipient is
+--          not staff. Create the assignment first.
+--   CONTEXT: bound_notification_payload() ← notify_on_help_request_insert()
+--
+-- The affected population was precisely the REAL students: 20260801122000's
+-- backfill only creates edges for `%+seed@ascenda.demo` addresses, so every
+-- non-seeded student had no edge, fell through to the duty-pool arm, and could
+-- not raise a help request at all. Reproduced against Postgres 16.14 before the
+-- fix and confirmed gone after it.
+--
+-- The fix is NOT a second copy of the by-email arm. Two hand-maintained
+-- definitions of "who is counsellor-side staff" is what produced the defect;
+-- adding a third would leave the class open. Section 0 below defines the duty
+-- pool ONCE, and the gate, the fan-out and the legacy zero-argument fan-out all
+-- read it. Section 6 asserts the two can no longer disagree.
+--
+-- It does NOT reopen the injection hole this file exists to close. The duty pool
+-- grows by exactly one id — the operator's own account, which already receives
+-- every counsellor-audience notification on the platform — and the payload
+-- reaching it is still shape-checked and capped at 160/300 by section 2.
+-- Cross-STUDENT injection, the actual finding, stays closed: a student's
+-- recipient set is still {self} ∪ {their counsellors} ∪ {their guardians} ∪
+-- {staff}.
+--
 -- ── App change required ──────────────────────────────────────────────────────
 -- None in src/ — no application code inserts into `notifications` (verified:
 -- the only direct writer is the doc_nudge path, already bounded by
@@ -54,12 +87,28 @@
 -- and the whole point of this file is to stop reasoning writer-by-writer.
 --
 -- ── Ordering constraint (files apply in FILENAME order) ──────────────────────
--- Must sort AFTER 20260801122000_counsellor_assignments.sql. Section 3's
--- recipient check and section 4's targets overload both read
--- `counsellor_assignments`, which that file creates. Placed earlier, the replay
--- aborts with 42P01 on a fresh database.
--- No dependency on 20260801120000 (is_admin is not used here) or on
--- 20260802100000.
+-- Reasoned constraint by constraint, because nothing in the apply path checks
+-- this for you and a SQL-language function body is validated at CREATE time
+-- (check_function_bodies), so a forward reference fails immediately with 42883 /
+-- 42P01 on a half-migrated database.
+--
+--  1. AFTER 20260801122000_counsellor_assignments.sql — section 1's gate and
+--     section 5's targets overload both read `counsellor_assignments`. Earlier,
+--     the replay aborts 42P01.
+--  2. AFTER 20260716120000_guardian_links.sql — section 1 reads `guardian_links`
+--     (already applied on the remote; the 20260802 prefix satisfies it anyway).
+--  3. AFTER 20260702120000_p0_role_guard_notification_routing.sql, which creates
+--     the ZERO-ARGUMENT counsellor_notification_targets() and
+--     profile_display_name(). Section 0 redefines the former via `create or
+--     replace`, which requires it to already exist with the same return type,
+--     and section 5's trigger body calls the latter. This constraint is NEW as
+--     of the 2026-08-02 fix — before it, this file only ever ADDED an overload.
+--  4. `auth.users` must have an `email` column. Real on Supabase; on stock
+--     Postgres it is the CI stub's job (.github/workflows/ci.yml). Section 0's
+--     body is validated at CREATE time, so a bare `auth.users(id uuid)` fails
+--     the whole file at 42703 rather than at call time.
+--  5. NO dependency on 20260801120000 (is_admin is not used here), on
+--     20260802100000, or on 20260802150000.
 --
 -- ── Reversal ─────────────────────────────────────────────────────────────────
 --   drop trigger if exists trg_bound_notification_payload on notifications;
@@ -68,8 +117,66 @@
 --   drop function if exists public.counsellor_notification_targets(uuid);
 --   alter table deck_assignments drop constraint if exists deck_assignments_message_len;
 -- and restore notify_on_help_request_insert() from supabase/schema.sql:1916-1951.
--- The zero-argument counsellor_notification_targets() is never touched, so the
--- fan-out reverts with the function body alone.
+--
+-- Two more, added by the 2026-08-02 fix — reverse them AFTER the drops above,
+-- because the gate and the overload both call the duty pool:
+--   restore the zero-argument counsellor_notification_targets() from
+--     supabase/schema.sql:1893-1903 (its pre-fix body, which inlines the union);
+--   drop function if exists public.notification_duty_pool();
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 0. The duty pool — ONE definition of "counsellor-side staff"
+-- ─────────────────────────────────────────────────────────────────────────────
+-- ⛔ IF YOU CHANGE WHO COUNTS AS STAFF, CHANGE IT HERE AND NOWHERE ELSE.
+--
+-- Three places in this codebase need that answer: who the fan-out ADDRESSES
+-- (section 5), who the gate ACCEPTS (section 1), and the legacy zero-argument
+-- fan-out still called by five other triggers. They were three hand-written
+-- copies of the same union, and two of them disagreed by one account — the
+-- single-account demo, which holds the counsellor inbox but is role='student'
+-- (schema.sql:60 has no 'demo' role, and 20260611130000 resolves it by email for
+-- exactly this reason). That one-account disagreement broke every help request
+-- from an unassigned student. See the header.
+--
+-- SECURITY DEFINER: called from a gate that may be running as `authenticated`,
+-- where an invoker-rights read of `profiles` is RLS-filtered and would return a
+-- FALSE NEGATIVE — blocking a legitimate notification. It also reads auth.users,
+-- which `authenticated` cannot.
+--
+-- No recursion risk: neither table it reads has a policy that reads
+-- `notifications` (the invariant 20260713130000 established).
+
+create or replace function public.notification_duty_pool()
+returns setof uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select id from profiles where role in ('counsellor', 'admin')
+  union
+  select u.id from auth.users u where lower(u.email) = 'greg@workiflow.com';
+$$;
+
+-- No grant to `authenticated`. The default EXECUTE grant is to PUBLIC, and this
+-- function enumerates every staff profile id — the same oracle shape the audit
+-- flags as F10 for profile_display_name(). Both call sites are SECURITY DEFINER
+-- functions owned by the migration role, which keeps EXECUTE regardless.
+revoke execute on function public.notification_duty_pool() from public;
+
+-- Fold the legacy zero-argument fan-out into the same definition. The body is
+-- behaviourally IDENTICAL to schema.sql:1900-1902 — same union, same order-free
+-- set — so the five triggers that call it are unaffected. What changes is that
+-- it can no longer drift away from the gate.
+create or replace function public.counsellor_notification_targets()
+returns setof uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select d from public.notification_duty_pool() as d;
+$$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 1. Who is allowed to receive a notification from whom
@@ -118,10 +225,14 @@ as $$
     -- is a deliberate hole, and a small one: the payload is capped at 160/300
     -- characters by section 2, and the recipients are staff, not other students.
     -- Cross-STUDENT injection — the actual finding — is closed.
-    or exists (
-      select 1 from profiles p
-      where p.id = p_recipient and p.role in ('counsellor', 'admin')
-    );
+    --
+    -- ⛔ READ FROM notification_duty_pool(), NEVER inline the union again. This
+    --    arm used to read `profiles.role` directly while section 5 addressed the
+    --    demo account by email; the two disagreed by one account and every
+    --    unassigned student's help request aborted at 42501. Section 6 asserts
+    --    the two sets are equal, so a re-divergence fails the migration instead
+    --    of the product.
+    or p_recipient in (select public.notification_duty_pool());
 $$;
 
 grant execute on function public.notification_recipient_allowed(uuid) to authenticated;
@@ -281,24 +392,17 @@ as $$
   -- today. Without this arm, an unassigned student's help request would notify
   -- nobody — silently, since a notification that is never inserted raises
   -- nothing anywhere.
-  select p.id
-    from profiles p
-   where p.role in ('counsellor', 'admin')
-     and not exists (
+  --
+  -- The pool is section 0's, which is also what section 1's gate accepts — so
+  -- every id this arm returns is, by construction, a recipient the gate allows.
+  -- It used to be two hand-written arms here (role, then the demo by email)
+  -- against one hand-written arm there (role only), and the missing third arm
+  -- aborted every unassigned student's help request. Do not re-inline it.
+  select d.id
+    from public.notification_duty_pool() as d(id)
+   where not exists (
        select 1 from counsellor_assignments a2
         where a2.student_profile_id = p_student and a2.status = 'active'
-     )
-  union
-  -- The single-account demo (greg@workiflow.com) holds the counsellor inbox but
-  -- is role='student'; resolve via auth.users, as the zero-arg function
-  -- (schema.sql:1902) and the guardian_links seed already do. Dropping this
-  -- would empty the demo's inbox on deploy.
-  select u.id
-    from auth.users u
-   where lower(u.email) = 'greg@workiflow.com'
-     and not exists (
-       select 1 from counsellor_assignments a3
-        where a3.student_profile_id = p_student and a3.status = 'active'
      );
 $$;
 
@@ -399,5 +503,110 @@ begin
                     'the existing zero-argument call site is now ambiguous (42725)';
   end if;
 
-  raise notice 'notification bounds verified: gate attached to INSERT+UPDATE, 2 unambiguous fan-out overloads';
+  -- ── The regression that made this file dangerous ──
+  -- Assert, on the SETS, that every recipient the fan-out addresses is a
+  -- recipient the gate accepts. Asserting on the PREDICATE instead would be
+  -- vacuous here: notification_recipient_allowed() short-circuits to true when
+  -- auth.uid() is null, and auth.uid() is always null inside a migration. So
+  -- compare the duty pool with the fan-out's fallback arm directly, using an
+  -- all-zeros student id that provably has no counsellor_assignments row —
+  -- which is exactly the unassigned-real-student case that used to abort.
+  --
+  -- Break this to check it works: put `role in ('counsellor','admin')` back into
+  -- either function and this raises.
+  if exists (
+    select 1 from counsellor_assignments
+     where student_profile_id = '00000000-0000-0000-0000-000000000000'::uuid
+       and status = 'active'
+  ) then
+    raise warning 'fan-out/gate parity check skipped: the all-zeros uuid has an active assignment';
+  else
+    select count(*) into n from (
+      select t from public.counsellor_notification_targets('00000000-0000-0000-0000-000000000000'::uuid) t
+      except
+      select d from public.notification_duty_pool() d
+    ) s;
+    if n <> 0 then
+      raise exception
+        'verification failed: counsellor_notification_targets() addresses % recipient(s) that '
+        'notification_recipient_allowed() would reject. That combination aborts every help '
+        'request from an unassigned student with 42501. Both must read notification_duty_pool().', n;
+    end if;
+
+    select count(*) into n from (
+      select d from public.notification_duty_pool() d
+      except
+      select t from public.counsellor_notification_targets('00000000-0000-0000-0000-000000000000'::uuid) t
+    ) s;
+    if n <> 0 then
+      raise exception
+        'verification failed: % duty-pool member(s) are unreachable by the fan-out — '
+        'an unassigned student''s help request would silently skip their inbox.', n;
+    end if;
+  end if;
+
+  -- The set comparison above catches a fan-out that drifts. It does NOT catch
+  -- the other direction — someone re-inlining `role in ('counsellor','admin')`
+  -- into the GATE while the fan-out still reads the pool. That is the direction
+  -- the original defect ran in, so assert it explicitly, by ASKING THE GATE.
+  --
+  -- notification_recipient_allowed() short-circuits to true when auth.uid() is
+  -- null, which it always is inside a migration — so borrow an identity for the
+  -- duration of this block. set_config(..., true) is transaction-local and is
+  -- undone at COMMIT (and at the end of this DO block under psql). The borrowed
+  -- id is all-zeros: provably not staff, no assignments, no guardian edges, so
+  -- the ONLY arm that can return true is the duty-pool one.
+  declare
+    borrowed uuid := '00000000-0000-0000-0000-000000000000';
+    prev     text := coalesce(current_setting('request.jwt.claims', true), '');
+    pool_n   integer;
+    bad      integer;
+  begin
+    perform set_config('request.jwt.claims',
+      json_build_object('sub', borrowed::text)::text, true);
+
+    if auth.uid() is distinct from borrowed then
+      -- A stubbed auth.uid() (the CI job hardcodes `select null::uuid`). The
+      -- assertion would pass for the wrong reason; say so instead of claiming it.
+      raise notice 'gate-accepts-pool check SKIPPED: auth.uid() does not read '
+                   'request.jwt.claims here, so it would pass vacuously';
+    else
+      select count(*) into pool_n from public.notification_duty_pool();
+      if pool_n = 0 then
+        raise warning 'gate-accepts-pool check is vacuous: the duty pool is EMPTY. '
+                      'No counsellor/admin profile and no greg@workiflow.com in auth.users — '
+                      'on a real database that also means help requests notify nobody.';
+      else
+        select count(*) into bad
+        from public.notification_duty_pool() d
+        where not public.notification_recipient_allowed(d);
+        if bad <> 0 then
+          raise exception
+            'verification failed: the gate REJECTS % of % duty-pool recipient(s). Every help '
+            'request from an unassigned student will abort with 42501. '
+            'notification_recipient_allowed() must read notification_duty_pool(), not profiles.role.',
+            bad, pool_n;
+        end if;
+        raise notice 'gate accepts all % duty-pool recipient(s)', pool_n;
+      end if;
+    end if;
+
+    perform set_config('request.jwt.claims', prev, true);
+  end;
+
+  -- The zero-argument fan-out must agree too: five other triggers still call it.
+  select count(*) into n from (
+    (select t from public.counsellor_notification_targets() t
+     except select d from public.notification_duty_pool() d)
+    union all
+    (select d from public.notification_duty_pool() d
+     except select t from public.counsellor_notification_targets() t)
+  ) s;
+  if n <> 0 then
+    raise exception
+      'verification failed: the zero-argument counsellor_notification_targets() disagrees with '
+      'notification_duty_pool() on % id(s)', n;
+  end if;
+
+  raise notice 'notification bounds verified: gate attached to INSERT+UPDATE, 2 unambiguous fan-out overloads, fan-out ≡ gate duty pool';
 end $$;

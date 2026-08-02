@@ -8,9 +8,11 @@
 --     environment, so every statement here is reasoned, not observed.
 --
 -- ── Class: SAFE ──────────────────────────────────────────────────────────────
--- No policy is loosened, no column is dropped, no data is modified. The only
--- destructive statements are four `drop index`, and each is justified below
--- against a covering index that already exists.
+-- No policy is loosened, no column is dropped, no data is modified, and after
+-- the 2026-08-02 split NOTHING here is destructive: the four `drop index`
+-- statements this file used to carry now live in
+-- 20260802150000_drop_redundant_indexes.sql, which is optional and is meant to
+-- be run separately. See section 5 and the locking note.
 --
 -- ── App change required: NONE ────────────────────────────────────────────────
 -- Every statement is invisible to `src/`. It changes plans, not results.
@@ -53,24 +55,49 @@
 --
 -- ── Reversal ─────────────────────────────────────────────────────────────────
 --   • Indexes:    `drop index if exists <name>;` for each created below.
---   • Re-create the four dropped indexes from their definitions in schema.sql
---     (:864-880) — they are quoted inline at each drop.
 --   • cities RLS: `alter table cities disable row level security;` (do not —
 --     see 20260719120000).
 --   • pg_trgm: `drop extension pg_trgm cascade;` — CASCADE also drops the three
 --     gin indexes below. It is already present on the remote; leave it.
+--   • The four index DROPS that used to live here have moved to
+--     20260802150000_drop_redundant_indexes.sql; their reversal is in that file.
 --
--- ── Locking note ─────────────────────────────────────────────────────────────
+-- ── Locking note — MEASURED, and the reason this file was split ──────────────
 -- `npm run db:apply` sends the whole file as ONE simple query (scripts/apply-sql
 -- .ts:46 → client.query(sql)), which node-pg wraps in an implicit transaction.
--- CREATE INDEX CONCURRENTLY is therefore IMPOSSIBLE through that path. The plain
--- CREATE INDEX statements below take a SHARE lock, blocking WRITES (not reads)
--- on the indexed table for the duration. On `programs` (119k rows, three gin
--- indexes) expect tens of seconds. The catalogue is written only by the admin
--- import, so a maintenance window is not required — but if you want zero write
--- blocking, run the `programs`/`universities` index statements by hand through
--- psql with CONCURRENTLY added, outside any transaction, and then re-run this
--- file (every statement is `if not exists`, so it will skip them).
+-- CREATE INDEX CONCURRENTLY is therefore IMPOSSIBLE through that path, and every
+-- lock the file takes is held until COMMIT rather than released per statement —
+-- so `programs`, `universities`, `notifications`, `profiles`, `applications`,
+-- `student_matches`, `deadlines` and ~8 more are write-locked simultaneously for
+-- the whole run.
+--
+-- Timed on a local Postgres 16.14 loaded to real scale (119,000 programs, 2,900
+-- universities, warm cache, NVMe):
+--
+--     idx_programs_course_name_trgm  (gin trgm, 119k)     2,403 ms
+--     idx_universities_name_trgm     (gin, 2.9k)            249 ms
+--     idx_universities_country_trgm  (gin, 2.9k)              6 ms
+--     idx_programs_university_course_id (btree, 3 cols)     629 ms
+--     idx_programs_study_level_id                           281 ms
+--     idx_programs_tuition_id        (partial)              274 ms
+--     analyze programs                                      131 ms
+--     ── whole file, one transaction ──                  11,638 ms
+--
+-- ⏱  EXPECT 30–60 SECONDS ON SUPABASE. Shared/burstable compute with a cold
+--    cache is comfortably 3–5× local NVMe. Budget a minute of blocked catalogue
+--    WRITES. Reads are unaffected — that is the whole point of the split; the
+--    read-blocking statements are in 20260802150000 now.
+--
+-- The catalogue is written only by the admin import, so a maintenance window is
+-- not required. If you want zero write blocking, run the `programs`/
+-- `universities` index statements by hand through psql with CONCURRENTLY added,
+-- outside any transaction, and then re-run this file — every statement is
+-- `if not exists`, so it will skip them.
+--
+-- Deliberately NO `set lock_timeout` here: a timeout fired late in a 30–60 s
+-- transaction throws away every index built so far, because the rollback is
+-- all-or-nothing. If you need one, set it in the SESSION before applying, and
+-- expect to retry. The file that DOES need one — and has one — is 20260802150000.
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 1. pg_trgm
@@ -165,8 +192,27 @@ create index if not exists idx_student_matches_program
 create index if not exists idx_applications_program
   on applications (program_id);                      -- the applications↔programme join, 4 sites
 
-create index if not exists idx_shortlisted_program
-  on shortlisted_programs (program_id);              -- "is this shortlisted" probes
+-- ⛔ `if not exists` guards the INDEX, not the TABLE. `shortlisted_programs` is
+--    the one table in this schema whose existence on the remote is genuinely
+--    unknown: CLAUDE.md marks it "may not exist on the remote DB", MIGRATIONS.md
+--    row 33 flags its migration 🟡 "probe this one", and BOTH runtime call sites
+--    feature-detect it and fall back to localStorage on 42P01
+--    (src/lib/shortlist/shortlist-store.ts, src/lib/shortlist/server.ts). An
+--    unguarded reference aborts the whole file at 42P01 — reproduced against
+--    Postgres 16.14 by dropping the table and replaying:
+--      20260802100000_...sql:169  ERROR: relation "shortlisted_programs" does not exist
+--    Same to_regclass shape as the archive tables above, for the same reason.
+do $$
+begin
+  if to_regclass('public.shortlisted_programs') is not null then
+    execute 'create index if not exists idx_shortlisted_program '
+            'on public.shortlisted_programs (program_id)';   -- "is this shortlisted" probes
+    raise notice 'idx_shortlisted_program created (shortlisted_programs is present)';
+  else
+    raise notice 'shortlisted_programs is not present — idx_shortlisted_program skipped. '
+                 'If 20260724100000 is later applied, re-run this file to pick the index up.';
+  end if;
+end $$;
 
 create index if not exists idx_help_messages_author
   on help_messages (author_profile_id);              -- cascade on profile delete
@@ -298,35 +344,27 @@ begin
 end $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 5. Redundant indexes — dropped
+-- 5. Redundant indexes — MOVED OUT (see 20260802150000_drop_redundant_indexes)
 -- ─────────────────────────────────────────────────────────────────────────────
--- Standard applied: drop only where another index provably serves every query
--- the dropped one could, or where NO query in src/ uses the column as a
--- predicate at all. Every index costs a write on all 119k rows of `programs`
--- on every catalogue import.
+-- This section used to hold four `drop index` statements. They have been split
+-- into their own file, deliberately, because they have a different LOCK CLASS
+-- from everything above:
 --
--- Restore any of these with the definition quoted above it.
-
--- create index idx_programs_field_of_study on programs(field);
--- Fully covered: idx_programs_field_id (field, id) and idx_programs_field_tuition
--- (field, tuition) both lead on `field`. Three indexes lead on one column.
-drop index if exists idx_programs_field_of_study;
-
--- create index idx_programs_degree_type on programs(name);
--- `programs.name` is the nullable legacy twin of course_name. No query in src/
--- filters or sorts on it.
-drop index if exists idx_programs_degree_type;
-
--- create index idx_programs_university_life_override on programs(university_life_override);
--- btree on a free-text column, never used as a predicate.
-drop index if exists idx_programs_university_life_override;
-
--- create index idx_universities_ranks on universities(qs_uk_rank, times_sunday_rank, guardian_rank);
--- The app sorts on rank_overall (idx_universities_rank_overall). The two
--- trailing columns of this composite are unusable independently, and nothing
--- filters on qs_uk_rank alone.
-drop index if exists idx_universities_ranks;
-
+--   • `create index` takes SHARE on the table. It blocks WRITES. The catalogue
+--     is written only by the admin import, so that is tolerable.
+--   • `drop index` takes ACCESS EXCLUSIVE on the PARENT table. It blocks READS.
+--     And because db:apply sends the whole file as ONE implicit transaction,
+--     that lock would be acquired late and held to COMMIT — while ~15 other
+--     tables are already locked by the statements above. One in-flight SELECT on
+--     `programs` makes the drop wait, the Postgres lock queue is FIFO, and every
+--     subsequent catalogue query then queues behind the pending ACCESS
+--     EXCLUSIVE. That is a full catalogue stall in a codebase whose own
+--     migration headers record hitting the 8 s statement timeout (57014) before.
+--
+-- Keeping them here would mean this file could not be applied at all without a
+-- read-outage window. Split, this file is write-blocking only and the drops can
+-- wait for a quiet moment — or never happen, at no correctness cost.
+--
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 6. Refresh planner statistics
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -352,9 +390,12 @@ declare
   ix      text;
   n       integer;
 begin
+  -- idx_shortlisted_program is NOT in this list: its table may legitimately be
+  -- absent (see section 3). It is asserted conditionally below instead, so this
+  -- block cannot fail for the one reason that is not a defect.
   foreach ix in array array[
     'idx_deadlines_source', 'idx_application_tasks_program', 'idx_student_matches_program',
-    'idx_applications_program', 'idx_shortlisted_program', 'idx_help_messages_author',
+    'idx_applications_program', 'idx_help_messages_author',
     'idx_help_notes_author', 'idx_help_meetings_counsellor', 'idx_counsellor_notes_author',
     'idx_guardian_links_student', 'idx_deck_programs_program', 'idx_deck_assignments_assigned_by',
     'idx_deadlines_program_date', 'idx_checklist_application_due',
@@ -365,6 +406,15 @@ begin
       missing := missing || ix;
     end if;
   end loop;
+
+  -- Conditional, and it still ASSERTS: if the table is there, the index must be.
+  -- Skipping the assertion outright would let a genuine failure pass as "absent".
+  if to_regclass('public.shortlisted_programs') is not null
+     and to_regclass('public.idx_shortlisted_program') is null then
+    -- ::text is load-bearing: `text[] || 'literal'` with an unknown-typed literal
+    -- resolves to the array||array operator and fails at 22P02.
+    missing := missing || 'idx_shortlisted_program'::text;
+  end if;
 
   if array_length(missing, 1) > 0 then
     raise exception 'verification failed: index(es) not created: %', array_to_string(missing, ', ');
@@ -378,5 +428,6 @@ begin
     raise exception 'verification failed: RLS is not enabled on cities';
   end if;
 
-  raise notice 'step 1 remainder verified: 17 indexes present, cities RLS on';
+  raise notice 'step 1 remainder verified: 16 required indexes present (+ idx_shortlisted_program '
+               'if its table exists), cities RLS on';
 end $$;
