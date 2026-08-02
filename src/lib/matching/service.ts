@@ -722,16 +722,16 @@ export const loadMatchesForProfile = async (
     .filter((match) => !match.excluded);
 
   if (process.env.MATCH_DEBUG === '1') {
-    const byTier = {
-      Safety: ranked.filter((m) => m.tier_fit === 'Safety').length,
-      Target: ranked.filter((m) => m.tier_fit === 'Target').length,
-      Reach: ranked.filter((m) => m.tier_fit === 'Reach').length,
-      Hard: ranked.filter((m) => m.tier_fit === 'Harder-than-reach').length
+    const byBand = {
+      Safety: ranked.filter((m) => m.admission_band === 'Safety').length,
+      Target: ranked.filter((m) => m.admission_band === 'Target').length,
+      Reach: ranked.filter((m) => m.admission_band === 'Reach').length,
+      Hard: ranked.filter((m) => m.admission_band === 'Harder-than-reach').length
     };
     const sample = ranked.slice(0, 8).map((m) => ({
       uni: m.university,
       course: m.course,
-      tier: m.tier_fit,
+      band: m.admission_band,
       chance: m.chance_percent,
       courseTier: m.course_tier
     }));
@@ -740,7 +740,7 @@ export const loadMatchesForProfile = async (
       studentIb: studentPayload.academic_input.ib_total_points,
       enrichedCount: enrichedCourses.length,
       rankedCount: ranked.length,
-      byTier,
+      byBand,
       sample
     });
   }
@@ -750,10 +750,17 @@ export const loadMatchesForProfile = async (
   const courseLookup = new Map(enrichedCourses.map((course) => [toKey(course), course]));
   const courseByProgramId = new Map(enrichedCourses.map((course) => [course.program_id, course]));
 
-  // Apply result limit per-tier to ensure balanced Reach/Match/Safe representation.
-  // Without this, a top-N cut returns only Safety results (highest admission %).
-  // After capping, we pin programs from high-recognition universities (score ≥ 9) that
-  // would otherwise be cut off — prestigious schools always appear as Reach options.
+  // Apply the result limit per ADMISSION BAND so the set spans a range of
+  // difficulties. Without this, a top-N cut returns only Safety results (highest
+  // admission %). After capping, we pin programs from high-recognition
+  // universities (score ≥ 9) that would otherwise be cut off — prestigious
+  // schools always appear among the hardest options.
+  //
+  // This balances WHICH courses are returned. It does not decide what tier they
+  // are labelled with; that is `matchTierFromScore` below, applied to the same
+  // number the card prints. Keeping selection and labelling separate is what
+  // stopped the percentile pass that used to sit under this from relabelling a
+  // 41%-chance programme "Safe".
   //
   // The set is built at computeLimit — at least FULL_CACHE_LIMIT — not the
   // caller's resultLimit, and the caller's slice is taken when returning. The
@@ -765,9 +772,9 @@ export const loadMatchesForProfile = async (
   let limited: RankedCourseMatch[];
   if (computeLimit) {
     const perTier = Math.ceil(computeLimit / 3);
-    const safety = ranked.filter((m) => m.tier_fit === 'Safety').slice(0, perTier);
-    const target = ranked.filter((m) => m.tier_fit === 'Target').slice(0, perTier);
-    const reachAll = ranked.filter((m) => m.tier_fit === 'Reach' || m.tier_fit === 'Harder-than-reach');
+    const safety = ranked.filter((m) => m.admission_band === 'Safety').slice(0, perTier);
+    const target = ranked.filter((m) => m.admission_band === 'Target').slice(0, perTier);
+    const reachAll = ranked.filter((m) => m.admission_band === 'Reach' || m.admission_band === 'Harder-than-reach');
     const reach = reachAll.slice(0, perTier);
 
     // Pin top-recognition universities that got cut off from the Reach cap
@@ -793,19 +800,24 @@ export const loadMatchesForProfile = async (
     limited = ranked;
   }
 
-  const assignTierFromFit = (fit: RankedCourseMatch['tier_fit']): MatchTier => {
-    if (fit === 'Safety') return 'Safe';
-    if (fit === 'Target') return 'Match';
-    return 'Reach';
-  };
-
-  let matches: EnrichedMatch[] = limited
+  // The tier is derived from `chance_percent` — the number this same object
+  // publishes as `score` and the card prints next to the pill — so the label can
+  // never contradict the figure beside it, and so the tier persisted in
+  // `breakdown.tier` agrees with the `score` column persisted alongside it. The
+  // cached read path at :393 already recomputes with `matchTierFromScore(row.score)`
+  // when the key is missing; before this, the write path used a different rule
+  // (`assignTierFromFit`, an IB-points-gap band), so a cache hit and a cache miss
+  // could label the same row differently.
+  //
+  // `?? 'Reach'` is unreachable in practice — `chance_percent` is a clamped
+  // integer — but stays as the conservative choice if that ever changes.
+  const scoredMatches: EnrichedMatch[] = limited
     .map((match) => {
       const course =
         (match.program_id ? courseByProgramId.get(match.program_id) : null) ??
         courseLookup.get(toKey(match));
       if (!course) return null;
-      const tier: MatchTier = assignTierFromFit(match.tier_fit);
+      const tier: MatchTier = matchTierFromScore(match.chance_percent) ?? 'Reach';
       return {
         program: {
           id: course.program_id,
@@ -839,25 +851,27 @@ export const loadMatchesForProfile = async (
     })
     .filter((value): value is EnrichedMatch => value !== null);
 
-  // Redistribute tiers by score percentile when the engine collapses everything
-  // into one tier (common when catalog programs lack real selectivity data).
-  // Semantically correct: Reach = lowest admission chance relative to the set,
-  // Safe = highest. Ensures students always see a useful Reach/Match/Safe spread.
-  const tierCounts = matches.reduce((acc, m) => { acc[m.tier] = (acc[m.tier] ?? 0) + 1; return acc; }, {} as Record<MatchTier, number>);
-  const dominantTierPct = Math.max(...Object.values(tierCounts)) / (matches.length || 1);
-  if (dominantTierPct > 0.75 && matches.length >= 6) {
-    const sorted = [...matches].sort((a, b) => b.score - a.score);
-    const n = sorted.length;
-    matches = sorted.map((m, i) => {
-      const pct = i / n;
-      const tier: MatchTier = pct < 0.35 ? 'Safe' : pct < 0.65 ? 'Match' : 'Reach';
-      return { ...m, tier };
-    });
-  }
+  // DELETED HERE: a percentile reassignment that fired whenever one tier held
+  // >75% of the set (and >= 6 results) and rewrote every tier by RANK — top 35%
+  // Safe, next 30% Match, rest Reach. It ran after the tier was computed and
+  // before the cache write, so rank-derived tiers were what got persisted into
+  // `breakdown.tier` and read back by /applications and the counsellor surfaces.
+  //
+  // It was a third implementation of the tier rule, and the only one that could
+  // detach the label from the number entirely: a student whose best chance was
+  // 41% got a "Safe" badge, and an 87% programme in the bottom third got
+  // "Reach". Its stated purpose — "students always see a useful Reach/Match/Safe
+  // spread" — is a SELECTION concern, and the per-band caps above already serve
+  // it by choosing a spread of admission difficulties. Relabelling to
+  // manufacture a spread makes the label mean nothing.
+  //
+  // Consequence, stated plainly: a student whose whole result set scores under
+  // 60 now sees three Reach groups' worth of programmes under one Reach heading
+  // instead of a fabricated Safe/Match/Reach split. That is the true answer.
 
   // Apply recognition-boosted sort: well-known universities surface before unknown
   // ones when admission chances are similar (up to +5 pts boost for score-10 schools).
-  matches = matches
+  const matches: EnrichedMatch[] = scoredMatches
     .map((m) => ({ m, key: m.score + ((recognitionByUniId.get(m.university.id) ?? 3) / 10) * 5 }))
     .sort((a, b) => b.key - a.key)
     .map((x) => x.m);

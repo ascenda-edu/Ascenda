@@ -384,6 +384,18 @@ const DEMO_MATCHES: Array<{
     outcomes: number;
   };
 }> = [
+  // Each `tier` below MUST agree with `matchTierFromScore(score)` from
+  // src/lib/matching/match-tier.ts — Safe >= 80, Match >= 60, else Reach. These
+  // rows are written straight into `student_matches.breakdown.tier`, which every
+  // read path prefers over recomputation, so a seeded row that disagrees with the
+  // rule is indistinguishable from a real row that disagrees with it and hides
+  // exactly the bug it should expose. The Match rows here scored 38-45 and the
+  // Safe rows 72-77 — the Match ones contradicted even the OLD 70/50 rule.
+  //
+  // The pairing is asserted from the source by
+  // __tests__/tiering/tier-rule-singularity.test.ts; this file deliberately
+  // imports nothing from src/ so the seed keeps running standalone.
+  //
   // ── Reach (<30% admission chance) ────────────────────────────────────────
   {
     programId: '37b7597a-c85b-54b7-a263-f88b3e277344',
@@ -467,7 +479,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: 'dbc9c060-5d51-5871-80d6-d59d4821a4f4',
     tier: 'Match',
-    score: 45,
+    score: 68,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',
@@ -493,7 +505,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: 'c4678f36-8c52-5439-8fcb-6cd1181aa984',
     tier: 'Match',
-    score: 42,
+    score: 65,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',
@@ -519,7 +531,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: '0994d437-27c3-5231-8bd5-a1d011a61f3d',
     tier: 'Match',
-    score: 38,
+    score: 62,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',
@@ -546,7 +558,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: 'e31ba780-1145-5a2f-9ef3-2c094d9165dc',
     tier: 'Safe',
-    score: 77,
+    score: 90,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',
@@ -572,7 +584,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: 'a4fc623f-ab72-5995-8e45-59c250c0a49f',
     tier: 'Safe',
-    score: 75,
+    score: 86,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',
@@ -598,7 +610,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: '172c5384-481a-5bfc-a827-009382b991b6',
     tier: 'Safe',
-    score: 72,
+    score: 82,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',

@@ -123,9 +123,9 @@ function printBreakdown(profile: StudentProfilePayload) {
 function printMatches(profile: StudentProfilePayload, result: ReturnType<typeof scoreStudentProfile>) {
   const matches = rankCourseMatches(profile, result, CATALOGUE as EnrichedCourseRecord[]);
 
-  const reach   = matches.filter(m => !m.excluded && m.tier_fit === 'Reach');
-  const target  = matches.filter(m => !m.excluded && m.tier_fit === 'Target');
-  const safety  = matches.filter(m => !m.excluded && m.tier_fit === 'Safety');
+  const reach   = matches.filter(m => !m.excluded && m.admission_band === 'Reach');
+  const target  = matches.filter(m => !m.excluded && m.admission_band === 'Target');
+  const safety  = matches.filter(m => !m.excluded && m.admission_band === 'Safety');
 
   const printRow = (m: (typeof matches)[0]) =>
     report(`    ${pad(m.university, 35)} ${pad(m.course.slice(0, 30), 30)} ${m.chance_percent}%`);

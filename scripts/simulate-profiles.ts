@@ -1633,14 +1633,14 @@ async function validateProfile(
   // Pass if exact program keyword matched AND classified Safety/Target/Reach,
   // OR if any program at this university appeared as Safety/Target/Reach
   // (covers keyword stem mismatches like "Biology" vs "Biological Sciences").
-  const exactTier = match?.tier_fit;
-  const bestTier = anyMatch?.tier_fit;
-  const algorithmResult = exactTier ?? (anyMatch ? bestTier! : 'Not found');
+  const exactBand = match?.admission_band;
+  const bestBand = anyMatch?.admission_band;
+  const algorithmResult = exactBand ?? (anyMatch ? bestBand! : 'Not found');
   const chancePercent = match?.chance_percent ?? anyMatch?.chance_percent ?? null;
   const matchedCourse = match?.course ?? anyMatch?.course ?? null;
   const validationPass =
-    (exactTier != null && ['Safety', 'Target', 'Reach'].includes(exactTier)) ||
-    (exactTier == null && bestTier != null && ['Safety', 'Target', 'Reach'].includes(bestTier));
+    (exactBand != null && ['Safety', 'Target', 'Reach'].includes(exactBand)) ||
+    (exactBand == null && bestBand != null && ['Safety', 'Target', 'Reach'].includes(bestBand));
 
   console.log(`     Result: ${algorithmResult} | chance: ${chancePercent}% | matched: ${matchedCourse ?? 'none'}`);
   console.log(`     PASS: ${validationPass ? '✓' : '✗'}`);

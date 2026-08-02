@@ -1,7 +1,25 @@
 export type MatchTier = 'Reach' | 'Match' | 'Safe';
 
 /**
- * Score → tier thresholds. **The** thresholds — there are no others.
+ * Score → tier thresholds.
+ *
+ * ── What this governs, precisely ────────────────────────────────────────────
+ * This is the ONLY rule that turns a 0-100 score into a `MatchTier`, and every
+ * `MatchTier` in the app now comes from it. An earlier version of this comment
+ * claimed "there are no others"; that was false when it was written — two more
+ * implementations were live at the time (see "What was found afterwards"
+ * below). It is true now, and `__tests__/tiering/tier-rule-singularity.test.ts`
+ * reads the source tree to keep it true: a fourth implementation, or a stray
+ * `>= 80` / `>= 60` tier literal outside this file, fails that suite.
+ *
+ * What this deliberately does NOT govern:
+ *   - `EnrichedCourseRecord.course_tier` (1-5, lib/tiering/course_tiering) — a
+ *     catalogue-quality band. Numeric, unrelated vocabulary, no overlap.
+ *   - `RankedCourseMatch.admission_band` (lib/matching/matching_engine) — an
+ *     admission-difficulty band computed from the IB-points gap, used to
+ *     EXCLUDE ineligible courses and to balance which courses get selected.
+ *     It was called `tier_fit` and it used to be mapped straight onto
+ *     `MatchTier`; it is renamed and no longer produces a tier. See below.
  *
  * ── Why this moved here ─────────────────────────────────────────────────────
  * There were three live implementations of this rule and two different answers:
@@ -20,6 +38,23 @@ export type MatchTier = 'Reach' | 'Match' | 'Safe';
  * named, and invisible to the two modules that never read it. A single source of
  * truth asserted in prose is not one; only a value other code must import is.
  *
+ * ── What was found afterwards (docs/audit/review/02-domain.md) ──────────────
+ * Consolidating three implementations and then asserting "there are no others"
+ * without reading the tree left two more standing:
+ *
+ *   1. `matching_engine.classify` → `assignTierFromFit` (service.ts). This
+ *      thresholded an IB-POINTS GAP, not a 0-100 score, and it produced the
+ *      tier for every freshly-computed /matches row. `assignTierFromFit` is
+ *      deleted: /matches now derives its tier from the same number it prints on
+ *      the card. `classify` survives as an eligibility/selection rule under a
+ *      name that no longer says "tier".
+ *   2. A percentile REASSIGNMENT in service.ts: when one band held >75% of the
+ *      results, tiers were rewritten by rank (top 35% → Safe) and then
+ *      persisted. This is what let a 41%-chance programme carry a Safe badge
+ *      and an 87% one carry Reach. Deleted — the per-band selection caps above
+ *      it already guarantee a spread of programmes, and a label that contradicts
+ *      the number beside it is worse than a lopsided distribution.
+ *
  * ── Which numbers won, and what moves ───────────────────────────────────────
  * 80/60 — the rule the codebase already called canonical. It is also the
  * conservative choice: the expensive error here is telling a student a reach
@@ -27,10 +62,39 @@ export type MatchTier = 'Reach' | 'Match' | 'Safe';
  * it now reads as Match. Counsellor dashboards and /matches will show fewer
  * Safes. That is the fix, not a regression.
  *
- * `student_matches.breakdown.tier` is persisted, and cached tiers are preferred
- * over recomputation by design, so rows written under the old rule keep their
- * old tier until the cache is rebuilt. Expect a window where stored and
- * freshly-computed tiers disagree for scores in the 70-79 band.
+ * `lib/theme/fit-score.ts` bands the score COLOUR from these same constants, so
+ * the badge colour and the tier pill change at the same score. They used to
+ * change at 75 and 80 respectively, which put a green "strong" ring next to an
+ * amber "Match" pill for every score in 75-79.
+ *
+ * ── The stored tier is a standing contradiction, not a rebuild window ───────
+ * `student_matches.breakdown.tier` is persisted and preferred over
+ * recomputation (`service.ts` cached path, `counsellor/data.ts:136`,
+ * `lib/data/applications.ts` `loadTierByProgram`). `loadTierByProgram` has NO
+ * recompute path and no TTL, so a row written under the old 70/50 rule keeps
+ * its old tier on /applications, the parent progress board and the cost
+ * explorer FOREVER — beside the freshly-computed tier in search. An earlier
+ * version of this comment called that "a window until the cache is rebuilt".
+ * It is not; nothing rebuilds it.
+ *
+ * Closing it needs a backfill, which is a migration and therefore not this
+ * module's job. The proposal, for whoever applies it:
+ *
+ *     -- Drop the stored tier wherever it disagrees with this rule; the read
+ *     -- paths already fall back to matchTierFromScore(score) when the key is
+ *     -- absent, so removing the key is self-healing and needs no app change.
+ *     update student_matches
+ *        set breakdown = breakdown - 'tier'
+ *      where breakdown ? 'tier'
+ *        and breakdown->>'tier' is distinct from
+ *            case when score >= 80 then 'Safe'
+ *                 when score >= 60 then 'Match'
+ *                 else 'Reach' end;
+ *
+ * Deleting the key rather than rewriting it keeps the thresholds in one place:
+ * the SQL above encodes 80/60 once, at apply time, and leaves nothing behind
+ * that can drift. Until it runs, /applications and search WILL disagree for any
+ * row scored 60-79 that was written before this change.
  *
  * These live beside the `MatchTier` type rather than in lib/theme/ because they
  * are a domain rule, not a presentation concern. `classifyFitTier` now derives

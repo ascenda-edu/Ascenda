@@ -418,7 +418,7 @@ const runDemo = (student: StudentProfilePayload, label: string) => {
   console.log(`\nTop matches for ${label} (${score.student_band})`);
   matches.forEach((match, index) => {
     console.log(
-      `${index + 1}. ${match.university} • ${match.course} -> ${match.chance_percent}% (${match.tier_fit})${match.excluded ? ' [Excluded]' : ''}`
+      `${index + 1}. ${match.university} • ${match.course} -> ${match.chance_percent}% (${match.admission_band})${match.excluded ? ' [Excluded]' : ''}`
     );
   });
 };

@@ -285,11 +285,18 @@ const curateMatches = (rows: ProgRow[]): Array<{ program_id: string; score: numb
   if (rows.length === 0) return [];
   const n = rows.length;
   const pick = (frac: number) => rows[Math.min(n - 1, Math.floor(frac * n))];
+  // Every band below MUST sit wholly inside the tier it is labelled with under
+  // `matchTierFromScore` (Safe >= 80, Match >= 60, else Reach). It did not: the
+  // Reach rows scored 62-69 and the Match rows 75-82, so the seeded cohort
+  // carried stored tiers that contradicted the rule the app computes with —
+  // which made the whole tier unification look like a no-op on demo data.
+  // `__tests__/tiering/tier-rule-singularity.test.ts` reads these literals and
+  // checks BOTH ends of each range.
   const chosen: Array<{ row: ProgRow; tier: Tier; score: number }> = [
-    { row: pick(0.0), tier: 'Reach', score: 62 + Math.floor(Math.random() * 8) },
-    { row: pick(0.12), tier: 'Reach', score: 64 + Math.floor(Math.random() * 6) },
-    { row: pick(0.4), tier: 'Match', score: 75 + Math.floor(Math.random() * 8) },
-    { row: pick(0.55), tier: 'Match', score: 78 + Math.floor(Math.random() * 6) },
+    { row: pick(0.0), tier: 'Reach', score: 42 + Math.floor(Math.random() * 8) },
+    { row: pick(0.12), tier: 'Reach', score: 50 + Math.floor(Math.random() * 6) },
+    { row: pick(0.4), tier: 'Match', score: 64 + Math.floor(Math.random() * 8) },
+    { row: pick(0.55), tier: 'Match', score: 72 + Math.floor(Math.random() * 6) },
     { row: pick(0.8), tier: 'Safe', score: 87 + Math.floor(Math.random() * 5) },
     { row: pick(0.95), tier: 'Safe', score: 90 + Math.floor(Math.random() * 5) },
   ];

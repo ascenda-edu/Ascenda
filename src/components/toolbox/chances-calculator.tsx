@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, GraduationCap, Calendar, ClipboardList, ExternalLink, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { TIER_LABEL, TIER_VISUAL, type FitTier } from '@/lib/theme/categories';
+import { classifyFitTier, TIER_LABEL, TIER_VISUAL, type FitTier } from '@/lib/theme/categories';
 import { parseLocalDate } from '@/lib/utils/dates';
 import { stagger, cardFade } from '@/lib/motion';
 import type { DemoStudentGrades, UniversityChance } from '@/lib/data/student-demo-data';
@@ -17,12 +17,20 @@ function isLinkableCourseId(id: string): boolean {
   return !/^ch-\d+$/.test(id) && !id.endsWith('-shortlist');
 }
 
-function classify(predicted: number, min: number): FitTier {
-  const diff = predicted - min;
-  if (diff >= 5) return 'safety';
-  if (diff >= 1) return 'match';
-  return 'reach';
-}
+// This file used to carry its OWN tier rule — a grade-points-gap if-chain
+// (`diff >= 5 → safety, diff >= 1 → match, else reach`) sitting three lines
+// above the percentage it renders on the same row. The two disagreed: a gap of
+// 1-2 points printed "55%" beside a "Match" pill, while every other surface in
+// the app calls 55 a Reach. It was the fourth implementation of the rule that
+// `lib/matching/match-tier.ts` owns, and the one no review had spotted.
+//
+// The tier now comes from the number the card shows, via `classifyFitTier`.
+// User-visible change: a predicted score 1-2 points above the minimum reads
+// Reach (55%) where it used to read Match. `chancePercent` below is untouched —
+// it is this tool's own model of admission odds, and changing it would be a
+// scoring change, not a tier one.
+const classify = (predicted: number, min: number): FitTier =>
+  classifyFitTier(chancePercent(predicted, min)) ?? 'reach';
 
 function chancePercent(predicted: number, min: number): number {
   const diff = predicted - min;
