@@ -608,3 +608,58 @@ from the branch" — it is absent on purpose.
 
 Suite after these fixes: **68 suites / 1,554 tests, all pass.** `tsc --noEmit`
 clean.
+
+---
+
+## The test-suite blind spot — closed and verified
+
+Branch `fix/audit-tests`, merged. **All nine surviving mutations are now caught**, each
+proved red-then-green individually, and — the inverted headline — **all nine re-applied
+*simultaneously* now fail 9 suites / 19 tests.** Before: all 1,541 passed.
+
+**Coordinator's independent verification** (not taken on the agent's word). Re-applied M01 +
+M01b by hand — deleting both `.eq('profile_id', ctx.userId)` filters from
+`chat/tools/student-read.ts:152,262`, the exact mutation that previously left the entire
+suite green:
+
+```
+Test Suites: 1 failed, 15 passed, 16 total
+Tests:       2 failed, 187 passed, 189 total
+```
+
+Reverted clean. **The suite can now see a cross-tenant read.**
+
+Root cause fixed at source: `__tests__/helpers/supabase-recorder.ts` is now a shared
+recording double, and `__tests__/meta/recording-doubles.test.ts` is a **shrinking ratchet
+that fails any new double which discards `.eq()`/`.in()` arguments** — proved red by
+reintroducing the old shape in `__tests__/chat/`. The blind spot cannot silently return.
+
+Also closed: **H-03** (5 new escalation tests; reverting the guard → 3 red), **B3** (the
+matcher test now parses the real `PROTECTED_PREFIXES` from source — proved red by editing
+only the real constant, which the hardcoded copy could not see), the one vacuous test, and
+**D-05** (stale golden prose corrected in the generator and regenerated — **no golden value
+changed**, verified by diffing both revisions with every `_`-header and row `note` stripped:
+identical, 7/7 files).
+
+Suite: **73 suites / 1,634 tests**, green in both `TZ=UTC` and `TZ=America/Los_Angeles`.
+
+### REFUTED — a finding withdrawn
+
+**A6 / the `src/` half of M06 is stale and was correctly refused.** Lane A reported
+`isActionableStudent` fails open (`if (error || !data) return true`) with a docstring
+claiming otherwise, and the fix brief repeated it. At `1ec7052` **neither is true**: both
+`filterActionableStudentIds` and `isActionableStudent` already `return []` / `return false`,
+i.e. fail closed, and the docstring matches the code. **The defect was coverage only**, and
+the agent made no `src/` change on that branch.
+
+This is the refutation pass doing its job. Fixing an unconfirmed finding is how the previous
+round introduced defects; an agent declining to "fix" working code on a coordinator's say-so
+is the behaviour to keep.
+
+### Deferred, deliberately
+
+- The meta-test ships a **5-file allowlist** (`matching/score-programs`,
+  `counsellor/application-status`, `chat/university-info-tool`, `hooks/use-help-thread`,
+  `auth/identity-cache`), each annotated. It can only shrink.
+- `PROTECTED_PREFIXES` should be **exported** from `src/middleware.ts` rather than parsed
+  out of the source text. Cleaner, and worth doing.
