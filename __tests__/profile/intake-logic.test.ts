@@ -391,14 +391,69 @@ describe('toPayload — normalisation', () => {
     });
   });
 
-  it('joins the location multi-select with commas, or nulls it when empty', () => {
-    const lifestylePreference = {
-      ...buildInitialFormState().lifestylePreference,
-      desired_location_type: ['capital_city', 'major_city']
-    };
-    expect(toPayload(stateWith({ lifestylePreference })).lifestyle_preference.desired_location_type)
-      .toBe('capital_city,major_city');
-    expect(toPayload(stateWith({})).lifestyle_preference.desired_location_type).toBeNull();
+  /* ── desired_location_type must be a legal enum member (audit I-1) ─────────
+   *
+   * CHANGED DELIBERATELY, not re-baselined. This test asserted
+   * `'capital_city,major_city'` — the exact string Postgres rejects. The column
+   * is `location_type`, an enum of
+   * ('london', 'major_city', 'smaller_city', 'suburban', 'no_preference'),
+   * so BOTH halves of the old behaviour were invalid:
+   *
+   *   1. `capital_city` is not a member. The form renamed `london` for an
+   *      international audience but only `fromPayload` learned the mapping, so
+   *      the rename was one-way.
+   *   2. Comma-joining a multi-select produces a value no enum can hold.
+   *
+   * Reproduced against local PG16:
+   *     ERROR: invalid input value for enum location_type: "london,major_city"
+   *
+   * and because the six-table save has no transaction, it failed AFTER
+   * profiles/personal/academic had already committed. The zod schema types this
+   * column as free text, so nothing upstream caught it either.
+   *
+   * A multi-select collapses to `no_preference` — which is not a compromise but
+   * the semantics the scorer already documents: "scoring treats multi-select
+   * same as no_preference". Storing the individual choices needs an array
+   * column or a join table, i.e. a migration; recorded in the audit ledger.
+   */
+  describe('desired_location_type', () => {
+    const withLocations = (desired_location_type: string[]) =>
+      toPayload(
+        stateWith({
+          lifestylePreference: { ...buildInitialFormState().lifestylePreference, desired_location_type }
+        })
+      ).lifestyle_preference.desired_location_type;
+
+    const LEGAL = ['london', 'major_city', 'smaller_city', 'suburban', 'no_preference', null];
+
+    it('maps the capital_city chip back to the enum member it renames', () => {
+      expect(withLocations(['capital_city'])).toBe('london');
+    });
+
+    it('passes a single already-legal value straight through', () => {
+      expect(withLocations(['major_city'])).toBe('major_city');
+      expect(withLocations(['suburban'])).toBe('suburban');
+    });
+
+    it('collapses a multi-select to no_preference rather than a comma-joined string', () => {
+      expect(withLocations(['capital_city', 'major_city'])).toBe('no_preference');
+      expect(withLocations(['major_city', 'smaller_city', 'suburban'])).toBe('no_preference');
+    });
+
+    it('nulls an empty selection', () => {
+      expect(withLocations([])).toBeNull();
+      expect(toPayload(stateWith({})).lifestyle_preference.desired_location_type).toBeNull();
+    });
+
+    it('never emits a value the enum cannot hold, for any combination of chips', () => {
+      // The property, stated directly. Exhaustive over the chip set the form
+      // offers, so a newly-added chip that is not a legal member fails here.
+      const chips = ['capital_city', 'major_city', 'smaller_city', 'suburban', 'no_preference'];
+      for (const a of chips) {
+        expect(LEGAL).toContain(withLocations([a]));
+        for (const b of chips) expect(LEGAL).toContain(withLocations([a, b]));
+      }
+    });
   });
 
   it('only submits an English score when the chosen test actually has one', () => {
@@ -472,7 +527,9 @@ describe('round trip', () => {
       admissions_tests: [{ test_type: 'TMUA', status: 'booked', score_numeric: null, percentile: null }]
     },
     lifestyle_preference: {
-      teaching_style: 'academic', desired_location_type: 'capital_city,major_city',
+      // A legal `location_type` member — the enum could never have held the
+      // comma-joined value this used to carry (audit I-1).
+      teaching_style: 'academic', desired_location_type: 'major_city',
       campus_size: 'large', extracurricular_interests: ['Debate / public speaking', 'Volunteering'],
       other_extracurriculars: 'Chess club', leadership_roles: ['Class President'],
       commitment_level: 'deep', key_activities: ['Debate / Model UN', 'Community Service'],

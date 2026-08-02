@@ -142,6 +142,52 @@ export const shouldShowAdmissionsTests = (
 
 // ─── Form state → payload ────────────────────────────────────────────────────
 
+/**
+ * The form's location chips → a legal `location_type` enum member.
+ *
+ * AUDIT FINDING I-1. The column is a Postgres enum of
+ * ('london', 'major_city', 'smaller_city', 'suburban', 'no_preference'), and the
+ * old code wrote `arr.join(',')` straight into it. Two ways that was invalid:
+ *
+ *   1. The form offers `capital_city`, a rename of `london` for an
+ *      international audience — but only `fromPayload` ever learned the mapping,
+ *      so the rename was one-way and the write side sent a non-member.
+ *   2. Any multi-select produced a comma-joined string no enum can hold.
+ *
+ * Reproduced on PG16:
+ *   ERROR: invalid input value for enum location_type: "london,major_city"
+ *
+ * and because the six-table intake save runs without a transaction, it failed
+ * AFTER profiles/personal/academic had already committed, leaving a half-written
+ * profile behind a message naming no findable field. The zod schema types this
+ * column as free text, so no client-side check caught it either.
+ *
+ * A multi-select collapses to `no_preference`. That is not a fudge — it is the
+ * semantics the scorer already documents ("scoring treats multi-select same as
+ * no_preference"), so nothing downstream changes. Preserving the individual
+ * choices needs an array column or a join table, which is a migration; it is
+ * recorded in docs/audit/AUDIT-LEDGER.md rather than faked here.
+ */
+const LOCATION_TYPE_MEMBERS = ['london', 'major_city', 'smaller_city', 'suburban', 'no_preference'] as const;
+
+type LocationTypeEnum = StudentProfilePayload['lifestyle_preference']['desired_location_type'];
+
+export const toLocationTypeEnum = (selected: readonly string[] | null | undefined): LocationTypeEnum => {
+  if (!selected || selected.length === 0) return null;
+
+  // The display rename, applied on the way OUT as well as the way in.
+  const normalised = selected.map((value) => (value === 'capital_city' ? 'london' : value));
+  const legal = normalised.filter((value): value is (typeof LOCATION_TYPE_MEMBERS)[number] =>
+    (LOCATION_TYPE_MEMBERS as readonly string[]).includes(value)
+  );
+
+  if (legal.length === 0) return null;
+  // Anything beyond a single preference is, by the scorer's own rule, no
+  // preference at all.
+  if (legal.length > 1) return 'no_preference' as LocationTypeEnum;
+  return legal[0] as LocationTypeEnum;
+};
+
 export const toPayload = (state: IntakeFormState): StudentProfilePayload => {
   const {
     subjects, programmeType, admissionsTests, personalInfo, nationalities,
@@ -224,12 +270,7 @@ export const toPayload = (state: IntakeFormState): StudentProfilePayload => {
     },
     lifestyle_preference: {
       teaching_style: lifestylePreference.teaching_style ? (lifestylePreference.teaching_style as StudentProfilePayload['lifestyle_preference']['teaching_style']) : null,
-      desired_location_type: (() => {
-        const arr = lifestylePreference.desired_location_type;
-        if (!arr || arr.length === 0) return null;
-        // Store comma-separated; scoring treats multi-select same as no_preference
-        return arr.join(',') as StudentProfilePayload['lifestyle_preference']['desired_location_type'];
-      })(),
+      desired_location_type: toLocationTypeEnum(lifestylePreference.desired_location_type),
       campus_size: lifestylePreference.campus_size ? (lifestylePreference.campus_size as StudentProfilePayload['lifestyle_preference']['campus_size']) : null,
       extracurricular_interests: lifestylePreference.extracurricular_interests,
       other_extracurriculars: lifestylePreference.other_extracurriculars.trim() || null,

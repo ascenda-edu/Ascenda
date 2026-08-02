@@ -238,7 +238,12 @@ const IB_PAYLOAD: StudentProfilePayload = {
   },
   lifestyle_preference: {
     teaching_style: 'academic',
-    desired_location_type: 'capital_city,major_city',
+    // A legal `location_type` member. This fixture stands in for a row loaded
+    // FROM the database, and the enum
+    // ('london','major_city','smaller_city','suburban','no_preference') could
+    // never have held the comma-joined 'capital_city,major_city' this used to
+    // carry — the fixture encoded audit finding I-1 rather than reality.
+    desired_location_type: 'major_city',
     campus_size: 'large',
     extracurricular_interests: ['Debate / public speaking', 'Volunteering'],
     other_extracurriculars: 'Chess club',
@@ -1101,7 +1106,7 @@ describe('payload normalisation', () => {
     p.academic_input.school_city = '  ';
     p.academic_input.career_aspiration = '   ';
     p.academic_input.english_test_type = 'WAIVER'; // + english_required true
-    p.lifestyle_preference.desired_location_type = 'london,major_city'; // legacy key
+    p.lifestyle_preference.desired_location_type = 'london'; // legacy key, and a legal enum member
     p.lifestyle_preference.key_activities = ['stale', 'values'];
     p.lifestyle_preference.intl_experience = [];
     p.lifestyle_preference.epq_subject = 'Physics'; // IB → forced null
@@ -1138,8 +1143,17 @@ describe('payload normalisation', () => {
     expect(sent.academic_input.ib_total_points).toBe(35);
   });
 
-  it('migrates the legacy "london" location to "capital_city"', () => {
-    expect(sent.lifestyle_preference.desired_location_type).toBe('capital_city,major_city');
+  it('shows legacy "london" as the "capital_city" chip and stores it back as "london"', () => {
+    // CHANGED DELIBERATELY (audit I-1), not re-baselined. This asserted
+    // 'capital_city,major_city' — a value `location_type` cannot hold, so the
+    // save it describes failed on PG16 with
+    //   ERROR: invalid input value for enum location_type
+    // after three tables had already committed.
+    //
+    // `capital_city` is a DISPLAY rename of `london`. `fromPayload` always knew
+    // that; `toPayload` did not, so the rename was one-way. It now round-trips:
+    // stored 'london' → chip 'capital_city' → stored 'london'.
+    expect(sent.lifestyle_preference.desired_location_type).toBe('london');
   });
 
   it('derives key_activities from the distinct activity categories', () => {
