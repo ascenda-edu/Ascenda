@@ -29,6 +29,54 @@ to say what was applied.
 
 ---
 
+## 0. APPLIED 2026-08-02 — fact, not inference
+
+Two migrations were applied to the remote today via `npm run db:apply`, in this order.
+Both reported `✓ Applied`, which for these files means their `RAISE EXCEPTION` verification
+blocks passed.
+
+| # | File | Result |
+|---|---|---|
+| 1 | `20260801110000_profiles_insert_guard.sql` | ✅ applied — **closes the privilege escalation.** Until now any user could self-promote to admin, which defeated every other policy |
+| 2 | `20260801122000_counsellor_assignments.sql` | ✅ applied — additive (assignment table + backfill) |
+
+### STOPPED HERE, and why — a dependency this ledger did not record
+
+`20260801130000_reconcile_missing_tables` **failed**:
+
+```
+✗ Failed to apply SQL: function public.is_admin() does not exist
+```
+
+It rolled back cleanly — `apply-sql.ts` sends the file as one multi-statement simple query
+and the file declares no explicit `begin`/`commit`, so Postgres's implicit transaction
+covered the whole file. **Nothing was partially applied.** (Verified, not assumed.)
+
+`is_admin()` is defined in exactly one place: `20260801120000_close_counsellor_access`.
+**Four** of the remaining migrations depend on it —
+`20260801130000`, `20260802100000`, `20260802130000`, `20260802140000`.
+
+And `20260801120000` **cannot be applied while the portals stay open.** Its §1 rewrites
+`can_act_as_counsellor()` to a real role test; its own header requires
+`COUNSELLOR_PORTAL_OPEN_TO_ALL` and `PARENT_PORTAL_OPEN_TO_ALL` be set to `false` in the
+same commit, and `__tests__/db/portal-flag-agreement.test.ts` enforces that pairing. Applying
+it against the current app would close counsellor access at the database while the app still
+renders the portal to everyone — **every counsellor page would render empty, on real data,
+with no error.**
+
+So the rest of the chain is gated on a PRODUCT decision, not on database access:
+
+> **The remaining migrations land at the same moment the portals close** — one commit that
+> applies `20260801120000`, flips both flags to `false`, and deploys. Until then they are
+> correctly unapplied.
+
+Also still held, for an unrelated reason: **`20260802120000_student_matches_…`** requires
+C7 part (b) (the `upsert` on `onConflict: 'profile_id,program_id'`) to be deployed in the
+same release. Ship it earlier and every match-cache rebuild fails at `42P10`, breaking
+`/matches` for every student.
+
+---
+
 ## 1. Legend
 
 | Mark | Meaning |
