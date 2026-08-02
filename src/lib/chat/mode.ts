@@ -13,6 +13,7 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { canActAsCounsellor } from '@/lib/api/guards';
 import type { ChatMode } from '@/lib/chat/prompts';
+import { PARENT_PORTAL_OPEN_TO_ALL } from '@/lib/auth/policy';
 
 const VALID_MODES: ChatMode[] = ['student', 'counsellor', 'parent'];
 
@@ -60,7 +61,27 @@ export const resolveChatMode = async (
     return { ok: false, reason: 'forbidden' };
   }
 
-  if (mode === 'parent' && !(await hasActiveGuardianLink(supabase, user.id))) {
+  // The parent limb tracks PARENT_PORTAL_OPEN_TO_ALL, for the same reason the
+  // counsellor limb tracks can_act_as_counsellor(): the assistant must not be
+  // stricter than the portal it lives in. While the portal is open, all six
+  // /parent/* routes render for everyone, so refusing parent mode here 403'd
+  // the assistant on every message for any account without a link — which is
+  // most of them during development. That worked on origin/main (audit A1).
+  //
+  // This grants NO additional access, which is why it is safe to key off a
+  // display flag. Parent mode is self-scoping downstream:
+  //   - `buildParentContext` calls `loadLinkedChildren(supabase, userId)` and,
+  //     with no link, returns the "no linked children — general guidance only"
+  //     prompt carrying no child data at all;
+  //   - its only tool is `counsellorMessageDeclaration`, gated on
+  //     `hasParentContact`, which derives from that same context and is
+  //     undefined without a link;
+  //   - the tool registry grants parent mode nothing.
+  // The real boundary is `loadLinkedChildren`, and it is untouched.
+  //
+  // When PARENT_PORTAL_OPEN_TO_ALL flips to false the link check returns
+  // automatically, so the two cannot drift apart.
+  if (mode === 'parent' && !PARENT_PORTAL_OPEN_TO_ALL && !(await hasActiveGuardianLink(supabase, user.id))) {
     return { ok: false, reason: 'forbidden' };
   }
 

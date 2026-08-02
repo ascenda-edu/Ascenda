@@ -356,17 +356,30 @@ describe('POST /api/chat', () => {
     expect(mockGenerate).not.toHaveBeenCalled();
   });
 
-  it('returns 403 for parent mode when the caller has no active guardian_link', async () => {
-    // `mode` is client-supplied. A caller with no linked child is not a parent,
-    // so parent mode — whose context is built around another person's child —
-    // must be refused rather than quietly downgraded.
+  it('allows parent mode without a guardian_link while the portal is open to all', async () => {
+    // CHANGED DELIBERATELY (audit A1), not re-baselined. This asserted a 403.
+    // `PARENT_PORTAL_OPEN_TO_ALL` renders all six /parent/* routes to everyone,
+    // so refusing the mode here 403'd the assistant on every message for any
+    // account without a link — most of them during development. It worked on
+    // origin/main. The assistant must not be stricter than its own portal.
+    //
+    // This grants no data: `buildParentContext` scopes on
+    // `loadLinkedChildren(userId)` and, with no link, returns the "no linked
+    // children — general guidance only" prompt carrying no child record, and
+    // the one parent tool is gated on `hasParentContact` from that same
+    // context. `__tests__/chat/mode.test.ts` pins the coupling to the flag;
+    // when it flips to false the link requirement returns automatically.
     (createRouteHandlerSupabaseClient as jest.Mock).mockReturnValue({
       auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'user-123' } } }) },
       from: guardianLinkCount(0),
     });
+    mockGenerate.mockResolvedValueOnce(streamOf([{ text: 'hi' }]));
+
     const res = await POST(chatRequest({ ...validBody, mode: 'parent' }));
-    expect(res.status).toBe(403);
-    expect(mockGenerate).not.toHaveBeenCalled();
+
+    expect(res.status).toBe(200);
+    // The request reached the model rather than being refused at the gate.
+    expect(mockGenerate).toHaveBeenCalled();
   });
 
   // ── Persistence (assistant surface + conversationId) ───────────────────

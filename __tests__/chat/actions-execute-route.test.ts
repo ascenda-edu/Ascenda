@@ -361,35 +361,50 @@ describe('POST /api/chat/actions/execute', () => {
       expect(writeTool.execute).not.toHaveBeenCalled();
     });
 
-    it('403s a STUDENT executing inside a conversation row that claims parent mode', async () => {
-      // Parent mode resolves through guardian_links; this stub has no such
-      // table, so the read throws and `hasActiveGuardianLink` must fail closed.
-      const linkFilters: Array<[string, unknown]> = [];
-      (createRouteHandlerSupabaseClient as jest.Mock).mockReturnValue({
-        auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'user-123' } } }) },
-        from: jest.fn(() => ({
-          select: jest.fn(() => ({
-            eq: jest.fn((column: string, value: unknown) => {
-              linkFilters.push([column, value]);
-              return {
-                eq: jest.fn((c2: string, v2: unknown) => {
-                  linkFilters.push([c2, v2]);
-                  return Promise.resolve({ count: 0, error: null });
-                })
-              };
-            })
-          }))
-        }))
-      });
+    it('gives a STUDENT no write capability inside a conversation row that claims parent mode', async () => {
+      // WHAT CHANGED AND WHY (audit A1). This used to assert a 403 from
+      // `resolveChatMode`, which refused parent mode without an active
+      // guardian_link. While PARENT_PORTAL_OPEN_TO_ALL is true the portal
+      // renders all six /parent/* routes to everyone, so that refusal 403'd the
+      // assistant on every message for any account without a link. The mode
+      // check now tracks the flag.
+      //
+      // The security property is UNCHANGED and is what this test now asserts
+      // directly: parent mode carries no write tools. Verified against the REAL
+      // registry — `toolsForMode('parent')` is empty, so `getWriteTool(name,
+      // 'parent')` is null for every name. The old assertion could not see that
+      // at all, because `getWriteTool` is mocked in this file and answered
+      // regardless of mode.
+      //
+      // Data access is likewise unchanged: `buildParentContext` scopes on
+      // `loadLinkedChildren(userId)` and returns the "no linked children"
+      // prompt with no child data, and the one parent tool is gated on
+      // `hasParentContact`, which derives from that same context.
+      (getWriteTool as jest.Mock).mockImplementation(
+        (name: string, mode: string) => (mode === 'parent' ? null : writeTool)
+      );
       inConversationMode('parent');
 
-      expect((await POST(executeRequest(validBody))).status).toBe(403);
+      const response = await POST(executeRequest(validBody));
+
+      // No write tool resolves, so the action cannot run. The status is a 4xx
+      // either way; what matters is that nothing executed.
+      expect(response.status).toBeGreaterThanOrEqual(400);
       expect(writeTool.execute).not.toHaveBeenCalled();
-      // Parenthood is decided by the caller's OWN active guardian links.
-      expect(linkFilters).toEqual([
-        ['parent_profile_id', 'user-123'],
-        ['status', 'active']
-      ]);
+      expect(claimMessageAction).not.toHaveBeenCalled();
+      // The mode actually reached the registry — if this were resolving as
+      // 'student' the tool would have been handed over.
+      expect(getWriteTool).toHaveBeenCalledWith(expect.any(String), 'parent');
+    });
+
+    it('the real registry grants parent mode no tools at all — the check above is not a mock artefact', () => {
+      // Guards the premise of the previous test against the registry changing.
+      // If a parent-mode tool is ever added, this fails and the mode gate in
+      // `resolveChatMode` has to be reconsidered.
+      const { toolsForMode } = jest.requireActual<typeof import('@/lib/chat/tools/registry')>(
+        '@/lib/chat/tools/registry'
+      );
+      expect(toolsForMode('parent')).toEqual([]);
     });
 
     it('lets a real counsellor execute in a counsellor conversation, and resolves the tool in that mode', async () => {
