@@ -748,3 +748,94 @@ Nothing in round 1 is unresolved-and-unrecorded, so round 2 is not a re-run:
 - H-01/H-02/H-04/H-05 (pre-existing API-surface findings) and the remaining P3s.
 - The lanes' own "Not verified" sections — nothing was exercised in a browser, and
   `origin/main` was never built for a behavioural A/B.
+
+---
+
+# THE THREE OWNER DECISIONS — resolved
+
+## A1 — parent portal · DECIDED: portals stay open during development
+
+Owner: the parent and counsellor portals are intentionally open while the app is
+being built; they will be separated later. So the assistant was fixed to match the
+portal rather than the portal being closed to match the assistant.
+
+`resolveChatMode`'s guardian-link requirement now keys off `PARENT_PORTAL_OPEN_TO_ALL`,
+so the two cannot drift and the check returns automatically when the flag flips.
+
+**Established before changing it, not assumed:** this grants no additional access.
+`buildParentContext` scopes on `loadLinkedChildren(userId)` and returns the "no linked
+children — general guidance only" prompt with no child data; the one parent tool is gated
+on `hasParentContact` from that same context; and `toolsForMode('parent')` is **empty** in
+the real registry. The boundary is `loadLinkedChildren`, untouched.
+
+Two tests asserted the 403 and were changed deliberately. One was also **strengthened**:
+it asserted a refusal from `resolveChatMode`, but `getWriteTool` is mocked in that file and
+answered regardless of mode, so it never exercised the layer that actually protects users.
+It now asserts against the real registry, plus a guard that fails if a parent-mode tool is
+ever added.
+
+## D-01 — partial A-level branch · FIXED, harness first
+
+**The harness went first and was watched failing before any scoring changed** — 37
+inversions at one grade, 632 ordered pairs at two. `scoring-golden.test.ts` now enumerates
+1- and 2-grade signatures and checks dominance within each arity.
+
+The fix pads missing entries with `U` and reads the **same** signature table as a complete
+profile. Every U-bearing signature already exists in it, so no new numbers are invented and
+the partial rule cannot drift from the calibrated set — the alternative was a fourth
+parallel table, the failure mode this codebase keeps reproducing.
+
+**Impact, measured across all 35 partial signatures: 31 improved, 4 unchanged, 0 lowered.**
+No student's score goes down. `A*A*` 0 → 52, `A*E` 5 → 16, so the ordering is now correct.
+**No golden file changed** — every 3-grade signature scores exactly as before, which is what
+confines the change to the partial branch.
+
+## I-1 — `capital_city` · FIXED form-side, transaction deliberately deferred
+
+`toLocationTypeEnum` maps `capital_city` → `london` and collapses a multi-select to
+`no_preference` — the semantics the scorer already documents, so nothing downstream moves.
+An exhaustive test asserts no combination of chips can produce a non-member, so a newly
+added illegal chip fails the build.
+
+Three fixtures asserted `'capital_city,major_city'` / `'london,major_city'` — values the
+enum could never have held, so no row loaded *from* the database could look like that. The
+fixtures encoded the bug; changed deliberately.
+
+**The transaction was deliberately NOT attempted.** Making the six-table save atomic needs a
+Postgres function, i.e. a migration, which cannot be applied from here — it would ship
+unapplied and give false assurance. The A2 fix already narrowed the window substantially by
+validating the payload client-side against the server's own schema. Recorded as
+migration-gated follow-up work.
+
+---
+
+## Final state after the owner decisions
+
+| Gate | Result |
+|---|---|
+| `typecheck` (incl. `scripts/`) | exit 0 |
+| `lint` | exit 0 — 0 errors, the 2 known warnings |
+| `lint:boundaries` · `lint:tokens` · `lint:datalayer` · `lint:deadcode` | exit 0 |
+| `build` · `check:bundle` | exit 0 — all 47 routes within budget |
+| `test` — `TZ=UTC` | **74 suites / 1,654 tests** |
+| `test` — `TZ=America/Los_Angeles` | **74 suites / 1,654 tests** |
+| `./scripts/ci-db-local.sh` | PASS |
+
+Round 1 opened at 67 suites / 1,541 tests with five gates that could not fail.
+
+## Still owner-only — nothing here is automatable
+
+1. **Rotate `SUPABASE_SERVICE_ROLE_KEY`** — L7 confirms a live `service_role` JWT for
+   project `alpkbobbasxvubogkark`, **exp 2035-11-13**, in reachable git history (`823b0a7`,
+   file `.env.local`, untracked later by `9c310ff`). It bypasses all RLS.
+   **Purging history does not close this** — clones and forks already hold the blob, and
+   GitHub serves unreachable objects by SHA for a while after a rewrite. Order: rotate →
+   update Vercel + `.env.local` → enable secret scanning + push protection → *then* rewrite
+   if desired (`git filter-repo --path .env.local --invert-paths`), which rewrites every SHA
+   from that commit forward, needs a force-push, and should wait until this branch has
+   landed so its commits are not orphaned.
+2. Rotate `DEMO_USER_PASSWORD` / `SEED_STUDENT_PASSWORD`.
+3. Apply the migrations in order — `20260801110000_profiles_insert_guard` **first**, and
+   ship `20260802120000` together with C7 part (b) in one deploy.
+4. Buy GitHub Team; require the single `ci-ok` check.
+5. Run the Playwright wizard spec once against a throwaway account.
