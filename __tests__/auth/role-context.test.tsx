@@ -5,6 +5,24 @@ const getUser = jest.fn();
 const single = jest.fn();
 const getBrowserSupabaseClient = jest.fn();
 
+/**
+ * The double records `.select()` columns and `.eq()` arguments.
+ *
+ * It used to be `from: () => ({ select: () => ({ eq: () => ({ single }) }) })`
+ * — arguments thrown away — and nothing here asserted them. The same hole in
+ * the sibling suite let `.eq('id', user.id) → .eq('role', user.id)` survive the
+ * entire 1,069-test run on the module that resolves who the user is. The
+ * fallback path below writes the same query in the browser, so it gets the same
+ * treatment: record `[method, column, value]`, assert WHICH COLUMN.
+ */
+type Filter = [method: 'eq', column: string, value: unknown];
+interface RecordedQuery {
+  table: string;
+  select: string;
+  filters: Filter[];
+}
+const queries: RecordedQuery[] = [];
+
 jest.mock('@/lib/supabase/client', () => ({
   getBrowserSupabaseClient: () => getBrowserSupabaseClient()
 }));
@@ -28,11 +46,27 @@ const readRole = () => screen.getByTestId('role').textContent;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  queries.length = 0;
   window.sessionStorage.clear();
   window.localStorage.clear();
   getBrowserSupabaseClient.mockReturnValue({
     auth: { getUser },
-    from: () => ({ select: () => ({ eq: () => ({ single }) }) })
+    from: (table: string) => {
+      const record: RecordedQuery = { table, select: '', filters: [] };
+      queries.push(record);
+      const builder: Record<string, unknown> = {
+        select: (columns: string) => {
+          record.select = columns;
+          return builder;
+        },
+        eq: (column: string, value: unknown) => {
+          record.filters.push(['eq', column, value]);
+          return builder;
+        },
+        single
+      };
+      return builder;
+    }
   });
   getUser.mockResolvedValue({ data: { user: { id: 'u-1' } } });
   single.mockResolvedValue({ data: { role: 'student' } });
@@ -83,8 +117,22 @@ describe('the demo role switcher still wins', () => {
   });
 
   it('is ignored once cleared, falling back to the server role', async () => {
-    render(withProvider('admin'));
+    // This test used to be byte-identical to `'is used as-is'` — it never set
+    // the override it claimed to clear, so the name promised a path it did not
+    // drive and it would have passed with the override handling deleted. Now it
+    // actually walks the transition.
+    window.sessionStorage.setItem(SESSION_ROLE_KEY, 'counsellor');
+    const { rerender } = render(withProvider('student'));
+    await waitFor(() => expect(readRole()).toBe('counsellor'));
+
+    window.sessionStorage.removeItem(SESSION_ROLE_KEY);
+    // The effect is keyed on the server role, so changing it re-runs the
+    // precedence chain — the same thing a navigation does after /role-select
+    // clears the override.
+    rerender(withProvider('admin'));
+
     await waitFor(() => expect(readRole()).toBe('admin'));
+    expect(getUser).not.toHaveBeenCalled();
   });
 });
 
@@ -96,6 +144,19 @@ describe('fallback when no RoleProvider supplies a role', () => {
 
     await waitFor(() => expect(readRole()).toBe('student'));
     expect(getUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads the CALLER row: profiles.role WHERE id = the signed-in user', async () => {
+    // The fallback re-derives the role in the browser. If it filtered on the
+    // wrong column it would hand whatever row came back to `setRole` — which is
+    // how a nav that says "Admin" appears for someone who is not one.
+    getUser.mockResolvedValue({ data: { user: { id: 'u-99' } } });
+
+    renderBare(<RoleProbe />);
+    await waitFor(() => expect(readRole()).toBe('student'));
+
+    expect(queries).toEqual([{ table: 'profiles', select: 'role', filters: [['eq', 'id', 'u-99']] }]);
+    expect(queries[0].filters.map(([, column]) => column)).not.toContain('role');
   });
 
   it('uses the localStorage cache first to avoid nav flicker', async () => {

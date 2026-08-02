@@ -26,13 +26,61 @@
  * covered here is *whether the hook applies it*, which is a different question.
  */
 
-import { renderHook, waitFor, act } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 
 import { useSearchResults } from '@/hooks/use-search-results';
 import { getBrowserSupabaseClient } from '@/lib/supabase/client';
 import { DEFAULT_FILTERS, type SearchFilters } from '@/lib/university-search/search-params';
 
 jest.mock('@/lib/supabase/client');
+
+/* ── waitFor, but bounded by WORK rather than by the wall clock ──────────────
+ *
+ * THE FLAKE THIS REPLACES. This file made 22 `waitFor(...)` calls with no
+ * explicit timeout, so all of them used React Testing Library's 1000 ms
+ * default. `useSearchResults` has no timers of its own — every pending step is
+ * a promise continuation — so the only thing bounding those waits was how
+ * quickly the event loop got scheduled. Under CPU starvation a 1 s budget is
+ * marginal: a reviewer saw this suite fail 1 run in 4 while the machine was at
+ * load ~20, and pass 12 times out of 12 on an idle one. CI runs
+ * `npm test -- --runInBand` on a 2-core GitHub runner — the most starved
+ * environment this suite will ever see — with no retry, on a required check.
+ *
+ * Raising the timeout would only move the threshold. This removes the clock
+ * from the equation instead: the hook's pending work is entirely microtasks, so
+ * flushing the microtask queue inside `act()` a bounded number of times reaches
+ * the same fixed point every run, on any machine, at any load. A wall-clock
+ * second is not a unit of progress; a drained microtask queue is.
+ *
+ * `MAX_FLUSHES` bounds a genuinely-never-settling condition so a real failure
+ * still reports the assertion error rather than hanging until Jest's timeout.
+ * It is generous because exceeding it means "this predicate is never going to
+ * be true", not "this machine is busy" — 200 flushes is far deeper than any
+ * promise chain in the hook, and costs nothing when the predicate passes on the
+ * first or second one.
+ *
+ * Signature-compatible with RTL's `waitFor`, so the 22 call sites below are
+ * unchanged and read the same.
+ */
+const MAX_FLUSHES = 200;
+
+const waitFor = async (predicate: () => void | Promise<void>): Promise<void> => {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= MAX_FLUSHES; attempt += 1) {
+    try {
+      await predicate();
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+    // One turn of the microtask queue, with React's effects and state updates
+    // flushed — i.e. exactly one increment of real progress.
+    await act(async () => {
+      await Promise.resolve();
+    });
+  }
+  throw lastError;
+};
 
 /* ── the Supabase double ─────────────────────────────────────────────────────
  * Records every call: table, select string, select options, the ordered list of

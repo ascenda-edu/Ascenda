@@ -23,7 +23,12 @@ import {
   FUNNEL_STAGES,
 } from '@/lib/counsellor/stage-colors';
 import { APPLICATION_STATUS_VISUAL } from '@/lib/theme/categories';
-import { deriveCohortStats, deriveApplicationsWithPlatform, loadCohort } from '@/lib/counsellor/data';
+import {
+  deriveAtRiskAlerts,
+  deriveCohortStats,
+  deriveApplicationsWithPlatform,
+  loadCohort,
+} from '@/lib/counsellor/data';
 
 const DB_STATUSES = Constants.public.Enums.application_status;
 
@@ -263,14 +268,62 @@ describe('deriveCohortStats — the funnel', () => {
     expect(Object.keys(stats.appFunnel).sort()).toEqual([...FUNNEL_STAGES].sort());
   });
 
-  it('does not flag an enrolled application as an incomplete one', () => {
-    // The at-risk copy used to count "incomplete applications" as
-    // `status !== 'submitted' && status !== 'decision'`, which made every
-    // enrolled application incomplete forever.
-    const stale = studentWith('a', ['enrolled']);
-    stale.lastActive = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
-    const stats = deriveCohortStats([stale]);
-    expect(stats.appFunnel.enrolled).toBe(1);
-    expect(stale.flags).not.toContain('stalled');
+});
+
+/* ── "incomplete application" ──────────────────────────────────────────────── */
+
+/**
+ * `isOpenApplication` is the allow-list that replaced the deny-list
+ * `status !== 'submitted' && status !== 'decision'` — which counted every
+ * ENROLLED application as incomplete forever, the moment `enrolled` became
+ * representable.
+ *
+ * There used to be a test here NAMED for that bug that could not detect it: it
+ * called `deriveCohortStats` (which never computes flags) and then asserted
+ * `stale.flags` — the `studentWith` fixture's own `flags: []` — so it was the
+ * fixture asserting itself. A reviewer reinstated the deny-list and it stayed
+ * green while three real tests elsewhere went red.
+ *
+ * `deriveAtRiskAlerts` is the function that actually consumes
+ * `isOpenApplication`, so that is what these drive.
+ */
+describe('deriveAtRiskAlerts — an enrolled application is finished, not stalled', () => {
+  const inactiveFor = (days: number, statuses: ApplicationStatus[]) => {
+    const student = studentWith('a', statuses);
+    student.lastActive = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+    return student;
+  };
+
+  const stalledAlerts = (student: CounsellorStudent) =>
+    deriveAtRiskAlerts([student]).filter((alert) => alert.riskType === 'stalled_application');
+
+  it('raises no stalled alert for a long-inactive student whose only application is enrolled', () => {
+    // The student got in. There is nothing left for them to do, so chasing them
+    // for 60 days of inactivity is noise on the counsellor's at-risk panel.
+    expect(stalledAlerts(inactiveFor(60, ['enrolled']))).toEqual([]);
+  });
+
+  it.each<[ApplicationStatus, boolean]>([
+    ['planning', true],
+    ['in_progress', true],
+    ['submitted', false],
+    ['decision', false],
+    ['enrolled', false]
+  ])('a 60-day-inactive student with a %s application ⇒ stalled alert: %s', (status, expected) => {
+    // The whole enum, so a sixth value cannot quietly land on the wrong side of
+    // the allow-list, and so this cannot pass by never raising an alert at all.
+    expect(stalledAlerts(inactiveFor(60, [status])).length > 0).toBe(expected);
+  });
+
+  it('counts only the OPEN applications in the alert text', () => {
+    const student = inactiveFor(60, ['planning', 'enrolled', 'submitted', 'in_progress']);
+
+    expect(stalledAlerts(student)[0].description).toContain('2 incomplete application(s)');
+  });
+
+  it('says nothing about a recently-active student, whatever their applications', () => {
+    // The control: without it every assertion above passes on a function that
+    // has stopped raising stalled alerts entirely.
+    expect(stalledAlerts(inactiveFor(1, ['planning']))).toEqual([]);
   });
 });

@@ -7,6 +7,9 @@
  * would restore the divergence without changing a single call site.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import {
   APPLICATION_BOARD_SELECT,
   APPLICATION_LABEL_SELECT,
@@ -17,31 +20,76 @@ import {
   DOCUMENT_SELECT,
   MATCH_TIER_SELECT,
   PROGRAMME_FIELDS,
-  UNIVERSITY_FIELDS,
 } from '@/lib/data/columns';
 
-const APPLICATION_SELECTS = {
-  APPLICATION_BOARD_SELECT,
-  APPLICATION_TASKS_SELECT,
-  APPLICATION_LABEL_SELECT,
+/**
+ * The composition property has to be checked against the SOURCE, not the value.
+ *
+ * `expect(APPLICATION_BOARD_SELECT).toContain(`program:programs(${PROGRAMME_FIELDS}`)`
+ * reads like a real assertion and is a tautology: `columns.ts` builds that
+ * string by interpolating that very constant, so the two sides cannot disagree
+ * — and the one regression it claims to catch (someone pasting a full literal
+ * back into one of the selects) would still pass, because a freshly pasted
+ * literal is byte-identical to what the template produced.
+ *
+ * Reading the declarations proves the thing the module header actually
+ * promises: these constants are COMPOSED, so a change to a fragment reaches
+ * every consumer of it.
+ */
+const COLUMNS_SOURCE = readFileSync(join(__dirname, '..', '..', 'src', 'lib', 'data', 'columns.ts'), 'utf8');
+
+/** The right-hand side of `export const NAME = …` up to the closing backtick/quote. */
+const declarationOf = (name: string): string => {
+  const match = COLUMNS_SOURCE.match(new RegExp(`export const ${name}\\s*=\\s*([\\s\\S]*?)\\sas const;`));
+  expect(match).not.toBeNull();
+  return match![1];
 };
 
 describe('the shared fragments are actually shared', () => {
-  it.each(Object.entries(APPLICATION_SELECTS))(
-    '%s embeds the one programme fragment',
-    (_name, select) => {
-      expect(select).toContain(`program:programs(${PROGRAMME_FIELDS}`);
+  it.each([
+    ['APPLICATION_BOARD_SELECT'],
+    ['APPLICATION_TASKS_SELECT'],
+    ['APPLICATION_LABEL_SELECT'],
+  ])('%s interpolates PROGRAMME_FIELDS rather than restating it', (name) => {
+    const declaration = declarationOf(name);
+
+    expect(declaration).toContain('program:programs(${PROGRAMME_FIELDS}');
+    // The failure mode this catches: a literal pasted in place of the
+    // interpolation. Identical output today, silently divergent tomorrow.
+    expect(declaration).not.toContain('name:course_name');
+  });
+
+  it('PROGRAMME_FIELDS interpolates UNIVERSITY_FIELDS', () => {
+    const declaration = declarationOf('PROGRAMME_FIELDS');
+
+    expect(declaration).toContain('${UNIVERSITY_FIELDS}');
+    expect(declaration).not.toContain('universities(');
+  });
+
+  it.each([['APPLICATION_BOARD_SELECT'], ['APPLICATION_TASKS_SELECT']])(
+    '%s interpolates CHECKLIST_FIELDS',
+    (name) => {
+      const declaration = declarationOf(name);
+
+      expect(declaration).toContain('${CHECKLIST_FIELDS}');
+      expect(declaration).not.toContain('application_checklist(');
     }
   );
 
-  it('the programme fragment embeds the one university fragment', () => {
-    expect(PROGRAMME_FIELDS).toContain(UNIVERSITY_FIELDS);
+  it('the board interpolates DEADLINE_FIELDS', () => {
+    const declaration = declarationOf('APPLICATION_BOARD_SELECT');
+
+    expect(declaration).toContain('${DEADLINE_FIELDS}');
+    expect(declaration).not.toContain('deadlines(id,');
   });
 
-  it('every application select that carries a checklist carries the same one', () => {
-    for (const select of [APPLICATION_BOARD_SELECT, APPLICATION_TASKS_SELECT]) {
-      expect(select).toContain(CHECKLIST_FIELDS);
-    }
+  it('the source scanner is looking at the real declarations', () => {
+    // Without this, a rename or a reformat turns every check above into a pair
+    // of assertions against an empty string — vacuous in the exact way this
+    // rewrite exists to remove. `declarationOf` fails on a missing name, so
+    // reaching these lines already proves the four constants were found.
+    expect(declarationOf('APPLICATION_SUMMARY_SELECT').trim()).toBe(`'id,status,program_id'`);
+    expect(COLUMNS_SOURCE).toContain('export const PROGRAMME_FIELDS');
   });
 });
 

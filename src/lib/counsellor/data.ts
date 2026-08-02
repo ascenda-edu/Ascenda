@@ -113,8 +113,31 @@ export interface OutcomeStats {
 
 // Thresholds come from lib/matching/match-tier. This used to hardcode >=70/>=50,
 // which disagreed with the rule the search surfaces applied — a score of 75 read
-// "Safe" here and "Match" there. `?? 'Reach'` keeps the previous behaviour of
-// this call site, which treated a missing score as a Reach.
+// "Safe" here and "Match" there.
+//
+// ── On the `?? 'Reach'` fallback ───────────────────────────────────────────
+// This FABRICATES a tier for a row with no score, and the fabrication is real:
+// `matchTierFromScore` deliberately returns null for "we don't know" so that
+// unknown stays distinguishable from Reach, and this call site then collapses
+// that distinction. docs/audit/review/02-domain.md calls it the most harmful
+// null-handling site on the branch.
+//
+// It is kept, deliberately, for two reasons — recorded here because the next
+// person to read this deserves the argument rather than a silent `??`:
+//
+//   1. It leans the SAFE way. 'Reach' overstates difficulty. The expensive error
+//      in this product is telling a student a reach school is safe, never the
+//      reverse — the same reasoning that chose 80/60 over 70/50 in match-tier.ts.
+//      An unscored programme presented as "Safe" would be the harmful version of
+//      this bug; this is its opposite.
+//   2. The honest alternative is a nullable tier rendered as "—", and
+//      `CounsellorMatch.tier` is consumed at 23 sites in the counsellor UI. That
+//      is a real change to what a counsellor sees, and it is a product decision
+//      about whether an unscored programme should appear on the roster at all —
+//      not something to infer from a lint of the type signature.
+//
+// So: known, argued, and NOT a silent default. If you make `tier` nullable,
+// delete this fallback rather than moving it.
 const tierFromScore = (score: number | null | undefined): MatchTier =>
   matchTierFromScore(score) ?? 'Reach';
 

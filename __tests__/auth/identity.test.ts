@@ -11,6 +11,38 @@ const getUser = jest.fn();
 const profileMaybeSingle = jest.fn();
 const from = jest.fn();
 
+/**
+ * THE DOUBLE RECORDS FILTER ARGUMENTS. That is the whole point of it.
+ *
+ * The previous double was `select: () => ({ eq: () => ({ maybeSingle }) })` —
+ * arguments discarded — and the suite asserted only `toHaveBeenCalledWith
+ * ('profiles')`. A reviewer changed `.eq('id', user.id)` to `.eq('role',
+ * user.id)` in `identity.ts` — the module that answers "who is making this
+ * request" — and all 1,069 tests stayed green. That is the SAME
+ * find-and-replace class that already shipped on this branch once, as
+ * `'counsellor.student'` (commit b5119ae). Twice is a pattern, not bad luck.
+ *
+ * So: record `[method, column, value]` per filter, the select column list, and
+ * which terminal was used, then assert WHICH COLUMN is filtered — never just
+ * which table. Same shape as the recorder in `__tests__/data/applications.test.ts`
+ * and `__tests__/counsellor/cohort-loader.test.ts`.
+ */
+type Filter = [method: 'eq', column: string, value: unknown];
+interface RecordedQuery {
+  table: string;
+  select: string;
+  filters: Filter[];
+  terminal: string | null;
+}
+
+const queries: RecordedQuery[] = [];
+/** The single `profiles` read `getIdentity` makes, or a failure naming what it did instead. */
+const profileQuery = (): RecordedQuery => {
+  const profileReads = queries.filter((q) => q.table === 'profiles');
+  expect(profileReads).toHaveLength(1);
+  return profileReads[0];
+};
+
 jest.mock('@/lib/supabase/server', () => ({
   createServerSupabaseClient: jest.fn(async () => ({
     auth: { getUser },
@@ -40,8 +72,29 @@ const signedIn = (user: { id: string; email?: string | null }, role: unknown, er
 
 beforeEach(() => {
   jest.clearAllMocks();
-  from.mockReturnValue({
-    select: () => ({ eq: () => ({ maybeSingle: profileMaybeSingle }) })
+  queries.length = 0;
+  from.mockImplementation((table: string) => {
+    const record: RecordedQuery = { table, select: '', filters: [], terminal: null };
+    queries.push(record);
+    const builder: Record<string, unknown> = {
+      select: (columns: string) => {
+        record.select = columns;
+        return builder;
+      },
+      eq: (column: string, value: unknown) => {
+        record.filters.push(['eq', column, value]);
+        return builder;
+      },
+      maybeSingle: () => {
+        record.terminal = 'maybeSingle';
+        return profileMaybeSingle();
+      },
+      single: () => {
+        record.terminal = 'single';
+        return profileMaybeSingle();
+      }
+    };
+    return builder;
   });
 });
 
@@ -62,6 +115,63 @@ describe('getIdentity', () => {
       role: 'counsellor'
     });
     expect(from).toHaveBeenCalledWith('profiles');
+  });
+
+  it('reads the CALLER row: profiles WHERE id = <the JWT subject>', async () => {
+    signedIn({ id: 'u-42', email: 'c@example.com' }, 'counsellor');
+
+    await getIdentity();
+
+    // The whole query, in one assertion, so a change to any part of it names
+    // itself in the diff rather than hiding behind a table-name check.
+    expect(queries).toEqual([
+      { table: 'profiles', select: 'role', filters: [['eq', 'id', 'u-42']], terminal: 'maybeSingle' }
+    ]);
+  });
+
+  describe('the profiles read is pinned column by column', () => {
+    // Stated as four separate properties rather than left implicit in the shape
+    // assertion above, because each one is a distinct way to break this module
+    // silently, and the failure should name which one broke.
+    beforeEach(() => signedIn({ id: 'u-42', email: 'c@example.com' }, 'counsellor'));
+
+    it('filters on `id` — not on `role`, not on any other column', async () => {
+      await getIdentity();
+
+      const { filters } = profileQuery();
+      expect(filters).toEqual([['eq', 'id', 'u-42']]);
+      // Said again, negatively: `.eq('role', user.id)` is the exact mutation
+      // that survived the whole suite, and it is a one-word find-and-replace
+      // away at all times.
+      expect(filters.map(([, column]) => column)).not.toContain('role');
+    });
+
+    it('filters on the JWT subject, never on the email or anything else', async () => {
+      await getIdentity();
+
+      expect(profileQuery().filters).toEqual([['eq', 'id', 'u-42']]);
+      expect(JSON.stringify(profileQuery().filters)).not.toContain('c@example.com');
+    });
+
+    it('selects `role` — not `id`, not `*`', async () => {
+      await getIdentity();
+
+      expect(profileQuery().select).toBe('role');
+    });
+
+    it('resolves at most one row, and tolerates zero', async () => {
+      // `.single()` errors with PGRST116 when the profile row is missing, which
+      // would turn "no profile yet" into a logged error on every render.
+      await getIdentity();
+
+      expect(profileQuery().terminal).toBe('maybeSingle');
+    });
+
+    it('touches `profiles` and nothing else', async () => {
+      await getIdentity();
+
+      expect(queries.map((q) => q.table)).toEqual(['profiles']);
+    });
   });
 
   it('takes the email from the verified JWT claim, not from a profile table', async () => {
