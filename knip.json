@@ -3,17 +3,17 @@
 // (knip parses knip.json as JSONC, so these comments are legal. An extra "//" *key*
 //  is not — knip rejects unrecognised keys.)
 //
-// NON-BLOCKING BY DESIGN. The npm script passes --no-exit-code so knip always exits 0.
-// It is a report, not a gate, until the backlog it finds is burned down.
+// BLOCKING, as a per-category RATCHET. `npm run lint:deadcode` no longer runs knip
+// directly — it runs scripts/check-deadcode.mjs, which runs knip with the JSON reporter
+// and compares the count of each issue type against scripts/check-deadcode.baseline.json,
+// failing only on an INCREASE.
 //
-// TO MAKE IT BLOCKING (once the report is at zero, or once there is a baseline worth
-// defending):
-//   1. drop `--no-exit-code` from the `lint:deadcode` npm script, and
-//   2. add `- run: npm run lint:deadcode` to .github/workflows/ci.yml.
-// Intermediate option: keep --no-exit-code on the report script and add a second,
-// blocking script narrowed to one issue type, e.g.
-//   "lint:deadcode:files": "knip --include files"
-// so one category ratchets at a time instead of all nine at once.
+// It used to be `knip --no-exit-code`, i.e. exit 0 always, which meant a brand-new
+// unreferenced file was listed in the CI log and passed the build. The burn-down argument
+// for not blocking on the 217 existing findings was right; the exit code was wrong.
+//
+// `npm run lint:deadcode:report` is still the raw, ungated knip output.
+// Suppress FALSE POSITIVES here, with a reason. Never in the ratchet script.
 //
 // FALSE-POSITIVE GUARDS — do not remove without reading these:
 //   * `**/*.d.ts` is in `entry`. src/types/papaparse.d.ts is a 2-line ambient

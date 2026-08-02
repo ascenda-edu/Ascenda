@@ -309,12 +309,24 @@ const baseStudent: StudentProfilePayload = {
     english_score_overall: null,
     admissions_tests: []
   },
+  activities_list: [],
   lifestyle_preference: {
     teaching_style: 'academic',
     desired_location_type: 'london',
     campus_size: 'medium',
     extracurricular_interests: ['Sports/fitness'],
-    other_extracurriculars: null
+    other_extracurriculars: null,
+    leadership_roles: [],
+    commitment_level: null,
+    key_activities: [],
+    sat_score: null,
+    act_score: null,
+    intl_experience: [],
+    work_experience: null,
+    work_experience_summary: null,
+    ambition_statement: null,
+    epq_subject: null,
+    epq_title: null
   }
 };
 

@@ -70,6 +70,12 @@
     "**/*.mjs",
     ".next/types/**/*.ts"
   ],
+  // "scripts" is excluded HERE but NOT unchecked: tsconfig.scripts.json covers it,
+  // and `npm run typecheck` runs both. It stays out of this config because these are
+  // Node CLI programs (types: ["node"], no DOM, no jest) and this config is what Next
+  // and the editor read for the app. Do not remove tsconfig.scripts.json from the
+  // `typecheck` script — scripts/apply-sql.ts talks to the production database and was
+  // typechecked by nothing at all until 2026-08-02.
   "exclude": [
     "node_modules",
     "supabase",

@@ -187,6 +187,95 @@ for (const abs of files) {
 }
 
 // ---------------------------------------------------------------------------
+// Tailwind `content` coverage — a HARD check, not a ratchet.
+//
+// Tailwind only emits a utility it has SEEN in a file matched by `content`. A file
+// outside every glob keeps compiling, keeps type-checking, keeps passing lint — its
+// classes simply do not exist in the stylesheet, and the element falls back to the
+// browser default. There is no error anywhere.
+//
+// That is not hypothetical here: moving the parent slice from
+// `src/app/parent/_components/` (matched by `./src/app/**`) to `src/features/parent/ui/`
+// (matched by nothing) silently dropped `min-w-[180px]`, `max-w-[75%]`,
+// `text-primary-foreground/60`, `focus:ring-ring` and `sm:min-h-[560px]` out of the
+// shipped CSS.
+//
+// So: every source file that actually carries class strings must be matched by at
+// least one `content` glob. A hardcoded list of the five lost class names would only
+// re-detect that one incident; this detects the NEXT directory somebody adds.
+
+const TAILWIND_CONFIG = join(ROOT, 'tailwind.config.ts');
+
+/** Minimal glob -> RegExp. Supports `**`, `*`, `?`, and `{a,b,c}`. */
+function globToRegExp(glob) {
+  const g = glob.replace(/^\.\//, '');
+  let out = '';
+  for (let i = 0; i < g.length; i++) {
+    const c = g[i];
+    if (c === '*') {
+      if (g[i + 1] === '*') {
+        // `**/` spans zero or more directories; a bare `**` spans anything.
+        if (g[i + 2] === '/') { out += '(?:[^/]+/)*'; i += 2; } else { out += '.*'; i += 1; }
+      } else {
+        out += '[^/]*';
+      }
+    } else if (c === '?') out += '[^/]';
+    else if (c === '{') {
+      const end = g.indexOf('}', i);
+      if (end === -1) { out += '\\{'; continue; }
+      out += `(?:${g.slice(i + 1, end).split(',').map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`;
+      i = end;
+    } else out += c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+  return new RegExp(`^${out}$`);
+}
+
+function tailwindContentGlobs() {
+  const src = readFileSync(TAILWIND_CONFIG, 'utf8');
+  const m = /\n\s*content:\s*\[([\s\S]*?)\n\s*\],/.exec(src);
+  if (!m) {
+    console.error(
+      `Could not find the \`content: [ … ]\` array in ${relative(ROOT, TAILWIND_CONFIG)}.\n` +
+        '  This check parses it textually. If the config was restructured, update\n' +
+        '  tailwindContentGlobs() in scripts/check-design-tokens.mjs — do not delete the check.'
+    );
+    process.exit(1);
+  }
+  // Quoted strings only; the block is comment-heavy and comments never contain quotes
+  // that look like a path, but strip them first anyway.
+  const body = m[1].replace(/\/\/[^\n]*/g, '');
+  const globs = [...body.matchAll(/['"`]([^'"`]+)['"`]/g)].map((x) => x[1]);
+  if (!globs.length) {
+    console.error(`No content globs parsed out of ${relative(ROOT, TAILWIND_CONFIG)}.`);
+    process.exit(1);
+  }
+  return globs;
+}
+
+const CONTENT_RES = tailwindContentGlobs().map(globToRegExp);
+/** A file "carries classes" if it mentions a className/class attribute or cn(). */
+const CLASS_STRING = /className|class(?:Name)?=|\bcn\(|\bcva\(/;
+
+const uncovered = [];
+for (const abs of files) {
+  const rel = relative(ROOT, abs).split(sep).join('/');
+  if (!CLASS_STRING.test(readFileSync(abs, 'utf8'))) continue;
+  if (!CONTENT_RES.some((re) => re.test(rel))) uncovered.push(rel);
+}
+
+if (uncovered.length) {
+  console.error(
+    `\nFAIL  tailwind-content-coverage: ${uncovered.length} file(s) carry class strings but are\n` +
+      `      matched by NO glob in tailwind.config.ts \`content\`. Their utilities are absent\n` +
+      '      from the compiled CSS and the elements silently render unstyled.\n'
+  );
+  for (const f of uncovered.slice(0, 25)) console.error(`        ${f}`);
+  if (uncovered.length > 25) console.error(`        … ${uncovered.length - 25} more`);
+  console.error('\n      -> add the directory to `content` in tailwind.config.ts.\n');
+  process.exit(1);
+}
+
+// ---------------------------------------------------------------------------
 
 let baseline = {};
 let baselineExists = true;

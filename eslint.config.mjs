@@ -72,6 +72,15 @@ const config = [
     // `features/parent/api/data.ts` and quietly left `no-floating-promises`
     // behind, with every gate still green. Any new server-side directory must be
     // added here in the same commit that creates it.
+    //
+    // The EXTENSION list has the same property, and had the same hole: every glob
+    // below ended in `.ts`, so none of the 303 `.tsx` files in this repo got any
+    // of these four rules. `src/**/*.tsx` closes it. That is not scope creep —
+    // `no-misused-promises` on `onClick={async …}` is a COMPONENT bug class, and
+    // it is where 46 of the 61 violations this glob surfaced actually live: an
+    // async handler passed where a void return is expected swallows its own
+    // rejection, so a failed save shows the user nothing. Measured cost of the
+    // widening: `eslint .` 10.5s -> 22s.
     files: [
       'src/lib/**/*.ts',
       'src/features/**/*.ts',
@@ -79,6 +88,7 @@ const config = [
       'src/middleware.ts',
       'src/instrumentation.ts',
       'src/app/**/actions.ts',
+      'src/**/*.tsx',
     ],
     plugins: { '@typescript-eslint': tsPlugin },
     languageOptions: {
@@ -100,6 +110,65 @@ const config = [
     },
   },
   {
+    // ── The .tsx debt list — SHRINK-ONLY ────────────────────────────────────
+    //
+    // Turning the four type-aware rules on for `.tsx` surfaced 61 pre-existing
+    // violations in these 28 files (46 no-misused-promises, 14 no-floating-promises,
+    // 1 switch-exhaustiveness-check). They are real — an async `onClick` passed where
+    // a void return is expected swallows its own rejection, so a failed save shows the
+    // user nothing — but fixing 61 handlers is a behavioural change to 28 components
+    // and belongs in its own reviewed PR, not in a config commit.
+    //
+    // This is the same posture as scripts/check-design-tokens.baseline.json and
+    // scripts/check-data-layer.baseline.json: freeze the known debt, block new debt.
+    // The 275 OTHER .tsx files are covered at 'error' from this commit — before it,
+    // ALL 303 were uncovered, so nothing here is weaker than what it replaces.
+    //
+    // RULES FOR THIS LIST:
+    //   - it may only get SHORTER;
+    //   - a new file NEVER goes in it — fix the violation instead;
+    //   - delete this whole block when it empties.
+    // Tracked in docs/audit/AUDIT-LEDGER.md as L5.
+    files: [
+      'src/app/admin/_components/import-panel.tsx',
+      'src/app/appointment/page.tsx',
+      'src/app/counsellor/_components/counsellor-document-board.tsx',
+      'src/app/counsellor/_components/notes-panel.tsx',
+      'src/app/counsellor/_components/send-message-modal.tsx',
+      'src/app/counsellor/inbox/_components/counsellor-inbox.tsx',
+      'src/app/counsellor/universities/_universities-client.tsx',
+      // `*` not `[id]`: these are minimatch patterns, and `[id]` is a CHARACTER
+      // CLASS matching one of i/d — it does not match the literal directory name.
+      'src/app/course/*/CoursePageClient.tsx',
+      'src/app/inbox/_components/inbox-list.tsx',
+      'src/app/role-select/page.tsx',
+      'src/app/university-search/quests/_quests-client.tsx',
+      'src/components/applications/cross-application-tasks.tsx',
+      'src/components/applications/document-uploader.tsx',
+      'src/components/applications/help-request-modal.tsx',
+      'src/components/applications/rec-letter-workflow.tsx',
+      'src/components/chat/chatbot-widget.tsx',
+      'src/components/chat/shared.tsx',
+      'src/components/forms/auth-form.tsx',
+      'src/components/help/help-thread-drawer-impl.tsx',
+      'src/components/landing-preview/how-it-works-scrub.tsx',
+      'src/components/layout/mobile-nav.tsx',
+      'src/components/layout/navbar.tsx',
+      'src/components/layout/sidebar.tsx',
+      'src/components/notifications/notification-bell.tsx',
+      'src/components/toolbox/essay-ai-panel.tsx',
+      'src/components/toolbox/essay-workshop.tsx',
+      'src/components/university-search/IntelligentSearchBar.tsx',
+      'src/features/parent/ui/parent-thread.tsx',
+    ],
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-misused-promises': 'off',
+      '@typescript-eslint/switch-exhaustiveness-check': 'off',
+      '@typescript-eslint/await-thenable': 'off',
+    },
+  },
+  {
     // The generated Supabase types are a database contract, not a domain model.
     // Importing them directly is how row shapes leak into components and drift
     // from the columns actually selected. Confined to the data layer; the rest of
@@ -108,6 +177,16 @@ const config = [
     // Scoped as a warning for now — `docs/audit/06-types-validation.md` records
     // the existing call sites this would flag. Promote to 'error' once the
     // shared/data layer (Phase 3) gives them somewhere to go.
+    //
+    // A `warn` is only a gate because the npm script pins `--max-warnings 2` —
+    // ESLint's exit code ignores warnings otherwise, and for a while this rule
+    // was decorative: a third leak of a generated DB row type into the component
+    // tree left `npm run lint` at exit 0. The 2 is the frozen count of the two
+    // known sites (src/components/university-search/shortlist-store.ts:6 and
+    // src/hooks/useSupabase.ts:6). Same shrink-only posture as lint:tokens and
+    // lint:datalayer: LOWER the number as they are fixed, never raise it. If you
+    // add a new `warn`-severity rule here, its findings must fit under the same
+    // budget or the number moves in the same reviewed commit.
     // NB: no `{ts,tsx}` brace patterns anywhere in this file. The npm `overrides`
     // pin `brace-expansion@5`, whose export shape minimatch cannot call, so any
     // brace pattern dies with `TypeError: expand is not a function`. Enumerate
