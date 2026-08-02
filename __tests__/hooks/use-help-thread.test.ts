@@ -51,6 +51,16 @@ const USER_ID = 'profile-under-test';
 let rows: Record<string, unknown[]> = {};
 /** Recorded inserts: [table, payload]. */
 let inserts: Array<[string, unknown]> = [];
+/**
+ * Every read filter, as `[table, method, column, value]`.
+ *
+ * The double this replaces stubbed `eq: () => builder`, so the four loaders
+ * this hook drives could all drop `.eq('request_id', requestId)` and still
+ * resolve the seeded rows — the drawer would then render whichever messages the
+ * query happened to return, from any thread, and every assertion here would
+ * pass. See `__tests__/meta/recording-doubles.test.ts`.
+ */
+let readFilters: Array<[string, string, string, unknown]> = [];
 /** What `auth.getUser()` does. */
 let getUserImpl: () => Promise<{ data: { user: { id: string } | null } }>;
 
@@ -59,8 +69,14 @@ const makeClient = () => ({
   from(table: string) {
     const builder: Record<string, unknown> = {
       select: () => builder,
-      eq: () => builder,
-      in: () => builder,
+      eq: (column: string, value: unknown) => {
+        readFilters.push([table, 'eq', column, value]);
+        return builder;
+      },
+      in: (column: string, value: unknown) => {
+        readFilters.push([table, 'in', column, value]);
+        return builder;
+      },
       order: () => builder,
       limit: () => builder,
       maybeSingle: async () => ({ data: (rows[table] ?? [])[0] ?? null, error: null }),
@@ -113,6 +129,7 @@ beforeEach(() => {
     help_meetings: []
   };
   inserts = [];
+  readFilters = [];
   getUserImpl = async () => ({ data: { user: { id: USER_ID } } });
   (getBrowserSupabaseClient as jest.Mock).mockReturnValue(makeClient());
 });
@@ -181,5 +198,31 @@ describe('reply() on the happy path', () => {
       author_profile_id: USER_ID,
       body: 'thanks!'
     });
+  });
+});
+
+describe('the thread loads only the thread it was asked for', () => {
+  it('scopes all four reads to the request id', async () => {
+    const { result } = renderHook(() => useHelpThread(REQUEST_ID, 'student'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // Asserted per table rather than as one ordered list: `refresh()` fires the
+    // four in parallel and `markThreadRead` adds a fifth filter on its own
+    // schedule, so ordering is not a property of the hook. What IS a property
+    // is that each table was read, and read scoped.
+    const forTable = (table: string) => readFilters.filter(([t]) => t === table);
+
+    expect(forTable('help_requests')).toContainEqual(['help_requests', 'eq', 'id', REQUEST_ID]);
+    for (const table of ['help_messages', 'help_notes', 'help_meetings']) {
+      // toContainEqual, not toEqual([...]): a `[]` here would silently mean
+      // "that read was deleted", which is the failure this file guards.
+      expect(forTable(table)).toContainEqual([table, 'eq', 'request_id', REQUEST_ID]);
+    }
+  });
+
+  it('reads nothing at all when there is no thread selected', async () => {
+    const { result } = renderHook(() => useHelpThread(null, 'student'));
+    await waitFor(() => expect(result.current.request).toBeNull());
+    expect(readFilters).toEqual([]);
   });
 });

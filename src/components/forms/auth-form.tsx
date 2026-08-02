@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useTransition, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AuthError } from '@supabase/supabase-js';
@@ -14,7 +13,6 @@ import { Label } from '@/components/ui/label';
 import { isProfileComplete } from '@/lib/profile/completion';
 
 export const AuthForm = () => {
-  const router = useRouter();
   const supabase = useSupabase();
   const [error, setError] = useState<string | null>(null);
   const [authServiceReady, setAuthServiceReady] = useState(true);
@@ -129,8 +127,22 @@ export const AuthForm = () => {
           window.localStorage.setItem(RETURNING_USER_STORAGE_KEY, 'true');
         }
 
-        router.refresh();
-        router.push(redirectTarget);
+        // A FULL document navigation, deliberately — not `router.refresh()` +
+        // `router.push()`.
+        //
+        // That pair is what put people back on the login page after a
+        // *successful* sign-in. `refresh()` re-fetches the RSC payload for the
+        // page you are still on — `/login` — and middleware now sees a session
+        // there, so it answers that fetch with a redirect to `/role-select`.
+        // The App Router cannot reconcile a redirect on a refresh of the
+        // current route, so it falls back to a hard reload, which cancels the
+        // `push()` racing alongside it. You end up exactly where you started,
+        // signed in, staring at the login form again — and then "bypass" the
+        // login by typing /dashboard, because the session was valid all along.
+        //
+        // A hard navigation has none of those moving parts: one request, the
+        // fresh cookie on it, middleware routes it once.
+        window.location.assign(redirectTarget);
       } catch (submitError) {
         // A rejection here (rather than a populated `signInError`) left the
         // form with the spinner cleared and no message — the user pressed

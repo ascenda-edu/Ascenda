@@ -53,11 +53,24 @@ const ACADEMIC_IB_33 = {
 };
 
 /** Minimal thenable query builder: every chained method returns `this`, and
- * awaiting (or `.maybeSingle()`) resolves the configured result. */
-const makeBuilder = (result: { data: unknown; error: unknown }) => {
+ * awaiting (or `.maybeSingle()`) resolves the configured result. Filter methods
+ * RECORD their arguments — see `filters` on the return of `makeSupabase`. */
+const makeBuilder = (
+  result: { data: unknown; error: unknown },
+  record: (method: string, column: string, value: unknown) => void
+) => {
   const builder: Record<string, unknown> = {};
-  for (const method of ['select', 'eq', 'in', 'not', 'order', 'limit', 'range']) {
+  for (const method of ['not', 'order', 'limit', 'range']) {
     builder[method] = () => builder;
+  }
+  for (const method of ['select', 'eq', 'in']) {
+    builder[method] =
+      method === 'select'
+        ? () => builder
+        : (column: string, value: unknown) => {
+            record(method, column, value);
+            return builder;
+          };
   }
   builder.maybeSingle = async () => result;
   builder.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
@@ -69,29 +82,43 @@ const makeSupabase = (options: DoubleOptions) => {
   const scoringRows = options.scoringRows ?? {};
   const batchOutcomes = options.batchOutcomes ?? [];
   const batchCalls: string[][] = [];
+  /**
+   * Every scoping call, as `[table, method, column, value]`.
+   *
+   * The double this replaces discarded them, so `scoreProgramsForProfile` could
+   * read `student_academic_input` for a DIFFERENT profile and every score
+   * assertion below would be unchanged — the fixture is the same either way.
+   * The scores are the subject of this file; whose scores they are is what this
+   * records.
+   */
+  const filters: Array<[string, string, string, unknown]> = [];
 
   const client = {
     from(table: string) {
+      const record = (method: string, column: string, value: unknown) =>
+        filters.push([table, method, column, value]);
+      const builder_ = (result: { data: unknown; error: unknown }) => makeBuilder(result, record);
       switch (table) {
         case 'student_academic_input':
-          return makeBuilder({
+          return builder_({
             data: 'academic' in options ? options.academic : ACADEMIC_IB_33,
             error: null
           });
         case 'student_lifestyle_preference':
-          return makeBuilder({ data: null, error: null });
+          return builder_({ data: null, error: null });
         case 'student_subjects':
         case 'student_admissions_tests':
-          return makeBuilder({ data: [], error: null });
+          return builder_({ data: [], error: null });
         case 'programs':
-          return makeBuilder({ data: [], error: null });
+          return builder_({ data: [], error: null });
         case 'course_scoring_v1': {
           // `.in('course_id', batch)` carries the batch; capture it so the
           // per-batch outcome can be resolved in call order.
           const builder: Record<string, unknown> = {};
           let batchIndex = -1;
           builder.select = () => builder;
-          builder.in = (_column: string, batch: string[]) => {
+          builder.in = (column: string, batch: string[]) => {
+            record('in', column, batch);
             batchIndex = batchCalls.length;
             batchCalls.push(batch);
             return builder;
@@ -110,12 +137,12 @@ const makeSupabase = (options: DoubleOptions) => {
           return builder;
         }
         default:
-          return makeBuilder({ data: null, error: null });
+          return builder_({ data: null, error: null });
       }
     }
   };
 
-  return { client: client as never, batchCalls };
+  return { client: client as never, batchCalls, filters };
 };
 
 /** A course_scoring_v1 row demanding IB 42 — a genuine reach for the IB-33
@@ -177,6 +204,32 @@ describe('scoreProgramsForProfile — unknown fit is representable', () => {
     expect(typeof scores['p-scored']).toBe('number');
     expect(scores['p-scored']).toBeGreaterThanOrEqual(5);
     expect(scores['p-scored']).toBeLessThanOrEqual(95);
+  });
+
+  it('reads the profile it was asked to score, and only that profile', async () => {
+    const { client, filters } = makeSupabase({
+      scoringRows: { 'p-scored': scoringRow('p-scored', 42, 92) }
+    });
+
+    await scoreProgramsForProfile(client, 'student-1', ['p-scored']);
+
+    // Four student_* reads, each scoped to the profile argument. Without this
+    // the loader could read another student's academics and every score
+    // assertion above would be identical — the fixture is not per-profile.
+    const studentReads = filters.filter(([table]) => table.startsWith('student_'));
+    expect(studentReads.length).toBeGreaterThanOrEqual(3);
+    for (const [, method, column, value] of studentReads) {
+      expect({ method, column, value }).toEqual({
+        method: 'eq',
+        column: 'profile_id',
+        value: 'student-1'
+      });
+    }
+    // …and the catalogue read is keyed on the requested programmes, not a
+    // wildcard.
+    expect(filters.filter(([table]) => table === 'course_scoring_v1')).toEqual([
+      ['course_scoring_v1', 'in', 'course_id', ['p-scored']]
+    ]);
   });
 
   it('keeps unknown and known apart in the same request', async () => {

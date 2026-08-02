@@ -44,6 +44,18 @@ const getUser = jest.fn();
 const profileMaybeSingle = jest.fn();
 const from = jest.fn();
 
+/**
+ * Every `.eq()` the profile lookup made, as `[table, column, value]`.
+ *
+ * The stub this replaced was `eq: () => ({ maybeSingle })` — arguments
+ * discarded — so `.eq('id', user.id)` could become `.eq('role', user.id)` (the
+ * M1 mutation) or drop the user id entirely and this file would not notice. It
+ * is a *cache* test, so its own subject is the memo; recording the filter costs
+ * two lines and means the file can no longer be the reason a scope regression
+ * ships. See `__tests__/meta/recording-doubles.test.ts`.
+ */
+const profileFilters: Array<[string, string, unknown]> = [];
+
 jest.mock('@/lib/supabase/server', () => ({
   createServerSupabaseClient: jest.fn(async () => ({ auth: { getUser }, from }))
 }));
@@ -95,7 +107,15 @@ const servedUser = (id: string, role: string) => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockRequestScope = null;
-  from.mockReturnValue({ select: () => ({ eq: () => ({ maybeSingle: profileMaybeSingle }) }) });
+  profileFilters.length = 0;
+  from.mockImplementation((table: string) => ({
+    select: () => ({
+      eq: (column: string, value: unknown) => {
+        profileFilters.push([table, column, value]);
+        return { maybeSingle: profileMaybeSingle };
+      }
+    })
+  }));
   servedUser('u-1', 'counsellor');
 });
 
@@ -111,6 +131,9 @@ describe('getIdentity is memoised within one request', () => {
     expect(getUser).toHaveBeenCalledTimes(1);
     expect(profileMaybeSingle).toHaveBeenCalledTimes(1);
     expect(results.every((identity) => identity === results[0])).toBe(true);
+    // The one query it did make asked for THIS user's row. Without this the
+    // memo could be perfect and still be memoising somebody else's role.
+    expect(profileFilters).toEqual([['profiles', 'id', 'u-1']]);
   });
 
   it('sequential callers share the resolved value too', async () => {
@@ -152,6 +175,13 @@ describe('the memo does not outlive the request', () => {
     expect(second).not.toBe(first);
     expect(getUser).toHaveBeenCalledTimes(2);
     expect(profileMaybeSingle).toHaveBeenCalledTimes(2);
+    // Two round trips is necessary but not sufficient: they must also have
+    // asked for two DIFFERENT rows. A memo keyed on the wrong thing could
+    // re-query and still hand back request A's user.
+    expect(profileFilters).toEqual([
+      ['profiles', 'id', 'u-counsellor'],
+      ['profiles', 'id', 'u-student']
+    ]);
   });
 
   it('a second request re-reads the role even for the SAME user', async () => {

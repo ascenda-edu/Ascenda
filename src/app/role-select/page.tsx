@@ -60,13 +60,25 @@ export default function RoleSelectPage() {
       clearTimeout(timeout);
     };
 
-    // Safety timeout: if verification takes > 8s, redirect to login. Guarded by
-    // authResolvedRef so a check that succeeds *after* this timer was queued
-    // can't redirect an already-signed-in user.
+    // Safety timeout: if verification takes > 8s, stop blocking on it and show
+    // the role cards.
+    //
+    // It used to `router.replace('/login')` here, and that could only ever be
+    // wrong. `/role-select` is in PROTECTED_PREFIXES — middleware has already
+    // established a server-side session before this component mounts, so the
+    // only thing a timeout proves is that the *client's* `getUser()` round trip
+    // to Supabase was slow. Sending that user to /login bounced them straight
+    // back here (middleware redirects a signed-in visitor off /login), so a
+    // slow network turned into a ping-pong that reads as "the login page keeps
+    // reloading" — from a session that was valid the whole time.
+    //
+    // Rendering the cards is safe: neither is a capability. Clicking one is a
+    // navigation to /dashboard or /counsellor, and middleware is the thing that
+    // decides whether that request is allowed.
     const timeout = setTimeout(() => {
       if (isMounted && !authResolvedRef.current) {
-        console.warn('RoleSelect: Auth verification timed out');
-        router.replace('/login');
+        console.warn('RoleSelect: Auth verification timed out; deferring to middleware');
+        resolveAuth();
       }
     }, 8000);
 

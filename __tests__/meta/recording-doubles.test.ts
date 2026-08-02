@@ -27,9 +27,28 @@
  * that takes none cannot be asserted against, so no test in that file can pin a
  * scope — the filter becomes deletable in silence.
  *
- * It is a RATCHET, not a bar: `KNOWN_DISCARDING` lists the doubles that predate
- * it, with a reason each. That list may shrink and must never grow. Adding a new
- * discarding double fails here; use `__tests__/helpers/supabase-recorder.ts`.
+ * It shipped as a RATCHET with a five-file allowlist. **The allowlist is now
+ * empty**, so this is a bar: no test file in this tree may stub `.eq()`/`.in()`
+ * without accepting their arguments. Use
+ * `__tests__/helpers/supabase-recorder.ts`.
+ *
+ * `KNOWN_DISCARDING` is kept, empty, on purpose — as the place a genuinely
+ * unconvertible double would have to be declared, in writing, with a reason.
+ * The fourth test below makes a stale entry fail, so it cannot become a
+ * parking space.
+ *
+ * What converting the last five bought, beyond satisfying this file:
+ *   - `counsellor/application-status.test.ts` now pins
+ *     `profiles.eq('role','student')` — the exact argument of the historic
+ *     roster bug, a bare string no compiler checks;
+ *   - `matching/score-programs.test.ts` pins that the four `student_*` reads
+ *     use the profile id they were passed;
+ *   - `chat/university-info-tool.test.ts` pins that the programmes read is
+ *     keyed on the id the name lookup resolved;
+ *   - `hooks/use-help-thread.test.ts` pins all four thread reads to the
+ *     request id;
+ *   - `auth/identity-cache.test.ts` pins `profiles.eq('id', user.id)`.
+ * None of those was expressible while the arguments were being discarded.
  */
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';

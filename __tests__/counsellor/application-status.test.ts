@@ -23,6 +23,7 @@ import {
   FUNNEL_STAGES,
 } from '@/lib/counsellor/stage-colors';
 import { APPLICATION_STATUS_VISUAL } from '@/lib/theme/categories';
+import { recordingClient, filtersFor, type RecordedCall } from '../helpers/supabase-recorder';
 import {
   deriveAtRiskAlerts,
   deriveCohortStats,
@@ -108,25 +109,28 @@ describe('application_status — enum ↔ domain parity', () => {
 type Row = Record<string, unknown>;
 
 /**
- * The narrowest possible stand-in for the Supabase client: `from(table)` returns
- * a chainable, awaitable builder that ignores the filters and resolves the rows
- * seeded for that table. The counsellor loader only ever reads
- * `{ data, error }`, so this is sufficient to drive `loadCohort` end to end.
+ * A stand-in for the Supabase client built on the shared recording double:
+ * `from(table)` returns a chainable, awaitable builder that resolves the rows
+ * seeded for that table AND records every `.eq()`/`.in()` into `calls`.
+ *
+ * The double this replaces discarded the filter arguments. That mattered here
+ * more than anywhere: `loadCohort`'s very first query is
+ * `profiles.eq('role','student')`, and the historic roster bug was that exact
+ * argument reading `'counsellor.student'` — a string, so the compiler is blind
+ * to it — which returned an empty cohort with six gates green. A double that
+ * ignores the argument cannot see that, and this file is the one that drives
+ * the loader end to end.
+ *
+ * An unseeded table resolves `[]` rather than throwing: `loadCohort` reads more
+ * tables than any one fixture cares about, and the recorder's default is to
+ * fail loudly on an unanticipated read.
  */
-const fakeSupabase = (tables: Record<string, Row[]>) => {
-  const builder = (rows: Row[]) => {
-    const self: Record<string, unknown> = {};
-    for (const method of ['select', 'eq', 'in', 'order', 'limit', 'not', 'gte', 'lte']) {
-      self[method] = () => self;
-    }
-    self.then = (resolve: (value: { data: Row[]; error: null }) => unknown) =>
-      Promise.resolve({ data: rows, error: null }).then(resolve);
-    return self;
-  };
-  return {
-    from: (table: string) => builder(tables[table] ?? []),
-  } as unknown as Parameters<typeof loadCohort>[0];
-};
+const fakeSupabase = (tables: Record<string, Row[]>, calls: RecordedCall[] = []) =>
+  recordingClient(
+    Object.fromEntries(Object.entries(tables).map(([table, rows]) => [table, { data: rows }])),
+    calls,
+    { onUnknownTable: () => ({ data: [] }) }
+  ) as unknown as Parameters<typeof loadCohort>[0];
 
 const STUDENT_ID = '11111111-1111-1111-1111-111111111111';
 const PROGRAM_ID = '22222222-2222-2222-2222-222222222222';
@@ -192,6 +196,22 @@ describe('loadCohort — status passthrough', () => {
     const enriched = deriveApplicationsWithPlatform(students);
     expect(enriched).toHaveLength(1);
     expect(enriched[0].status).toBe('enrolled');
+  });
+
+  it('selects the cohort by role and scopes every student read to it', async () => {
+    const calls: RecordedCall[] = [];
+    await loadCohort(fakeSupabase(cohortFixture('submitted'), calls));
+
+    // THE roster bug, pinned. `profiles.role` is 'student' | 'counsellor' |
+    // 'admin'; the value here is a bare string, so no compiler sees it. When it
+    // read 'counsellor.student' the cohort was empty and every gate was green.
+    expect(filtersFor(calls, 'profiles')).toEqual([['eq', 'role', 'student']]);
+
+    // And every per-student read is confined to the ids that query returned —
+    // not to the whole table.
+    for (const table of ['student_personal_information', 'student_academic_input', 'applications']) {
+      expect(filtersFor(calls, table)).toContainEqual(['in', 'profile_id', [STUDENT_ID]]);
+    }
   });
 });
 

@@ -305,7 +305,12 @@ describe('an anonymous visitor on a protected page', () => {
     '/parent',
     '/role-select',
     '/inbox',
-    '/assistant'
+    '/assistant',
+    // Added after an unauthenticated GET against production returned 200 and
+    // the full signed-in shell for /appointment. /toolbox only ever 307'd
+    // because its layout guards itself — middleware never ran for either.
+    '/toolbox',
+    '/appointment'
   ];
 
   it.each(PROTECTED)('%s bounces to /login', async (prefix) => {

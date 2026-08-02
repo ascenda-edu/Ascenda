@@ -172,7 +172,7 @@ const LOCATION_TYPE_MEMBERS = ['london', 'major_city', 'smaller_city', 'suburban
 
 type LocationTypeEnum = StudentProfilePayload['lifestyle_preference']['desired_location_type'];
 
-export const toLocationTypeEnum = (selected: readonly string[] | null | undefined): LocationTypeEnum => {
+const toLocationTypeEnum = (selected: readonly string[] | null | undefined): LocationTypeEnum => {
   if (!selected || selected.length === 0) return null;
 
   // The display rename, applied on the way OUT as well as the way in.

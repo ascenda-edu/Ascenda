@@ -17,7 +17,13 @@ const PROTECTED_PREFIXES = [
   '/parent',
   '/role-select',
   '/inbox',
-  '/assistant'
+  '/assistant',
+  // Both were student-facing pages that middleware never ran for. `/toolbox`
+  // was covered by its own layout guard; `/appointment` had none, and served
+  // the full signed-in shell — sidebar and all — to an anonymous visitor
+  // (verified with an unauthenticated GET against production).
+  '/toolbox',
+  '/appointment'
 ];
 
 /**
@@ -278,7 +284,7 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/(dashboard|profile|matches|applications|admin|university-search|course|shortlist|scholarships|counsellor|parent|role-select|inbox|assistant)(.*)',
+    '/(dashboard|profile|matches|applications|admin|university-search|course|shortlist|scholarships|counsellor|parent|role-select|inbox|assistant|toolbox|appointment)(.*)',
     '/login',
     '/signup',
     // Every API route runs through the fail-closed check at the top of
