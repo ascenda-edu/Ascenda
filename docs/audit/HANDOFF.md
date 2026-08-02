@@ -1,168 +1,112 @@
-# HANDOFF — pick up here
+# HANDOFF — read this first
 
-**Branch:** `security/phase0-contain`, 13 commits ahead of `origin/main`, **nothing pushed**, working tree clean.
-**Gates:** typecheck · lint · lint:boundaries · lint:tokens · lint:deadcode · lint:datalayer all PASS. 63 suites / 1,073 tests pass in both `TZ=UTC` and `TZ=America/Los_Angeles`. `build` and `check:bundle` pass.
+**Branch:** `security/phase0-contain` · **19 commits** ahead of `origin/main` · **nothing pushed** · working tree clean.
+**Green:** typecheck · lint · lint:boundaries · lint:tokens · lint:deadcode · lint:datalayer · build · check:bundle · **67 suites / 1,541 tests** (pass in both `TZ=UTC` and `TZ=America/Los_Angeles`) · **`./scripts/ci-db-local.sh` → database gate PASS**.
 
-Read `docs/audit/SYNTHESIS.md` for what the codebase looked like, and
-`docs/audit/review/01..06` for what an adversarial review found in the fix work.
-`docs/audit/13-remaining-work.md` is the register.
-
----
-
-## Ground rules (violating these has already caused damage once)
-
-1. **Never connect to the production Supabase database.** No `npm run db:apply`, no Supabase MCP. A local throwaway Postgres is the right tool — `brew install postgresql@16` works; Docker is unavailable in this environment.
-2. **Never weaken auth to make a test pass.** If the only way through is editing `src/middleware.ts` or auth code, stop and report.
-3. **Do not re-baseline a characterization or golden test to make a change pass.** Read the diff. If you believe the old behaviour was right, stop and report.
-4. **Verify before claiming.** Every confident claim made in this session that went unverified turned out to contain an error. Run the thing.
-5. Commit locally; do not push.
-
-## The lesson that matters
-
-Every serious defect in this codebase — and every one introduced while fixing it — **reported success**. The scoring hole passed 13/13 golden tests. The role-literal typo passed six static gates. The `U`-grade regression passed the very harness written to catch it. A vacuous ratchet reported a number that was 32 short.
-
-So: when you add a check, **break it and watch it go red** before believing it.
+**Where everything is:**
+- `docs/audit/SYNTHESIS.md` — the original 12-dimension audit of the codebase
+- `docs/audit/review/01..06` — an adversarial review **of the fix work**, which found real defects in it
+- `docs/audit/12-database-design.md` — the DB redesign + 15-step migration plan
+- `supabase/MIGRATIONS.md` — the ledger: what is applied, what is not, and the apply order
 
 ---
 
-## TASK 1 — Make the `database` CI job actually pass — **DONE**
+## Ground rules (each of these has already been violated once, at cost)
 
-**Status: the job passes.** Verified against a throwaway PostgreSQL 16.14 cluster
-(Homebrew, `initdb`/`pg_ctl`, Unix socket, six disposable databases per run).
-Production was never contacted and `npm run db:apply` was never run.
+1. **Never connect to the production Supabase database.** No `db:apply`, no Supabase MCP. Use a throwaway local Postgres — `brew install postgresql@16` works, Docker does not.
+2. **Never weaken auth to make a test pass.** Stop and report instead.
+3. **Never re-baseline a golden/characterization test to make a change pass.** Read the diff; if the old behaviour was right, stop and report.
+4. **Verify before claiming.** Every unverified confident claim made in this work turned out to contain an error.
+5. Commit locally. **Do not push.**
 
-Run it yourself: **`./scripts/ci-db-local.sh`**. It boots a disposable cluster and
-runs `scripts/ci-db-check.sh` — *the same script* `.github/workflows/ci.yml` runs,
-so "passes locally" and "passes in CI" can no longer mean two different things.
-The previous version lived only as inline YAML, which is why it had never once
-been executed.
+## The lesson, because it generalises
 
-Five blockers, not three:
+Every serious defect here — including every one introduced *while fixing* it — **reported success**:
 
-| # | Blocker | Fix |
-|---|---|---|
-| 1 | Stub had no `create publication supabase_realtime` → died on the first migration | added to `scripts/ci-db-stub.sql` |
-| 2 | `20260718130000:37` **raises** when that publication is absent (not in the review's list) | same fix |
-| 3 | `recognition_score` was fixed in the wrong place — `schema.sql` declares it, then `20250308120000` renames `universities` away and promotes a `universities_v2` that never had it. `20260723120000:21` then fails 42703 | root cause was replaying `20250308120000` at all; see below |
-| 4 | `20260512120000:52` / `20260513120000:63` — unguarded `alter publication … add table`, fail on **pass 1** as well as 2 | ledgered |
-| 5 | `20250308120000:429` — non-idempotent rename, fails on pass 2 | ledgered |
+- The A-level scoring hole passed 13/13 golden tests.
+- A find-and-replace clobbered a role literal (`'counsellor.student'`), emptying the counsellor roster: **six static gates green**.
+- The `U`-grade regression passed the very harness written to catch that bug class.
+- A ratchet reported 166 when the true count was 198.
+- Deleting `.eq('profile_id', …)` from five loaders — a cross-tenant read — left 1,069 tests green.
 
-**The idempotency claim was narrowed, not deleted.** Three PRE-EXISTING,
-already-applied migrations are excluded by a documented ledger in
-`scripts/ci-db-check.sh` (`NOT_REPLAYABLE`). The narrowing is held honest by two
-assertions the job makes on itself:
-
-- **Ledger-staleness probe** — each excluded file is applied twice to its own
-  clone of the post-`schema.sql` database and must **fail**. If one is ever
-  fixed, the job goes red demanding its removal. The ledger cannot become a
-  place to hide a failure.
-- **Post-conditions** — every object those three files create (the five help/
-  notification tables, their `supabase_realtime` membership, `cities`,
-  `universities`, `programs`, `program_requirements`, `course_scoring_v1`,
-  `safe_int`, `cost_of_life_enum`, and `universities.recognition_score`) must be
-  present anyway. Skipping them must lose nothing.
-- Plus a count assertion, so a glob that matched nothing cannot report success.
-
-**Why narrow rather than guard.** All three are already applied to production;
-editing them rewrites a historical record without changing any database. The
-`alter publication` lines are already superseded — `20260718130000` publishes
-every subscribed table behind a `pg_publication_tables` guard.
-`20250308120000` is a one-time normalization that is *destructive*, not merely
-non-idempotent, when replayed: it renames the live `programs`/`universities` to
-`archive_raw_*` and promotes the empty `*_v2` tables it just created — which is
-also exactly what discards `recognition_score`. **Never `db:apply` that file
-against production.** Adding the column to `schema.sql` was necessary but could
-never have fixed the job on its own; the false claim to the contrary in
-`ci.yml`'s `ci-ok` comment has been corrected.
-
-**Broken on purpose, watched go red** (all four exit non-zero): removing the
-publication stub; removing a ledger entry; adding a replayable file to the
-ledger; deleting `recognition_score` from `schema.sql`. It also caught a real
-defect in `20260802150000` while that file was being written (`anyarray ||
-unknown` → "malformed array literal"), since fixed by its author.
-
-**Still open:** `database` is deliberately still NOT in `ci-ok`'s `needs`. It has
-been observed green twice consecutively on a local cluster, never yet on a
-GitHub runner. Add it the first time it goes green there.
-
-<details><summary>Original brief</summary>
-
-**Why first:** it is the gate that would have caught both schema defects, and it has never run green. Until it does, the database half of this branch is unverified.
-
-A reviewer ran the real thing (Postgres 16.14, throwaway cluster) and found:
-
-1. **The stub is missing `create publication supabase_realtime`.** The job dies on the FIRST migration (`20260512120000_help_requests_and_notifications.sql:52`), so the nine new migrations are never reached. Stub is at `.github/workflows/ci.yml`, step "Stub the Supabase-only objects".
-2. **`recognition_score` was fixed in the wrong place.** `schema.sql` does add the column — then `supabase/migrations/20250308120000_normalize_course_catalog.sql` renames `universities` to `archive_raw_universities` and promotes `universities_v2`, which lacks it. `ci.yml` currently claims this blocker is fixed. It is not.
-3. **Pass 2 fails** (`relation "programs" already exists`), so the idempotency assertion does not hold. Three PRE-EXISTING migrations are not idempotent — identify them, and either guard them or scope the idempotency assertion honestly to the files that claim it.
-
-**Definition of done:** the exact CI steps run green locally against a throwaway Postgres, twice. If a pre-existing migration genuinely cannot be made idempotent, say so and narrow the job's claim rather than deleting the check.
-
-</details>
+**When you add a check, break it and watch it go red before believing it.**
 
 ---
 
-## TASK 2 — Three migration defects (do NOT apply anything)
+## STATUS
 
-All in `supabase/migrations/`, all written-but-unapplied. Details and reproductions in `docs/audit/review/03-migrations.md`.
+### Done and committed
 
-1. **CRITICAL — `20260802110000_notification_bounds.sql` breaks help requests for real students.** `counsellor_notification_targets()` (~:296) targets the demo account by email, but `notification_recipient_allowed()` (~:121) whitelists staff by `profiles.role` — and that account is `role='student'`. Any *unassigned* student's help request aborts with 42501. The `20260801122000` backfill only covers `+seed@ascenda.demo`, so **real students are exactly the affected population**.
-2. **HIGH — `20260802100000:168` indexes `shortlisted_programs` unguarded**, while `CLAUDE.md`, `MIGRATIONS.md` and two source files all treat that table's existence as unknown. The same file correctly `to_regclass`-guards the archive tables — copy that.
-3. **HIGH — `20260802130000`'s pre-check misses empty titles**, so one such row aborts at ~:425. Under `psql` it half-applies (audit triggers already installed).
+| | |
+|---|---|
+| Phases 0–4 | security containment, gate layer, correctness fixes, shared auth/data, UI primitives, cleanup |
+| Six adversarial reviews | + fixes for what they found |
+| **database CI gate** | now genuinely passes — `./scripts/ci-db-local.sh`, proven twice on real Postgres |
+| **3 migration defects** | incl. the one that broke help requests for every real student |
+| **Tier unification** | **four** implementations found, not two; percentile reassignment deleted |
+| **F0 backport** | privilege escalation closed in `schema.sql`, not just the migration |
+| **Portal flag test** | mutation-proven; see below |
 
-Also confirm/repair: **the F0 fix was never backported into `schema.sql`** — `:932-933` still declares the `FOR ALL` `profiles_self_access` and `:1319` the update-only trigger. Three lesser items were backported; the critical one was not.
+### IN FLIGHT — may not have landed
 
-**Also worth acting on:** `20260802100000` takes ACCESS EXCLUSIVE on `programs` for its `drop index` statements and `db:apply` sends the file as one transaction — ~15 tables write-locked for 30–60s on Supabase. Split it.
-
----
-
-## TASK 3 — Four surviving mutations + the vacuous tests
-
-From `docs/audit/review/05-tests.md`. 15 of 20 injected bugs were caught; **all four survivors are authz-, scoping- or persistence-shaped.**
-
-1. **`src/lib/auth/identity.ts`: `.eq('id', user.id)` → `.eq('role', user.id)` survives.** This is the *same find-and-replace class* that already shipped here once as `'counsellor.student'` (see commit `b5119ae`). It has now bitten twice. Add a test asserting WHICH COLUMN is filtered — the pattern to copy is the filter-recording double added to `__tests__/data/applications.test.ts` in commit `b4a1923`.
-2. **`src/lib/profile/persist-intake.ts`'s failure rollback is 0% covered** — that is the Phase 2 "could destroy a student's subject list" fix, untested.
-3. **`src/middleware.ts` is 236 lines at 0% coverage.**
-4. **`__tests__/auth/identity-cache.test.ts` passes when `cache()` is swapped for a global memo** — a cross-request identity leak. Its "new request" simulation is `jest.resetModules()`, which resets both. Make it discriminate.
-
-**Vacuous (~60–75 tests, ~6%):** six `it.each` cases in `__tests__/data/call-sites.test.ts` whose loop bodies never execute (2 assertions run out of 8 cases); four tautologies in `columns.test.ts`; `__tests__/counsellor/application-status.test.ts:266` is *named* for a bug and stays green when that bug is reintroduced.
-
-**One flake:** `__tests__/hooks/use-search-results.test.ts` — 22 `waitFor` calls at RTL's 1000ms default with no fake timers; failed 1 run in 4 under load. CI is `--runInBand` on 2 cores with no retry, so it will surface.
+**TASK 3** was dispatched to an agent and had not reported when context ran out. **Check first:** `git log --oneline -5` and `git status`. If its work is absent, redo it from the spec below.
 
 ---
 
-## TASK 4 — Two tier implementations still exist
+## TASK 3 — the only outstanding engineering work
 
-`src/lib/matching/match-tier.ts` claims "there are no others". False — `docs/audit/review/02-domain.md` found:
+From `docs/audit/review/05-tests.md` (has full reproductions + raw output in Appendix A).
 
-1. `matching_engine.classify` (IB-points gap) — **drives `/matches`**, so it can show "87% · Reach" while search shows Safe.
-2. The percentile reassignment at `src/lib/matching/service.ts:846`.
+Context: 15 of 20 injected bugs were caught, but **all four survivors are authz-, scoping- or persistence-shaped**, on a branch named `security/phase0-contain`. The tests are real; they defend the wrong things.
 
-Also: `loadTierByProgram` has **no recompute path**, so `/applications` vs search is a standing contradiction, not a rebuild window. Both seed scripts store tiers contradicting the 80/60 rule. And the colour bands sit at 75 while the tier boundary is 80 — a new mixed-signal 75–79 band.
+**Four surviving mutations — each must fail after your work. Re-inject, watch it fail, revert, report the output.**
+
+1. **`src/lib/auth/identity.ts`: `.eq('id', user.id)` → `.eq('role', user.id)` survives.** Same find-and-replace class that already shipped here once. **Copy the pattern from `__tests__/data/applications.test.ts`** (commit `b4a1923`): the Supabase double records `.eq()`/`.in()` as `[method, column, value]` and asserts *which column* is filtered.
+2. **`src/lib/profile/persist-intake.ts`'s failure rollback is 0% covered** — the Phase 2 "could destroy a student's subject list" fix. Cover: snapshot → delete lands → insert fails → rows restored; and the restore itself failing.
+3. **`src/middleware.ts` — 236 lines, 0% coverage.** Cover the access decisions: `/api/*` fail-closed, the public allowlist, the `Authorization` pass-through, the onboarding redirect (incl. the `english_status` case), the auth-route redirect.
+4. **`__tests__/auth/identity-cache.test.ts` passes when `cache()` is swapped for a global memo** — a cross-request identity leak. Its "new request" is `jest.resetModules()`, which resets both. Make it discriminate.
+
+**Also:** ~60–75 vacuous tests (~6%) — six `it.each` cases in `__tests__/data/call-sites.test.ts` whose bodies never execute; four tautologies in `columns.test.ts`; `__tests__/counsellor/application-status.test.ts:266` is *named* for a bug and stays green when that bug returns. And one flake: `__tests__/hooks/use-search-results.test.ts` (22 `waitFor` at RTL's 1000 ms default, no fake timers) failed 1 run in 4 under load; CI is `--runInBand` on 2 cores with no retry.
+
+**Do not modify `src/`** for this task — report anything that needs it.
 
 ---
 
-## Known-open, deliberately not done (do not "fix" without deciding)
+## Known-open — do NOT "fix" without a decision
 
 - **`src/components/ui/select.tsx`** swallows `onValueChange('')` app-wide. Safe at all 10 current call sites but **NOT "by construction"** — Radix 2.3.7 permits empty `SelectItem` values (proven). A new `<SelectItem value="">` will silently do nothing.
-- **The StudentIntakeForm react-hook-form rewrite** is deferred until the Playwright wizard spec has actually run. It never has — no credentials. See §2 of `13-remaining-work.md`.
-- **Feature slices: do not repeat on `counsellor`.** The `parent` pilot measured a ~40 kB/route barrel cost that is structural; `/counsellor` has 22 kB of headroom. Verdict and evidence in `docs/audit/review/`/the pilot's README.
-- **`course_scoring_v1` is `grant select … to anon`** without `security_invoker`. Revoking `anon` is a product decision.
+- **`counsellor/data.ts` `?? 'Reach'`** — a reviewer called it the most harmful null-handling site; I disagreed and wrote the argument into the code. `'Reach'` overstates difficulty, which is the safe direction. Changing it means a nullable tier across 23 consumers and is a product decision.
+- **StudentIntakeForm react-hook-form rewrite** — deferred until the Playwright wizard spec has actually run. It never has.
+- **Feature slices: do not repeat on `counsellor`.** The `parent` pilot measured a ~40 kB/route barrel cost that is structural; `/counsellor` has 22 kB headroom.
+- **`course_scoring_v1` is `grant select … to anon`** without `security_invoker`. Revoking `anon` is a product call.
+- **`database` and `e2e` are deliberately NOT in `ci-ok`'s `needs`** — green locally, never yet on a GitHub runner. Add each the first time it passes there.
 
-## OWNER-ONLY — cannot be automated, still outstanding
+---
 
-1. **Rotate `SUPABASE_SERVICE_ROLE_KEY`.** It is in git history (`823b0a7`, `e1382bf`, both ancestors of `origin/main`), unrotated, byte-identical to the key in use. **Everything else is downstream of this.**
+## OWNER-ONLY — cannot be automated
+
+1. **Rotate `SUPABASE_SERVICE_ROLE_KEY`.** In git history (`823b0a7`, `e1382bf`, both ancestors of `origin/main`), unrotated, byte-identical to the key in use. **All 19 commits are downstream of this.**
 2. Rotate `DEMO_USER_PASSWORD` / `SEED_STUDENT_PASSWORD` in Supabase Auth (removed from the repo, still live).
 3. Enable GitHub secret scanning + push protection.
-4. Apply migrations in order — `20260801110000_profiles_insert_guard` **FIRST**; until it lands any user can self-promote to admin, which defeats every other policy. See `supabase/MIGRATIONS.md`.
+4. **Apply migrations in order — `20260801110000_profiles_insert_guard` FIRST.** Until it lands, any user can self-promote to admin, which defeats every other policy. See `supabase/MIGRATIONS.md`.
+   ⚠️ **Never `db:apply` `20250308120000_normalize_course_catalog.sql`** — replaying it renames the live `programs`/`universities` to `archive_raw_*` and promotes empty `*_v2` tables. It is destructive, not merely non-idempotent.
+   ⚠️ **When you apply `20260801120000`, set `COUNSELLOR_PORTAL_OPEN_TO_ALL` and `PARENT_PORTAL_OPEN_TO_ALL` to `false` in the same commit.** `__tests__/db/portal-flag-agreement.test.ts` enforces this — otherwise both portals silently render empty.
 5. Buy GitHub Team; require the single `ci-ok` check (branch protection currently 403s).
-6. Run the Playwright wizard spec once against a **throwaway** account.
+6. Run the Playwright wizard spec once against a **throwaway** account: `E2E_EMAIL=… E2E_PASSWORD=… npm run test:e2e`.
 
-## Suggested merge strategy
+---
 
-Do not merge 235 files as one PR.
+## TWO PRODUCT DECISIONS — yours, not an engineer's
+
+1. **Tier reassignment was deleted.** The code used to *manufacture* a 35/30/35 tier spread when results collapsed into one band, and persist it — which is how a 41%-chance programme carried a "Safe" badge. Students with weak result sets will now honestly see **"everything is Reach."** Correct, but it will read as a regression to anyone who liked the spread.
+2. **Scoring moved.** 19 of 56 A-level signatures change band. The numbers are internally consistent and monotone — but I was wrong once about my own justification for them, and **nobody with admissions knowledge has reviewed them**. A green build is not sign-off.
+
+---
+
+## MERGE STRATEGY — do not merge 235 files as one PR
 
 | PR | Contents | Risk |
 |---|---|---|
-| **A** | audit docs, the nine gates, dead code, unused deps, perf | zero behaviour change — merge first |
-| **B** | security containment + `20260801*` applied in order | medium |
-| **C** | scoring, tiers, ACT rigour | **changes real student scores** — 19 of 56 A-level signatures change band. Needs someone with admissions knowledge to sign off, not just a green build |
+| **A** | audit docs, the nine gates, dead code, unused deps, perf | zero behaviour change — merge first, makes `main` self-defending |
+| **B** | security containment + `20260801*` applied in order | medium — `20260801110000` must be first |
+| **C** | scoring, tiers, ACT rigour | **changes real student scores** — needs a human with domain knowledge |
