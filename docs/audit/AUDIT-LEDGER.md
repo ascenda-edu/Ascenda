@@ -839,3 +839,82 @@ Round 1 opened at 67 suites / 1,541 tests with five gates that could not fail.
    ship `20260802120000` together with C7 part (b) in one deploy.
 4. Buy GitHub Team; require the single `ci-ok` check.
 5. Run the Playwright wizard spec once against a throwaway account.
+
+---
+
+# PUSHED, AND WHAT THE RUNNER FOUND
+
+Branch pushed 2026-08-02. **Not merged — owner asked that `main` stay untouched.**
+
+## Final CI, on a real GitHub runner
+
+| Job | Result |
+|---|---|
+| `quality` | success |
+| `test (TZ=UTC)` | success |
+| `test (TZ=America/Los_Angeles)` | success |
+| `build` | success |
+| `database` | success |
+| `e2e` | success — **and it now actually executes** |
+| **`ci-ok`** | **success** |
+
+`needs: [quality, test, build, database, e2e]` — **`database` and `e2e` both admitted.**
+Each was admitted only after being *observed* green on a runner, per the workflow's own
+admission conditions, and each in its own commit.
+
+## Three defects the runner found that local runs did not
+
+All three were **staleness or environment** failures, not analysis-depth failures. No amount
+of extra auditing reaches them; only running the gates against the final artifact does.
+
+1. **`lint:deadcode` — 218 vs baseline 217.** `toLocationTypeEnum` was exported but consumed
+   only inside its own module. The local ratchet sat at baseline because its last run
+   predated the A1/D-01/I-1 commits. **Caught by a gate this audit installed** — before this
+   work `lint:deadcode` ran `--no-exit-code` and could not fail at all.
+2. **The meta recording-double ratchet.** Its sibling check "the allowlist only names files
+   that still exist and still offend" failed: **all five** exemptions had since been
+   converted. The allowlist is now **empty**. A stale exemption is how a converted file
+   quietly regresses later.
+3. **`e2e` failed its first runner outing.** Playwright's `webServer` runs `npm run dev`, and
+   `instrumentation.ts` asserts the env on boot; with no `.env.local` the server exited
+   before the first navigation. Fixed with the same placeholders `build` uses — sufficient
+   because the bounce is decided by cookie PRESENCE (`hasSessionCookie`), never by asking
+   Supabase. **This is why the rule is "observe, then admit".**
+
+## L8 closed — the e2e delegation is finally true
+
+`harness-smoke.e2e.ts` had **never executed**. It sat in the `chromium` project, whose
+`dependencies: ['setup']` binds it to a real login, and every CI step was gated on a secrets
+probe this repo fails — so the job reported success having run nothing.
+
+It is now a `smoke` project with no dependencies and an explicitly empty `storageState`, run
+unconditionally. Two specs pass in a real Chromium, credential-free. One of them is the
+anonymous `/profile/wizard` bounce that `__tests__/middleware/middleware.test.ts` explicitly
+delegates the `matcher` question to — **the half that shipped dead to production once.** That
+delegation comment is now true for the first time.
+
+## Verified against a running server, not a test double
+
+The largest "Not verified" gap in round 1 was that nothing had been exercised in a browser.
+Against a production build served locally:
+
+- **All 11 protected routes 307 to `/login`** — `/dashboard`, `/matches`, `/applications`,
+  `/profile`, `/profile/wizard`, `/shortlist`, `/scholarships`, `/toolbox`, `/counsellor`,
+  `/parent`, `/admin`. The matcher works in a real Next server.
+- **Every `/api/*` fails closed with 401 `application/json`**, never an HTML redirect;
+  `/api/calendar-feed` correctly 200.
+- **H-08 fixed in reality:** `{"error":"Authentication required.","code":"unauthenticated"}`
+  — `data.error ?? fallback` yields real text, not `[object Object]`.
+- **K-1's five utilities are present in the compiled CSS**, `sm:` variant included.
+  (Coordinator's first reading said "missing" — that was a grep-escaping error, corrected.)
+- Landing page renders 135 kB of real content, correct `<title>`, no error shell.
+
+## Still owner-only — I could not do these, and did not fake them
+
+| Item | Why not |
+|---|---|
+| **Rotate `SUPABASE_SERVICE_ROLE_KEY`** | Needs Supabase dashboard access. **Most urgent item in the repo** — live JWT, exp 2035-11-13, in reachable history. Purging history does NOT close it: clones and forks hold the blob. Rotate → update Vercel + `.env.local` → enable secret scanning + push protection → *then* rewrite if desired, after this branch lands so its 46 commits are not orphaned. |
+| Rotate the two demo passwords | Same. |
+| **Apply the migrations** | Requires production DB access, which ground rule 1 forbids and which would be **wrong ordering anyway**: the app is not deployed, `20260802120000` must ship with C7 part (b) or `/matches` breaks at 42P10, and `20260801120000` expects the portal flags set to `false` — which contradicts the decision to keep the portals open. Apply after deploy, in order, `20260801110000` first. |
+| **Playwright wizard spec (e2e part 2)** | Needs `E2E_EMAIL` / `E2E_PASSWORD` for a THROWAWAY account on a non-production project. The spec completes the wizard and saves, overwriting that account's `student_*` rows. |
+| Buy GitHub Team + branch protection | Paid plan. Until then `ci-ok` is green but **blocks nothing**. |
