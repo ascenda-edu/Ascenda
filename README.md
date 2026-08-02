@@ -63,7 +63,7 @@ Run the schema and seed files using the Supabase SQL editor or CLI:
 
 1. Open `supabase/schema.sql` in the SQL editor and execute it to create tables, enums, policies, and the `application-documents` storage bucket with RLS.
 2. Run `supabase/seed.sql` to insert sample records.
-3. If you are normalizing the UK course catalog, apply the migration in `supabase/migrations/20250308120000_normalize_course_catalog.sql` to add `cities`, enhanced catalog columns, and the `course_scoring_v1` view.
+3. **Do not** apply `20250308120000_normalize_course_catalog.sql`. It lives in `supabase/migrations/_applied_archive/`, it is already applied to production, and it is *destructive on replay* — it renames the live catalogue to `archive_raw_*` and promotes the empty `*_v2` tables in its place. `cities`, the enhanced catalog columns and the `course_scoring_v1` view are all in `supabase/schema.sql` (step 1), which is the only thing you need. `npm run db:apply` refuses any path under `_applied_archive/`.
 4. (Recommended) Regenerate types after applying schema updates:
    ```bash
     npx supabase gen types typescript --project-id <your-project-ref> --schema public,storage > src/lib/types/database.ts

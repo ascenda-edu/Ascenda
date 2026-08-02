@@ -151,5 +151,72 @@ begin
     raise exception 'verification failed: trg_guard_profile_role does not cover INSERT';
   end if;
 
+  -- Timing is the wrapper; the body is the behaviour. Registering the trigger
+  -- for INSERT while leaving the UPDATE-only body in place does not close the
+  -- hole, it BREAKS SIGNUP: on INSERT `old` is NULL, so `new.role is distinct
+  -- from old.role` is TRUE for the legitimate role='student' insert too. That
+  -- is exactly what landed in supabase/schema.sql (C-database.md finding C2) —
+  -- and the tgtype assertion above passed on it, because it checks the wrapper
+  -- rather than what the wrapper calls. So assert the body as well.
+  --
+  -- Static first, because it is the assertion that runs EVERYWHERE, including
+  -- the CI `database` job where auth.uid() is stubbed to `select null::uuid`
+  -- and no behavioural authorisation test can mean anything.
+  if coalesce((select p.prosrc from pg_proc p
+               join pg_namespace ns on ns.oid = p.pronamespace
+               where ns.nspname = 'public'
+                 and p.proname = 'guard_profile_role_change'), '') !~ 'tg_op' then
+    raise exception
+      'verification failed: guard_profile_role_change() has no tg_op branch, so the '
+      'INSERT registration above rejects EVERY insert including signup';
+  end if;
+
+  -- Behavioural, where auth.uid() is real. Declares itself skipped rather than
+  -- passing vacuously — same discipline as 20260802110000's verification.
+  declare
+    uid  constant uuid := '00000000-0000-4000-8000-00000000ffff';
+    prev text := current_setting('request.jwt.claims', true);
+    ok_student    boolean := false;
+    blocked_admin boolean := false;
+    live          boolean;
+  begin
+    perform set_config('request.jwt.claims',
+                       json_build_object('sub', uid::text, 'role', 'authenticated')::text, true);
+    live := auth.uid() is not distinct from uid;
+
+    if not live then
+      perform set_config('request.jwt.claims', nullif(coalesce(prev, ''), ''), true);
+      raise notice
+        'profiles insert guard: behavioural probe SKIPPED — auth.uid() does not follow '
+        'request.jwt.claims here (stubbed environment). Static assertions all passed.';
+    else
+      begin
+        insert into profiles (id, role) values (uid, 'student');
+        ok_student := true;
+      exception when others then ok_student := false;
+      end;
+      delete from profiles where id = uid;
+
+      begin
+        insert into profiles (id, role) values (uid, 'admin');
+        blocked_admin := false;
+      exception when others then blocked_admin := true;
+      end;
+      delete from profiles where id = uid;
+
+      perform set_config('request.jwt.claims', nullif(coalesce(prev, ''), ''), true);
+
+      if not ok_student then
+        raise exception
+          'verification failed: a self-insert of role=student was REJECTED — signup is broken';
+      end if;
+      if not blocked_admin then
+        raise exception
+          'verification failed: a self-insert of role=admin was ACCEPTED — F0 is still open';
+      end if;
+      raise notice 'profiles insert guard: behavioural probe passed';
+    end if;
+  end;
+
   raise notice 'profiles insert guard: applied and verified';
 end $$;

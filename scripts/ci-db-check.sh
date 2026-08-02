@@ -24,6 +24,17 @@
 #      fixing a listed file turns the job red until the entry is removed.
 #   4. Skipping the ledger files loses nothing: the objects they create are
 #      present anyway (§ "post-conditions" below).
+#   5. The replay is NON-DESTRUCTIVE — pass 2 does not delete columns or rows
+#      that pass 1 created (§ "replay is non-destructive" below).
+#
+# ⚠️  WHY 5 EXISTS. "Idempotent" was read here as "applies twice with no error",
+#     and that is the wrong sense. `drop type … cascade` raises NOTHING and
+#     returns 0 — while dropping every COLUMN of that type and all of its data.
+#     20250214120000_student_intake_profile.sql opened with 14 of them, and
+#     replaying it deleted 17 columns across the five student_* tables (58 → 41),
+#     `english_status` among them. This script certified that as idempotent for
+#     as long as it only checked exit codes. An exit code is not evidence that a
+#     database still contains what it contained.
 #
 set -euo pipefail
 
@@ -112,7 +123,128 @@ for pass in 1 2; do
     psql_run -d "$DB_MAIN" -f "$f"
     replayed=$((replayed + 1))
   done
+
+  # Between the passes, plant a row in every table whose columns a replay has
+  # historically destroyed. Pass 2 then runs over a database that HAS data —
+  # which is the only state in which the destructive case is visible, and the
+  # state a real operator's database is always in.
+  if [ "$pass" = 1 ]; then
+    echo "── planting replay probe rows ──"
+    # The base database is built from schema.sql, which already declares the
+    # student_* tables — so a `drop type … cascade` in the migration set takes
+    # its columns out on pass ONE, before there is anything to plant. Say so
+    # here, with the diagnosis, rather than letting the INSERT below fail with a
+    # bare 42703 that reads like a broken probe.
+    psql_run -d "$DB_MAIN" <<'SQL'
+do $$
+declare
+  gone text[] := '{}';
+  r    record;
+begin
+  for r in
+    select * from (values
+      ('student_academic_input', 'programme_type'), ('student_academic_input', 'english_status'),
+      ('student_subjects', 'level'), ('student_admissions_tests', 'test_type'),
+      ('student_personal_information', 'gender'), ('student_lifestyle_preference', 'campus_size')
+    ) as v(tbl, col)
+  loop
+    if not exists (select 1 from information_schema.columns
+                   where table_schema = 'public' and table_name = r.tbl and column_name = r.col)
+    then gone := gone || format('%s.%s', r.tbl, r.col); end if;
+  end loop;
+  if cardinality(gone) > 0 then
+    raise exception
+      'a migration DESTROYED columns that schema.sql declares, with no error: %. '
+      'Look for `drop type … cascade` — it drops every column of that type, and a '
+      '`create table if not exists` below does NOT put them back.',
+      array_to_string(gone, ', ');
+  end if;
+end $$;
+SQL
+    psql_run -d "$DB_MAIN" <<'SQL'
+insert into profiles (id, role, full_name)
+  values ('00000000-0000-4000-8000-00000000d0d0', 'student', 'replay probe')
+  on conflict (id) do nothing;
+insert into student_academic_input (profile_id, programme_type, school_name, school_type,
+    language_of_instruction, intended_clusters, secondary_clusters,
+    english_test_type, english_status, ib_tok_grade, ib_ee_grade, ib_math_pathway)
+  values ('00000000-0000-4000-8000-00000000d0d0', 'IB', 'Replay Probe School', 'boarding',
+    'english', '{maths}', '{law}', 'IELTS', 'met', 'A', 'B', 'AA_HL')
+  on conflict (profile_id) do nothing;
+insert into student_personal_information (profile_id, first_name, gender)
+  values ('00000000-0000-4000-8000-00000000d0d0', 'Replay', 'female')
+  on conflict (profile_id) do nothing;
+insert into student_subjects (profile_id, subject_name, level, grade_value)
+  values ('00000000-0000-4000-8000-00000000d0d0', 'Mathematics', 'HL', '7');
+insert into student_admissions_tests (profile_id, test_type, status, score_numeric)
+  values ('00000000-0000-4000-8000-00000000d0d0', 'MAT', 'taken', 88);
+insert into student_lifestyle_preference (profile_id, teaching_style, desired_location_type, campus_size)
+  values ('00000000-0000-4000-8000-00000000d0d0', 'academic', 'london', 'large')
+  on conflict (profile_id) do nothing;
+SQL
+  fi
 done
+echo "::endgroup::"
+
+echo "::group::replay is non-destructive (columns AND data survive pass 2)"
+# The assertion the exit-code-only idempotency check cannot make. Every value
+# below is an ENUM-typed column, i.e. exactly what `drop type … cascade` takes
+# with it. Reading the value back — not just the column's existence — is
+# deliberate: a column could be re-added empty and look fine to a catalogue
+# query while every student's data was gone.
+psql_run -d "$DB_MAIN" <<'SQL'
+do $$
+declare
+  probe constant uuid := '00000000-0000-4000-8000-00000000d0d0';
+  lost  text[] := '{}';
+  r     record;
+begin
+  for r in
+    select * from (values
+      ('student_academic_input',       'programme_type'),
+      ('student_academic_input',       'english_status'),
+      ('student_academic_input',       'english_test_type'),
+      ('student_academic_input',       'intended_clusters'),
+      ('student_academic_input',       'secondary_clusters'),
+      ('student_academic_input',       'school_type'),
+      ('student_academic_input',       'language_of_instruction'),
+      ('student_academic_input',       'ib_tok_grade'),
+      ('student_academic_input',       'ib_ee_grade'),
+      ('student_academic_input',       'ib_math_pathway'),
+      ('student_subjects',             'level'),
+      ('student_admissions_tests',     'test_type'),
+      ('student_admissions_tests',     'status'),
+      ('student_personal_information', 'gender'),
+      ('student_lifestyle_preference', 'teaching_style'),
+      ('student_lifestyle_preference', 'desired_location_type'),
+      ('student_lifestyle_preference', 'campus_size')
+    ) as v(tbl, col)
+  loop
+    if not exists (select 1 from information_schema.columns
+                   where table_schema = 'public' and table_name = r.tbl and column_name = r.col)
+    then
+      lost := lost || format('column %s.%s DROPPED by the replay', r.tbl, r.col);
+    else
+      declare
+        val text;
+      begin
+        execute format('select %I::text from public.%I where profile_id = $1', r.col, r.tbl)
+          into val using probe;
+        if val is null then
+          lost := lost || format('value %s.%s LOST by the replay', r.tbl, r.col);
+        end if;
+      end;
+    end if;
+  end loop;
+
+  if cardinality(lost) > 0 then
+    raise exception
+      E'the migration replay is DESTRUCTIVE — it applied twice with no error and still lost %:\n  %',
+      cardinality(lost), array_to_string(lost, E'\n  ');
+  end if;
+end $$;
+SQL
+echo "  every probed column and value survived a second full replay."
 echo "::endgroup::"
 
 # A glob that matched nothing, or a ledger that swallowed the whole directory,

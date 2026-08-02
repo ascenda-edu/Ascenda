@@ -125,6 +125,73 @@
 --   drop function if exists public.notification_duty_pool();
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- 0a. PRE-FLIGHT — the rows that are ALREADY there
+-- ─────────────────────────────────────────────────────────────────────────────
+-- MIGRATIONS.md §6 rule 8: a pre-flight must mirror EVERY `raise` in what it is
+-- protecting, and it must run FIRST.
+--
+-- The safety argument at the top of this file ("every kind in the schema and in
+-- src/ is already snake_case, every href already starts with '/'") is an
+-- argument about WRITERS. The trigger installed in section 4 is
+-- `before insert OR UPDATE`, so it also gates every future write to a row that
+-- is already stored. Any pre-existing row with a malformed `kind`, a non-root
+-- `href` or an empty/NULL `title` becomes PERMANENTLY UN-UPDATABLE the moment
+-- this file commits — marking it read aborts with a check_violation, and the
+-- only way out is a superuser session that disables the trigger. A migration
+-- that silently plants that trap is worse than one that refuses.
+--
+-- This is the same three-condition probe as 20260802130000:134-163. That file
+-- got it because its own backfill would have aborted; the file that installs
+-- the gate did not. Keep the two in step — the conditions must mirror the
+-- raises in bound_notification_payload() below, and there is exactly one source
+-- of truth for those, which is that function.
+--
+-- `title is null or title = ''`, NOT `coalesce(trim(title),'') = ''`: the gate
+-- collapses whitespace before testing, so an all-whitespace title becomes a
+-- single space and does not raise. trim() here would refuse over rows that are
+-- actually fine.
+--
+-- The gate's fourth raise (the recipient relationship) is guarded by
+-- `auth.uid() is not null` and a migration carries no JWT, so it cannot fire on
+-- an UPDATE issued by an operator. It CAN fire for the app's own updates, but
+-- only for rows whose recipient edge is gone — which is section 3's disclosed
+-- behaviour change, not a stored-data problem.
+do $$
+declare
+  bad_kind  integer;
+  bad_href  integer;
+  bad_title integer;
+begin
+  if to_regclass('public.notifications') is null then
+    raise notice 'pre-flight: notifications does not exist yet — nothing stored to check';
+    return;
+  end if;
+
+  select count(*) into bad_kind from notifications
+   where kind is null or kind !~ '^[a-z][a-z0-9_]{0,48}$';
+  select count(*) into bad_href from notifications
+   where href is not null and (href !~ '^/' or href like '//%');
+  select count(*) into bad_title from notifications
+   where title is null or title = '';
+
+  if bad_kind > 0 or bad_href > 0 or bad_title > 0 then
+    raise exception
+      'refusing to apply: % stored notification row(s) have a malformed kind, % a '
+      'non-root href and % an empty title. trg_bound_notification_payload below is '
+      'BEFORE INSERT OR UPDATE, so applying this file would make those rows '
+      'PERMANENTLY UN-UPDATABLE — marking one read would abort. '
+      'NOTHING HAS BEEN CREATED — repair or delete the rows and re-run. '
+      'Inspect: select id, kind, href, title from notifications '
+      'where kind is null or kind !~ ''^[a-z][a-z0-9_]{0,48}$'' '
+      'or (href is not null and (href !~ ''^/'' or href like ''//%%'')) '
+      'or title is null or title = '''';',
+      bad_kind, bad_href, bad_title;
+  end if;
+
+  raise notice 'pre-flight: all stored notification rows satisfy the gate';
+end $$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- 0. The duty pool — ONE definition of "counsellor-side staff"
 -- ─────────────────────────────────────────────────────────────────────────────
 -- ⛔ IF YOU CHANGE WHO COUNTS AS STAFF, CHANGE IT HERE AND NOWHERE ELSE.
@@ -558,7 +625,14 @@ begin
   -- the ONLY arm that can return true is the duty-pool one.
   declare
     borrowed uuid := '00000000-0000-0000-0000-000000000000';
-    prev     text := coalesce(current_setting('request.jwt.claims', true), '');
+    -- NOT coalesce(…, ''): an UNSET GUC and a GUC set to the empty string are
+    -- different states, and restoring the second where the first was is how you
+    -- leave `current_setting('request.jwt.claims', true)` returning '' instead
+    -- of NULL. Anything that then writes auth.uid() as
+    -- `current_setting(…)::json->>'sub'` (without the nullif Supabase's own
+    -- definition has) raises `invalid input syntax for type json`. Restore with
+    -- nullif() below so an unset GUC comes back unset.
+    prev     text := current_setting('request.jwt.claims', true);
     pool_n   integer;
     bad      integer;
   begin
@@ -591,7 +665,7 @@ begin
       end if;
     end if;
 
-    perform set_config('request.jwt.claims', prev, true);
+    perform set_config('request.jwt.claims', nullif(coalesce(prev, ''), ''), true);
   end;
 
   -- The zero-argument fan-out must agree too: five other triggers still call it.

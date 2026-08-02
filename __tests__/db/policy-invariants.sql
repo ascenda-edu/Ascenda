@@ -45,17 +45,39 @@
 -- the suite" means in the migration plan.
 --
 -- ── Read-only ────────────────────────────────────────────────────────────────
--- No DDL, no DML, no transaction. Safe against any database including
--- production — though nothing here needs production to answer.
+-- No transaction, and it touches nothing in `public`: the only object it creates
+-- is a TEMP table used to defer Section A's report until after Section B has
+-- run. Safe against any database including production — though nothing here
+-- needs production to answer.
 
 \set ON_ERROR_STOP on
 
 -- ═════════════════════════════════════════════════════════════════════════════
 -- SECTION A — invariants that MUST hold on this branch, today
 -- ═════════════════════════════════════════════════════════════════════════════
+-- Section A's violations are RECORDED here and re-raised as a hard error at the
+-- very END of the file, not at the end of this block. Raising here, under the
+-- `\set ON_ERROR_STOP on` above, aborted the script — so for as long as Section A
+-- had ANY violation (it has had six since the day it was written) Section B was
+-- dead code that nobody had ever executed. MIGRATIONS.md cites B4 as the check
+-- that means F4 "cannot be forgotten"; it could not even run. The final error
+-- message and the non-zero exit are unchanged; only their position moved.
+drop table if exists _pi_section_a_failures;
+create temp table _pi_section_a_failures (msg text);
 
 do $$
 declare
+  -- ⚠️  `failures` is text[]. ALWAYS append a TYPED text value:
+  --       failures := failures || format('…', x);        -- format() returns text ✅
+  --       failures := failures || 'literal'::text;       -- explicit cast      ✅
+  --       failures := failures || 'literal';             -- ✗ unknown-typed
+  --     A bare literal is type `unknown`, so `||` resolves to
+  --     `anyarray || anyarray` and Postgres tries to PARSE the sentence as an
+  --     array literal: `ERROR: malformed array literal`. The branch then dies
+  --     with a raw type error instead of reporting its finding — and because
+  --     these branches only execute on a database where the invariant is
+  --     VIOLATED, the defect is invisible on any database that passes.
+  --     Eight sites shipped that way; see docs/audit/verify/C-database.md C3.
   failures text[] := '{}';
   r        record;
   n        integer;
@@ -163,7 +185,7 @@ begin
     and t.tgname = 'trg_guard_profile_role' and not t.tgisinternal;
 
   if n = 0 then
-    failures := failures || 'A5 trg_guard_profile_role is not attached to profiles';
+    failures := failures || 'A5 trg_guard_profile_role is not attached to profiles'::text;
   elsif (n & 4) = 0 then
     failures := failures || format('A5 trg_guard_profile_role does not cover INSERT (tgtype=%s) — F0 is open', n);
   elsif (n & 16) = 0 then
@@ -202,12 +224,12 @@ begin
       and cmd in ('DELETE', 'ALL')
       and coalesce(qual, '') !~ 'admin'
   ) then
-    failures := failures || 'A7 student_matches has no non-admin DELETE policy — the cache rebuild is a silent no-op (F5)';
+    failures := failures || 'A7 student_matches has no non-admin DELETE policy — the cache rebuild is a silent no-op (F5)'::text;
   end if;
 
   -- ── A8. student_matches cannot hold duplicates ─────────────────────────────
   if to_regclass('public.student_matches_profile_program_key') is null then
-    failures := failures || 'A8 student_matches has no unique index on (profile_id, program_id) — unbounded growth (F5)';
+    failures := failures || 'A8 student_matches has no unique index on (profile_id, program_id) — unbounded growth (F5)'::text;
   end if;
 
   -- ── A9. The notification gate is attached and covers both verbs ────────────
@@ -219,7 +241,7 @@ begin
     and t.tgname = 'trg_bound_notification_payload' and not t.tgisinternal;
 
   if n = 0 then
-    failures := failures || 'A9 trg_bound_notification_payload is not attached to notifications (F6)';
+    failures := failures || 'A9 trg_bound_notification_payload is not attached to notifications (F6)'::text;
   elsif (n & 4) = 0 or (n & 16) = 0 then
     failures := failures || format('A9 trg_bound_notification_payload does not cover both INSERT and UPDATE (tgtype=%s)', n);
   end if;
@@ -234,7 +256,7 @@ begin
     and p.proname = 'counsellor_notification_targets'
     and p.pronargdefaults > 0;
   if n > 0 then
-    failures := failures || 'A10 counsellor_notification_targets has a DEFAULT — the zero-arg call site is ambiguous (42725)';
+    failures := failures || 'A10 counsellor_notification_targets has a DEFAULT — the zero-arg call site is ambiguous (42725)'::text;
   end if;
 
   -- ── A11. audit_log is append-only ──────────────────────────────────────────
@@ -260,13 +282,37 @@ begin
       'A12 %s.%s permits DELETE — revoke by status, never by erasing the edge', r.tablename, r.policyname);
   end loop;
 
-  -- ── Report ─────────────────────────────────────────────────────────────────
-  if array_length(failures, 1) > 0 then
-    raise exception E'SECTION A: % policy invariant(s) violated:\n  %',
-      array_length(failures, 1), array_to_string(failures, E'\n  ');
+  -- ── A13. The role guard's FUNCTION BODY has an INSERT arm ──────────────────
+  -- A5 above asserts the trigger's TIMING. Timing without the matching body is
+  -- not a weaker version of the fix, it is a different bug: on INSERT `old` is
+  -- NULL, so an UPDATE-only body registered `before insert` rejects the
+  -- legitimate role='student' insert and BREAKS SIGNUP. That is exactly what
+  -- landed in schema.sql (C2) while A5 stayed green.
+  if exists (select 1 from pg_trigger t
+             join pg_class c on c.oid = t.tgrelid
+             join pg_namespace ns on ns.oid = c.relnamespace
+             where ns.nspname = 'public' and c.relname = 'profiles'
+               and t.tgname = 'trg_guard_profile_role' and not t.tgisinternal
+               and (t.tgtype & 4) = 4)
+     and coalesce((select p.prosrc from pg_proc p
+                   join pg_namespace ns on ns.oid = p.pronamespace
+                   where ns.nspname = 'public'
+                     and p.proname = 'guard_profile_role_change'), '') !~ 'tg_op'
+  then
+    failures := failures || (
+      'A13 trg_guard_profile_role fires on INSERT but guard_profile_role_change() '
+      'has no tg_op branch — every profile INSERT, including signup, raises')::text;
   end if;
 
-  raise notice 'SECTION A: all policy invariants hold';
+  -- ── Report ─────────────────────────────────────────────────────────────────
+  -- Deferred to the end of the file; see the note above the block.
+  if array_length(failures, 1) > 0 then
+    insert into _pi_section_a_failures (msg) select unnest(failures);
+    raise warning E'SECTION A: % policy invariant(s) violated (re-raised as an ERROR at the end of this file):\n  %',
+      array_length(failures, 1), array_to_string(failures, E'\n  ');
+  else
+    raise notice 'SECTION A: all policy invariants hold';
+  end if;
 end $$;
 
 -- ═════════════════════════════════════════════════════════════════════════════
@@ -305,7 +351,7 @@ begin
     where ns.nspname = 'public' and p.proname = 'can_act_as_counsellor'
   loop
     if r.src ~* 'select\s+auth\.uid\(\)\s+is not null' then
-      failures := failures || 'B2 can_act_as_counsellor() body is `auth.uid() is not null` — every policy calling it is bare';
+      failures := failures || 'B2 can_act_as_counsellor() body is `auth.uid() is not null` — every policy calling it is bare'::text;
     end if;
   end loop;
 
@@ -321,7 +367,7 @@ begin
       and (has_function_privilege('authenticated', p.oid, 'EXECUTE')
         or has_function_privilege('anon', p.oid, 'EXECUTE'))
   loop
-    failures := failures || 'B3 profile_display_name() is EXECUTE-able by authenticated/anon — full-name oracle (F10)';
+    failures := failures || 'B3 profile_display_name() is EXECUTE-able by authenticated/anon — full-name oracle (F10)'::text;
   end loop;
 
   -- ── B4. The scoring view does not run with owner rights ────────────────────
@@ -337,7 +383,7 @@ begin
     where ns.nspname = 'public' and c.relname = 'course_scoring_v1'
       and coalesce(array_to_string(c.reloptions, ','), '') like '%security_invoker=on%';
     if n = 0 then
-      failures := failures || 'B4 course_scoring_v1 has no security_invoker=on — owner-rights view granted to anon (F4)';
+      failures := failures || 'B4 course_scoring_v1 has no security_invoker=on — owner-rights view granted to anon (F4)'::text;
     end if;
   end if;
 
@@ -383,5 +429,22 @@ begin
     end if;
   else
     raise notice 'SECTION B: target posture reached — turn ascenda.target_posture on permanently';
+  end if;
+end $$;
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- FINAL — re-raise Section A
+-- ═════════════════════════════════════════════════════════════════════════════
+-- Section A is the set that must hold TODAY, so it is still a hard failure and a
+-- non-zero exit; it is only reported here so that Section B gets to run first.
+do $$
+declare
+  n    integer;
+  msgs text;
+begin
+  select count(*), string_agg(msg, E'\n  ') into n, msgs from _pi_section_a_failures;
+  drop table if exists _pi_section_a_failures;
+  if n > 0 then
+    raise exception E'SECTION A: % policy invariant(s) violated:\n  %', n, msgs;
   end if;
 end $$;

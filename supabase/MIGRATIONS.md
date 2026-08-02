@@ -249,6 +249,10 @@ select prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public' and p.proname = 'can_act_as_counsellor';
 --   'select auth.uid() is not null'                  → 20260712130000 is live: OPEN
 --   'select public.is_counsellor() or public...'     → 20260801120000 is applied: CLOSED
+-- (20260801120000 now also asserts this itself, in a terminal verification block.
+--  It was the only one of the ten without one — §6 rule 3 — and the only one
+--  whose central change leaves no distinguishable object, i.e. the one case where
+--  the in-file assertion is the ONLY way to know it took.)
 
 -- Did 20260719120000's public-read branches actually apply? (F9)
 select tablename, policyname, roles, qual from pg_policies
@@ -295,6 +299,21 @@ psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f __tests__/db/policy-invariants.sql
 > all nine migrations applied. **6 is the expected number. More than 6 is a
 > finding.** Do not read this failure as a broken migration, and do not "fix" it
 > by deleting the assertions.
+>
+> Against a database WITHOUT the ten unapplied migrations — which is the remote's
+> state — the count is **9**: the same 6 plus A7, A8 and A9, which are what
+> `20260802120000` and `20260802110000` close. Both counts re-verified locally on
+> 2026-08-02 after the C3 fix.
+>
+> ⚠️  Until that fix, the file **crashed** against the remote's state rather than
+> reporting: 8 of its failure branches appended a bare string literal to a
+> `text[]`, which Postgres resolves as `anyarray || anyarray` and dies on with
+> `malformed array literal` at the first one (A7). Those branches only run on a
+> database that VIOLATES the invariant, so the defect was invisible on the only
+> database anyone had run it against. Section A's report is also deferred to the
+> end of the file now — raising it in place aborted the script under
+> `ON_ERROR_STOP`, so Section B (including **B4**, the F4 check this document
+> calls the reason F4 "cannot be forgotten") had never executed even once.
 
 ### Behaviour, not just shape
 
@@ -321,11 +340,15 @@ run rather than report a vacuous pass.
 
 Everything here is a live gap, not a to-do list someone wrote optimistically.
 
-### ⛔ OPEN — the F0 privilege escalation is STILL DECLARED IN `schema.sql`
+### ✅ CLOSED — F0 in `schema.sql` (backported `95b078e` + `fix/audit-database`)
 
-**This is the highest-severity open item on this page, and it is not fixed by
-anything in `supabase/migrations/`.** It is recorded here because the person who
-found it did not own `supabase/schema.sql`; do not let it be closed by inference.
+This section used to read "the F0 privilege escalation is STILL DECLARED IN
+`schema.sql`" and to name two lines, `:932-933` and `:1319-1320`, as the
+evidence. **Neither line exists any more, and leaving the section standing was
+actively harmful**: it told a reader the escalation was open when it was closed,
+and it pointed away from the part that genuinely had not landed. Recorded here
+with dates rather than deleted, because the section's own instruction was "do
+not let it be closed by inference".
 
 `20260801110000_profiles_insert_guard.sql` closes the escalation on any database
 it is applied to. A reviewer verified that empirically: they reproduced the
@@ -333,30 +356,38 @@ escalation on a pre-migration database, then failed to reproduce it through five
 attack vectors afterwards, including the `ON CONFLICT DO UPDATE SET role=…`
 upsert bypass. **The migration works.**
 
-`schema.sql` does not carry the fix:
+What landed in `schema.sql`, and when:
 
-| Line (as of `ca8f856`) | Still says | Why it matters |
+| Part of the fix | State | Where |
 |---|---|---|
-| `:932-933` | `create policy profiles_self_access on profiles using (auth.uid() = id) with check (auth.uid() = id);` | **No `for` clause means `FOR ALL`, which includes INSERT and DELETE.** That is the hole: `delete from profiles where id = <self>`, then `insert into profiles (id, role) values (<self>, 'admin')`. Demonstrated: `DELETE 1`, `INSERT 0 1`, `select role` → `admin`. |
-| `:1319-1320` | `create trigger trg_guard_profile_role before update on profiles` | UPDATE only. The INSERT arm — the one the escalation actually uses — is missing, exactly as it was before the audit. |
+| `profiles_self_access` split into `profiles_self_select` / `_update` / `_insert`, with `role = 'student'` pinned on insert and **no** DELETE policy | ✅ backported | `95b078e`, `schema.sql:963-978` |
+| `trg_guard_profile_role` re-registered `before insert or update` | ✅ backported | `95b078e`, `schema.sql:1365-1370` |
+| `guard_profile_role_change()`'s **function body**, with the `tg_op = 'INSERT'` arm | ✅ backported — **but not until the C2 fix; `95b078e` transcribed the trigger and not the function** | `schema.sql:1346` |
 
-So **any database provisioned from `schema.sql` alone ships the privilege
-escalation**: a preview branch, a new laptop, a restore, the CI `database` job's
-first phase. Three lesser things (`recognition_score`, `student_activities` /
-`simulation_results`, `is_admin()`) *were* backported in the same pass. The
-critical one was skipped.
+⚠️  **The half-backport is the failure mode to remember.** Between `95b078e` and
+the C2 fix, `schema.sql` carried the new trigger timing over the old UPDATE-only
+body. On INSERT `old` is NULL, so `new.role is distinct from old.role` is true
+for *every* insert including the legitimate `role='student'` one — so a database
+built from `schema.sql` alone did not ship the escalation, it **could not create
+a profile at all**. `insert into profiles (id, role) values (<self>,'student')`
+raised `changing profiles.role requires an administrator` and
+`src/lib/profile/persist-intake.ts`'s upsert threw on first write for every new
+user. Fail-closed, but signup was broken on any preview branch, fresh laptop,
+restore, or the CI `database` job's first phase.
 
-The correction is to transcribe `20260801110000`'s section 2 and section 3 into
-`schema.sql` verbatim: split `profiles_self_access` into a SELECT policy and an
-UPDATE policy, add `profiles_self_insert` with its `role = 'student'` check, add
-**no** DELETE policy, and change `trg_guard_profile_role` to
-`before insert or update`. Then re-run the escalation from
-`20260801110000`'s own header against a database built from `schema.sql` alone
-and confirm it fails at both the DELETE and the INSERT.
+`20260801110000`'s own verification block did not catch it: it asserted
+`tgtype & 4 = 4`, i.e. the trigger's TIMING, which the half-backport satisfies
+exactly. Both that block and `__tests__/db/policy-invariants.sql` (§A13) now
+assert the function BODY, and the migration additionally runs a behavioural
+probe wherever `auth.uid()` is real.
 
-Until that lands, the two lines above are the reason `schema.sql` cannot be
-called the file of record, and it is why the long-term fix below (treat it as
-generated output) is the real answer.
+**To re-confirm on any database:** build it from `schema.sql` alone, wire
+`auth.uid()` to `request.jwt.claims`, and run all three of —
+`insert into profiles (id, role) values (<self>,'student')` → must SUCCEED;
+`insert into profiles (id, role) values (<other>,'admin')` → must raise
+`new profiles must be created with role=student`;
+`update profiles set role='admin' where id = <self>` → must raise
+`changing profiles.role requires an administrator`.
 
 **`schema.sql` is not the file of record it claims to be.** It has diverged in
 both directions (`docs/audit/12-database-design.md` §1.5). Still outstanding:
@@ -453,7 +484,11 @@ forgotten.
 6. **Enabling RLS and creating the table must never be separated.** A table
    created without `enable row level security` is readable *and writable* by the
    anon key that ships in the browser bundle, and any policies attached to it are
-   inert. That is how `cities` shipped.
+   inert. That is how `cities` shipped — and `schema.sql` went on REOPENING it
+   for another two weeks after `20260719120000` closed it on the remote, because
+   the rule was written down and the schema file was not updated. It is now
+   transcribed there too, and `policy-invariants.sql` §A2 asserts it generally,
+   for every table, so the next one is caught rather than the last one.
 7. **One definition per concept, read from one place — and assert they agree.**
    If a gate decides who may receive something and a fan-out decides who is
    addressed, those are the SAME SET and must be the same function. Two
@@ -463,7 +498,13 @@ forgotten.
    avoid two definitions, its verification block must compare them **as sets, in
    both directions**, and fail.
 8. **A pre-flight check must mirror EVERY `raise` in what it is protecting, and
-   it must run FIRST.** `20260802130000` counted two of the three conditions its
+   it must run FIRST — and the file that INSTALLS a gate needs one at least as
+   much as the file that trips over it.** `20260802110000` installs
+   `trg_bound_notification_payload` as `before insert OR UPDATE` and shipped with
+   no pre-flight at all: its safety argument was about writers, and said nothing
+   about the rows already stored. Any pre-existing row failing the gate became
+   permanently un-updatable the moment it committed — marking it read aborts.
+   It now carries the same probe. `20260802130000` counted two of the three conditions its
    trigger raises on, and it counted them halfway down the file — so the missed
    case aborted after five triggers were already installed. Put the check at the
    top: a refusal should cost nothing and leave nothing behind. And write the
