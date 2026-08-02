@@ -59,6 +59,8 @@ let sessionUser: { id: string; email?: string } | null = null;
 let rows: Record<string, unknown> = {};
 /** `{ count }` payload per table, for the head query. */
 let counts: Record<string, number> = {};
+/** `error` payload per table — a transient DB failure on a completion query. */
+let queryErrors: Record<string, unknown> = {};
 const createServerClient = jest.fn();
 
 jest.mock('@supabase/ssr', () => ({
@@ -79,9 +81,16 @@ jest.mock('@supabase/ssr', () => ({
             call.filters.push([column, value]);
             return builder;
           },
-          maybeSingle: async () => ({ data: rows[table] ?? null, error: null }),
+          maybeSingle: async () => ({
+            data: queryErrors[table] ? null : rows[table] ?? null,
+            error: queryErrors[table] ?? null
+          }),
           then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
-            Promise.resolve({ data: null, error: null, count: counts[table] ?? 0 }).then(resolve, reject)
+            Promise.resolve({
+              data: null,
+              error: queryErrors[table] ?? null,
+              count: queryErrors[table] ? null : counts[table] ?? 0
+            }).then(resolve, reject)
         };
         return builder;
       }
@@ -148,6 +157,7 @@ beforeEach(() => {
   sessionUser = null;
   rows = {};
   counts = {};
+  queryErrors = {};
   process.env.NEXT_PUBLIC_SUPABASE_URL = `${ORIGIN}/supabase`;
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
 });
@@ -164,9 +174,32 @@ describe('/api/* fails closed', () => {
     // An HTML redirect here is a bug of its own: an API client follows it and
     // parses the login page as its response payload.
     expect(location(response)).toBeNull();
+    // Changed deliberately (H-08), not re-baselined: this used to assert the
+    // nested `{ error: { code, message } }`, which was the defect itself. `code`
+    // is retained as a sibling so machine callers that read it still work.
     await expect(response.json()).resolves.toEqual({
-      error: { code: 'unauthenticated', message: 'Authentication required.' }
+      error: 'Authentication required.',
+      code: 'unauthenticated'
     });
+  });
+
+  // Regression: H-08. The fence used to answer `{ error: { code, message } }`.
+  // Every one of the 23 route handlers answers `{ error: '<string>' }`, and six
+  // client call sites are written `data.error ?? 'fallback'`. A nested object is
+  // truthy, so `??` never fires and the object itself is what reaches the UI:
+  // `essay-ai-panel.tsx` pushed it into a `useState<string | null>` rendered as a
+  // React child, which throws "Objects are not valid as a React child" and
+  // unmounts the panel; the other five render `[object Object]`.
+  //
+  // `res.json()` is untyped, so nothing in the type system can catch this. The
+  // shape is the contract, and this test is the only thing holding it.
+  it('answers with the same flat {error: string} envelope every route handler uses', async () => {
+    const response = await middleware(request('/api/applications'));
+    const body = await response.json();
+
+    expect(typeof body.error).toBe('string');
+    // The exact consumer expression, executed against the real payload.
+    expect(body.error ?? 'Something went wrong').toBe('Authentication required.');
   });
 
   it('does not even construct a Supabase client for the rejected request', async () => {
@@ -404,6 +437,57 @@ describe('the onboarding redirect', () => {
 
     expect(passedThrough(response)).toBe(true);
     expect(dbCalls).toEqual([]);
+  });
+
+  /* ── a failed completion query is not an incomplete profile (E-01) ───────── */
+
+  describe('when a completion query fails', () => {
+    // The four reads discarded their `error`. A failed query yields `data: null`,
+    // which `isProfileComplete` cannot distinguish from "the student never filled
+    // this in" — so one transient DB blip bounced a *complete* student to the
+    // wizard and wrote `onboarding_status=pending`, which the fast path at the top
+    // of this function then honours for the next 60 minutes without re-querying.
+    //
+    // Failing open is the correct direction here: the wizard redirect is a
+    // completeness nudge, not an authorization boundary. Nothing is exposed by
+    // letting a request through; a complete student locked out of the whole app
+    // for an hour is real harm.
+    const eachTable = [
+      'student_personal_information',
+      'student_academic_input',
+      'student_lifestyle_preference',
+      'student_subjects'
+    ];
+
+    it.each(eachTable)('does not bounce a complete student when %s errors', async (table) => {
+      completeProfile();
+      queryErrors = { [table]: { message: 'timeout', code: '57014' } };
+
+      const response = await middleware(request('/dashboard', SESSION_COOKIE));
+
+      expect(location(response)).toBeNull();
+      expect(passedThrough(response)).toBe(true);
+    });
+
+    it('does not cache a pending verdict it could not actually establish', async () => {
+      completeProfile();
+      queryErrors = { student_academic_input: { message: 'timeout', code: '57014' } };
+
+      const response = await middleware(request('/dashboard', SESSION_COOKIE));
+
+      // Neither cookie may be written: `pending` would lock the student out for an
+      // hour, and `complete` would assert something this request never verified.
+      const written = response.cookies.getAll().map((c) => c.name);
+      expect(written).not.toContain('onboarding_status');
+      expect(written).not.toContain('onboarding_complete');
+    });
+
+    it('still bounces a genuinely incomplete profile when every query succeeds', async () => {
+      // The guard must not become a blanket "never redirect".
+      const response = await middleware(request('/dashboard', SESSION_COOKIE));
+
+      expect(location(response)).toBe('/profile/wizard?onboarding=true');
+    });
   });
 
   /* ── the english_status case COMPLETION_COLUMNS exists for ───────────────── */

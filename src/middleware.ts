@@ -80,8 +80,15 @@ export async function middleware(req: NextRequest) {
     );
 
     if (!isPublicApi && !hasSessionCookie(req) && !hasAuthorizationHeader(req)) {
+      // `error` is a flat string because that is what all 23 route handlers
+       // return and what the six `data.error ?? '…'` call sites consume. A
+       // nested `{ code, message }` here is truthy, so `??` never falls back and
+       // the object itself reaches the UI — `[object Object]` in five places, and
+       // in `essay-ai-panel.tsx` a React "Objects are not valid as a React child"
+       // throw that unmounts the panel. `res.json()` is untyped, so no compiler
+       // catches it; `middleware.test.ts` is the only guard. Keep it flat.
       return NextResponse.json(
-        { error: { code: 'unauthenticated', message: 'Authentication required.' } },
+        { error: 'Authentication required.', code: 'unauthenticated' },
         { status: 401 }
       );
     }
@@ -177,6 +184,24 @@ export async function middleware(req: NextRequest) {
       supabase.from('student_lifestyle_preference').select(COMPLETION_COLUMNS.lifestyle).eq('profile_id', user.id).maybeSingle(),
       supabase.from('student_subjects').select('id', { count: 'exact', head: true }).eq('profile_id', user.id)
     ]);
+
+    // A failed read is not an empty profile. Every one of these returns
+    // `data: null` on error, which `isProfileComplete` cannot tell apart from
+    // "never filled in" — so one transient blip bounced a *complete* student to
+    // the wizard and cached `pending`, which the fast path above then honours for
+    // the next 60 minutes without re-querying. An hour locked out of the app.
+    //
+    // Fail open, and cache nothing. The wizard redirect is a completeness nudge,
+    // not an authorization boundary: letting a request through exposes nothing,
+    // and the next request re-checks. Writing either cookie here would persist a
+    // verdict this request never actually established.
+    const completionError =
+      personalResponse.error ?? academicResponse.error ?? lifestyleResponse.error ?? subjectsResponse.error;
+
+    if (completionError) {
+      console.error('[middleware] completion check failed; not redirecting', completionError);
+      return false;
+    }
 
     const completionRecords = {
       personal: personalResponse.data,
