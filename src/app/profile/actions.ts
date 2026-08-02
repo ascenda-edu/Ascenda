@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { createServerActionSupabaseClient } from '@/lib/supabase/server';
 import type { StudentProfilePayload } from '@/lib/profile/intake-types';
-import { formatIntakeIssues, studentProfilePayloadSchema } from '@/lib/profile/intake-schema';
+import { describeIntakeIssues, formatIntakeIssues, studentProfilePayloadSchema } from '@/lib/profile/intake-schema';
 import { writeStudentIntake } from '@/lib/profile/persist-intake';
 
 const ensureUser = async () => {
@@ -50,7 +50,16 @@ export const saveStudentIntake = async (payload: StudentProfilePayload) => {
       console.error('Profile intake validation failed', formatIntakeIssues(parsed.error));
       return {
         success: false,
-        message: 'Some of your answers could not be saved. Please review the form and try again.'
+        // Name the offending fields. The previous generic sentence left a student
+        // who had, say, typed past the 4,000-character limit on "career
+        // aspiration" with no way to discover WHICH answer was the problem — the
+        // step validators do not check length, so nothing was highlighted and the
+        // save failed identically every retry. A validation error the user cannot
+        // act on is a lockout.
+        //
+        // Field PATHS only, never the submitted values: this string reaches the
+        // browser and the values are a minor's personal data.
+        message: `Some of your answers could not be saved: ${describeIntakeIssues(parsed.error)}. Please shorten or correct them and try again.`
       };
     }
 

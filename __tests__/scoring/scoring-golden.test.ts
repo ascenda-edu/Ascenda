@@ -222,18 +222,26 @@ const makePayload = (
 });
 
 // ════════════════════════════════════════════════════════════════════════════
-//  TASK A — all 56 three-grade A-level signatures
+//  TASK A — all 84 three-grade A-level signatures (7 grades incl. U)
 // ════════════════════════════════════════════════════════════════════════════
 
 /** Descending strength order — the same order `mapAlevelGradeToRank` imposes. */
-const A_LEVEL_GRADES = ['A*', 'A', 'B', 'C', 'D', 'E'] as const;
+// `U` (ungraded) IS a legal grade: it is offered by the intake form's
+// A_LEVEL_GRADES, permitted by StudentProfilePayload, accepted by the zod schema
+// and ranked by mapAlevelGradeToRank. Omitting it here is why this harness
+// reported 13/13 green while all 28 U-bearing signatures were falling through
+// the scoring table to `?? 0` — scoring BELOW the catch-all they replaced.
+//
+// An enumeration that does not span the real domain cannot see a missing row,
+// only a wrong one. Keep this list identical to src/lib/profile/intake-options.ts.
+const A_LEVEL_GRADES = ['A*', 'A', 'B', 'C', 'D', 'E', 'U'] as const;
 type ALevelGrade = (typeof A_LEVEL_GRADES)[number];
 
 /** Higher = stronger. Index into A_LEVEL_GRADES, inverted. */
 const gradeRank = (grade: ALevelGrade): number => A_LEVEL_GRADES.length - A_LEVEL_GRADES.indexOf(grade);
 
 /**
- * All 56 = C(6+3-1, 3) multisets of size 3, emitted already sorted
+ * All 84 = C(7+3-1, 3) multisets of size 3, emitted already sorted
  * strongest-first so `join('')` reproduces the scorer's own signature string.
  */
 const threeGradeSignatures = (): ALevelGrade[][] => {
@@ -983,9 +991,9 @@ const REGEN_NOTE =
 describe('golden — A-level grade signatures (task A)', () => {
   const rows = buildSignatureRows();
 
-  it('enumerates exactly 56 distinct three-grade signatures', () => {
-    expect(rows).toHaveLength(56);
-    expect(new Set(rows.map((row) => row.signature)).size).toBe(56);
+  it('enumerates exactly 84 distinct three-grade signatures', () => {
+    expect(rows).toHaveLength(84);
+    expect(new Set(rows.map((row) => row.signature)).size).toBe(84);
   });
 
   it('matches the committed signature baseline', () => {

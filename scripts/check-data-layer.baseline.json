@@ -1,5 +1,6 @@
 {
   "_readme": "Direct .from() call sites outside src/lib/data. May shrink, never grow. See scripts/check-data-layer.mjs.",
-  "total": 166,
-  "files": 45
+  "_corrected_2026_08_02": "Was 166 under a single-quote-only regex that missed double quotes, template literals and the tbl(supabase,name)/.from(table) indirection. This is the honest count under the widened detector — the code did not get worse, the measurement got accurate.",
+  "total": 198,
+  "files": 56
 }

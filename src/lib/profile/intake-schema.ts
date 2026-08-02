@@ -218,6 +218,42 @@ void _typeAssignableToInfer;
  * Human-readable one-line summary of zod issues, safe to log server-side.
  * Field paths only — values are never included, so PII stays out of the logs.
  */
+/**
+ * Human-readable field list for a validation failure, safe to show the user.
+ *
+ * `formatIntakeIssues` is for the SERVER LOG (full paths, zod's own wording).
+ * This one is for the person: it names the fields in the words the form uses, so
+ * a save that fails is actionable. Deliberately no submitted values — this string
+ * reaches the browser and the values are a minor's personal data.
+ */
+const FIELD_LABELS: Record<string, string> = {
+  'academic_input.career_aspiration': 'career aspiration',
+  'lifestyle_preference.ambition_statement': 'ambition statement',
+  'lifestyle_preference.work_experience_summary': 'work experience summary',
+  'academic_input.ee_summary': 'extended essay summary',
+  'personal_information.first_name': 'first name',
+  'personal_information.last_name': 'last name',
+  'personal_information.email': 'email',
+  'academic_input.school_name': 'school name'
+};
+
+export const describeIntakeIssues = (error: z.ZodError): string => {
+  const seen = new Set<string>();
+  for (const issue of error.issues) {
+    const path = issue.path.join('.');
+    // Walk up to the nearest labelled ancestor so an array index
+    // (subject_list.2.grade_value) still reads as a field name.
+    const label =
+      FIELD_LABELS[path] ??
+      FIELD_LABELS[issue.path.slice(0, 2).join('.')] ??
+      (issue.path[0] ? String(issue.path[0]).replace(/_/g, ' ') : 'your answers');
+    seen.add(label);
+  }
+  const labels = [...seen];
+  if (labels.length <= 2) return labels.join(' and ');
+  return `${labels.slice(0, 2).join(', ')} and ${labels.length - 2} other field${labels.length - 2 === 1 ? '' : 's'}`;
+};
+
 export const formatIntakeIssues = (error: z.ZodError): string =>
   error.issues
     .map((issue) => `${issue.path.join('.') || '<root>'}: ${issue.message}`)

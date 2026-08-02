@@ -36,20 +36,38 @@ const PROTECTED_PREFIXES = [
 const PUBLIC_API_PREFIXES = ['/api/calendar-feed'];
 
 /**
- * Presence check only — deliberately NOT `auth.getUser()`.
+ * Cheap plausibility check. **This is not authentication and does not make a
+ * handler safe.**
  *
- * `getUser()` round-trips to the auth server to validate the JWT, and every
- * protected handler already does that for itself. Repeating it here would double
- * the auth latency of every API call to re-derive an answer the handler is about
- * to compute authoritatively.
+ * It tests only that a cookie with the Supabase auth-token NAME exists. It does
+ * not read, decode or validate the value, so `Cookie: sb-x-auth-token=junk`
+ * passes it. Its whole job is to reject the large class of drive-by
+ * unauthenticated requests without paying for a `getUser()` round trip on every
+ * API call — `getUser()` hits the auth server, and every protected handler
+ * already does that for itself.
  *
- * So middleware answers the cheap question ("is there a session at all?") and
- * rejects the unauthenticated case for free; the handler remains the real
- * boundary and still decides who the caller is and what they may touch. A forged
- * or expired cookie gets past this check and is then rejected by the handler.
+ * **The handler is the authentication boundary, not this.** An earlier version of
+ * this comment claimed that a route which forgets its own `getUser()` "is not
+ * silently public". That was false and is exactly the kind of assurance someone
+ * would build on: such a route is reachable by anyone willing to set a junk
+ * cookie. If you add a route, it authenticates itself.
  */
 const hasSessionCookie = (req: NextRequest) =>
   req.cookies.getAll().some((cookie) => /^sb-.+-auth-token(\.\d+)?$/.test(cookie.name));
+
+/**
+ * Server-to-server callers present `Authorization`, never a cookie.
+ *
+ * `/api/admin/catalog-health` accepts an `ADMIN_API_KEY` bearer for CLI/cron use.
+ * Gating on the cookie alone 401'd those callers here, before the route could
+ * check the key — a regression introduced when this fence was added, and one no
+ * test covered because nothing exercises the bearer path.
+ *
+ * Presence of the header is not authorisation: the route still does a
+ * `timingSafeEqual` against the configured key and rejects it if it does not
+ * match. This only declines to answer on the route's behalf.
+ */
+const hasAuthorizationHeader = (req: NextRequest) => req.headers.has('authorization');
 
 export async function middleware(req: NextRequest) {
   // API requests are handled before the Supabase client is constructed: they must
@@ -61,7 +79,7 @@ export async function middleware(req: NextRequest) {
       (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
     );
 
-    if (!isPublicApi && !hasSessionCookie(req)) {
+    if (!isPublicApi && !hasSessionCookie(req) && !hasAuthorizationHeader(req)) {
       return NextResponse.json(
         { error: { code: 'unauthenticated', message: 'Authentication required.' } },
         { status: 401 }

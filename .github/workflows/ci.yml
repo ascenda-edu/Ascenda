@@ -95,15 +95,18 @@ jobs:
 
       - name: Data-layer confinement
         if: always()
-        # Ratcheting, like the token check: 166 direct .from() call sites still
+        # Ratcheting, like the token check: 198 direct .from() call sites still
         # live outside src/lib/data, so this fails only on an INCREASE. When it
         # reaches zero, delete the script and use a real no-restricted-syntax rule.
         run: npm run lint:datalayer
 
       - name: Dead code (advisory)
         if: always()
-        # Reports only — knip's baseline is non-zero and triaging it is Phase 4.
-        # Kept visible so the list cannot quietly grow.
+        # Reports only. `knip --no-exit-code` ALWAYS exits 0, so — unlike the two
+        # ratchets above — this cannot fail and the list CAN quietly grow. It is
+        # here to be read in the log, not to gate. Making it a real ratchet means
+        # dropping --no-exit-code and committing a baseline, which is worth doing
+        # once the current findings are triaged.
         run: npm run lint:deadcode
 
   # ── Tests ──────────────────────────────────────────────────────────────────
@@ -122,12 +125,22 @@ jobs:
       - run: npm ci
 
       - name: Unit + integration tests
-        run: npm test -- --runInBand --coverage --coverageReporters=text-summary --coverageReporters=json-summary
+        # `--collectCoverageFrom` is REQUIRED, not decorative. Without it Jest
+        # measures only the files some test happened to import, which reported
+        # 72.9% over 108 of 449 source files — a number that looks like coverage
+        # and is not. With it the figure spans the whole tree.
+        run: >-
+          npm test -- --runInBand --coverage
+          --coverageReporters=text-summary --coverageReporters=json-summary
+          --collectCoverageFrom='src/**/*.{ts,tsx}'
 
-      # Coverage is ~13% overall but ~79% in lib/chat. A single global threshold
-      # would be either meaningless or permanently red, so this reports the
-      # number rather than gating on it. Add a per-directory floor on
-      # features/*/model/** once Phase 3 gives that code a home.
+      # ~25% of statements across the whole tree, unevenly: lib/counsellor 91%,
+      # use-search-results 93%, app/profile 69% — and several directories at 0.
+      # A single global threshold would be either meaningless or permanently red,
+      # so this reports rather than gates. The useful gate is a per-directory
+      # floor on the pure domain logic (src/lib/scoring, src/lib/matching,
+      # src/features/*/model), which is where a regression is expensive and
+      # coverage is already high enough to hold a line.
       - name: Coverage summary
         if: always()
         run: |
@@ -358,6 +371,14 @@ jobs:
         run: |
           results='${{ join(needs.*.result, ' ') }}'
           echo "job results: $results"
+          # Fail on an EMPTY list. `join` over an empty `needs` yields '', the
+          # loop below iterates zero times, and this job would print success
+          # having verified nothing — the same fail-open shape as a skipped
+          # dependency counting as a pass.
+          if [ -z "$results" ]; then
+            echo "::error::ci-ok resolved no dependencies — refusing to report success."
+            exit 1
+          fi
           for r in $results; do
             if [ "$r" != "success" ]; then
               echo "::error::A required job did not succeed ($results)"

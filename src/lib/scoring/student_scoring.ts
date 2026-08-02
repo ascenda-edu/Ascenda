@@ -495,52 +495,76 @@ export const calculateActScore = (actScore: number | null): number => {
  *
  * ── Why this is a complete table rather than an if-chain ────────────────────
  * It used to be 26 `if (signature === …)` branches with `return 8` as a
- * catch-all. There are 56 possible signatures, so **30 of them — 54% — hit that
- * catch-all**, which produced 34 strict-dominance inversions: `A*A*D` scored 8
+ * catch-all. Over the six PASSING grades that is 56 signatures, so 30 of them
+ * hit the catch-all, producing 34 strict-dominance inversions: `A*A*D` scored 8
  * while `DDD` scored 10 and `ABD` scored 40. `AAD`, `ACC`, `ACD` and `BBD` are
- * among the most common real results in the UK, so the students who fell in the
- * hole were disproportionately the ones with one weak subject alongside strong
- * ones — exactly the profile that most needs accurate matching. The wrong value
- * was then persisted to `student_scores`.
+ * among the most common real results in the UK, so the students in the hole were
+ * disproportionately those with one weak subject beside strong ones — exactly the
+ * profile that most needs accurate matching. The wrong value was then persisted
+ * to `student_scores`.
  *
- * A missing entry is now unrepresentable: the table is exhaustive over the grade
- * set, so a signature cannot silently fall through.
+ * ── `U` IS A GRADE. The domain is 84 signatures, not 56. ────────────────────
+ * A first version of this table covered only A*–E and was described here as
+ * "exhaustive". It was not: `U` (ungraded) is offered by the intake form
+ * (`A_LEVEL_GRADES`), permitted by `StudentProfilePayload`, accepted by the zod
+ * schema, and ranked by `mapAlevelGradeToRank` — so all 28 `U`-bearing
+ * signatures missed the table and fell to `?? 0`, scoring BELOW the catch-all 8
+ * they replaced. `A*A*U` scored 0, under `EEE`'s 5.
  *
- * ── How the 30 new values were derived ──────────────────────────────────────
- * The 25 originally-listed values were checked and found **internally perfectly
- * monotonic** — the calibration was sound, only the gaps were broken. So every
- * original value is preserved EXACTLY; no existing student's score moves.
+ * That regression is worth remembering: it was introduced by a fix for the same
+ * class of bug, it passed every gate, and the exhaustive dominance check could
+ * not see it — a missing ROW is not an inversion between rows. The domain was
+ * assumed rather than read off the type.
  *
- * The gaps were filled by fitting a position-weighted grade score
- * (1.2 : 1 : 0.8 over the sorted grades) to the original values and interpolating,
- * then clamping each result into the range dominance permits — at least the best
- * signature it beats, at most the worst signature that beats it. That weighting
- * was chosen because it reproduces the original table most closely of those
- * tried (absolute fit error 22.0, versus 36.7 for equal weights and 55.0 for
- * 3:2:1), so the fills follow the curve a human already tuned rather than one
- * invented here.
+ * ── How the fills were derived ──────────────────────────────────────────────
+ * The originally-listed values were checked and found internally monotonic — the
+ * calibration was sound, only the gaps were broken. Every original value is
+ * preserved EXACTLY, and so is every value from the six-grade pass, so no score
+ * moves twice.
  *
- * The result is verified exhaustively: across all 56 × 56 ordered pairs there
- * are **zero** dominance inversions. `__tests__/scoring/` asserts this, and
- * `a-level-monotonicity.golden.json` — which captured the original 34 violations
- * — must contain zero.
+ * Gaps are filled by fitting a position-weighted grade score (1.2 : 1 : 0.8 over
+ * the sorted grades) to the original values, interpolating, then clamping into
+ * the range dominance permits — at least the best signature it beats, at most the
+ * worst that beats it.
+ *
+ * HONEST CAVEAT ON THAT WEIGHTING. An earlier version of this comment claimed
+ * 1.2:1:0.8 "reproduces the original table most closely (fit error 22.0 vs 36.7
+ * equal-weight and 55.0 for 3:2:1)". That claim does not hold: the metric behind
+ * it is degenerate under ties, and equal weighting scores better under every
+ * tie-robust measure (OLS residuals, RMSE, rank discordance). The weighting is a
+ * REASONABLE choice, not a demonstrably optimal one. It is kept because the
+ * values it produced are monotone, tariff-consistent and already shipped —
+ * re-deriving them would move student scores a second time for no proven gain.
+ * If these are ever recalibrated, do it against admissions data, not curve-fit.
+ *
+ * ── What is actually verified ───────────────────────────────────────────────
+ * Across all 84 × 84 ordered pairs there are zero STRICT dominance inversions.
+ * Some dominance-comparable pairs TIE (the scale is compressed at the bottom:
+ * `EEE`, `DEE` and `UUU` all sit at 5). Ties are permitted; a strictly better
+ * profile scoring strictly worse is not. `__tests__/scoring/` asserts this and
+ * `a-level-monotonicity.golden.json` must stay at zero.
  *
  * Grades beyond the top three are ignored (`.slice(0, 3)`), matching UK offer
  * convention.
  */
 const A_LEVEL_SIGNATURE_SCORE: Readonly<Record<string, number>> = {
   'A*A*A*': 80, 'A*A*A': 80, 'A*A*B': 78, 'A*AA': 76, 'A*A*C': 74,
-  AAA: 70,      'A*AB': 68, 'A*A*D': 67, 'A*AC': 64, 'A*BB': 60,
-  AAB: 60,      'A*A*E': 57, 'A*AD': 55, 'A*BC': 52, ABB: 52,
-  AAC: 50,      'A*AE': 50, 'A*BD': 48, AAD: 46,     ABC: 46,
-  'A*CC': 44,   'A*BE': 44, BBB: 44,     AAE: 40,    ABD: 40,
-  ACC: 38,      BBC: 36,    ABE: 34,     BBD: 31,    BCC: 30,
-  'A*CD': 28,   'A*CE': 28, 'A*DD': 28,  ACD: 28,    'A*DE': 28,
-  ACE: 27,      ADD: 25,    BBE: 25,     'A*EE': 24, CCC: 24,
-  ADE: 22,      BCD: 20,    BCE: 20,     BDD: 18,    CCD: 16,
-  AEE: 15,      BDE: 14,    CCE: 14,     CDD: 13,    BEE: 12,
-  CDE: 11,      DDD: 10,    CEE: 8,      DDE: 8,     DEE: 5,
-  EEE: 5
+  AAA: 70, 'A*AB': 68, 'A*A*D': 67, 'A*AC': 64, 'A*BB': 60,
+  AAB: 60, 'A*A*E': 57, 'A*AD': 55, 'A*BC': 52, 'A*A*U': 52,
+  ABB: 52, AAC: 50, 'A*AE': 50, 'A*BD': 48, AAD: 46,
+  ABC: 46, 'A*AU': 45, 'A*CC': 44, 'A*BE': 44, BBB: 44,
+  AAE: 40, ABD: 40, ACC: 38, 'A*BU': 36, BBC: 36,
+  AAU: 34, ABE: 34, BBD: 31, BCC: 30, 'A*CD': 28,
+  'A*CE': 28, 'A*DD': 28, ACD: 28, 'A*CU': 28, 'A*DE': 28,
+  ABU: 28, ACE: 27, ADD: 25, BBE: 25, 'A*DU': 24,
+  'A*EE': 24, ACU: 24, CCC: 24, BBU: 22, ADE: 22,
+  BCD: 20, BCE: 20, BDD: 18, 'A*EU': 16, CCD: 16,
+  ADU: 16, BCU: 15, AEE: 15, BDE: 14, CCE: 14,
+  'A*UU': 13, CDD: 13, AEU: 13, BDU: 12, CCU: 12,
+  BEE: 12, CDE: 11, AUU: 10, DDD: 10, BEU: 9,
+  CDU: 9, CEE: 8, DDE: 8, BUU: 7, CEU: 6,
+  DDU: 6, DEE: 5, CUU: 5, DEU: 5, EEE: 5,
+  DUU: 5, EEU: 5, EUU: 5, UUU: 5
 };
 
 const calculateALevelProfileScore = (academic_input: StudentProfilePayload['academic_input']) => {

@@ -19,6 +19,7 @@ import { type Content } from '@google/genai';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/api/rate-limit';
 import { parseJsonBody } from '@/lib/api/guards';
+import { resolveChatMode } from '@/lib/chat/mode';
 import { getSystemPrompt, getToolAddendum } from '@/lib/chat/prompts';
 import { buildContextForMode } from '@/lib/chat/context';
 import { contextCacheKey, getCachedContext, setCachedContext } from '@/lib/chat/cache';
@@ -82,11 +83,27 @@ export async function POST(req: NextRequest) {
     if (!conversation || conversation.owner_id !== user.id) {
       return jsonError('Conversation not found', 403);
     }
-    // Mode↔tool binding comes from the PERSISTED conversation row, never the
-    // wire. Same demo-posture seam as /api/chat (mode was client-chosen at
-    // conversation creation): when profiles.role is enforced there, this
-    // tightens automatically.
-    const mode = conversation.mode;
+    // Mode decides which WRITE TOOLS this request may reach, so it is authorised
+    // against the caller — it is not read off the conversation row.
+    //
+    // Reading `conversation.mode` directly was an escalation path. The row is
+    // written by the browser and `chat_conversations_all_own` constrains only
+    // `owner_id = auth.uid()`, nothing about `mode` — so a student could POST a
+    // conversation with `mode: 'counsellor'` straight to PostgREST, then execute
+    // counsellor write tools through this route. `/api/chat` binds mode via
+    // resolveChatMode; this route did not, so the guard was reachable around.
+    //
+    // Persisted mode is still the CEILING (a counsellor cannot execute a
+    // counsellor action inside a conversation they created as a student), and
+    // resolveChatMode is the floor. Both must agree.
+    const resolved = await resolveChatMode(supabase, user, conversation.mode);
+    if (!resolved.ok) {
+      return jsonError('Not available for this conversation', 403);
+    }
+    const mode = resolved.mode;
+    if (mode !== conversation.mode) {
+      return jsonError('Not available for this conversation', 403);
+    }
 
     const message = await getMessage(supabase, messageId);
     if (!message || message.conversation_id !== conversationId || message.role !== 'assistant') {

@@ -58,15 +58,30 @@ const selectTriggerVariants = cva(
  * A-level grades, TOK/EE grades and English test type silently blanked. The
  * wizard then refused to advance, reporting those fields as missing.
  *
- * ── Why swallowing '' is safe, not a papering-over ──────────────────────────
- * Radix itself forbids an empty-string `SelectItem` value — it throws
- * "A <Select.Item /> must have a value prop that is not an empty string."
- * So `''` is not reachable through user interaction by construction, and every
- * `onValueChange('')` is this artefact. Clearing a Select is still possible: a
- * controlled parent sets `value=""` directly, which does not route through here.
+ * ── Why swallowing '' is acceptable HERE — and its limits ───────────────────
+ * An earlier version of this comment claimed Radix forbids an empty-string
+ * `SelectItem` value, making `''` unreachable "by construction". **That is
+ * false** for the installed `@radix-ui/react-select@2.3.7`: no such invariant
+ * exists, and `hasEmptyValueOption` in its source exists precisely to SUPPORT
+ * empty-value items. A reviewer disproved the claim by rendering
+ * `<SelectItem value="">None</SelectItem>` — it mounts fine, and under this
+ * wrapper clicking it does nothing at all, silently.
  *
- * Applied at the wrapper so it holds for every Select in the app rather than
- * being re-remembered per call site.
+ * So the real justification is narrower and needs re-checking when it changes:
+ * every Select in this app today uses a SENTINEL for its empty option
+ * ('NONE', 'any', …), never `value=""`, so no legitimate clear routes through
+ * `onValueChange`. That was verified across all current call sites, not derived
+ * from a library guarantee.
+ *
+ * **If you add a Select with `<SelectItem value="">`, it will not work.** Give it
+ * a sentinel value, or clear it from the controlled parent (setting `value=""`
+ * directly does not route through here). Radix's native form-reset listener also
+ * resolves to `''` and is swallowed — latent only because nothing in `src/` uses
+ * `<button type="reset">`.
+ *
+ * Applied at the wrapper so the fix holds app-wide rather than being
+ * re-remembered per call site — but it is a targeted workaround for a library
+ * bug, not an invariant.
  */
 const Select = ({
   onValueChange,

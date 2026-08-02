@@ -54,6 +54,7 @@
 import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { logger } from '@/lib/observability/logger';
 
 // Defence in depth: identity resolution must never run in a browser bundle.
 // Same guard, same reason as lib/supabase/service.ts:11 and lib/env.ts:442.
@@ -105,11 +106,27 @@ export const getIdentity = cache(async (): Promise<Identity | null> => {
 
   if (!user) return null;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .maybeSingle();
+
+  // Bind and LOG the error. `parseRole(undefined)` already fails closed to
+  // 'student', so an unreadable profile cannot escalate — but silence here means
+  // a dropped RLS policy or a database outage presents as "everyone is suddenly a
+  // student", locking every counsellor and admin out of their own portal with
+  // nothing to grep for. This is the same discarded-error shape that
+  // src/app/api/admin/admin-guard.ts exists to prevent; it was left here.
+  //
+  // Deliberately NOT thrown: identity resolution runs in layouts on every
+  // authenticated route, and turning a transient read failure into a site-wide
+  // error page is worse than degrading to least privilege. Loud, not fatal.
+  if (error) {
+    logger.error('Failed to read profiles.role; falling back to least privilege', error, {
+      userId: user.id
+    });
+  }
 
   return {
     userId: user.id,
