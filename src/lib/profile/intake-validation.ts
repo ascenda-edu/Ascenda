@@ -14,6 +14,7 @@
 
 import { formatNationalities, parseNumber, type IntakeFormState } from '@/lib/profile/intake-logic';
 import { getMaxSubjects } from '@/lib/profile/intake-options';
+import { studentProfilePayloadSchema } from '@/lib/profile/intake-schema';
 
 export type IntakeErrors = Record<string, string>;
 
@@ -91,9 +92,79 @@ export const validateStep3 = (state: IntakeFormState): IntakeErrors => {
   return e;
 };
 
-// Steps 4 & 5 are optional
+// Steps 4 & 5 have no *required* fields, so there is nothing to block a step
+// transition on. That is NOT the same as "nothing on these steps can be
+// invalid" — see `validatePayload`, which is what the final submit uses.
 export const validateStep4 = (): IntakeErrors => ({});
 export const validateStep5 = (): IntakeErrors => ({});
+
+/**
+ * The last check before the save, run against **the same schema the server
+ * validates with** — `studentProfilePayloadSchema`, the one
+ * `saveStudentIntake` parses the payload with.
+ *
+ * WHY THIS EXISTS (audit finding A2)
+ * ----------------------------------
+ * `handleFinalSubmit` ran `validateStep1/2/3` and nothing else, and steps 4–5
+ * return `{}` unconditionally — so no client-side check ever looked at the
+ * step-4 fields. The `max={1600}` on the SAT input does not save you either:
+ * the user submits from the review step, by which time step 4 is unmounted, and
+ * every Next button is `type="button"`, so the browser never runs constraint
+ * validation over the form.
+ *
+ * A student typing SAT `1650` therefore passed the whole wizard and had the
+ * entire six-table save rejected with *"Some of your answers could not be
+ * saved: lifestyle preference."* — a step name, not a field they could find.
+ * Same for `career_aspiration`, `ambition_statement` and
+ * `work_experience_summary` past 4,000 characters, none of which carry a
+ * `maxLength`. All of it saved on `origin/main`.
+ *
+ * This deliberately reuses the schema rather than restating its bounds. A
+ * fourth hand-written list of maxima is exactly the "one concept declared
+ * twice" pattern that produced most of this codebase's defects: the copies
+ * drift, and the drift is invisible until a user hits it.
+ */
+export const validatePayload = (payload: unknown): IntakeErrors => {
+  const result = studentProfilePayloadSchema.safeParse(payload);
+  if (result.success) return {};
+
+  const errors: IntakeErrors = {};
+  for (const issue of result.error.issues) {
+    // zod's path is the payload path, which is already the dotted form the
+    // wizard hangs off `data-field` — so `focusFirstError` can scroll to it.
+    const key = issue.path.join('.');
+    // First message per field: later issues on the same path are usually a
+    // less specific restatement of the first.
+    if (key && !errors[key]) errors[key] = issue.message;
+  }
+  return errors;
+};
+
+/**
+ * Which wizard step owns a given payload field, so a failed `validatePayload`
+ * can put the student in front of the field rather than on the review page
+ * reading a message about a step name.
+ *
+ * Order matters: the subject/test keys are checked before the general
+ * `academic_input.` prefix, because they live on step 3 while the rest of
+ * `academic_input` is step 2.
+ */
+export const stepForFieldKey = (key: string): number => {
+  if (key.startsWith('personal_information.')) return 1;
+  if (
+    key.startsWith('academic_input.subject_list') ||
+    key.startsWith('academic_input.admissions_tests') ||
+    key.startsWith('academic_input.english') ||
+    key.startsWith('academic_input.ib_') ||
+    key.startsWith('academic_input.predicted')
+  ) {
+    return 3;
+  }
+  if (key.startsWith('academic_input.')) return 2;
+  // Everything the payload schema can still reject — SAT/ACT, the free-text
+  // ambition and work-experience answers, the activity rows — is step 4.
+  return 4;
+};
 
 /** Dispatch for the wizard's "can I leave this step?" check. Step 6 (Review) never blocks. */
 export const validateStep = (step: number, state: IntakeFormState): IntakeErrors => {

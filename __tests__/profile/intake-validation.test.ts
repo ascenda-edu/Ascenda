@@ -18,9 +18,10 @@
  *      the screen.
  */
 
-import { buildInitialFormState, type IntakeFormState } from '@/lib/profile/intake-logic';
+import { buildInitialFormState, toPayload, type IntakeFormState } from '@/lib/profile/intake-logic';
 import {
-  validateStep, validateStep1, validateStep2, validateStep3, validateStep4, validateStep5
+  validateStep, validateStep1, validateStep2, validateStep3, validateStep4, validateStep5,
+  validatePayload
 } from '@/lib/profile/intake-validation';
 
 const stateWith = (patch: Partial<IntakeFormState>): IntakeFormState => ({
@@ -355,5 +356,69 @@ describe('validateStep — dispatch', () => {
   it('returns no errors for an out-of-range step rather than throwing', () => {
     expect(validateStep(0, buildInitialFormState())).toEqual({});
     expect(validateStep(99, buildInitialFormState())).toEqual({});
+  });
+});
+
+/* ── the wizard must not accept what the save endpoint rejects (A2) ──────────
+ *
+ * Audit finding A2. `handleFinalSubmit` ran only `validateStep1/2/3`;
+ * `validateStep4` returned `{}` unconditionally, so nothing checked the step-4
+ * fields client-side. The native `max={1600}` on the SAT input never fires
+ * either: step 4 is unmounted by the time the user submits from the review
+ * step, and every Next button is `type="button"`, so the browser never runs
+ * constraint validation on the form.
+ *
+ * The result: a student types SAT 1650, sails through the wizard, and the whole
+ * six-table save is rejected by `studentProfilePayloadSchema` with
+ * "Some of your answers could not be saved: lifestyle preference." — naming a
+ * step they cannot map to the field they got wrong. All of it saved on
+ * origin/main. It passed 1,541 green tests.
+ *
+ * The fix validates the built payload against THE SAME schema the server uses,
+ * rather than adding a fourth hand-written bounds list that can drift from it.
+ * That is the point: one declaration, not two.
+ */
+describe('validatePayload — the client checks what the server will check', () => {
+  // Build through the real `toPayload`, not a hand-rolled literal: the point of
+  // this suite is that the client and the server agree, and a fixture invented
+  // here would be testing the fixture rather than the agreement.
+  const validPayload = () => {
+    const state: IntakeFormState = {
+      ...validStep1(),
+      ...validStep2(),
+      ...validStep3IB(),
+      personalInfo: validStep1().personalInfo,
+      nationalities: validStep1().nationalities,
+      // step 3's academicInput is built off the INITIAL state, so spreading it
+      // after step 2's would blank the school fields. Step 2 wins; step 3
+      // contributes only the one field it actually sets.
+      academicInput: { ...validStep2().academicInput, ib_math_pathway: 'AA_HL' as const }
+    };
+    return toPayload(state) as unknown as Record<string, Record<string, unknown>>;
+  };
+
+  it('rejects an out-of-range SAT score, keyed to the field the user can find', () => {
+    const payload = validPayload();
+    payload.lifestyle_preference.sat_score = 1650;
+
+    const errors = validatePayload(payload);
+
+    expect(errors['lifestyle_preference.sat_score']).toBeDefined();
+  });
+
+  it('rejects an over-long free-text answer', () => {
+    const payload = validPayload();
+    payload.lifestyle_preference.ambition_statement = 'x'.repeat(4001);
+
+    const errors = validatePayload(payload);
+
+    expect(errors['lifestyle_preference.ambition_statement']).toBeDefined();
+  });
+
+  it('accepts a payload the server would accept', () => {
+    const payload = validPayload();
+    payload.lifestyle_preference.sat_score = 1450;
+
+    expect(validatePayload(payload)).toEqual({});
   });
 });

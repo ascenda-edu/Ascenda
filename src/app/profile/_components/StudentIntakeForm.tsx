@@ -29,7 +29,7 @@ import {
   shouldShowAdmissionsTests, shouldShowEnglishScore, toPayload,
   type IntakeFormState
 } from '@/lib/profile/intake-logic';
-import { validateStep, validateStep1, validateStep2, validateStep3 } from '@/lib/profile/intake-validation';
+import { validateStep, validateStep1, validateStep2, validateStep3, validatePayload, stepForFieldKey } from '@/lib/profile/intake-validation';
 import { saveStudentIntake } from '../actions';
 import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
 
@@ -907,6 +907,25 @@ export const StudentIntakeForm = ({
       return;
     }
     const payload = buildPayload();
+
+    // The wizard used to send whatever the step validators did not object to,
+    // and steps 4–5 object to nothing. So a SAT of 1650 — or any free-text
+    // answer past 4,000 characters — sailed through and the server rejected the
+    // entire six-table save with a step name the student could not act on.
+    // `validatePayload` runs the SAME schema the server parses with, so the two
+    // cannot disagree, and the errors it returns are keyed by payload path,
+    // which is what `focusFirstError` scrolls to.
+    const payloadErrors = validatePayload(payload);
+    if (Object.keys(payloadErrors).length > 0) {
+      setErrors(payloadErrors);
+      // These fields live on step 4; send the student to the step that holds
+      // the first offending field rather than leaving them on the review page.
+      const firstKey = Object.keys(payloadErrors)[0];
+      setCurrentStep(stepForFieldKey(firstKey));
+      focusFirstError(payloadErrors, 600);
+      return;
+    }
+
     setStatusMessage('Saving…'); setStatusIsError(false);
     startTransition(async () => {
       try {
