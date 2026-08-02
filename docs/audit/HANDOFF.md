@@ -25,7 +25,67 @@ So: when you add a check, **break it and watch it go red** before believing it.
 
 ---
 
-## TASK 1 — Make the `database` CI job actually pass (highest value)
+## TASK 1 — Make the `database` CI job actually pass — **DONE**
+
+**Status: the job passes.** Verified against a throwaway PostgreSQL 16.14 cluster
+(Homebrew, `initdb`/`pg_ctl`, Unix socket, six disposable databases per run).
+Production was never contacted and `npm run db:apply` was never run.
+
+Run it yourself: **`./scripts/ci-db-local.sh`**. It boots a disposable cluster and
+runs `scripts/ci-db-check.sh` — *the same script* `.github/workflows/ci.yml` runs,
+so "passes locally" and "passes in CI" can no longer mean two different things.
+The previous version lived only as inline YAML, which is why it had never once
+been executed.
+
+Five blockers, not three:
+
+| # | Blocker | Fix |
+|---|---|---|
+| 1 | Stub had no `create publication supabase_realtime` → died on the first migration | added to `scripts/ci-db-stub.sql` |
+| 2 | `20260718130000:37` **raises** when that publication is absent (not in the review's list) | same fix |
+| 3 | `recognition_score` was fixed in the wrong place — `schema.sql` declares it, then `20250308120000` renames `universities` away and promotes a `universities_v2` that never had it. `20260723120000:21` then fails 42703 | root cause was replaying `20250308120000` at all; see below |
+| 4 | `20260512120000:52` / `20260513120000:63` — unguarded `alter publication … add table`, fail on **pass 1** as well as 2 | ledgered |
+| 5 | `20250308120000:429` — non-idempotent rename, fails on pass 2 | ledgered |
+
+**The idempotency claim was narrowed, not deleted.** Three PRE-EXISTING,
+already-applied migrations are excluded by a documented ledger in
+`scripts/ci-db-check.sh` (`NOT_REPLAYABLE`). The narrowing is held honest by two
+assertions the job makes on itself:
+
+- **Ledger-staleness probe** — each excluded file is applied twice to its own
+  clone of the post-`schema.sql` database and must **fail**. If one is ever
+  fixed, the job goes red demanding its removal. The ledger cannot become a
+  place to hide a failure.
+- **Post-conditions** — every object those three files create (the five help/
+  notification tables, their `supabase_realtime` membership, `cities`,
+  `universities`, `programs`, `program_requirements`, `course_scoring_v1`,
+  `safe_int`, `cost_of_life_enum`, and `universities.recognition_score`) must be
+  present anyway. Skipping them must lose nothing.
+- Plus a count assertion, so a glob that matched nothing cannot report success.
+
+**Why narrow rather than guard.** All three are already applied to production;
+editing them rewrites a historical record without changing any database. The
+`alter publication` lines are already superseded — `20260718130000` publishes
+every subscribed table behind a `pg_publication_tables` guard.
+`20250308120000` is a one-time normalization that is *destructive*, not merely
+non-idempotent, when replayed: it renames the live `programs`/`universities` to
+`archive_raw_*` and promotes the empty `*_v2` tables it just created — which is
+also exactly what discards `recognition_score`. **Never `db:apply` that file
+against production.** Adding the column to `schema.sql` was necessary but could
+never have fixed the job on its own; the false claim to the contrary in
+`ci.yml`'s `ci-ok` comment has been corrected.
+
+**Broken on purpose, watched go red** (all four exit non-zero): removing the
+publication stub; removing a ledger entry; adding a replayable file to the
+ledger; deleting `recognition_score` from `schema.sql`. It also caught a real
+defect in `20260802150000` while that file was being written (`anyarray ||
+unknown` → "malformed array literal"), since fixed by its author.
+
+**Still open:** `database` is deliberately still NOT in `ci-ok`'s `needs`. It has
+been observed green twice consecutively on a local cluster, never yet on a
+GitHub runner. Add it the first time it goes green there.
+
+<details><summary>Original brief</summary>
 
 **Why first:** it is the gate that would have caught both schema defects, and it has never run green. Until it does, the database half of this branch is unverified.
 
@@ -36,6 +96,8 @@ A reviewer ran the real thing (Postgres 16.14, throwaway cluster) and found:
 3. **Pass 2 fails** (`relation "programs" already exists`), so the idempotency assertion does not hold. Three PRE-EXISTING migrations are not idempotent — identify them, and either guard them or scope the idempotency assertion honestly to the files that claim it.
 
 **Definition of done:** the exact CI steps run green locally against a throwaway Postgres, twice. If a pre-existing migration genuinely cannot be made idempotent, say so and narrow the job's claim rather than deleting the check.
+
+</details>
 
 ---
 

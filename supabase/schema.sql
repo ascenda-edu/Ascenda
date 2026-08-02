@@ -240,6 +240,16 @@ create table if not exists universities (
   -- and everything after it (roughly half the tables, all 93 policies, all 19
   -- functions) silently never ran. Nothing caught it because nothing ever
   -- replayed this file; the CI `database` job now does, on every PR.
+  --
+  -- DECLARED HERE AND NOWHERE ELSE. No migration adds this column — and
+  -- 20250308120000_normalize_course_catalog.sql actively REMOVES it, because it
+  -- renames this table to archive_raw_universities and promotes a
+  -- `universities_v2` (that file, :32-60) which never declared it. That is why
+  -- adding the column here did not, on its own, make the CI `database` job pass:
+  -- the replay dropped it again, and 20260723120000:21 then failed with 42703.
+  -- That migration is a one-time normalization and is now on the not-replayable
+  -- ledger in scripts/ci-db-check.sh. Never re-apply it to a normalized database.
+  --
   -- Used by search suggestions to prioritise well-known universities (>= 5).
   recognition_score numeric,
   website text,

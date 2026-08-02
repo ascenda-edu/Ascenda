@@ -208,6 +208,19 @@ jobs:
   # Replaying migrations TWICE also proves they are idempotent — required here,
   # since they are applied one-off via `npm run db:apply` rather than by a tool
   # that tracks what it has already run.
+  #
+  # The whole job is `scripts/ci-db-check.sh`, NOT inline steps, so that
+  # `scripts/ci-db-local.sh` can run byte-identical logic against a throwaway
+  # local cluster. The previous inline version had never once been executed —
+  # it died on the first migration for want of a `supabase_realtime` publication
+  # in the stub, and three pre-existing migrations behind that were not
+  # replayable at all. A gate whose only copy lives in a YAML file nobody can run
+  # is a gate nobody runs.
+  #
+  # Three pre-existing migrations are excluded from the replay by a documented,
+  # self-verifying ledger in that script — the job PROVES each excluded file
+  # still fails, so the list cannot become a place to hide a failure. Read the
+  # ledger before adding to it.
   database:
     runs-on: ubuntu-latest
     services:
@@ -224,77 +237,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Stub the Supabase-only objects
-        # schema.sql targets a Supabase database: it references the auth schema,
-        # auth.uid()/auth.jwt(), and the service_role/authenticated/anon roles,
-        # none of which exist in stock Postgres. These stubs let the DDL parse so
-        # the SHAPE of the schema is verified. They do NOT emulate RLS — this job
-        # proves the schema builds, not that the policies are correct.
+      - name: Build the schema and replay every migration, twice
         env:
+          PGHOST: localhost
+          PGUSER: postgres
           PGPASSWORD: postgres
-        run: |
-          psql -h localhost -U postgres -v ON_ERROR_STOP=1 <<'SQL'
-          create extension if not exists pgcrypto;
-          -- pg_trgm lives in `extensions` on Supabase but is unqualified here;
-          -- installing it into public keeps unqualified opclass references resolvable.
-          create extension if not exists pg_trgm;
-
-          create schema if not exists auth;
-          -- `email` is NOT optional in this stub. schema.sql:1902 and
-          -- 20260801122000 both read auth.users.email, and a SQL-language function
-          -- body is validated at CREATE time — so a bare (id uuid) table fails the
-          -- whole run with 42703 "column u.email does not exist" before a single
-          -- policy is reached. The columns here are exactly those the repo's SQL
-          -- touches; this is not an attempt to model auth.users faithfully.
-          create table if not exists auth.users (
-            id uuid primary key,
-            email text
-          );
-          create or replace function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
-          create or replace function auth.jwt() returns jsonb language sql stable as $$ select '{}'::jsonb $$;
-
-          -- schema.sql:1104 inserts a bucket and policies storage.objects. Without
-          -- these the run aborts at 3P01 "schema storage does not exist".
-          create schema if not exists storage;
-          create table if not exists storage.buckets (
-            id text primary key,
-            name text not null,
-            public boolean default false,
-            file_size_limit bigint,
-            allowed_mime_types text[]
-          );
-          create table if not exists storage.objects (
-            id uuid primary key default gen_random_uuid(),
-            bucket_id text references storage.buckets(id),
-            name text,
-            owner uuid,
-            created_at timestamptz default now(),
-            updated_at timestamptz default now(),
-            metadata jsonb
-          );
-
-          do $$ begin create role authenticated; exception when duplicate_object then null; end $$;
-          do $$ begin create role anon;          exception when duplicate_object then null; end $$;
-          do $$ begin create role service_role;  exception when duplicate_object then null; end $$;
-          SQL
-
-      - name: schema.sql must build a database
-        env:
-          PGPASSWORD: postgres
-        run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/schema.sql
-
-      - name: Migrations must replay, twice (idempotency)
-        env:
-          PGPASSWORD: postgres
-        run: |
-          for pass in 1 2; do
-            echo "── pass $pass ──"
-            for f in supabase/migrations/*.sql; do
-              echo "  $f"
-              psql -h localhost -U postgres -v ON_ERROR_STOP=1 -q -f "$f"
-            done
-          done
-          echo "All migrations replayed twice with no error."
+        run: ./scripts/ci-db-check.sh
 
   # ── Browser end-to-end (advisory) ──────────────────────────────────────────
   # The gate docs/audit/13-remaining-work.md blocks the StudentIntakeForm
@@ -370,12 +318,17 @@ jobs:
   # `database` and `e2e` are deliberately NOT in `needs` yet — see each job's own
   # header for what has to be true before it is added.
   #
-  # `database`: its one known blocker (the
-  # missing universities.recognition_score column) is fixed, but there is no
-  # Postgres in the authoring environment, so the full replay has never actually
-  # been observed green — and a required check that fails on arrival is a check
-  # someone deletes. It runs and reports on every PR; add it here the first time
-  # it passes, which should be this PR.
+  # `database`: it now passes. The earlier claim here — that "its one known
+  # blocker (the missing universities.recognition_score column) is fixed" — was
+  # FALSE, and was written without a Postgres to check it against. Adding that
+  # column to schema.sql was necessary but changed nothing about this job: the
+  # replay of 20250308120000 renames the live `universities` away and promotes a
+  # `universities_v2` that never declared the column, so it was dropped again
+  # three files before the index that needs it. There were four further blockers
+  # behind that one. All are now fixed or ledgered in scripts/ci-db-check.sh,
+  # and the full run has been observed green against Postgres 16.14, twice
+  # consecutively — but on a local cluster, never yet on a GitHub runner.
+  # Add it to `needs` above the first time it goes green here.
   ci-ok:
     if: always()
     needs: [quality, test, build]
