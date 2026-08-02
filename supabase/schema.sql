@@ -1040,6 +1040,21 @@ create policy scores_admin on student_scores
   using ((select auth_role()) = 'admin');
 
 -- Catalog policies
+--
+-- cities: transcribed from 20260719120000_catalog_rls.sql. Without it this file
+-- leaves `cities` as the ONE table in the database with RLS off, and a table
+-- without RLS is readable *and writable* by the anon key that ships in the
+-- browser bundle (MIGRATIONS.md §6 rule 6 — that rule exists because of this
+-- exact table). The migration closed it on the remote; this file reopened it on
+-- every database built from schema.sql alone. See C-database.md finding C6.
+alter table cities enable row level security;
+drop policy if exists cities_read_all on cities;
+drop policy if exists cities_admin on cities;
+create policy cities_read_all on cities for select to public using (true);
+create policy cities_admin on cities for all to public
+  using ((select auth_role()) = 'admin')
+  with check ((select auth_role()) = 'admin');
+
 drop policy if exists universities_read_all on universities;
 drop policy if exists universities_admin on universities;
 create policy universities_read_all on universities for select using (auth.uid() is not null);
@@ -1343,6 +1358,14 @@ grant execute on function public.can_act_as_counsellor() to authenticated;
 -- could set their own role='admin' from the browser console. Server-side
 -- contexts (service_role key, seed scripts, SQL editor) carry no auth.uid()
 -- and stay trusted.
+--
+-- The INSERT arm is from 20260801110000_profiles_insert_guard.sql and MUST stay
+-- in step with the trigger registration below. On INSERT `old` is NULL, so
+-- `new.role is distinct from old.role` is TRUE for every insert including the
+-- legitimate `role='student'` one — a body without the tg_op branch, paired with
+-- a `before insert or update` trigger, breaks signup on any database built from
+-- this file alone. That exact half-backport shipped once; see
+-- docs/audit/verify/C-database.md finding C2.
 create or replace function public.guard_profile_role_change()
 returns trigger
 language plpgsql
@@ -1350,6 +1373,16 @@ security definer
 set search_path = public
 as $$
 begin
+  if tg_op = 'INSERT' then
+    if auth.uid() is not null
+       and new.role is distinct from 'student'
+       and not exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+    then
+      raise exception 'new profiles must be created with role=student';
+    end if;
+    return new;
+  end if;
+
   if new.role is distinct from old.role then
     if auth.uid() is not null
        and not exists (select 1 from profiles where id = auth.uid() and role = 'admin')

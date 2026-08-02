@@ -200,6 +200,19 @@ begin
   -- counsellor_notification_targets() (schema.sql:1803) and the guardian_links
   -- seed (20260716120000:63-66) already do. Primary, so the partial unique
   -- index gives the demo a single deterministic owner per student.
+  --
+  -- ⚠️  TWO unique indexes can reject this insert, and `on conflict` arbitrates
+  -- on exactly ONE. The clause below covers
+  -- counsellor_assignments_pair_key (counsellor_profile_id, student_profile_id);
+  -- it does NOT cover counsellor_assignments_one_primary_idx, the partial unique
+  -- on (student_profile_id) where status='active' and role='primary' that this
+  -- same file creates at :69-71. If an admin has since made a DIFFERENT
+  -- counsellor the primary for a seeded student — which the product explicitly
+  -- supports — re-running this file raised 23505 on that second index and
+  -- aborted the whole migration, while the header promised "Idempotent … Safe to
+  -- re-apply". The `not exists` below is what makes that promise true: a student
+  -- who already has an active primary is skipped, whoever that primary is.
+  -- See docs/audit/verify/C-database.md finding C10.
   with ins as (
     insert into counsellor_assignments
       (counsellor_profile_id, student_profile_id, role, status, activated_at)
@@ -209,6 +222,12 @@ begin
       on lower(coalesce(spi.email, '')) like '%+seed@ascenda.demo'
     where lower(u.email) = 'greg@workiflow.com'
       and u.id <> spi.profile_id
+      and not exists (
+        select 1 from counsellor_assignments ca
+        where ca.student_profile_id = spi.profile_id
+          and ca.role = 'primary'
+          and ca.status = 'active'
+      )
     on conflict (counsellor_profile_id, student_profile_id) do nothing
     returning 1
   )

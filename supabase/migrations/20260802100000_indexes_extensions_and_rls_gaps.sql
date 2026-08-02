@@ -85,8 +85,20 @@
 --
 -- ⏱  EXPECT 30–60 SECONDS ON SUPABASE. Shared/burstable compute with a cold
 --    cache is comfortably 3–5× local NVMe. Budget a minute of blocked catalogue
---    WRITES. Reads are unaffected — that is the whole point of the split; the
---    read-blocking statements are in 20260802150000 now.
+--    WRITES.
+--
+-- ⛔ LOCK CLASS, precisely — the earlier blanket "reads are unaffected" was wrong:
+--      • programs / universities — SHARE (create index). WRITES block, reads do
+--        not. That is the whole point of the split; the read-blocking DROP INDEX
+--        statements are in 20260802150000 now.
+--      • cities — ACCESS EXCLUSIVE. `alter table … enable row level security` and
+--        the policy DDL in section 2 take it, in section 2, i.e. EARLY, and hold
+--        it for the whole 30–60 s run. READS OF `cities` BLOCK for that window.
+--      • archive_raw_courses / archive_raw_universities — ACCESS EXCLUSIVE, same
+--        reason, same window, where those tables exist.
+--    The mitigation is that nothing reads them from the app: `grep -r "from('cities')"
+--    src/` finds nothing, and neither archive table is read anywhere. A direct
+--    psql session or a dashboard query against cities during the run WILL hang.
 --
 -- The catalogue is written only by the admin import, so a maintenance window is
 -- not required. If you want zero write blocking, run the `programs`/
@@ -362,8 +374,10 @@ end $$;
 --     migration headers record hitting the 8 s statement timeout (57014) before.
 --
 -- Keeping them here would mean this file could not be applied at all without a
--- read-outage window. Split, this file is write-blocking only and the drops can
--- wait for a quiet moment — or never happen, at no correctness cost.
+-- CATALOGUE read-outage window. Split, this file blocks only catalogue WRITES —
+-- see the lock-class note in the header for the one exception, `cities` and the
+-- archive tables, which section 2 does take ACCESS EXCLUSIVE on — and the drops
+-- can wait for a quiet moment, or never happen, at no correctness cost.
 --
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 6. Refresh planner statistics

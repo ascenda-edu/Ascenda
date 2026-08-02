@@ -5,11 +5,40 @@
 --     Read it, then apply one-off with `npm run db:apply <file>`. Nothing here
 --     has been executed against any database.
 --
--- ── Class: SAFE ──────────────────────────────────────────────────────────────
--- Purely additive: two new tables, three functions, five triggers, one nullable
--- column. No existing policy, constraint or column is changed, and nothing
--- deletes anything (the purge function in section 5 is not scheduled by this
--- file — it only becomes active when a job calls it).
+-- ── Class: SAFE, but NOT "purely additive" ───────────────────────────────────
+-- Additive in SCHEMA: two new tables, three functions, five triggers, one
+-- nullable column. No existing policy, constraint or column is changed, and
+-- nothing deletes anything (the purge function in section 5 is not scheduled by
+-- this file — it only becomes active when a job calls it).
+--
+-- It is NOT additive in DATA or in LOCKING, and the header used to claim it was.
+-- Section 5 does two things to `notifications`, one of the larger tables:
+--   :458  alter table notifications add column if not exists expires_at timestamptz;
+--   :474  update notifications set expires_at = created_at + interval '180 days'
+--          where expires_at is null;
+--
+-- ⛔ LOCK CLASS: ACCESS EXCLUSIVE on `notifications`, taken by the ADD COLUMN and
+--    held until COMMIT — which, under `npm run db:apply`, means until the whole
+--    file finishes, because scripts/apply-sql.ts sends it as one transaction.
+--    Every read AND write of notifications blocks for that whole window, not
+--    just the ADD COLUMN.
+--    The nullable-with-no-default ADD COLUMN is itself catalogue-only (Postgres
+--    11+), so it is instant; the cost is the UPDATE, which is a FULL TABLE
+--    REWRITE that also fires the per-row bound_notification_payload() gate once
+--    per existing row if 20260802110000 is already applied.
+--
+-- ⏱  DURATION: proportional to the row count and NOT measured against a
+--    production-sized table (the audit's cluster held a handful of rows).
+--    Before running it, size the window:
+--        select count(*) from notifications;
+--    Rough local shape is a few thousand rows/second with the gate attached, so
+--    treat >100k rows as a maintenance-window job. If the window is
+--    unacceptable, run the UPDATE yourself in batches OUTSIDE this file —
+--        update notifications set expires_at = created_at + interval '180 days'
+--        where expires_at is null and id in (
+--          select id from notifications where expires_at is null limit 5000);
+--    — repeat to zero, then apply this file: the `where expires_at is null`
+--    makes the in-file backfill a no-op once you are done.
 --
 -- ── App change required ──────────────────────────────────────────────────────
 -- None for this migration to be correct. To make it USEFUL, three follow-ups:
@@ -138,6 +167,25 @@ declare
   bad_title integer;
 begin
   if to_regclass('public.notifications') is null then
+    return;
+  end if;
+
+  -- Only a HAZARD if the gate is actually installed. Section 5's backfill can
+  -- only be rejected by trg_bound_notification_payload, which 20260802110000
+  -- creates; applied without that file, a malformed stored row cannot abort
+  -- anything and refusing over it blocks this migration for no reason.
+  -- (20260802110000 now carries its own copy of this probe, for the different
+  -- hazard of making those rows permanently un-updatable — C9.)
+  if not exists (
+    select 1 from pg_trigger t
+    join pg_class c on c.oid = t.tgrelid
+    join pg_namespace ns on ns.oid = c.relnamespace
+    where ns.nspname = 'public' and c.relname = 'notifications'
+      and t.tgname = 'trg_bound_notification_payload' and not t.tgisinternal
+  ) then
+    raise notice
+      'pre-flight skipped: trg_bound_notification_payload is not installed, so the '
+      'expires_at backfill cannot be rejected by it';
     return;
   end if;
 

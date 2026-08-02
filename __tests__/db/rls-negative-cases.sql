@@ -130,10 +130,45 @@ insert into counsellor_assignments
 values (:'couns_c', :'student_a', 'primary', 'active', now())
 on conflict (counsellor_profile_id, student_profile_id) do nothing;
 
--- A cached match belonging to A, used by the DELETE tests.
+-- A cached match belonging to A, used by the §3.3 DELETE tests.
+--
+-- This fixture MUST create its own catalogue row. It used to read
+-- `select … from programs p limit 1`, which is unsatisfiable by construction:
+-- §0 above refuses to run against anything holding more than 5000 programmes,
+-- i.e. this file is only ever pointed at a near-empty catalogue, and a
+-- `supabase start` stack or a disposable cluster has ZERO. The insert then
+-- added no row and §3.3 aborted the whole file with `[3.3] fixture problem`,
+-- for a reason that has nothing to do with policy correctness — so
+-- matches_self_delete, the policy 20260802120000 exists to add, had never once
+-- been exercised. See docs/audit/verify/C-database.md finding C4.
+--
+-- The whole file ends in ROLLBACK, so inventing a university and a programme
+-- costs nothing and leaves nothing behind.
+\set fx_uni  '00000000-0000-4000-8000-0000000000f1'
+\set fx_prog '00000000-0000-4000-8000-0000000000f2'
+
+insert into universities (id, name, country)
+values (:'fx_uni', 'RLS Fixture University', 'United Kingdom')
+on conflict (id) do nothing;
+
+insert into programs (id, university_id, course_name)
+values (:'fx_prog', :'fx_uni', 'RLS Fixture Course')
+on conflict (id) do nothing;
+
 insert into student_matches (profile_id, program_id, score)
-select :'student_a', p.id, 42 from programs p limit 1
+values (:'student_a', :'fx_prog', 42)
 on conflict do nothing;
+
+-- Fail loudly here rather than 200 lines later as a mystery "[3.3] fixture
+-- problem": a fixture that silently does not materialise turns every assertion
+-- downstream of it into a false report.
+do $$
+begin
+  if not exists (select 1 from student_matches
+                 where profile_id = '00000000-0000-4000-8000-0000000000a1') then
+    raise exception 'fixture failed: student A has no student_matches row — §3.3 cannot run';
+  end if;
+end $$;
 
 -- ═════════════════════════════════════════════════════════════════════════════
 -- SECTION 2 — NEGATIVE: student B must not reach student A

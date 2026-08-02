@@ -162,3 +162,102 @@ drop policy if exists student_documents_student_read on student_documents;
 create policy student_documents_student_read on student_documents
   for select to authenticated
   using (student_profile_id = auth.uid() or public.can_act_as_counsellor());
+
+-- ── 4. Verify it took effect ─────────────────────────────────────────────────
+-- MIGRATIONS.md §6 rule 3: end with a verification block that raises. A security
+-- migration that can silently no-op is worse than one that fails, because it
+-- reads as though it worked. This file needs one more than most: its central
+-- change is a `create or replace function` body, which leaves NO distinguishable
+-- catalogue object behind (MIGRATIONS.md:246-251) — there is no index to look
+-- for, no policy name that appears. Only an in-file assertion can tell an
+-- operator whether the open form is really gone.
+--
+-- Deliberately catalogue-only: no auth.uid(), no fixtures, so it is REAL in the
+-- CI `database` job too, where auth.uid() is stubbed to `select null::uuid` and
+-- every behavioural authorisation test passes vacuously.
+--
+-- Idempotent: re-running the file re-runs this and it stays green.
+
+do $$
+declare
+  src text;
+  n   integer;
+  survivors text;
+begin
+  -- 1. can_act_as_counsellor() is no longer the open form.
+  select p.prosrc into src
+  from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
+  where ns.nspname = 'public' and p.proname = 'can_act_as_counsellor';
+
+  if src is null then
+    raise exception 'verification failed: can_act_as_counsellor() does not exist';
+  end if;
+  if src ~ 'auth\.uid\(\)\s+is\s+not\s+null' then
+    raise exception
+      'verification failed: can_act_as_counsellor() is STILL the open form '
+      '(`auth.uid() is not null`) — every one of the ~24 policies that call it '
+      'still reads "any signed-in user". Body: %', src;
+  end if;
+  if src !~ 'is_counsellor' then
+    raise exception
+      'verification failed: can_act_as_counsellor() does not call is_counsellor() — '
+      'body is neither the open form nor the intended one: %', src;
+  end if;
+
+  -- 2. is_admin() exists and pins its search_path (it is SECURITY DEFINER).
+  select count(*) into n
+  from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
+  where ns.nspname = 'public' and p.proname = 'is_admin' and p.prosecdef
+    and exists (select 1 from unnest(coalesce(p.proconfig, '{}'::text[])) cfg
+                where cfg like 'search\_path=%');
+  if n <> 1 then
+    raise exception
+      'verification failed: public.is_admin() is missing, not SECURITY DEFINER, or does '
+      'not pin search_path — the *_admin_delete policies below all resolve through it';
+  end if;
+
+  -- 3. No FOR ALL policy survived the split. These are the three the file drops;
+  --    a `for all` here is a single PostgREST .delete() away from wiping the table.
+  select string_agg(format('%s.%s', tablename, policyname), ', ' order by tablename, policyname)
+    into survivors
+  from pg_policies
+  where schemaname = 'public'
+    and tablename in ('parent_contacts', 'parent_messages', 'student_documents')
+    and cmd = 'ALL';
+  if survivors is not null then
+    raise exception
+      'verification failed: FOR ALL policy(ies) survived the verb split: %', survivors;
+  end if;
+
+  -- 4. The split actually produced the per-verb policies. A drop with no create
+  --    would satisfy assertion 3 while leaving counsellors unable to work at all.
+  select count(*) into n
+  from pg_policies
+  where schemaname = 'public'
+    and policyname in ('parent_contacts_counsellor_read',   'parent_contacts_counsellor_insert',
+                       'parent_contacts_counsellor_update', 'parent_contacts_admin_delete',
+                       'parent_messages_counsellor_read',   'parent_messages_counsellor_insert',
+                       'parent_messages_counsellor_update', 'parent_messages_admin_delete',
+                       'student_documents_counsellor_write','student_documents_counsellor_update',
+                       'student_documents_admin_delete',    'student_documents_student_read');
+  if n <> 12 then
+    raise exception
+      'verification failed: expected 12 split policies, found % — the split half-applied', n;
+  end if;
+
+  -- 5. Every DELETE on those three tables is admin-only.
+  select string_agg(format('%s.%s', tablename, policyname), ', ' order by tablename, policyname)
+    into survivors
+  from pg_policies
+  where schemaname = 'public'
+    and tablename in ('parent_contacts', 'parent_messages', 'student_documents')
+    and cmd = 'DELETE'
+    and coalesce(qual, '') !~ 'is_admin';
+  if survivors is not null then
+    raise exception
+      'verification failed: non-admin DELETE policy(ies) on the parent/document tables: %',
+      survivors;
+  end if;
+
+  raise notice 'counsellor access closed and write policies split: applied and verified';
+end $$;

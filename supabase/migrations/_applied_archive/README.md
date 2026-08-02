@@ -24,6 +24,12 @@ of these. The CI database gate also had to carry a permanent special-case
 excluding them from its replay — a standing exception that would eventually be
 mistaken for a place to hide a genuinely broken migration.
 
+Note that the move alone was **not** containment: `db:apply` takes a path, so it
+would happily run a file from here. It now refuses outright —
+`scripts/apply-sql.ts` exits 1 on any path containing an `_applied_archive`
+segment, before it even reads `SUPABASE_DB_URL`. Moving a file back into
+`supabase/migrations/` would defeat that. Don't.
+
 ---
 
 ## `20250308120000_normalize_course_catalog.sql`
