@@ -318,6 +318,61 @@ const buildSignatureRows = (): SignatureRow[] =>
     };
   });
 
+/**
+ * 1- and 2-grade signatures — the region the 3-grade enumeration above cannot
+ * see, and where audit finding D-01 lived.
+ *
+ * `calculateALevelProfileScore` reads `a_level_predicted_grades` only when it
+ * holds three or more entries; with fewer it falls through to `subject_list`.
+ * So a partial profile has to be expressed as subjects, not predicted grades,
+ * or the branch under test never runs.
+ */
+const partialSignatures = (): ALevelGrade[][] => {
+  const out: ALevelGrade[][] = [];
+  for (let i = 0; i < A_LEVEL_GRADES.length; i += 1) {
+    out.push([A_LEVEL_GRADES[i]]);
+    for (let j = i; j < A_LEVEL_GRADES.length; j += 1) {
+      out.push([A_LEVEL_GRADES[i], A_LEVEL_GRADES[j]]);
+    }
+  }
+  return out;
+};
+
+const aLevelSubjects = (grades: readonly ALevelGrade[]) =>
+  grades.map((grade, index) => ({
+    subject_name: `Subject ${index + 1}`,
+    level: 'A_LEVEL' as const,
+    grade_value: grade
+  }));
+
+const buildPartialSignatureRows = (): SignatureRow[] =>
+  partialSignatures().map((grades) => {
+    const isolated = scoreStudentProfile(
+      makePayload({ programme_type: 'A_LEVEL', subject_list: aLevelSubjects(grades) })
+    );
+    const contextual = scoreStudentProfile(
+      makePayload(
+        {
+          programme_type: 'A_LEVEL',
+          intended_clusters: ['law'],
+          subject_list: aLevelSubjects(grades),
+          english_required: false
+        },
+        ENVELOPE_LIFESTYLE
+      )
+    );
+    return {
+      signature: grades.join(''),
+      grades: [...grades],
+      rank_vector: grades.map(gradeRank),
+      academic_performance: isolated.breakdown.academic_performance,
+      isolated_total_score: isolated.total_score,
+      isolated_band: isolated.student_band,
+      contextual_total_score: contextual.total_score,
+      contextual_band: contextual.student_band
+    };
+  });
+
 type ViolationRow = {
   dominant: string;
   dominated: string;
@@ -1054,6 +1109,72 @@ describe('golden — A-level grade signatures (task A)', () => {
         violations
       )
     );
+  });
+
+  /* ── the partial branch (audit D-01) ───────────────────────────────────────
+   *
+   * The enumeration above only ever built 3-grade signatures, so the 1- and
+   * 2-grade branch of `calculateALevelProfileScore` was structurally invisible
+   * to the golden harness — the same blindness that hid the U-grade regression
+   * from the very suite written to catch it.
+   *
+   * It contained 95 strict inversions. The rule was literally
+   * `if (sorted.join('').includes('E')) return 5; return 0;` — an `E` was the
+   * only grade worth anything, so `A*A*` scored 0 while `A*E` scored 5.
+   *
+   * Dominance is compared WITHIN an arity. A 2-grade profile against a 3-grade
+   * one is genuinely a different shape, and the old code comment was right
+   * about that much; it was wrong that the same-shape pairs were also excused.
+   */
+  describe('partial profiles — one or two A-levels entered', () => {
+    const partialRows = buildPartialSignatureRows();
+    const byArity = [1, 2].map((n) => partialRows.filter((r) => r.grades.length === n));
+
+    it.each([
+      ['one A-level', 0],
+      ['two A-levels', 1]
+    ])('has no dominance inversion among %s', (_label, index) => {
+      const { violations } = buildMonotonicity(byArity[index]);
+      expect(violations).toEqual([]);
+    });
+
+    it('scores a stronger partial above a weaker one — the D-01 worked examples', () => {
+      const score = (signature: string) =>
+        partialRows.find((row) => row.signature === signature)?.academic_performance;
+
+      // Each of these was inverted: the left-hand side scored 0, the right 5.
+      expect(score('A*A*')!).toBeGreaterThan(score('A*E')!);
+      expect(score('A*A*')!).toBeGreaterThan(score('EE')!);
+      expect(score('AA')!).toBeGreaterThan(score('AE')!);
+      expect(score('BB')!).toBeGreaterThan(score('BE')!);
+      expect(score('A*')!).toBeGreaterThan(score('E')!);
+    });
+
+    it('entering a third subject never lowers the score', () => {
+      // The completion incentive. A 2-grade profile must not outscore the same
+      // two grades plus a third, for ANY third grade — otherwise a student is
+      // punished for finishing data entry. Signatures are compared after the
+      // same descending sort the scorer applies.
+      const full = buildSignatureRows();
+      const scoreOf = (grades: ALevelGrade[]) => {
+        const key = [...grades].sort((a, b) => gradeRank(b) - gradeRank(a)).join('');
+        return full.find((f) => f.signature === key)?.academic_performance;
+      };
+
+      for (const p of partialRows.filter((r) => r.grades.length === 2)) {
+        for (const third of A_LEVEL_GRADES) {
+          const completed = scoreOf([...(p.grades as ALevelGrade[]), third]);
+          if (completed === undefined) continue;
+          expect({
+            partial: p.signature,
+            third,
+            partialScore: p.academic_performance,
+            completedScore: completed
+          }).toMatchObject({ partialScore: expect.any(Number) });
+          expect(p.academic_performance).toBeLessThanOrEqual(completed);
+        }
+      }
+    });
   });
 
   it('has repaired the inversions recorded by the audit (F-01)', () => {

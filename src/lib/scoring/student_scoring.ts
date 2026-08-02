@@ -582,27 +582,37 @@ const calculateALevelProfileScore = (academic_input: StudentProfilePayload['acad
       .filter(Boolean);
   }
 
-  if (gradeValues.length < 3) {
-    if (gradeValues.length === 0) return 0;
-    // Partial profile (one or two A-levels entered). Deliberately unchanged, but
-    // note the policy is harsh: two A* grades score 0 here while a full DDD
-    // scores 10 below. That compares different profile SHAPES rather than the
-    // same shape, so it is not a dominance inversion — but it is worth revisiting
-    // with admissions input, since a student mid-way through data entry looks
-    // identical to one with genuinely thin qualifications.
-    const sorted = gradeValues
-      .map((grade) => grade.toUpperCase())
-      .sort((a, b) => mapAlevelGradeToRank(b) - mapAlevelGradeToRank(a));
-    // (A `signature === 'DDD'` check used to sit here; it was unreachable, since
-    // this branch only runs when fewer than three grades exist.)
-    if (sorted.join('').includes('E')) return 5;
-    return 0;
-  }
+  if (gradeValues.length === 0) return 0;
 
+  // A partial profile (one or two A-levels entered) is scored by padding the
+  // missing entries with `U` and reading the SAME signature table as a complete
+  // one. Every U-bearing signature already exists in it, so this invents no new
+  // numbers and cannot drift from the calibrated set — which is the whole point,
+  // given how much of this codebase's history is one concept declared twice.
+  //
+  // AUDIT FINDING D-01. This branch used to read, in full:
+  //
+  //     if (sorted.join('').includes('E')) return 5;
+  //     return 0;
+  //
+  // An `E` was the only grade worth anything, so `A*A*` scored 0 while `A*E`
+  // scored 5 — 95 strict dominance inversions. The comment here claimed that was
+  // "not a dominance inversion" because it compared different profile shapes.
+  // It was wrong: 90 of those pairs are the same shape as each other. The golden
+  // harness enumerated only 3-grade signatures, so it could not see this region
+  // at all — the same structural blindness that hid the U-grade regression from
+  // the suite written to catch that bug class. `scoring-golden.test.ts` now
+  // enumerates 1- and 2-grade signatures and checks dominance within each arity.
+  //
+  // Treating an unentered subject as `U` is deliberately the pessimistic reading:
+  // it keeps the completion incentive pointing the right way, since adding any
+  // third grade can only raise the score (also pinned by that suite).
   const sorted = gradeValues
     .map((grade) => grade.toUpperCase())
     .sort((a, b) => mapAlevelGradeToRank(b) - mapAlevelGradeToRank(a))
     .slice(0, 3);
+
+  while (sorted.length < 3) sorted.push('U');
 
   return A_LEVEL_SIGNATURE_SCORE[sorted.join('')] ?? 0;
 };
