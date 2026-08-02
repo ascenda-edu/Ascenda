@@ -24,7 +24,12 @@ export const MobileNav = () => {
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleSignOut = async () => {
+  // Synchronous `() => void` boundary. A rejected `signOut()` used to leave the
+  // click doing nothing at all — no navigation, no message, the user still
+  // looking at the signed-in shell. Log it and route to /login regardless:
+  // middleware remains the authority on whether the session actually ended, and
+  // a button that visibly does nothing is the one outcome that explains nothing.
+  const handleSignOut = (): void => {
     if (!confirmSignOut) {
       setConfirmSignOut(true);
       if (confirmTimer.current) clearTimeout(confirmTimer.current);
@@ -32,9 +37,15 @@ export const MobileNav = () => {
       return;
     }
     if (confirmTimer.current) clearTimeout(confirmTimer.current);
-    await supabase.auth.signOut();
-    router.refresh();
-    router.push('/login');
+    supabase.auth
+      .signOut()
+      .catch((err: unknown) => {
+        console.error('sign out failed', err);
+      })
+      .finally(() => {
+        router.refresh();
+        router.push('/login');
+      });
   };
 
   useEffect(

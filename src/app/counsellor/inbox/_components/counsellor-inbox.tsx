@@ -38,26 +38,44 @@ export function CounsellorInbox() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterKey>('open');
   const [query, setQuery] = useState('');
+  const [loadFailed, setLoadFailed] = useState(false);
 
-  const refresh = useCallback(async () => {
-    try {
-      const next = await loadCounsellorInbox(supabase);
-      setItems(next);
-    } catch (err) {
-      console.warn('counsellor inbox: refresh failed', err);
-    }
+  const load = useCallback(async (): Promise<void> => {
+    const next = await loadCounsellorInbox(supabase);
+    setItems(next);
+    setLoadFailed(false);
   }, [supabase]);
+
+  // The background refresh (poll tick / realtime event) is deliberately
+  // fire-and-forget: one dropped refetch only means the list is briefly stale
+  // and the next tick, 2–12s away, retries. A toast per dropped poll would be
+  // unusable, so it is reported to the console only — but it is never silent,
+  // and it never overwrites the list with an empty one.
+  const refresh = useCallback((): void => {
+    load().catch((err: unknown) => {
+      console.warn('counsellor inbox: refresh failed', err);
+    });
+  }, [load]);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    refresh().finally(() => {
-      if (!cancelled) setLoading(false);
-    });
+    load()
+      .catch((err: unknown) => {
+        // The FIRST load is different: with no rows and no error flag the view
+        // renders "No open conversations", which tells the counsellor their
+        // inbox is empty when in fact the query failed. Flag it so the render
+        // below says so instead.
+        console.warn('counsellor inbox: initial load failed', err);
+        if (!cancelled) setLoadFailed(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
-  }, [refresh]);
+  }, [load]);
 
   // Realtime + adaptive poll fallback (fast until the socket confirms, slow after).
   useRealtimePoll({
@@ -66,8 +84,8 @@ export function CounsellorInbox() {
     slowMs: POLL_MS_SLOW,
     onPoll: refresh,
     subscriptions: [
-      { table: 'help_requests', handler: () => refresh() },
-      { table: 'help_messages', handler: () => refresh() }
+      { table: 'help_requests', handler: refresh },
+      { table: 'help_messages', handler: refresh }
     ]
   });
 
@@ -147,6 +165,14 @@ export function CounsellorInbox() {
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="h-[76px] animate-pulse rounded-2xl bg-muted/40" />
           ))}
+        </div>
+      ) : loadFailed && items.length === 0 ? (
+        <div className="rounded-4xl border border-dashed border-danger/40 bg-danger-subtle p-12 text-center" role="alert">
+          <Inbox className="mx-auto mb-3 h-8 w-8 text-danger/50" />
+          <p className="font-semibold text-foreground">Couldn&apos;t load your inbox</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            This is a connection problem, not an empty inbox. It retries automatically — or reload the page.
+          </p>
         </div>
       ) : visible.length === 0 ? (
         <div className="rounded-4xl border border-dashed border-border bg-muted/40 p-12 text-center">

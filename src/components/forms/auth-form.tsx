@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,16 +27,30 @@ export const AuthForm = () => {
 
   useEffect(() => {
     let isMounted = true;
-    supabase.auth.getSession().then(({ error: sessionError }) => {
-      if (!isMounted) return;
-      if (sessionError) {
-        console.error('Supabase auth unavailable', sessionError);
-        setAuthServiceReady(false);
-        setError((prev) => prev ?? 'We could not reach the sign-in service. Please refresh and try again.');
-      } else {
-        setAuthServiceReady(true);
-      }
-    });
+    const reportAuthUnavailable = (cause: unknown) => {
+      console.error('Supabase auth unavailable', cause);
+      setAuthServiceReady(false);
+      setError((prev) => prev ?? 'We could not reach the sign-in service. Please refresh and try again.');
+    };
+    supabase.auth
+      .getSession()
+      .then(({ error: sessionError }) => {
+        if (!isMounted) return;
+        if (sessionError) {
+          reportAuthUnavailable(sessionError);
+        } else {
+          setAuthServiceReady(true);
+        }
+      })
+      // The whole point of this probe is to detect "auth is unreachable", and a
+      // rejected getSession (offline, DNS, CORS) is the most literal form of
+      // that — but it arrives as a rejection rather than an `error` field, so
+      // without this catch the page stayed in its optimistic `ready` state and
+      // showed no banner at all.
+      .catch((cause: unknown) => {
+        if (!isMounted) return;
+        reportAuthUnavailable(cause);
+      });
 
     return () => {
       isMounted = false;
@@ -101,26 +115,45 @@ export const AuthForm = () => {
       return;
     }
     startTransition(async () => {
-      const { error: signInError, data } = await supabase.auth.signInWithPassword(values);
+      try {
+        const { error: signInError, data } = await supabase.auth.signInWithPassword(values);
 
-      if (signInError) {
-        setError(formatAuthError(signInError));
-        return;
+        if (signInError) {
+          setError(formatAuthError(signInError));
+          return;
+        }
+
+        const redirectTarget = await determineRedirectTarget(data.user?.id);
+
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(RETURNING_USER_STORAGE_KEY, 'true');
+        }
+
+        router.refresh();
+        router.push(redirectTarget);
+      } catch (submitError) {
+        // A rejection here (rather than a populated `signInError`) left the
+        // form with the spinner cleared and no message — the user pressed
+        // Sign in and nothing at all happened.
+        console.error('sign-in failed', submitError);
+        setError('We could not sign you in just now. Please check your connection and try again.');
       }
+    });
+  };
 
-      const redirectTarget = await determineRedirectTarget(data.user?.id);
-
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(RETURNING_USER_STORAGE_KEY, 'true');
-      }
-
-      router.refresh();
-      router.push(redirectTarget);
+  // react-hook-form's handleSubmit returns a promise. Handing it straight to
+  // `onSubmit` discards it, so a throw from validation or from `onSubmit` would
+  // leave the form inert with no message.
+  const submitForm = form.handleSubmit(onSubmit);
+  const handleFormSubmit = (event: FormEvent<HTMLFormElement>): void => {
+    submitForm(event).catch((submitError: unknown) => {
+      console.error('login form submit failed', submitError);
+      setError('Something went wrong submitting the form. Please try again.');
     });
   };
 
   return (
-    <form className="form-stack" onSubmit={form.handleSubmit(onSubmit)}>
+    <form className="form-stack" onSubmit={handleFormSubmit}>
       <div className="form-field">
         <Label htmlFor="email">
           Email

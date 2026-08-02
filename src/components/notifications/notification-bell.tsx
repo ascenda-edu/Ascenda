@@ -124,8 +124,24 @@ export const NotificationBell = ({ className }: { className?: string }) => {
     return () => node?.removeEventListener('focusout', handle);
   }, [open]);
 
+  // `markRead`/`markAllRead` swallow their own failures into a console warning
+  // (see use-notifications.ts) — these terminal catches are what keeps the
+  // promise from floating. The consequence of a failure is only that the unread
+  // dot survives until the next poll, which is the SAFE direction to be wrong
+  // in: it never claims a notification was read when it was not, so there is
+  // nothing worth interrupting the user for.
+  const handleMarkAllRead = (): void => {
+    markAllRead().catch((err: unknown) => {
+      console.warn('notification-bell: markAllRead failed', err);
+    });
+  };
+
   const handleItemClick = (notif: Notification) => {
-    if (!notif.read_at) markRead(notif.id);
+    if (!notif.read_at) {
+      markRead(notif.id).catch((err: unknown) => {
+        console.warn('notification-bell: markRead failed', err);
+      });
+    }
     setOpen(false);
     // If the notification points at a specific help_request, open the
     // drawer rather than navigating to a list page. Drawer renders the
@@ -196,7 +212,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
               {unreadCount > 0 ? (
                 <button
                   type="button"
-                  onClick={markAllRead}
+                  onClick={handleMarkAllRead}
                   className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-label font-medium text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
                 >
                   <CheckCheck className="h-3 w-3" />

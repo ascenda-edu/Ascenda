@@ -148,7 +148,11 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
     showToast({ title: "Couldn't remove that task", variant: 'error' });
   };
 
-  const remove = async (id: string) => {
+  // Synchronous `() => void` event-handler boundary around an async body. An
+  // `async` function handed to `onClick`/`onDrop`/`onChange` returns a promise
+  // the DOM discards, so a rejection is swallowed and the user is told nothing;
+  // the terminal `.catch` below is the only exit for a failure.
+  const remove = (id: string): void => {
     const target = tasks.find((t) => t.id === id);
     if (!target) return;
     setTasks((prev) => prev.filter((t) => t.id !== id));
@@ -159,19 +163,28 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
       return;
     }
 
-    try {
+    const run = async (): Promise<void> => {
       const res = await fetch('/api/checklist', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id })
       });
       if (!res.ok) throw new Error('request failed');
-    } catch {
+    };
+
+    // The row popping back into the list was the only signal that a delete had
+    // failed, and it reads as a UI glitch rather than an error. Say it plainly.
+    run().catch(() => {
       restoreTask(target);
-    }
+      showToast({ title: "Couldn't remove that task", variant: 'error' });
+    });
   };
 
-  const add = async () => {
+  // Synchronous `() => void` event-handler boundary around an async body. An
+  // `async` function handed to `onClick`/`onDrop`/`onChange` returns a promise
+  // the DOM discards, so a rejection is swallowed and the user is told nothing;
+  // the terminal `.catch` below is the only exit for a failure.
+  const add = (): void => {
     const name = newName.trim();
     if (!name || !newAppId || adding) return;
     const tempId = `temp-${Date.now()}-${++tempSeq.current}`;
@@ -193,7 +206,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
     setNewDue('');
     setAdding(true);
 
-    try {
+    const run = async (): Promise<void> => {
       const res = await fetch('/api/checklist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -237,13 +250,17 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
         // Through the queue so a failure reverts + toasts like any other toggle.
         queue.set(item.id, pending.status);
       }
-    } catch {
-      pendingTempOps.current.delete(tempId);
-      setTasks((prev) => prev.filter((t) => t.id !== tempId));
-      showToast({ title: "Couldn't add that task", variant: 'error' });
-    } finally {
-      setAdding(false);
-    }
+    };
+
+    run()
+      .catch(() => {
+        pendingTempOps.current.delete(tempId);
+        setTasks((prev) => prev.filter((t) => t.id !== tempId));
+        showToast({ title: "Couldn't add that task", variant: 'error' });
+      })
+      .finally(() => {
+        setAdding(false);
+      });
   };
 
   return (

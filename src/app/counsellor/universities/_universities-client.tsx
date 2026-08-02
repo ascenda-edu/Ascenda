@@ -238,11 +238,20 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
   const [newDeckEmoji, setNewDeckEmoji] = useState(DECK_EMOJI[0]);
   const [isCreating, setIsCreating] = useState(false);
 
-  const createDeck = async () => {
+  // Every mutation below is a SYNCHRONOUS `() => void` event-handler boundary
+  // wrapping an async body. An `async` function handed straight to `onClick`
+  // returns a promise the DOM discards, so a rejected fetch shows the counsellor
+  // nothing at all and leaves the button's in-flight flag stuck on. The terminal
+  // `.catch`/`.finally` here is the only exit for a failure, and it always lands
+  // on a toast the counsellor can see.
+  const errorText = (err: unknown): string | undefined =>
+    err instanceof Error ? err.message : undefined;
+
+  const createDeck = (): void => {
     const name = newDeckName.trim();
     if (!name || isCreating) return;
     setIsCreating(true);
-    try {
+    const run = async (): Promise<void> => {
       const res = await fetch('/api/counsellor/decks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -265,30 +274,45 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
       setNewDeckName('');
       setCreateOpen(false);
       showToast({ title: `Deck "${deck.name}" created`, variant: 'success' });
-    } catch (err) {
-      showToast({ title: 'Could not create deck', description: err instanceof Error ? err.message : undefined, variant: 'error' });
-    } finally {
-      setIsCreating(false);
-    }
+    };
+    run()
+      .catch((err: unknown) => {
+        showToast({ title: 'Could not create deck', description: errorText(err), variant: 'error' });
+      })
+      .finally(() => {
+        setIsCreating(false);
+      });
   };
 
-  const confirmDeleteDeck = async () => {
+  const confirmDeleteDeck = (): void => {
     const deck = deckPendingDelete;
     if (!deck || isDeletingDeck) return;
     setIsDeletingDeck(true);
-    const res = await fetch(`/api/counsellor/decks?id=${deck.id}`, { method: 'DELETE' });
-    if (!res.ok) {
-      const data = await res.json().catch(() => null);
-      showToast({ title: 'Could not delete deck', description: data?.error, variant: 'error' });
-      setIsDeletingDeck(false);
-      return;
-    }
-    const next = decks.filter((d) => d.id !== deck.id);
-    setDecks(next);
-    if (selectedDeckId === deck.id) setSelectedDeckId(next[0]?.id ?? null);
-    showToast({ title: `Deck "${deck.name}" deleted`, variant: 'info' });
-    setIsDeletingDeck(false);
-    setDeckPendingDelete(null);
+    const run = async (): Promise<void> => {
+      const res = await fetch(`/api/counsellor/decks?id=${deck.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data: { error?: string } | null = await res.json().catch(() => null);
+        showToast({ title: 'Could not delete deck', description: data?.error, variant: 'error' });
+        return;
+      }
+      const next = decks.filter((d) => d.id !== deck.id);
+      setDecks(next);
+      if (selectedDeckId === deck.id) setSelectedDeckId(next[0]?.id ?? null);
+      showToast({ title: `Deck "${deck.name}" deleted`, variant: 'info' });
+      setDeckPendingDelete(null);
+    };
+    // The `finally` matters more here than anywhere else on this page: the
+    // confirm dialog refuses to close while `isDeletingDeck` is true (see
+    // `closeDelete`), so a rejected fetch used to trap the counsellor in a modal
+    // they could not dismiss with Escape, the scrim or the X — and with no error
+    // shown to explain why.
+    run()
+      .catch((err: unknown) => {
+        showToast({ title: 'Could not delete deck', description: errorText(err), variant: 'error' });
+      })
+      .finally(() => {
+        setIsDeletingDeck(false);
+      });
   };
 
   const patchCard = useCallback(
@@ -334,7 +358,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
     []
   );
 
-  const addToDeck = async (result: SearchResult) => {
+  const addToDeck = (result: SearchResult): void => {
     if (!selectedDeck) {
       showToast({ title: 'Create a deck first', description: 'Cards need a deck to live in.', variant: 'info' });
       setCreateOpen(true);
@@ -344,41 +368,47 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
       showToast({ title: 'Already in this deck', variant: 'info' });
       return;
     }
-    try {
-      await patchCard(selectedDeck.id, { programId: result.programId }, result);
-      showToast({ title: `Added to "${selectedDeck.name}"`, description: result.university, variant: 'success' });
-    } catch (err) {
-      showToast({ title: 'Could not add card', description: err instanceof Error ? err.message : undefined, variant: 'error' });
-    }
+    const deck = selectedDeck;
+    patchCard(deck.id, { programId: result.programId }, result)
+      .then(() => {
+        showToast({ title: `Added to "${deck.name}"`, description: result.university, variant: 'success' });
+      })
+      .catch((err: unknown) => {
+        showToast({ title: 'Could not add card', description: errorText(err), variant: 'error' });
+      });
   };
 
-  const cycleRarity = async (deckId: string, card: DeckCard) => {
+  const cycleRarity = (deckId: string, card: DeckCard): void => {
     const next = RARITY_ORDER[(RARITY_ORDER.indexOf(card.rarity) + 1) % RARITY_ORDER.length];
-    try {
-      await patchCard(deckId, { ...card, rarity: next });
-    } catch {
+    patchCard(deckId, { ...card, rarity: next }).catch(() => {
       showToast({ title: 'Could not update rarity', variant: 'error' });
-    }
+    });
   };
 
-  const cycleFit = async (deckId: string, card: DeckCard) => {
+  const cycleFit = (deckId: string, card: DeckCard): void => {
     const next = FIT_ORDER[(FIT_ORDER.indexOf(card.fit) + 1) % FIT_ORDER.length];
-    try {
-      await patchCard(deckId, { ...card, fit: next });
-    } catch {
+    patchCard(deckId, { ...card, fit: next }).catch(() => {
       showToast({ title: 'Could not update fit', variant: 'error' });
-    }
+    });
   };
 
-  const removeCard = async (deckId: string, card: DeckCard) => {
-    const res = await fetch(`/api/counsellor/decks/cards?id=${card.id}`, { method: 'DELETE' });
-    if (!res.ok) {
+  const removeCard = (deckId: string, card: DeckCard): void => {
+    const run = async (): Promise<void> => {
+      const res = await fetch(`/api/counsellor/decks/cards?id=${card.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        showToast({ title: 'Could not remove card', variant: 'error' });
+        return;
+      }
+      setDecks((prev) =>
+        prev.map((d) => (d.id === deckId ? { ...d, cards: d.cards.filter((c) => c.id !== card.id) } : d))
+      );
+    };
+    // A rejected fetch (offline, DNS, aborted) previously produced no toast at
+    // all — the card stayed on screen and the counsellor had no way to tell the
+    // delete had not happened.
+    run().catch(() => {
       showToast({ title: 'Could not remove card', variant: 'error' });
-      return;
-    }
-    setDecks((prev) =>
-      prev.map((d) => (d.id === deckId ? { ...d, cards: d.cards.filter((c) => c.id !== card.id) } : d))
-    );
+    });
   };
 
   // ── assignment ──────────────────────────────────────────────────────────────
@@ -408,15 +438,16 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
     });
   };
 
-  const assignDeck = async () => {
+  const assignDeck = (): void => {
     if (!selectedDeck || assignSelection.size === 0 || isAssigning) return;
+    const deck = selectedDeck;
     setIsAssigning(true);
-    try {
+    const run = async (): Promise<void> => {
       const res = await fetch('/api/counsellor/decks/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          deckId: selectedDeck.id,
+          deckId: deck.id,
           studentIds: [...assignSelection],
           message: assignMessage.trim() || undefined,
         }),
@@ -432,34 +463,44 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
         assignedAt: a.created_at,
       }));
       setDecks((prev) =>
-        prev.map((d) => (d.id === selectedDeck.id ? { ...d, assignees: [...d.assignees, ...added] } : d))
+        prev.map((d) => (d.id === deck.id ? { ...d, assignees: [...d.assignees, ...added] } : d))
       );
       setAssignOpen(false);
       setAssignSelection(new Set());
       setAssignMessage('');
       showToast({
         title: `Quest sent to ${added.length} student${added.length === 1 ? '' : 's'}`,
-        description: `"${selectedDeck.name}" is now on their dashboard.`,
+        description: `"${deck.name}" is now on their dashboard.`,
         variant: 'success',
       });
-    } catch (err) {
-      showToast({ title: 'Could not assign deck', description: err instanceof Error ? err.message : undefined, variant: 'error' });
-    } finally {
-      setIsAssigning(false);
-    }
+    };
+    run()
+      .catch((err: unknown) => {
+        showToast({ title: 'Could not assign deck', description: errorText(err), variant: 'error' });
+      })
+      .finally(() => {
+        setIsAssigning(false);
+      });
   };
 
-  const unassign = async (deckId: string, assignmentId: string) => {
-    const res = await fetch(`/api/counsellor/decks/assign?id=${assignmentId}`, { method: 'DELETE' });
-    if (!res.ok) {
+  const unassign = (deckId: string, assignmentId: string): void => {
+    const run = async (): Promise<void> => {
+      const res = await fetch(`/api/counsellor/decks/assign?id=${assignmentId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        showToast({ title: 'Could not unassign', variant: 'error' });
+        return;
+      }
+      setDecks((prev) =>
+        prev.map((d) =>
+          d.id === deckId ? { ...d, assignees: d.assignees.filter((a) => a.assignmentId !== assignmentId) } : d
+        )
+      );
+    };
+    // Same gap as `removeCard`: a rejected fetch left the student chip on screen
+    // with no error, so the counsellor believed the unassign had gone through.
+    run().catch(() => {
       showToast({ title: 'Could not unassign', variant: 'error' });
-      return;
-    }
-    setDecks((prev) =>
-      prev.map((d) =>
-        d.id === deckId ? { ...d, assignees: d.assignees.filter((a) => a.assignmentId !== assignmentId) } : d
-      )
-    );
+    });
   };
 
   // ── render ──────────────────────────────────────────────────────────────────

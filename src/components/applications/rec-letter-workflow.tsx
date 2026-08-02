@@ -109,10 +109,14 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
   // counsellor to chase the recommender on the student's behalf.
   // This is the honest version of the demo claim: the chase happens
   // through the platform, not out-of-band email.
-  const handleRemind = async (letter: RecLetterRequest) => {
+  // Synchronous `() => void` event-handler boundary around an async body. An
+  // `async` function handed to `onClick`/`onDrop`/`onChange` returns a promise
+  // the DOM discards, so a rejection is swallowed and the user is told nothing;
+  // the terminal `.catch` below is the only exit for a failure.
+  const handleRemind = (letter: RecLetterRequest): void => {
     if (busy) return;
     setBusy(letter.id);
-    try {
+    const run = async (): Promise<void> => {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData?.user?.id;
       if (!userId) {
@@ -153,12 +157,16 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
         description: 'Tracked in your counsellor inbox',
         variant: 'success'
       });
-    } catch (err) {
-      console.error('rec-letter remind failed', err);
-      showToast({ title: "Couldn't send reminder", variant: 'error' });
-    } finally {
-      setBusy(null);
-    }
+    };
+
+    run()
+      .catch((err: unknown) => {
+        console.error('rec-letter remind failed', err);
+        showToast({ title: "Couldn't send reminder", variant: 'error' });
+      })
+      .finally(() => {
+        setBusy(null);
+      });
   };
 
   return (

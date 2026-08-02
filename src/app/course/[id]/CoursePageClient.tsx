@@ -107,7 +107,14 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
       }
     };
 
-    fetchCourse();
+    // `fetchCourse` routes its own failures into `setError`. This terminal
+    // `.catch` is the backstop for anything it missed: without it a rejection is
+    // dropped and the page sits on its skeleton forever with no explanation.
+    fetchCourse().catch((err: unknown) => {
+      console.error('[CoursePageClient] fetch error:', err);
+      setError('Unable to load this course.');
+      setLoading(false);
+    });
   }, [params.id, initialData]);
 
   const [activeTabParam, setActiveTab] = useSearchParamState('tab', 'overview');

@@ -102,10 +102,14 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
   // notification surfaces in the navbar bell after switching to student
   // view, which makes the demo claim ("the chase happens through the
   // platform") honest end-to-end.
-  const handleNudge = async (doc: CounsellorDocument, target: NudgeTarget) => {
+  // Synchronous `() => void` event-handler boundary around an async body. An
+  // `async` function handed to `onClick`/`onSubmit` returns a promise the DOM
+  // discards, so a rejection is swallowed and the user is told nothing; the
+  // terminal `.catch`/`.finally` below is the only exit for a failure.
+  const handleNudge = (doc: CounsellorDocument, target: NudgeTarget): void => {
     if (busy) return;
     setBusy(doc.id);
-    try {
+    const run = async (): Promise<void> => {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData?.user?.id;
       if (!userId) {
@@ -146,12 +150,16 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
         description: `${doc.documentName} · ${doc.studentName}`,
         variant: 'success'
       });
-    } catch (err) {
-      console.error('doc nudge failed', err);
-      showToast({ title: "Couldn't send nudge", variant: 'error' });
-    } finally {
-      setBusy(null);
-    }
+    };
+
+    run()
+      .catch((err: unknown) => {
+        console.error('doc nudge failed', err);
+        showToast({ title: "Couldn't send nudge", variant: 'error' });
+      })
+      .finally(() => {
+        setBusy(null);
+      });
   };
 
   const filtered = documents.filter((doc) => {

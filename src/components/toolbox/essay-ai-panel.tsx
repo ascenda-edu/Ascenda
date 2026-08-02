@@ -19,6 +19,22 @@ interface EssayAIPanelProps {
   onInsertText?: (text: string) => void;
 }
 
+// `error` is rendered directly as a React child at the "Error" block below, so
+// it MUST be a string. Both places it is set read out of a `res.json()` — i.e.
+// `any` — and an API that answers `{ error: { message, code } }` instead of
+// `{ error: "…" }` would put an object into that state and crash the whole
+// panel with "Objects are not valid as a React child". Everything assigned to
+// `setError` goes through here.
+const toMessage = (value: unknown, fallback: string): string => {
+  if (typeof value === 'string' && value.trim()) return value;
+  if (value instanceof Error && value.message) return value.message;
+  if (value && typeof value === 'object') {
+    const message = (value as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  return fallback;
+};
+
 const ACTIONS: { key: Action; label: string; icon: typeof Sparkles; description: string; color: string }[] = [
   { key: 'feedback', label: 'Get Feedback', icon: MessageSquare, description: 'AI reviews your draft with specific rewrites', color: 'text-feature bg-feature-subtle' },
   { key: 'outline', label: 'Suggest Outline', icon: ListTree, description: 'Generate essay structure from your blocks', color: 'text-success bg-success-subtle' },
@@ -95,8 +111,8 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
       });
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Request failed' }));
-        setError(err.error ?? 'Something went wrong');
+        const err: unknown = await res.json().catch(() => null);
+        setError(toMessage((err as { error?: unknown } | null)?.error, 'Something went wrong'));
         setLoading(false);
         return;
       }
@@ -129,7 +145,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
               setResult((prev) => prev + parsed.text);
             }
             if (parsed.error) {
-              setError(parsed.error);
+              setError(toMessage(parsed.error, 'The assistant stopped early'));
             }
           } catch {
             // skip malformed chunks
@@ -138,16 +154,40 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
       }
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to connect');
+      setError(toMessage(err, 'Failed to connect'));
     } finally {
       setLoading(false);
     }
   }, [essay, platform, selectedBlocks]);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(result);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  // Synchronous `() => void` boundary for the three buttons that start a run.
+  // `runAction` handles its own failures into `setError`, so this terminal
+  // `.catch` only sees what that missed — but without it a rejection would be
+  // dropped on the floor with the panel still spinning.
+  const startAction = useCallback(
+    (action: Action): void => {
+      runAction(action).catch((err: unknown) => {
+        setError(toMessage(err, 'Failed to connect'));
+        setLoading(false);
+      });
+    },
+    [runAction]
+  );
+
+  const handleCopy = (): void => {
+    // `writeText` rejects when the document is not focused, the page is not a
+    // secure context, or the user denied clipboard permission. Flipping to
+    // "Copied" before knowing that would tell the student their essay feedback
+    // is on the clipboard when it is not, and they would paste stale content.
+    navigator.clipboard
+      .writeText(result)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => {
+        setError('Could not copy to the clipboard — select the text and copy it manually.');
+      });
   };
 
   const handleInsert = () => {
@@ -204,7 +244,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
                   <button
                     key={key}
                     onClick={() => {
-                      runAction(key);
+                      startAction(key);
                     }}
                     disabled={disabled}
                     className={cn(
@@ -248,7 +288,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
                   <p className="text-xs text-danger">{error}</p>
                   {activeAction && (
                     <button
-                      onClick={() => runAction(activeAction)}
+                      onClick={() => startAction(activeAction)}
                       className="flex items-center gap-1 text-label font-medium text-danger hover:text-danger/80 transition-colors"
                     >
                       <RefreshCw className="h-3 w-3" /> Retry
@@ -276,7 +316,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
                     <div className="flex gap-1">
                       {done && !loading && activeAction && (
                         <button
-                          onClick={() => runAction(activeAction)}
+                          onClick={() => startAction(activeAction)}
                           className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-label font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
                           title="Run again"
                         >

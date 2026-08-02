@@ -94,7 +94,13 @@ export default function RoleSelectPage() {
       }
     };
 
-    performCheck();
+    // `performCheck` logs and swallows its own errors; this terminal `.catch`
+    // is the backstop for anything it missed. Nothing user-visible to do here —
+    // if auth never resolves, the 8s safety timeout above moves the user on to
+    // /login, which is the correct destination for an unverifiable session.
+    performCheck().catch((err: unknown) => {
+      console.error('RoleSelect: Verification error', err);
+    });
 
     return () => {
       isMounted = false;

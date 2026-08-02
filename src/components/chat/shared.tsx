@@ -171,14 +171,23 @@ function LegacyActionCard({
   }
 
   const sending = state === 'sending';
-  const handleSend = async () => {
+  // Synchronous `() => void` boundary: `onSend` returns Promise<boolean>, and a
+  // REJECTION (rather than a `false`) used to be swallowed entirely — the card
+  // sat spinning with no "Couldn't send" line, so the user believed the message
+  // was still on its way. Route it to the same `failed` state a `false` uses.
+  const handleSend = (): void => {
     setFailed(false);
     const edited: ChatAction =
       action.kind === 'help_request'
         ? { ...action, subject: subject.trim(), body: body.trim() }
         : { ...action, body: body.trim() };
-    const ok = await onSend(edited);
-    if (!ok) setFailed(true);
+    onSend(edited)
+      .then((ok) => {
+        if (!ok) setFailed(true);
+      })
+      .catch(() => {
+        setFailed(true);
+      });
   };
 
   return (
@@ -289,12 +298,19 @@ function ToolActionCard({
   const sending = state === 'sending';
   const setField = (key: string, val: string) => setValues((prev) => ({ ...prev, [key]: val }));
 
-  const handleSend = async () => {
+  // Same boundary as the legacy card above: a rejected `onSend` must land on
+  // the visible `failed` state, not vanish.
+  const handleSend = (): void => {
     setFailed(false);
     const merged: Record<string, unknown> = { ...action.params };
     for (const field of action.editable) merged[field.key] = values[field.key] ?? '';
-    const ok = await onSend({ ...action, params: merged });
-    if (!ok) setFailed(true);
+    onSend({ ...action, params: merged })
+      .then((ok) => {
+        if (!ok) setFailed(true);
+      })
+      .catch(() => {
+        setFailed(true);
+      });
   };
 
   const controlClass =

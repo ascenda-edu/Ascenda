@@ -35,8 +35,9 @@ export function InboxList({ profileId }: InboxListProps) {
   const [unreadByRequest, setUnreadByRequest] = useState<Map<string, number>>(new Map());
   const [counsellorNames, setCounsellorNames] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
 
-  const refresh = useCallback(async () => {
+  const load = useCallback(async () => {
     // Unread comes from student_last_read_at (same source of truth as the "Seen"
     // receipt and the counsellor's unread count), not notification hrefs — see
     // countUnreadForStudent. Keeps the badge from contradicting the receipt.
@@ -62,7 +63,18 @@ export function InboxList({ profileId }: InboxListProps) {
         console.warn('inbox: counsellor name lookup failed', err);
       }
     }
+    setLoadFailed(false);
   }, [supabase, profileId]);
+
+  // Background refresh (poll tick / realtime event): fire-and-forget on purpose.
+  // A single dropped refetch only means the list is briefly stale and the next
+  // tick retries, so it is logged rather than surfaced — but it is never silent,
+  // and it never blanks the list the student is already looking at.
+  const refresh = useCallback((): void => {
+    load().catch((err: unknown) => {
+      console.warn('inbox: refresh failed', err);
+    });
+  }, [load]);
 
   const initiatorLabel = (req: HelpRequest): string => {
     const name = req.counsellor_profile_id
@@ -77,15 +89,21 @@ export function InboxList({ profileId }: InboxListProps) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    refresh()
-      .catch((err) => console.warn('inbox: initial load failed', err))
+    load()
+      .catch((err: unknown) => {
+        // A failed first load used to fall through to the "No messages yet"
+        // empty state — telling the student they have no conversations when the
+        // query simply did not come back. Flag it and say so instead.
+        console.warn('inbox: initial load failed', err);
+        if (!cancelled) setLoadFailed(true);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [refresh]);
+  }, [load]);
 
   // Realtime-with-poll-fallback: any change to this student's help_requests, or
   // a new notification for them, invalidates and we refetch. The shared hook adds
@@ -96,40 +114,45 @@ export function InboxList({ profileId }: InboxListProps) {
     enabled: !!profileId,
     onPoll: refresh,
     subscriptions: [
-      { table: 'help_requests', filter: `student_profile_id=eq.${profileId}`, handler: () => refresh() },
-      { table: 'notifications', filter: `profile_id=eq.${profileId}`, handler: () => refresh() }
+      { table: 'help_requests', filter: `student_profile_id=eq.${profileId}`, handler: refresh },
+      { table: 'notifications', filter: `profile_id=eq.${profileId}`, handler: refresh }
     ]
   });
 
   const handleOpen = useCallback(
-    async (req: HelpRequest) => {
+    (req: HelpRequest): void => {
       openRequest(req.id);
       // Best-effort: mark unread notifications for this thread as read.
       // Don't block the drawer open if it fails.
       const unread = unreadByRequest.get(req.id) ?? 0;
-      if (unread > 0) {
-        try {
-          // We don't have notification ids here without another query, so just
-          // bulk-mark all unread student notifications pointing at this thread.
-          const { data } = await (supabase as any)
-            .from('notifications')
-            .select('id, href')
-            .eq('profile_id', profileId)
-            .eq('audience', 'student')
-            .is('read_at', null);
-          const ids = ((data ?? []) as { id: string; href: string | null }[])
-            .filter((r) => r.href && r.href.includes(`help=${req.id}`))
-            .map((r) => r.id);
-          await Promise.all(ids.map((id) => markNotificationRead(supabase, id)));
-          setUnreadByRequest((prev) => {
-            const next = new Map(prev);
-            next.delete(req.id);
-            return next;
-          });
-        } catch (err) {
-          console.warn('inbox: mark read failed', err);
-        }
-      }
+      if (unread === 0) return;
+      const markRead = async (): Promise<void> => {
+        // We don't have notification ids here without another query, so just
+        // bulk-mark all unread student notifications pointing at this thread.
+        const { data } = await (supabase as any)
+          .from('notifications')
+          .select('id, href')
+          .eq('profile_id', profileId)
+          .eq('audience', 'student')
+          .is('read_at', null);
+        const ids = ((data ?? []) as { id: string; href: string | null }[])
+          .filter((r) => r.href && r.href.includes(`help=${req.id}`))
+          .map((r) => r.id);
+        await Promise.all(ids.map((id) => markNotificationRead(supabase, id)));
+        setUnreadByRequest((prev) => {
+          const next = new Map(prev);
+          next.delete(req.id);
+          return next;
+        });
+      };
+      // Console-only by design: the drawer has already opened and the student
+      // is reading the thread. The only consequence of a failure is that the
+      // unread dot survives until the next refresh, which is strictly the SAFE
+      // direction to be wrong in — it never claims a message was read when it
+      // was not.
+      markRead().catch((err: unknown) => {
+        console.warn('inbox: mark read failed', err);
+      });
     },
     [openRequest, unreadByRequest, supabase, profileId]
   );
@@ -141,6 +164,16 @@ export function InboxList({ profileId }: InboxListProps) {
           <div key={i} className="h-20 animate-pulse rounded-2xl bg-muted/40" />
         ))}
       </div>
+    );
+  }
+
+  if (loadFailed && requests.length === 0) {
+    return (
+      <EmptyState
+        icon={<Inbox />}
+        title="Couldn't load your messages"
+        description="This is a connection problem, not an empty inbox. It retries automatically — or reload the page."
+      />
     );
   }
 
