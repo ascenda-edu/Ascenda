@@ -1,0 +1,12 @@
+{
+  "_comment": "Ratchet baseline for scripts/check-deadcode.mjs (knip). Counts may only go DOWN. A category at 0 should be deleted from this file so it becomes a hard error. Regenerate with: node scripts/check-deadcode.mjs --update-baseline",
+  "_generated": "2026-08-02",
+  "counts": {
+    "devDependencies": 3,
+    "duplicates": 2,
+    "exports": 102,
+    "files": 2,
+    "types": 107,
+    "unresolved": 1
+  }
+}

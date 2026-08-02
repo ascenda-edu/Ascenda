@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "overrides": {
     "brace-expansion": "5.0.8",
@@ -16,12 +16,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 2",
     "lint:boundaries": "depcruise src --config .dependency-cruiser.cjs --output-type err",
-    "lint:deadcode": "knip --no-exit-code",
+    "lint:deadcode": "node scripts/check-deadcode.mjs",
+    "lint:deadcode:report": "knip --no-exit-code",
     "lint:tokens": "node scripts/check-design-tokens.mjs",
     "check:bundle": "node scripts/check-bundle-budget.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && npm run typecheck:scripts",
+    "typecheck:scripts": "tsc -p tsconfig.scripts.json",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --coverageReporters=text-summary --coverageReporters=text",

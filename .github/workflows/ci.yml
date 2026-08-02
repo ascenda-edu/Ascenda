@@ -4,6 +4,11 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Manual trigger, on any branch. This is what makes the `database` and `e2e`
+  # admission conditions at the bottom of this file SATISFIABLE: both say "add it
+  # to ci-ok's `needs` the first time it goes green here", and without a way to
+  # run the workflow off a PR, "here" could never happen. Actions > CI > Run workflow.
+  workflow_dispatch:
 
 # A second push to a PR makes the first run's result irrelevant. Without this,
 # slow runs queue behind each other and the reported status lags the branch.
@@ -14,8 +19,10 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  NODE_VERSION: '22'
+# Node version: .nvmrc is the ONE source. It was three answers before —
+# package.json `engines`, this file's NODE_VERSION, and whatever the developer had
+# installed. `node-version-file` below reads .nvmrc, and package.json now says
+# ">=22" to match (Node 20 makes jest.environment-node.js a no-op; see the `test` job).
 
 jobs:
   # GitHub runs PR checks against a merge of head into base *as it was when the
@@ -34,7 +41,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
@@ -67,10 +74,10 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
 
@@ -100,27 +107,59 @@ jobs:
         # reaches zero, delete the script and use a real no-restricted-syntax rule.
         run: npm run lint:datalayer
 
-      - name: Dead code (advisory)
+      - name: Dead code
         if: always()
-        # Reports only. `knip --no-exit-code` ALWAYS exits 0, so — unlike the two
-        # ratchets above — this cannot fail and the list CAN quietly grow. It is
-        # here to be read in the log, not to gate. Making it a real ratchet means
-        # dropping --no-exit-code and committing a baseline, which is worth doing
-        # once the current findings are triaged.
+        # Ratcheting, per knip issue type, against scripts/check-deadcode.baseline.json.
+        # It used to be `knip --no-exit-code`, i.e. exit 0 ALWAYS — a step that read
+        # like a gate and could not fail. Planting a brand-new unreferenced file
+        # printed it in this log and passed the build. The 217 existing findings are
+        # frozen, not blocking; a new one is red.
         run: npm run lint:deadcode
 
+      - name: Dependency advisories
+        if: always()
+        # There are three security `overrides` in package.json (brace-expansion, and
+        # postcss/sharp pinned inside next) whose entire purpose is to clear
+        # advisories — and until now nothing checked whether they were still needed
+        # or still sufficient. 0 vulnerabilities at any level as of 2026-08-02, so
+        # this starts green.
+        #
+        # `--audit-level=high` (not `moderate`, not the default): a low/moderate
+        # advisory in a transitive devDependency is a thing to read on a Monday, not
+        # a thing that reddens an unrelated PR at 6pm. Note this step CAN go red
+        # without anyone changing anything — that is what a newly-published advisory
+        # looks like, and it is the point.
+        run: npm audit --audit-level=high
+
   # ── Tests ──────────────────────────────────────────────────────────────────
+  # Run in BOTH timezones. `docs/audit/AUDIT-PROMPT.md` §1 criterion 1 requires
+  # TZ=UTC *and* TZ=America/Los_Angeles; this job ran only the latter, on the
+  # correct argument that a UTC runner cannot observe the `parseLocalDate` bug
+  # class — which is a reason to ADD the west-coast run, not to DROP the UTC one.
+  # The mirror-image bug (a helper that assumes getTimezoneOffset() > 0, or a test
+  # that only holds in a negative-offset zone) was unobservable in CI.
   test:
+    name: test (TZ=${{ matrix.tz }})
     runs-on: ubuntu-latest
+    strategy:
+      # One zone failing must not cancel the other: which zones fail is the
+      # diagnostic.
+      fail-fast: false
+      matrix:
+        include:
+          - tz: UTC
+            label: utc
+          - tz: America/Los_Angeles
+            label: la
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           # Must stay >= 22: jest.environment-node.js exists to strip the
           # experimental localStorage/sessionStorage globals Node 22 introduced,
           # and on Node 20 that wrapper is a no-op — so CI would never exercise
           # the path every developer machine actually takes.
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
 
@@ -135,10 +174,10 @@ jobs:
           # gutting it fails 2 tests under UTC and 8 under America/Los_Angeles.
           #
           # The branch built exactly the right tool (jest.environment-tz-west.js)
-          # and applied it to one suite. This makes the whole suite run where
-          # date-only bugs are visible. Verified: 1,073 tests pass in this zone,
-          # so it costs nothing and detects six more mutations.
-          TZ: America/Los_Angeles
+          # and applied it to one suite. The matrix runs the whole suite in both
+          # zones. Verified: the suite passes in each, so this costs one runner and
+          # detects six more mutations than UTC alone.
+          TZ: ${{ matrix.tz }}
         # `--collectCoverageFrom` is REQUIRED, not decorative. Without it Jest
         # measures only the files some test happened to import, which reported
         # 72.9% over 108 of 449 source files — a number that looks like coverage
@@ -169,10 +208,11 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: coverage
+          # Matrix legs cannot share an artifact name, and TZ contains a `/`.
+          name: coverage-${{ matrix.label }}
           path: coverage/
           retention-days: 7
 
@@ -180,10 +220,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
 
@@ -235,7 +275,7 @@ jobs:
           --health-retries 5
         ports: ['5432:5432']
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Build the schema and replay every migration, twice
         env:
@@ -256,18 +296,21 @@ jobs:
   # so the job checks for them first and no-ops when they are absent: a check
   # that fails on every PR is a check someone deletes.
   #
-  # Same "runs but is not required yet" posture as `database` below: deliberately
-  # NOT in ci-ok's `needs`. Add it there the first time it goes green with real
-  # secrets — set E2E_EMAIL / E2E_PASSWORD (a THROWAWAY account: the spec
-  # completes the wizard and saves, overwriting that account's student_* rows)
-  # plus the two NEXT_PUBLIC_SUPABASE_* vars, against a non-production project.
+  # Same "runs but is not required yet" posture as `database` above: deliberately
+  # NOT in ci-ok's `needs`. See the ADMISSION CONDITION in the ci-ok header for
+  # exactly what has to happen first, and note the honest cost recorded there:
+  # e2e/harness-smoke.e2e.ts needs NO credentials, is the check the middleware unit
+  # test explicitly delegates the `matcher` question to — and is skipped along with
+  # everything else, because every step below is gated on the secrets probe. That
+  # is a real hole, tracked as L8; fixing it means splitting this job, which is a
+  # change that must be observed on a runner before it is trusted.
   e2e:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Are E2E secrets configured?
@@ -300,7 +343,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always() && steps.secrets.outputs.configured == 'true'
         with:
           name: playwright-report
@@ -315,20 +358,49 @@ jobs:
   # job is SKIPPED when a dependency fails, and GitHub counts a skipped required
   # check as PASSING.
   #
-  # `database` and `e2e` are deliberately NOT in `needs` yet — see each job's own
-  # header for what has to be true before it is added.
+  # ── Why `database` and `e2e` are NOT in `needs`, and what would change that ──
   #
-  # `database`: it now passes. The earlier claim here — that "its one known
-  # blocker (the missing universities.recognition_score column) is fixed" — was
-  # FALSE, and was written without a Postgres to check it against. Adding that
-  # column to schema.sql was necessary but changed nothing about this job: the
-  # replay of 20250308120000 renames the live `universities` away and promotes a
+  # Both are excluded deliberately. Both exclusions were, until now, PERMANENT BY
+  # CONSTRUCTION — each admission condition depended on a runner result that no
+  # trigger in this file could ever produce. `workflow_dispatch` at the top fixes
+  # that: either job can now be run on a real runner, on any branch, without
+  # opening a PR. The conditions below are therefore satisfiable by someone doing
+  # a specific, named thing.
+  #
+  # `database` — it passes. (The claim that used to sit here, that "its one known
+  # blocker, the missing universities.recognition_score column, is fixed", was
+  # FALSE and was written without a Postgres to check it against: the replay of
+  # 20250308120000 renames the live `universities` away and promotes a
   # `universities_v2` that never declared the column, so it was dropped again
-  # three files before the index that needs it. There were four further blockers
-  # behind that one. All are now fixed or ledgered in scripts/ci-db-check.sh,
-  # and the full run has been observed green against Postgres 16.14, twice
-  # consecutively — but on a local cluster, never yet on a GitHub runner.
-  # Add it to `needs` above the first time it goes green here.
+  # three files before the index that needs it, and there were four further
+  # blockers behind that. All are now fixed or ledgered in scripts/ci-db-check.sh.)
+  # The full run has been observed green against Postgres 16.14, twice
+  # consecutively — but on a LOCAL cluster. Nothing has ever run it on a GitHub
+  # runner, where the Postgres is a service container, the client is whatever
+  # ubuntu-latest ships, and the collation and locale are not this laptop's.
+  #   ADMISSION CONDITION: run this workflow once via Actions > CI > Run workflow,
+  #   watch the `database` job go green on the runner, then add `database` to
+  #   `needs` in that same observation's PR. One line, one human, one green tick.
+  #
+  # `e2e` — it currently executes NOTHING. With no secrets configured (the state
+  # of this repo) the job runs its probe, prints a ::notice::, and succeeds having
+  # done no work, so "it went green" would mean nothing.
+  #   ADMISSION CONDITION, part 1 (no secrets needed, do this first): split the job
+  #   so `e2e/harness-smoke.e2e.ts` — written to need no credentials, and the check
+  #   __tests__/middleware/middleware.test.ts delegates the `matcher` question to —
+  #   runs unconditionally, and only profile-wizard.e2e.ts stays behind the secrets
+  #   gate. Verify the split with `workflow_dispatch`. That half can then join
+  #   `needs`, which is what makes the unit test's delegation comment true.
+  #   ADMISSION CONDITION, part 2 (owner action): set E2E_EMAIL / E2E_PASSWORD (a
+  #   THROWAWAY account — the spec completes the wizard and saves, overwriting that
+  #   account's student_* rows) plus the two NEXT_PUBLIC_SUPABASE_* vars, against a
+  #   non-production project. Then the full job can join too.
+  #
+  # And the thing that makes all of this weaker than it looks: there is NO BRANCH
+  # PROTECTION on this repo (it needs a paid GitHub plan for a private repo), so
+  # `ci-ok` is not *required* by anything and cannot block a merge today. It is a
+  # correctly-built aggregate gate with nothing wired to it. Wiring it up is the
+  # single highest-value thing on docs/audit/13-remaining-work.md §4.
   ci-ok:
     if: always()
     needs: [quality, test, build]
