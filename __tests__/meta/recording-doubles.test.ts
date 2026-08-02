@@ -41,12 +41,6 @@
  *   - `counsellor/application-status.test.ts` now pins
  *     `profiles.eq('role','student')` — the exact argument of the historic
  *     roster bug, a bare string no compiler checks;
- *   - `matching/score-programs.test.ts` pins that the four `student_*` reads
- *     use the profile id they were passed;
- *   - `chat/university-info-tool.test.ts` pins that the programmes read is
- *     keyed on the id the name lookup resolved;
- *   - `hooks/use-help-thread.test.ts` pins all four thread reads to the
- *     request id;
  *   - `auth/identity-cache.test.ts` pins `profiles.eq('id', user.id)`.
  * None of those was expressible while the arguments were being discarded.
  */
@@ -64,16 +58,20 @@ const SELF = 'meta/recording-doubles.test.ts';
  * SHRINK THIS LIST. Never add to it.
  */
 const KNOWN_DISCARDING: Record<string, string> = {
-  'matching/score-programs.test.ts':
-    'Scores are asserted end-to-end against a fixed catalogue; no scope assertion exists to protect yet.',
-  'counsellor/application-status.test.ts':
-    'Asserts the status transition matrix, not the query. Convert when a scope assertion is added.',
-  'chat/university-info-tool.test.ts':
-    'Reads the public catalogue (universities/programs). There is no tenant to scope to.',
-  'hooks/use-help-thread.test.ts':
-    'Hook-level render test; the loader it drives is scoped and asserted in its own suite.',
-  'auth/identity-cache.test.ts':
-    'Tests the memo LIFETIME, not the query. The `.eq(id, user.id)` filter it stubs is pinned by its sibling identity.test.ts, which records filters properly.',
+  // EMPTY, and it should stay that way.
+  //
+  // This ratchet shipped with five exemptions. Every one of them has since been
+  // converted to a recording double, and the sibling test below — "the allowlist
+  // only names files that still exist and still offend" — is what forced the
+  // issue: it fails on a STALE entry, so a converted file cannot quietly keep
+  // its exemption and regress later behind it.
+  //
+  // Adding an entry here is allowed but must come with a reason of substance
+  // (>20 chars, enforced) explaining why the double cannot record which column
+  // it filtered. "It is only a render test" is not one: the historic roster bug
+  // (`.eq('role', 'counsellor.student')`) and the cross-tenant read
+  // (`.eq('profile_id', …)` deleted from five loaders) both passed a full green
+  // suite precisely because the doubles recorded the CALL and not the COLUMN.
 };
 
 const listTestFiles = (dir: string): string[] =>
