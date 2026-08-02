@@ -656,6 +656,11 @@ export function useSearchResults(filters: SearchFilters): SearchResultsState {
         };
         const facetMatched = facetActive ? unis.filter(facetPredicate) : unis;
         const facetMatchedIds = facetMatched.map((u) => u.id);
+        // Membership set for the text∩facet intersection below, which used to
+        // run `facetMatched.some(...)` per candidate id — O(n·m) over a 119k
+        // catalogue (audit J-5). Built here rather than inline so it is paid for
+        // once per resolution, not once per candidate.
+        const facetMatchedIdSet = new Set(facetMatchedIds);
 
         // --- Free-text resolution. -------------------------------------------
         const text = resolveText(unis, f.q, drillActive);
@@ -668,7 +673,7 @@ export function useSearchResults(filters: SearchFilters): SearchResultsState {
           // Text pins us to a small set of uni ids. Intersect with the facet
           // predicate in-memory so the two constraints compose into ONE `.in`.
           const candidates = facetActive
-            ? text.uniIds.filter((id) => facetMatched.some((u) => u.id === id))
+            ? text.uniIds.filter((id) => facetMatchedIdSet.has(id))
             : text.uniIds;
           uni = candidates.length ? { kind: 'in', ids: candidates } : { kind: 'empty' };
         } else if (facetActive) {

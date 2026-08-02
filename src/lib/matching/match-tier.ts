@@ -67,34 +67,32 @@ export type MatchTier = 'Reach' | 'Match' | 'Safe';
  * change at 75 and 80 respectively, which put a green "strong" ring next to an
  * amber "Match" pill for every score in 75-79.
  *
- * ── The stored tier is a standing contradiction, not a rebuild window ───────
+ * ── The stored tier is a rebuild window, and it closes by itself ────────────
  * `student_matches.breakdown.tier` is persisted and preferred over
  * recomputation (`service.ts` cached path, `counsellor/data.ts:136`,
- * `lib/data/applications.ts` `loadTierByProgram`). `loadTierByProgram` has NO
- * recompute path and no TTL, so a row written under the old 70/50 rule keeps
- * its old tier on /applications, the parent progress board and the cost
- * explorer FOREVER — beside the freshly-computed tier in search. An earlier
- * version of this comment called that "a window until the cache is rebuilt".
- * It is not; nothing rebuilds it.
+ * `lib/data/applications.ts` `loadTierByProgram`). `loadTierByProgram` itself
+ * has no recompute path, so a row written under the old 70/50 rule serves its
+ * old tier on /applications, the parent progress board and the cost explorer —
+ * beside the freshly-computed tier in search.
  *
- * Closing it needs a backfill, which is a migration and therefore not this
- * module's job. The proposal, for whoever applies it:
+ * CORRECTION (audit finding D-04). An earlier version of this comment said that
+ * lasted "FOREVER" because "nothing rebuilds it", and proposed a production
+ * backfill on that premise. Both claims are wrong. `service.ts:912` DELETEs
+ * every `student_matches` row for the profile and reinserts the freshly-scored
+ * set whenever a recompute runs, and recompute is gated on
+ * `PROGRAM_CACHE_TTL_MS` = 24h (`service.ts:41,327`) — the very table
+ * `loadTierByProgram` reads. So a stale tier survives at most one TTL after the
+ * student's next visit, and the disagreement is self-healing.
  *
- *     -- Drop the stored tier wherever it disagrees with this rule; the read
- *     -- paths already fall back to matchTierFromScore(score) when the key is
- *     -- absent, so removing the key is self-healing and needs no app change.
- *     update student_matches
- *        set breakdown = breakdown - 'tier'
- *      where breakdown ? 'tier'
- *        and breakdown->>'tier' is distinct from
- *            case when score >= 80 then 'Safe'
- *                 when score >= 60 then 'Match'
- *                 else 'Reach' end;
+ * Do NOT run a backfill migration for this. It would be a write across every
+ * student's match cache to fix something that expires within a day on its own,
+ * and the version of it that used to be proposed here hardcoded the 80/60
+ * thresholds a fourth time — the exact drift this module exists to prevent.
  *
- * Deleting the key rather than rewriting it keeps the thresholds in one place:
- * the SQL above encodes 80/60 once, at apply time, and leaves nothing behind
- * that can drift. Until it runs, /applications and search WILL disagree for any
- * row scored 60-79 that was written before this change.
+ * What is worth knowing: for a student who does not return within the TTL,
+ * /applications and search WILL disagree for any row scored 60-79 written
+ * before this change. That is a display inconsistency with a known expiry, not
+ * a data defect.
  *
  * These live beside the `MatchTier` type rather than in lib/theme/ because they
  * are a domain rule, not a presentation concern. `classifyFitTier` now derives

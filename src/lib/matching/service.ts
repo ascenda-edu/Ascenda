@@ -685,10 +685,22 @@ export const loadMatchesForProfile = async (
   const allUniIds = [...new Set(enrichedCourses.map((c) => c.university_id).filter(Boolean))];
   const recognitionByUniId = new Map<string, number>();
   if (allUniIds.length > 0) {
-    const { data: recData } = await supabase
+    const { data: recData, error: recError } = await supabase
       .from('universities')
       .select('id, recognition_score')
       .in('id', allUniIds);
+    // Discarding this error (audit E-05) left every university on the default
+    // of 3 — see the `?? 3` at the cachePayload mapper below and the sort key
+    // that reads this map. The match list is then ordered as if no university
+    // were more recognised than any other, which is a different ranking served
+    // and cached for 24h with no signal that anything failed.
+    if (recError) {
+      console.error(
+        'Failed to load recognition scores — the match list will be ordered as if every ' +
+          'university had the default recognition of 3',
+        recError
+      );
+    }
     for (const row of (recData ?? []) as Array<{ id: string; recognition_score: number }>) {
       if (row.id && typeof row.recognition_score === 'number') {
         recognitionByUniId.set(row.id, row.recognition_score);
@@ -919,7 +931,22 @@ export const loadMatchesForProfile = async (
         const { error: insertError } = await supabase.from('student_matches').insert(batch);
         if (insertError) {
           console.warn(`Failed to persist cached matches batch ${i} — clearing partial cache`, insertError);
-          await supabase.from('student_matches').delete().eq('profile_id', profileId);
+          // This rollback was the one write in src/ that discarded its error
+          // (audit E-04). If the wipe fails, the truncated cache it was meant to
+          // remove stays — and a truncated cache is served as authoritative for
+          // the full 24h TTL, so the student silently sees a subset of their
+          // matches. It must be loud: nothing downstream can detect this state.
+          const { error: rollbackError } = await supabase
+            .from('student_matches')
+            .delete()
+            .eq('profile_id', profileId);
+          if (rollbackError) {
+            console.error(
+              `Failed to clear the partial match cache for profile ${profileId} — ` +
+                'a TRUNCATED cache will be served as authoritative until the 24h TTL expires',
+              rollbackError
+            );
+          }
           break;
         }
       }
