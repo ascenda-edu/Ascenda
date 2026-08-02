@@ -45,7 +45,7 @@ to say what was applied.
 | # | File | Introduces | Applied? | Evidence / probe marker |
 |---|---|---|---|---|
 | 1 | `20250214120000_student_intake_profile.sql` | student intake enums + `student_*` tables | ✅ | product depends on it; type `programme_type` |
-| 2 | `20250308120000_normalize_course_catalog.sql` | `cities`, `safe_int()`, `archive_raw_*` | ✅ | catalogue is live; table `cities` |
+| 2 | `_applied_archive/20250308120000_normalize_course_catalog.sql` ⛔ **ARCHIVED — never replay** | `cities`, `safe_int()`, `archive_raw_*` | ✅ | catalogue is live; table `cities` |
 | 3 | `20250415_update_course_scoring_v1_metadata_scores.sql` | `course_scoring_v1` metadata-preferring rewrite | ✅ | scoring reads metadata keys in prod; — |
 | 4 | `20260512120000_help_requests_and_notifications.sql` | `help_requests`, `notifications` | ✅ | table `notifications` |
 | 5 | `20260513120000_help_thread_tables.sql` | `help_messages`, `help_notes`, `help_meetings` | ✅ | table `help_notes` |

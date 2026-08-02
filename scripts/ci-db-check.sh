@@ -49,23 +49,12 @@ DB_MAIN="${DB_MAIN:-ascenda_ci}"
 # not unfixed.
 #
 NOT_REPLAYABLE=(
-  # One-time catalogue normalization. Against a database that has ALREADY been
-  # normalized it is destructive, not a no-op: `:415-430` renames the live
-  # `programs`/`universities` to `archive_raw_*` and promotes the empty
-  # `programs_v2`/`universities_v2` it just created in their place. A second run
-  # then aborts with `relation "programs" already exists`, because the rename
-  # target is occupied.
-  #
-  # It is also the real cause of the `recognition_score` blocker: `universities_v2`
-  # (`:32-60`) never declared the column, so replaying this file DISCARDS
-  # `universities.recognition_score` — after which `20260723120000:21` fails with
-  # 42703. Adding the column to `schema.sql` was necessary but could not fix that;
-  # only not replaying this file can. Verified: with this file replayed,
-  # `universities.recognition_score` is gone and `archive_raw_universities` holds
-  # it instead.
-  #
-  # OPERATIONAL WARNING: never `npm run db:apply` this file against production.
-  20250308120000_normalize_course_catalog.sql
+  # 20250308120000_normalize_course_catalog.sql USED to be listed here. It is now
+  # in supabase/migrations/_applied_archive/ — out of this glob entirely — because
+  # it is DESTRUCTIVE on replay, not merely non-idempotent, and a standing
+  # exception for a file that must never run is an exception someone eventually
+  # mistakes for a place to hide a broken migration. See that directory's README.
+
 
   # `:52-53` — bare `alter publication supabase_realtime add table help_requests`
   # / `notifications`, with no `pg_publication_tables` guard. Errors with

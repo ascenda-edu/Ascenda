@@ -89,7 +89,7 @@ Context: 15 of 20 injected bugs were caught, but **all four survivors are authz-
 2. Rotate `DEMO_USER_PASSWORD` / `SEED_STUDENT_PASSWORD` in Supabase Auth (removed from the repo, still live).
 3. Enable GitHub secret scanning + push protection.
 4. **Apply migrations in order — `20260801110000_profiles_insert_guard` FIRST.** Until it lands, any user can self-promote to admin, which defeats every other policy. See `supabase/MIGRATIONS.md`.
-   ⚠️ **Never `db:apply` `20250308120000_normalize_course_catalog.sql`** — replaying it renames the live `programs`/`universities` to `archive_raw_*` and promotes empty `*_v2` tables. It is destructive, not merely non-idempotent.
+   ✅ The one destructive migration (`20250308120000_normalize_course_catalog.sql`) has been **moved to `supabase/migrations/_applied_archive/`**, out of every glob and out of the CI replay path, so it can no longer be reached by `db:apply` or by "replay the migrations to rebuild an environment". Its README explains why. Do not move it back.
    ⚠️ **When you apply `20260801120000`, set `COUNSELLOR_PORTAL_OPEN_TO_ALL` and `PARENT_PORTAL_OPEN_TO_ALL` to `false` in the same commit.** `__tests__/db/portal-flag-agreement.test.ts` enforces this — otherwise both portals silently render empty.
 5. Buy GitHub Team; require the single `ci-ok` check (branch protection currently 403s).
 6. Run the Playwright wizard spec once against a **throwaway** account: `E2E_EMAIL=… E2E_PASSWORD=… npm run test:e2e`.
