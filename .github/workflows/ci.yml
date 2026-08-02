@@ -328,6 +328,20 @@ jobs:
 
       - name: Playwright — credential-free smoke
         run: npm run test:e2e:smoke
+        env:
+          # The same placeholders the `build` job uses. Playwright's `webServer`
+          # starts `npm run dev`, and src/instrumentation.ts asserts the env on
+          # boot — so with nothing set the server exits before the first
+          # navigation and Playwright reports "Process from config.webServer
+          # exited early", which is what the first runner attempt did.
+          #
+          # Placeholders are sufficient BECAUSE of what these two specs assert:
+          # that /login renders labelled fields, and that middleware bounces an
+          # anonymous /profile/wizard. The bounce is decided by the PRESENCE of a
+          # session cookie, never by asking Supabase whether it is valid — see
+          # `hasSessionCookie` in src/middleware.ts. No request reaches Supabase.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
 
       - name: Are E2E secrets configured?
         id: secrets
