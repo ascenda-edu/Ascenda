@@ -921,10 +921,36 @@ export const loadMatchesForProfile = async (
     // duplicate rows); if any insert batch fails, wipe the partial cache —
     // an empty cache recomputes next request, but a truncated one would be
     // served as authoritative for the full 24h TTL.
-    const { error: deleteError } = await supabase.from('student_matches').delete().eq('profile_id', profileId);
+    // `.select('id')` makes PostgREST return the deleted rows, which is the only
+    // way to tell "nothing was cached" apart from "the DELETE was silently
+    // filtered away by RLS" (migration 20260802120000 §5a).
+    //
+    // Postgres does NOT error on an RLS-filtered DELETE — it removes zero rows
+    // and reports success. There has never been a DELETE policy on
+    // student_matches (matches_self is SELECT, matches_self_write INSERT,
+    // matches_self_update UPDATE, matches_admin is admin-only), so for a student
+    // this clear has always been a no-op that reported success, and the insert
+    // below then piled 300 more rows on top of everything already there. That is
+    // how the table grows without bound.
+    const { data: cleared, error: deleteError } = await supabase
+      .from('student_matches')
+      .delete()
+      .eq('profile_id', profileId)
+      .select('id');
     if (deleteError) {
       console.warn('Failed to clear cached matches — skipping cache rebuild', deleteError);
     } else {
+      if ((cleared?.length ?? 0) === 0) {
+        // Not necessarily wrong — a first-time student has nothing cached — but
+        // it is indistinguishable from the RLS no-op above, and that ambiguity
+        // is the finding. Once 20260802120000 lands this should only ever be a
+        // genuinely empty cache.
+        console.warn(
+          `Cleared 0 cached match rows for profile ${profileId} before rebuilding. ` +
+            'If this profile had a cache, the DELETE was filtered by RLS and the rebuild ' +
+            'will duplicate rather than replace (see migration 20260802120000).'
+        );
+      }
       // Insert in batches to avoid payload size limits
       for (let i = 0; i < cachePayload.length; i += 500) {
         const batch = cachePayload.slice(i, i + 500);

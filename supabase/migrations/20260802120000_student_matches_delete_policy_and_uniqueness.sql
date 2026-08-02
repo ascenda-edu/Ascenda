@@ -147,6 +147,22 @@ analyze student_matches;
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 5. THE REQUIRED APP CHANGE — src/lib/matching/service.ts
 -- ─────────────────────────────────────────────────────────────────────────────
+-- STATUS (audit finding C7, resolved as far as it safely can be):
+--
+--   (a) DONE and on this branch. `.select('id')` is in place and a zero-row
+--       clear is now logged loudly.
+--
+--   (b) DELIBERATELY NOT DONE — it must ship in the SAME deploy as this file,
+--       and this file is not applied. `onConflict: 'profile_id,program_id'`
+--       infers its target from the unique index in section 3. Land the upsert
+--       first and every cache rebuild in production fails at 42P10 (no matching
+--       index), which breaks /matches for every student. Land this migration
+--       first and a partially-cleared cache raises 23505 until (b) follows.
+--
+--       So: apply this migration and merge the (b) edit together. The audit
+--       recorded C7 as "the mandatory app change is absent from the branch";
+--       it is absent on purpose, and this note is the coupling.
+--
 -- Two edits, both in `service.ts:894-912`. Neither is optional.
 --
 -- (a) Stop discarding the DELETE result. A zero-row delete must be treated as a
