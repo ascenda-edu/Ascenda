@@ -40,10 +40,14 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
     };
   }, [decks, started]);
 
-  const startApplication = async (programId: string, label: string) => {
+  // Synchronous `() => void` event-handler boundary around an async body. An
+  // `async` function handed to `onClick`/`onSubmit` returns a promise the DOM
+  // discards, so a rejection is swallowed and the user is told nothing; the
+  // terminal `.catch`/`.finally` below is the only exit for a failure.
+  const startApplication = (programId: string, label: string): void => {
     if (started.has(programId) || tracking) return;
     setTracking(programId);
-    try {
+    const run = async (): Promise<void> => {
       const res = await fetch('/api/applications/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -56,15 +60,19 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
         title: data.status === 'exists' ? 'Already in your applications' : `Application started · ${label}`,
         variant: 'success',
       });
-    } catch (err) {
-      showToast({
-        title: 'Could not start application',
-        description: err instanceof Error ? err.message : undefined,
-        variant: 'error',
+    };
+
+    run()
+      .catch((err: unknown) => {
+        showToast({
+          title: 'Could not start application',
+          description: err instanceof Error ? err.message : undefined,
+          variant: 'error',
+        });
+      })
+      .finally(() => {
+        setTracking(null);
       });
-    } finally {
-      setTracking(null);
-    }
   };
 
   const saveToShortlist = (programId: string, courseName: string, university: string, country: string) => {

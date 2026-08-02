@@ -52,7 +52,8 @@ const meetingToneClass = (status: HelpMeetingStatus): string => {
       return 'border-border/60 bg-muted/40 text-muted-foreground line-through';
     case 'completed':
       return 'border-feature/25 bg-feature-subtle text-feature';
-    default:
+    case 'proposed':
+      // Awaiting a decision — the same "in progress" tone the rest of the app uses.
       return 'border-info/25 bg-info-subtle text-info';
   }
 };
@@ -140,107 +141,132 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
     };
   }, [supabase, request?.student_profile_id, request?.counsellor_profile_id]);
 
-  const handleReply = async () => {
+  // Every handler below is a SYNCHRONOUS event-handler boundary that returns
+  // `void`, wrapping an async body. That shape is deliberate: an `async` handler
+  // passed to `onClick` returns a promise nobody holds, so if the await rejects
+  // the rejection is swallowed and the user is told nothing. Here the terminal
+  // `.catch` is the only exit for a failure and it always reaches the toast —
+  // and `useHelpThread.reply()` really does throw when it cannot send, which is
+  // the case that used to toast "Reply sent" over a message that never left.
+  // The input is left intact on failure so the user can retry without retyping.
+
+  const handleReply = (): void => {
     if (busy || !replyText.trim()) return;
+    const body = replyText;
     setBusy(true);
-    try {
-      await reply(replyText, side);
-      setReplyText('');
-      showToast({
-        title: isCounsellor ? `Reply sent to ${studentName}` : 'Reply sent to your counsellor',
-        variant: 'success'
+    reply(body, side)
+      .then(() => {
+        setReplyText('');
+        showToast({
+          title: isCounsellor ? `Reply sent to ${studentName}` : 'Reply sent to your counsellor',
+          variant: 'success'
+        });
+      })
+      .catch(() => {
+        showToast({ title: "Couldn't send reply", variant: 'error' });
+      })
+      .finally(() => {
+        setBusy(false);
       });
-    } catch {
-      showToast({ title: "Couldn't send reply", variant: 'error' });
-    } finally {
-      setBusy(false);
-    }
   };
 
-  const handleAddNote = async () => {
+  const handleAddNote = (): void => {
     if (busy || !noteText.trim()) return;
+    const body = noteText;
     setBusy(true);
-    try {
-      await addNote(noteText);
-      setNoteText('');
-      showToast({ title: 'Note saved', variant: 'success' });
-    } catch {
-      showToast({ title: "Couldn't save note", variant: 'error' });
-    } finally {
-      setBusy(false);
-    }
+    addNote(body)
+      .then(() => {
+        setNoteText('');
+        showToast({ title: 'Note saved', variant: 'success' });
+      })
+      .catch(() => {
+        showToast({ title: "Couldn't save note", variant: 'error' });
+      })
+      .finally(() => {
+        setBusy(false);
+      });
   };
 
-  const handleProposeMeeting = async () => {
+  const handleProposeMeeting = (): void => {
     if (busy || !meetingTitle.trim() || !meetingTime) return;
     setBusy(true);
-    try {
-      await proposeMeeting({
-        title: meetingTitle.trim(),
-        scheduledFor: new Date(meetingTime).toISOString(),
-        location: meetingLocation.trim() || undefined
+    proposeMeeting({
+      title: meetingTitle.trim(),
+      scheduledFor: new Date(meetingTime).toISOString(),
+      location: meetingLocation.trim() || undefined
+    })
+      .then(() => {
+        showToast({
+          title: `Meeting proposed`,
+          description: `${meetingTitle} · ${formatMeetingTime(new Date(meetingTime).toISOString())}`,
+          variant: 'success'
+        });
+      })
+      .catch(() => {
+        showToast({ title: "Couldn't propose meeting", variant: 'error' });
+      })
+      .finally(() => {
+        setBusy(false);
       });
-      showToast({
-        title: `Meeting proposed`,
-        description: `${meetingTitle} · ${formatMeetingTime(new Date(meetingTime).toISOString())}`,
-        variant: 'success'
-      });
-    } catch {
-      showToast({ title: "Couldn't propose meeting", variant: 'error' });
-    } finally {
-      setBusy(false);
-    }
   };
 
-  const handleMeetingStatus = async (
+  const handleMeetingStatus = (
     meeting: ReturnType<typeof useHelpThread>['meetings'][number],
     status: HelpMeetingStatus
-  ) => {
+  ): void => {
     if (busy) return;
     setBusy(true);
-    try {
-      await setMeetingStatus(meeting, status, side);
-      const label =
-        status === 'confirmed'
-          ? 'Meeting confirmed'
-          : status === 'cancelled'
-            ? 'Meeting cancelled'
-            : status === 'completed'
-              ? 'Meeting marked complete'
-              : 'Meeting updated';
-      showToast({ title: label, variant: 'success' });
-    } catch {
-      showToast({ title: "Couldn't update the meeting", variant: 'error' });
-    } finally {
-      setBusy(false);
-    }
+    setMeetingStatus(meeting, status, side)
+      .then(() => {
+        const label =
+          status === 'confirmed'
+            ? 'Meeting confirmed'
+            : status === 'cancelled'
+              ? 'Meeting cancelled'
+              : status === 'completed'
+                ? 'Meeting marked complete'
+                : 'Meeting updated';
+        showToast({ title: label, variant: 'success' });
+      })
+      .catch(() => {
+        showToast({ title: "Couldn't update the meeting", variant: 'error' });
+      })
+      .finally(() => {
+        setBusy(false);
+      });
   };
 
-  const handleAccept = async () => {
+  const handleAccept = (): void => {
     if (busy) return;
     setBusy(true);
-    try {
-      await setStatus('accepted');
-      showToast({ title: 'Request accepted', variant: 'success' });
-    } catch {
-      showToast({ title: "Couldn't accept", variant: 'error' });
-    } finally {
-      setBusy(false);
-    }
+    setStatus('accepted')
+      .then(() => {
+        showToast({ title: 'Request accepted', variant: 'success' });
+      })
+      .catch(() => {
+        showToast({ title: "Couldn't accept", variant: 'error' });
+      })
+      .finally(() => {
+        setBusy(false);
+      });
   };
 
-  const handleResolve = async () => {
+  const handleResolve = (): void => {
     if (busy) return;
     setBusy(true);
-    try {
-      await setStatus('resolved');
-      showToast({ title: 'Request resolved', variant: 'success' });
-      onClose();
-    } catch {
-      showToast({ title: "Couldn't resolve", variant: 'error' });
-    } finally {
-      setBusy(false);
-    }
+    setStatus('resolved')
+      .then(() => {
+        showToast({ title: 'Request resolved', variant: 'success' });
+        // Only close on success — closing on failure would hide the error toast's
+        // context and leave the counsellor believing the request was resolved.
+        onClose();
+      })
+      .catch(() => {
+        showToast({ title: "Couldn't resolve", variant: 'error' });
+      })
+      .finally(() => {
+        setBusy(false);
+      });
   };
 
   return (

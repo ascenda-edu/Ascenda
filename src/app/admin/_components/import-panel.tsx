@@ -56,13 +56,17 @@ export const ImportPanel = () => {
     });
   };
 
-  const syncRows = async () => {
+  // Synchronous `() => void` event-handler boundary around an async body. An
+  // `async` function handed to `onClick`/`onSubmit` returns a promise the DOM
+  // discards, so a rejection is swallowed and the user is told nothing; the
+  // terminal `.catch`/`.finally` below is the only exit for a failure.
+  const syncRows = (): void => {
     if (!rows.length) return;
     setIsSyncing(true);
     setStatus('Syncing with Supabase…');
     setError(null);
 
-    try {
+    const run = async (): Promise<void> => {
       const response = await fetch('/api/admin/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -78,14 +82,18 @@ export const ImportPanel = () => {
       setStatus(`Synced ${payload.count ?? rows.length} ${template} rows.`);
       showToast({ title: 'Import synced', description: `Uploaded ${payload.count ?? rows.length} ${template} rows.`, variant: 'success' });
       trackEvent('admin_import_synced', { template, count: payload.count ?? rows.length });
-    } catch (syncError) {
-      const message = syncError instanceof Error ? syncError.message : 'Sync failed.';
-      setError(message);
-      setStatus('Sync failed');
-      showToast({ title: 'Import failed', description: message, variant: 'error' });
-    } finally {
-      setIsSyncing(false);
-    }
+    };
+
+    run()
+      .catch((syncError: unknown) => {
+        const message = syncError instanceof Error ? syncError.message : 'Sync failed.';
+        setError(message);
+        setStatus('Sync failed');
+        showToast({ title: 'Import failed', description: message, variant: 'error' });
+      })
+      .finally(() => {
+        setIsSyncing(false);
+      });
   };
 
   return (

@@ -32,6 +32,16 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }
 
   const bucket = useMemo(() => process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ?? 'application-documents', []);
 
+  // Last-resort reporter for a rejection `processFiles` did not catch itself.
+  // Anything reaching here left the uploader mid-flight, so the in-flight flag
+  // has to be cleared too or the dropzone stays disabled for good.
+  const reportUploadCrash = (uploadError: unknown): void => {
+    console.error('document upload failed', uploadError);
+    setError(uploadError instanceof Error ? uploadError.message : 'Unable to upload document.');
+    setStatus(null);
+    setIsUploading(false);
+  };
+
   // Shared validation + upload path for both the file input and drag-drop.
   const processFiles = async (files: File[]) => {
     if (!files.length || isUploading) return;
@@ -137,12 +147,21 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }
     }
   };
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Synchronous `() => void` event-handler boundary around an async body. An
+  // `async` function handed to `onClick`/`onDrop`/`onChange` returns a promise
+  // the DOM discards, so a rejection is swallowed and the user is told nothing;
+  // the terminal `.catch` below is the only exit for a failure.
+  //
+  // `processFiles` routes upload failures into `setError` itself; these terminal
+  // catches cover what it cannot — a throw before its own try block, say —
+  // because otherwise the dropzone would sit at "Uploading…" forever with the
+  // student believing the file is on its way.
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const files = Array.from(event.target.files ?? []);
     // Reset the input so selecting the same file again (e.g. after a failed
     // upload) still fires a change event.
     event.target.value = '';
-    await processFiles(files);
+    processFiles(files).catch(reportUploadCrash);
   };
 
   const handleDragOver = (event: React.DragEvent) => {
@@ -160,12 +179,12 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }
     setIsDragActive(false);
   };
 
-  const handleDrop = async (event: React.DragEvent) => {
+  const handleDrop = (event: React.DragEvent): void => {
     event.preventDefault();
     event.stopPropagation();
     setIsDragActive(false);
     if (isUploading) return;
-    await processFiles(Array.from(event.dataTransfer.files ?? []));
+    processFiles(Array.from(event.dataTransfer.files ?? [])).catch(reportUploadCrash);
   };
 
   return (

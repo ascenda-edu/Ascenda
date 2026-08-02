@@ -214,7 +214,17 @@ export function IntelligentSearchBar({
         if (debounceRef.current) {
             window.clearTimeout(debounceRef.current);
         }
-        debounceRef.current = window.setTimeout(() => fetchSuggestions(value), 250);
+        debounceRef.current = window.setTimeout(() => {
+            // `fetchSuggestions` routes its own failures into `setSuggestionsError`;
+            // this terminal catch is the backstop for anything it missed, which
+            // would otherwise leave the dropdown pinned on its loading spinner.
+            fetchSuggestions(value).catch((err: unknown) => {
+                console.error('Failed to load suggestions', err);
+                setSuggestions({ programs: [], universities: [] });
+                setSuggestionsError(true);
+                setIsLoadingSuggestions(false);
+            });
+        }, 250);
 
         return () => {
             if (debounceRef.current) {
@@ -268,7 +278,13 @@ export function IntelligentSearchBar({
             }
         };
 
-        loadTrending();
+        // Trending is decoration on an empty search box: if it never arrives the
+        // dropdown simply shows nothing extra, so a failure is logged rather than
+        // surfaced. `loadTrending` already clears its own loading flag in a
+        // `finally`; this catch only exists so the rejection is not dropped.
+        loadTrending().catch((err: unknown) => {
+            console.warn('Unable to load trending suggestions', err);
+        });
 
         return () => {
             isActive = false;

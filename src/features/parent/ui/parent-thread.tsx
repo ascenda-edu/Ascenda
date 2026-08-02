@@ -47,6 +47,7 @@ export function ParentThreadPanel({
   const [composeText, setComposeText] = useState('');
   const [localMessages, setLocalMessages] = useState<ParentThreadMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const messages = useMemo(() => {
@@ -71,11 +72,14 @@ export function ParentThreadPanel({
     );
   }
 
-  const handleSend = async () => {
+  // Synchronous `() => void` event-handler boundary around an async body: an
+  // `async` handler on `onClick`/`onKeyDown` returns a promise the DOM discards.
+  const handleSend = (): void => {
     if (isSending) return;
     const body = composeText.trim();
     if (!body) return;
     setIsSending(true);
+    setSendError(null);
     const optimistic: ParentThreadMessage = {
       id: `pm-local-${Date.now()}`,
       sender: 'parent',
@@ -87,23 +91,37 @@ export function ParentThreadPanel({
     setLocalMessages((prev) => [...prev, optimistic]);
     setComposeText('');
 
-    try {
+    // Rolling the optimistic bubble back was the ENTIRE failure path, and the
+    // composer had already been cleared — so a failed send deleted the parent's
+    // message and the text they typed, with nothing on screen to say it had not
+    // reached the counsellor. Put the text back and say so.
+    const rollBack = (message: string) => {
+      setLocalMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+      setComposeText((current) => (current.trim() ? current : body));
+      setSendError(message);
+    };
+
+    const run = async (): Promise<void> => {
       const res = await fetch('/api/parent/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contactId: thread.contactId, body }),
       });
-      if (res.ok) {
-        const { message } = await res.json();
-        setLocalMessages((prev) => prev.map((m) => (m.id === optimistic.id ? message : m)));
-      } else {
-        setLocalMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+      if (!res.ok) {
+        rollBack("Couldn't send that message — it hasn't reached the counsellor. Try again.");
+        return;
       }
-    } catch {
-      setLocalMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
-    } finally {
-      setIsSending(false);
-    }
+      const { message } = await res.json();
+      setLocalMessages((prev) => prev.map((m) => (m.id === optimistic.id ? message : m)));
+    };
+
+    run()
+      .catch(() => {
+        rollBack("Couldn't reach the server — your message hasn't been sent. Try again.");
+      })
+      .finally(() => {
+        setIsSending(false);
+      });
   };
 
   const applyTemplate = (template: (typeof TEMPLATES)[number]) => {
@@ -166,6 +184,11 @@ export function ParentThreadPanel({
       </div>
 
       {/* Compose */}
+      {sendError ? (
+        <p className="border-t border-border px-3 pt-3 text-label font-medium text-danger" role="alert">
+          {sendError}
+        </p>
+      ) : null}
       <div className="flex gap-2 border-t border-border p-3">
         <label htmlFor="parent-thread-compose" className="sr-only">
           Type a message

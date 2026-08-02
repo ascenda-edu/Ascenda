@@ -46,34 +46,53 @@ export const NotesPanel = ({ notes: seedNotes, studentId }: NotesPanelProps) => 
   const [newNote, setNewNote] = useState('');
   const [noteType, setNoteType] = useState<'session' | 'flag' | 'update'>('session');
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const addNote = async () => {
+  // Synchronous `() => void` event-handler boundary around an async body: an
+  // `async` function handed to `onClick` returns a promise the DOM discards, so
+  // a rejection would be swallowed entirely.
+  const addNote = (): void => {
     const body = newNote.trim();
     if (!body || saving) return;
     setSaving(true);
+    setSaveError(null);
 
     // Optimistic insert; reconciled with the server row on success.
     const optimistic: CounsellorNote = { id: `local-${Date.now()}`, date: new Date().toISOString(), content: body, type: noteType };
     setNotes((prev) => [optimistic, ...prev]);
     setNewNote('');
 
-    try {
+    // The rollback used to be the WHOLE failure path: the composer was already
+    // cleared, so a failed save deleted the optimistic row and the counsellor's
+    // typed text with it, with nothing shown to say the note had not saved. Put
+    // the text back and say so.
+    const rollBack = (message: string) => {
+      setNotes((prev) => prev.filter((n) => n.id !== optimistic.id));
+      setNewNote((current) => (current.trim() ? current : body));
+      setSaveError(message);
+    };
+
+    const run = async (): Promise<void> => {
       const res = await fetch('/api/counsellor/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId, body, noteType }),
       });
-      if (res.ok) {
-        const { note } = await res.json();
-        setNotes((prev) => prev.map((n) => (n.id === optimistic.id ? note : n)));
-      } else {
-        setNotes((prev) => prev.filter((n) => n.id !== optimistic.id)); // roll back
+      if (!res.ok) {
+        rollBack("Couldn't save that note — it hasn't been recorded. Try again.");
+        return;
       }
-    } catch {
-      setNotes((prev) => prev.filter((n) => n.id !== optimistic.id));
-    } finally {
-      setSaving(false);
-    }
+      const { note } = await res.json();
+      setNotes((prev) => prev.map((n) => (n.id === optimistic.id ? note : n)));
+    };
+
+    run()
+      .catch(() => {
+        rollBack("Couldn't reach the server — the note hasn't been saved. Try again.");
+      })
+      .finally(() => {
+        setSaving(false);
+      });
   };
 
   return (
@@ -116,6 +135,12 @@ export const NotesPanel = ({ notes: seedNotes, studentId }: NotesPanelProps) => 
           rows={3}
           className="form-input resize-none p-3"
         />
+
+        {saveError ? (
+          <p className="text-xs font-medium text-danger" role="alert">
+            {saveError}
+          </p>
+        ) : null}
 
         <div className="flex justify-end">
           <button
