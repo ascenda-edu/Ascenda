@@ -71,9 +71,10 @@ const PROFILE = {
     highlight: 'Won the national schools hackathon'
   },
   ambition: 'I want to build bridges that outlast me.',
-  teachingStyle: 'Practical',
+  // The chip's accessible name is its label AND its description, concatenated.
+  teachingStyle: 'Practical Project-based, hands-on',
   locationType: '🌆 Major city',
-  campusSize: 'Medium',
+  campusSize: 'Medium 5–15k',
   extracurricular: 'Student societies'
 } as const;
 
@@ -124,7 +125,7 @@ test.describe('profile wizard — six-step happy path round trip', () => {
     await page.getByLabel(/^City/).fill(PROFILE.city);
     await page.getByLabel(/^Age/).fill(PROFILE.age);
 
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Your studies' })).toBeVisible();
 
     // ── 2. Studies ─────────────────────────────────────────────────────────
@@ -140,7 +141,7 @@ test.describe('profile wizard — six-step happy path round trip', () => {
       .click();
     await page.getByLabel(/^Career aspiration/).fill(PROFILE.careerAspiration);
 
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Grades & tests' })).toBeVisible();
 
     // ── 3. Grades & tests ──────────────────────────────────────────────────
@@ -162,7 +163,7 @@ test.describe('profile wizard — six-step happy path round trip', () => {
     await chipIn(page.locator('[data-field="academic_input.english_status"]'), PROFILE.englishStatus).click();
     await page.getByLabel(/^Overall score/).fill(PROFILE.englishScore);
 
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Activities & ambitions' })).toBeVisible();
 
     // ── 4. Activities ──────────────────────────────────────────────────────
@@ -173,7 +174,7 @@ test.describe('profile wizard — six-step happy path round trip', () => {
     await page.getByPlaceholder(/hackathon|Best delegate|award/i).first().fill(PROFILE.activity.highlight);
     await page.getByPlaceholder(/biomedical sciences/).fill(PROFILE.ambition);
 
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Life at university' })).toBeVisible();
 
     // ── 5. Lifestyle ───────────────────────────────────────────────────────
@@ -182,7 +183,7 @@ test.describe('profile wizard — six-step happy path round trip', () => {
     await chipIn(page, PROFILE.campusSize).click();
     await chipIn(page, PROFILE.extracurricular).click();
 
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Review & confirm' })).toBeVisible();
 
     // ── 6. Review & submit ─────────────────────────────────────────────────
