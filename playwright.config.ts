@@ -67,8 +67,25 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] }
     },
     {
+      // The credential-free half (audit L8, e2e ADMISSION CONDITION part 1).
+      //
+      // `harness-smoke.e2e.ts` used to sit in `chromium`, which `dependencies:
+      // ['setup']` binds to a real login — so the one spec written to need NO
+      // credentials could not run without them. In CI every step was gated on the
+      // secrets probe, so the `e2e` job went green having executed NOTHING, and
+      // `__tests__/middleware/middleware.test.ts` delegates the `matcher`
+      // question to a check that never ran.
+      //
+      // No `dependencies`, and an explicitly empty storageState: these specs must
+      // behave as an anonymous visitor, which is the whole point of the bounce
+      // assertion. Run it alone with `npm run test:e2e:smoke`.
+      name: 'smoke',
+      testMatch: /harness-smoke\.e2e\.ts$/,
+      use: { ...devices['Desktop Chrome'], storageState: { cookies: [], origins: [] } }
+    },
+    {
       name: 'chromium',
-      testIgnore: /auth\.setup\.e2e\.ts$/,
+      testIgnore: /(auth\.setup|harness-smoke)\.e2e\.ts$/,
       dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'], storageState: STORAGE_STATE }
     }

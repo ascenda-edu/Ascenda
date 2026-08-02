@@ -313,6 +313,22 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      # ── The credential-free half (ADMISSION CONDITION part 1, L8) ───────────
+      # Unconditional, and BEFORE the secrets probe. `harness-smoke.e2e.ts` needs
+      # no account: it asserts the login form is labelled and that middleware
+      # bounces an anonymous /profile/wizard. That second assertion is the one
+      # __tests__/middleware/middleware.test.ts explicitly delegates the `matcher`
+      # question to — the half that failed in production once — and until this
+      # step existed it never ran, because every step below is gated on secrets
+      # this repo does not have. The job went green having executed nothing.
+      - run: npm ci
+
+      - name: Install Chromium
+        run: npm run test:e2e:install
+
+      - name: Playwright — credential-free smoke
+        run: npm run test:e2e:smoke
+
       - name: Are E2E secrets configured?
         id: secrets
         env:
@@ -327,14 +343,7 @@ jobs:
             echo "::notice::E2E secrets are not set — skipping the browser suite. See .github/workflows/ci.yml."
           fi
 
-      - if: steps.secrets.outputs.configured == 'true'
-        run: npm ci
-
-      - name: Install Chromium
-        if: steps.secrets.outputs.configured == 'true'
-        run: npm run test:e2e:install
-
-      - name: Playwright
+      - name: Playwright — the credentialed wizard spec
         if: steps.secrets.outputs.configured == 'true'
         run: npm run test:e2e
         env:
@@ -403,7 +412,16 @@ jobs:
   # single highest-value thing on docs/audit/13-remaining-work.md §4.
   ci-ok:
     if: always()
-    needs: [quality, test, build]
+    # `database` joined 2026-08-02: its ADMISSION CONDITION below said "run this
+    # workflow via Actions > CI > Run workflow, watch the job go green on the
+    # runner, then add it to `needs` in that same observation". Done — green on
+    # ubuntu-latest across three consecutive dispatched runs, against the service
+    # container's Postgres rather than a laptop's.
+    #
+    # `e2e` has NOT joined. Its part-1 condition (split out the credential-free
+    # half) is now implemented, but the split itself has to be observed green on a
+    # runner before it is trusted — the same rule that admitted `database`.
+    needs: [quality, test, build, database]
     runs-on: ubuntu-latest
     steps:
       - name: Verify every job succeeded
