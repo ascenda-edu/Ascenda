@@ -663,3 +663,88 @@ is the behaviour to keep.
   `auth/identity-cache`), each annotated. It can only shrink.
 - `PROTECTED_PREFIXES` should be **exported** from `src/middleware.ts` rather than parsed
   out of the source text. Cleaner, and worth doing.
+
+---
+
+# ROUND 1 — FINAL STATE
+
+## Every gate, measured after the last merge
+
+| Gate | Result |
+|---|---|
+| `typecheck` (now incl. `scripts/`) | exit 0 |
+| `lint` (`--max-warnings 2`) | exit 0 — 0 errors, exactly the 2 known `no-restricted-imports` warnings |
+| `lint:boundaries` | exit 0 |
+| `lint:tokens` (+ new `tailwind-content-coverage`) | exit 0 |
+| `lint:datalayer` | exit 0 — **183** real PostgREST sites, 50 files |
+| `lint:deadcode` (now enforceable) | exit 0 — 217, at baseline |
+| `build` | exit 0 |
+| `check:bundle` (now fails on missing chunk / stale manifest) | exit 0 — all 47 routes within budget, 15–19 kB headroom |
+| `test` — `TZ=UTC` | **73 suites / 1,634 tests** |
+| `test` — `TZ=America/Los_Angeles` | **73 suites / 1,634 tests** |
+| `./scripts/ci-db-local.sh` | **PASS** |
+
+Start of round: 67 suites / 1,541 tests, five gates that could not fail.
+
+## The 61 lint violations were not lint noise
+
+Widening the type-aware rules to `.tsx` — 303 files that had none — surfaced 61 violations,
+every one an unreported failure. The debt block is **deleted**; all `src/**/*.tsx` are at
+`error` with no exemption list. What was behind them:
+
+- **`_universities-client.tsx`** — a rejected deck delete left `isDeletingDeck` true forever,
+  and `closeDelete` refuses to close while that flag is set. **The counsellor was trapped in
+  a modal that Escape, the scrim and the X all refused to dismiss**, with no explanation.
+- **`notes-panel.tsx` / `parent-thread.tsx`** — cleared the composer, inserted an optimistic
+  row, then on failure deleted it **with no message**. A failed save destroyed both the note
+  and the typed text, and read as a UI glitch.
+- **`essay-workshop.tsx` / `essay-ai-panel.tsx`** — flipped to "Copied" without awaiting
+  `clipboard.writeText`, which rejects on denied permission, an unfocused document or a
+  non-secure context. **Students were told their essay was on the clipboard when it wasn't.**
+- **`counsellor-inbox.tsx` / `inbox-list.tsx`** — a failed *first* load fell through to "No
+  open conversations": an empty state asserted over a query that never returned.
+- **`auth-form.tsx`** — the `getSession()` probe **whose entire job is detecting "auth
+  unreachable"** had no `.catch`, so the offline case never showed its banner.
+
+Every one is the same family as H-08/E-01/G1/G3. That family — *an async failure swallowed,
+then reported as a definite state* — is the defining defect of this codebase, and it now has
+a compiler-adjacent rule enforcing it across all 303 `.tsx` files.
+
+## Regressions introduced by the refactor — status
+
+| ID | Regression | Status |
+|---|---|---|
+| K-1 / L1 | Tailwind glob missed `src/features/**`; 5 utilities absent from compiled CSS | **fixed** + new coverage gate |
+| A1 | parent chat 403s for unlinked users while the portal is open to all | **OPEN — product decision** |
+| J-1 | four `/parent` routes +45 kB from the slice barrel | open — structural, `13-remaining-work.md` §3 |
+| J-4 | barrel drags the parent client tree into 4 API routes | open — `feature-internals-are-private` forbids the cheap fix |
+| J-8 | middleware edge bundle 86.4 → 101 kB | open — runtime cost is fine |
+
+## Still open — owner decisions, not engineering
+
+1. **A1 — parent portal.** `resolveChatMode` requires an active `guardian_link`;
+   `PARENT_PORTAL_OPEN_TO_ALL` still renders all six `/parent/*` routes to everyone. Relax
+   the chat gate (restores `main`'s behaviour) or close the portal (blocked on migration
+   step 5: `'parent'` is not yet a `profiles.role` value).
+2. **D-01 — 95 inversions in the *partial* A-level branch.** `A*A*` = 0, `A*E` = 5 with 1–2
+   subjects. Pre-existing; the golden harness enumerates only 3-grade signatures so it
+   cannot see the region. Fixing moves real student scores.
+3. **I-1 — `capital_city`.** Offered by the form, not a member of the `location_type` enum,
+   and multi-selects are comma-joined into that single enum column. Reproduced on PG16. The
+   save fails **after** `profiles`/`personal`/`academic` have committed — there is no
+   transaction.
+
+Plus the six owner-only items at the top of this file (key rotation first — **L7 confirms a
+live `service_role` JWT, exp 2035-11-13, in reachable git history**).
+
+## Round 2 — what it should target
+
+Nothing in round 1 is unresolved-and-unrecorded, so round 2 is not a re-run:
+
+- The five `.tsx` files still on the recording-double allowlist.
+- Export `PROTECTED_PREFIXES` from `src/middleware.ts` instead of parsing it from source.
+- **L8** — `harness-smoke.e2e.ts` still never runs in CI; it is the only check on the
+  middleware matcher, which B1 showed is otherwise unenforced.
+- H-01/H-02/H-04/H-05 (pre-existing API-surface findings) and the remaining P3s.
+- The lanes' own "Not verified" sections — nothing was exercised in a browser, and
+  `origin/main` was never built for a behavioural A/B.
