@@ -1,5 +1,6 @@
 import { STUDENT_WRITE_TOOLS } from '@/lib/chat/tools/student-write';
 import type { WriteTool, ToolContext } from '@/lib/chat/tools/types';
+import { filtersFor, recordingClient, type RecordedCall } from '../helpers/supabase-recorder';
 
 jest.mock('@google/genai', () => ({
   Type: { OBJECT: 'OBJECT', STRING: 'STRING', INTEGER: 'INTEGER', ARRAY: 'ARRAY' },
@@ -158,5 +159,65 @@ describe('toProposal returns null on missing required args (no DB touch)', () =>
     expect(proposal).not.toBeNull();
     expect(proposal!.tool).toBe('send_help_request');
     expect(proposal!.editable.map((f) => f.key)).toEqual(['subject', 'body']);
+  });
+});
+
+/**
+ * `update_task_status.toProposal` — the ownership check on a model-supplied id.
+ *
+ * `task_id` comes out of the model, which is influenced by conversation content,
+ * which the user controls. The lookup joins `applications!inner(profile_id)` and
+ * refuses to draft a card unless that profile is the caller's.
+ *
+ * Replacing `if (owner?.profile_id !== ctx.userId) return null` with
+ * `if (false)` left all 170 chat tests green. The blast radius is smaller than
+ * the other survivors — the execute path re-checks ownership server-side, so
+ * what leaks is another student's TASK NAME in the card summary, not the ability
+ * to mutate their checklist — but it is still an unchecked id from an untrusted
+ * source, and nothing said so.
+ */
+describe('update_task_status ownership', () => {
+  const tool = byName('update_task_status');
+  const taskRow = (profileId: string | null) => ({
+    id: UUID,
+    task_name: 'Draft the personal statement',
+    status: 'todo',
+    applications: { profile_id: profileId },
+  });
+
+  const ctxFor = (row: unknown, calls: RecordedCall[] = []): ToolContext =>
+    ({
+      supabase: recordingClient({ application_checklist: { data: row, error: null } }, calls),
+      userId: 'stu-1',
+      mode: 'student',
+    }) as unknown as ToolContext;
+
+  it('drafts the card for a task the caller owns', async () => {
+    const proposal = await tool.toProposal(ctxFor(taskRow('stu-1')), {
+      task_id: UUID,
+      status: 'done',
+    });
+
+    expect(proposal).not.toBeNull();
+    expect(proposal!.summary).toContain('Draft the personal statement');
+    expect(proposal!.params).toEqual({ task_id: UUID, status: 'done' });
+  });
+
+  it.each([
+    ['owned by another student', taskRow('stu-2')],
+    ['an application with a null profile_id', taskRow(null)],
+    // The embed arrives as an array under some PostgREST shapes; an empty one
+    // must not read as "owner matches".
+    ['an empty applications embed', { id: UUID, task_name: 'x', status: 'todo', applications: [] }],
+    ['no row at all (unreadable or nonexistent)', null],
+  ])('drafts NOTHING when the task is %s', async (_label, row) => {
+    expect(await tool.toProposal(ctxFor(row), { task_id: UUID, status: 'done' })).toBeNull();
+  });
+
+  it('looks the task up by the id it was given, and nothing else', async () => {
+    const calls: RecordedCall[] = [];
+    await tool.toProposal(ctxFor(taskRow('stu-1'), calls), { task_id: UUID, status: 'done' });
+
+    expect(filtersFor(calls, 'application_checklist')).toEqual([['eq', 'id', UUID]]);
   });
 });
