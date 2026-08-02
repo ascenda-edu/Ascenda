@@ -432,10 +432,18 @@ jobs:
     # ubuntu-latest across three consecutive dispatched runs, against the service
     # container's Postgres rather than a laptop's.
     #
-    # `e2e` has NOT joined. Its part-1 condition (split out the credential-free
-    # half) is now implemented, but the split itself has to be observed green on a
-    # runner before it is trusted — the same rule that admitted `database`.
-    needs: [quality, test, build, database]
+    # `e2e` joined 2026-08-02 too, once its part-1 condition was MET AND OBSERVED:
+    # the credential-free half is split out and ran green on ubuntu-latest. It
+    # failed its first runner outing (dev server had no env), which is precisely
+    # why the rule is "observe, then admit" rather than "implement, then admit".
+    #
+    # What this does and does not buy: the job now genuinely executes two specs,
+    # one of which is the anonymous /profile/wizard bounce that
+    # __tests__/middleware/middleware.test.ts delegates the `matcher` question to.
+    # That delegation is now true. Part 2 (E2E_EMAIL / E2E_PASSWORD against a
+    # THROWAWAY account on a non-production project) is still open and owner-only;
+    # until it is set, profile-wizard.e2e.ts is still skipped.
+    needs: [quality, test, build, database, e2e]
     runs-on: ubuntu-latest
     steps:
       - name: Verify every job succeeded
