@@ -9,14 +9,20 @@
  * across the A-level, IB and ACT credential paths, plus a machine-checkable
  * monotonicity report over the A-level grade domain.
  *
- * It exists so the *next* phase — which repairs real correctness bugs in
- * `src/lib/scoring/student_scoring.ts` — produces a reviewable diff of scores
+ * It existed first so that the phase which repaired the real correctness bugs in
+ * `src/lib/scoring/student_scoring.ts` produced a reviewable diff of scores
  * instead of an invisible behavioural change. See `docs/audit/05-domain-logic.md`
- * findings F-01 (A-level signature table) and F-04 (ACT rigour).
+ * findings F-01 (A-level signature table) and F-04 (ACT rigour). **Both are now
+ * FIXED**, and these files record the repaired behaviour.
  *
- * THESE FILES ENCODE BUGS ON PURPOSE. Do not "correct" a value because it looks
- * wrong. The known-wrong values are catalogued in the `_known_bugs` block of
- * each golden file.
+ * DO NOT "CORRECT" A VALUE BECAUSE IT LOOKS WRONG. Some of these numbers still
+ * capture behaviour the audit flagged and nobody has decided to change — those
+ * are listed in each file's `_known_bugs` block. That block is a DESCRIPTION of
+ * the values beside it, and descriptions rot: it claimed "rigour 0" on a row
+ * reading `"rigour_score": 13` for as long as the fix had been in. When the two
+ * disagree, THE VALUES ARE THE FACT. Correct the prose — and correct it HERE,
+ * since the headers are generated from the literals below and editing the JSON
+ * is undone by the next regeneration.
  *
  * REGENERATING IS A DELIBERATE ACT
  * --------------------------------
@@ -41,7 +47,7 @@
  *
  * REACHING THE A-LEVEL SCORER
  * ---------------------------
- * `calculateALevelProfileScore` is module-private (`student_scoring.ts:480`).
+ * `calculateALevelProfileScore` is module-private (`student_scoring.ts`).
  * It is reached through the public `scoreStudentProfile`, using payloads that
  * vary ONLY in `academic_input.a_level_predicted_grades`; every other scoring
  * component is pinned to a constant, so `breakdown.academic_performance` is the
@@ -517,15 +523,17 @@ const buildIbEeRows = (): IbEeRow[] => {
 };
 
 /**
- * ACT. `calculateActScore` (`student_scoring.ts:467-478`) reads
+ * ACT. `calculateActScore` (`student_scoring.ts`) reads
  * `lifestyle_preference.act_score`, NOT anything on academic_input, and
- * `if (!actScore) return 0` puts composite 0 in the same bucket as null.
+ * `if (!actScore) return 0` puts composite 0 in the same bucket as null. That
+ * one is still open.
  *
- * ⚠ AUDIT F-04 CAPTURED FAITHFULLY: the sweep rows carry three A-level-shaped
- * subjects, exactly what `StudentIntakeForm` emits for an ACT student, and
- * `rigour_score` is 0 in every single row because `calculateRigourScore`
- * filters on `level === 'AP'` for ACT. The `act_rigour_paths` table below shows
- * the unreachable counterfactual.
+ * AUDIT F-04, NOW FIXED: the sweep rows carry three A-level-shaped subjects,
+ * exactly what `StudentIntakeForm` emits for an ACT student. `rigour_score` used
+ * to be 0 in every single row, because `calculateRigourScore` filtered on
+ * `level === 'AP'` for ACT and nothing emits AP; it is 13 in every row now. The
+ * `act_rigour_paths` table below pins the two levels to the same score so the
+ * counterfactual cannot drift away from reality again.
  */
 const ACT_FORM_SUBJECTS: StudentSubject[] = [
   { subject_name: 'Mathematics', level: 'A_LEVEL', grade_value: 'A' },
@@ -606,8 +614,8 @@ const buildActRigourRows = (): ActRigourRow[] => {
     };
   };
   return [
-    at('A_LEVEL', 'act_subjects_as_the_form_emits_them', 'F-04: what every real ACT student gets — rigour 0'),
-    at('AP', 'act_subjects_at_AP_level', 'F-04: the branch RigourTable.ACT was written for; nothing emits AP'),
+    at('A_LEVEL', 'act_subjects_as_the_form_emits_them', 'what every real ACT student gets; scored 0 before the F-04 fix, must now equal the AP row'),
+    at('AP', 'act_subjects_at_AP_level', 'the level RigourTable.ACT was written for; nothing in the app emits it, so this row is the counterfactual the A_LEVEL row must match'),
     at('HL', 'act_subjects_at_HL_level', 'not emitted for ACT; recorded for completeness'),
     at(null, 'act_no_subjects', 'baseline')
   ];
@@ -762,7 +770,7 @@ const PROFILES: NamedProfile[] = [
   },
   {
     name: '10_alevel_low_business',
-    note: 'DDE — hits the `signature.includes(\'DEE\')` miss and falls to the catch-all',
+    note: 'DDE — one of only two signatures that legitimately score 8; it used to reach that value through a catch-all rather than a calibrated entry',
     profile: makePayload({
       programme_type: 'A_LEVEL',
       intended_clusters: ['business_non_quant'],
@@ -778,10 +786,10 @@ const PROFILES: NamedProfile[] = [
     })
   },
 
-  // ── Known-buggy A-level paths (audit F-01) ────────────────────────────────
+  // ── The A-level paths F-01 broke, kept as its regression test ─────────────
   {
     name: '11_alevel_bug_A_star_A_star_D',
-    note: 'BUG F-01: A*A*D falls to the catch-all 8 — below DDD (10) and far below ABD (40)',
+    note: 'F-01 regression guard: A*A*D scored the catch-all 8 — below DDD (10) and far below ABD (40), both of which it strictly dominates. Now 67.',
     profile: makePayload(
       {
         programme_type: 'A_LEVEL',
@@ -801,7 +809,7 @@ const PROFILES: NamedProfile[] = [
   },
   {
     name: '12_alevel_bug_AAD_vs_BBC',
-    note: 'BUG F-01: AAD → 8 while the weaker BBC → 36',
+    note: 'F-01 regression guard: AAD scored 8 while the weaker BBC scored 36. Now 46.',
     profile: makePayload(
       {
         programme_type: 'A_LEVEL',
@@ -823,7 +831,7 @@ const PROFILES: NamedProfile[] = [
   // ── ACT ───────────────────────────────────────────────────────────────────
   {
     name: '13_act_strong_cs',
-    note: 'BUG F-04: ACT 34 with A_LEVEL-shaped subjects — rigour_score is 0',
+    note: 'F-04 regression guard: ACT 34 with A_LEVEL-shaped subjects — rigour_score was 0, now 13',
     profile: makePayload(
       {
         programme_type: 'ACT',
@@ -1002,16 +1010,17 @@ describe('golden — A-level grade signatures (task A)', () => {
       serializeTable(
         {
           _readme: REGEN_NOTE,
-          _source: 'scoreStudentProfile → (private) calculateALevelProfileScore, src/lib/scoring/student_scoring.ts:480',
+          _source: 'scoreStudentProfile → (private) calculateALevelProfileScore, src/lib/scoring/student_scoring.ts',
           _method:
             'Payloads vary ONLY in academic_input.a_level_predicted_grades. On the isolated rows every other component is pinned to 0, so isolated_total_score === academic_performance. Contextual rows add a constant non-academic envelope (law cluster, ungraded A-level subjects, english_required=false, activities capped at 20) so student_band is reachable.',
           _known_bugs: [
-            'F-01: 30 of the 56 signatures are absent from the lookup table and return the catch-all 8, producing strict-dominance inversions (see a-level-monotonicity.golden.json).'
+            'F-01 is FIXED. A_LEVEL_SIGNATURE_SCORE is now a complete table over all 84 signatures (U is a grade, so the domain is 84, not the 56 the first attempt assumed). Nothing here falls to a catch-all: the two rows scoring 8, CEE and DDE, are calibrated entries. a-level-monotonicity.golden.json records violation_count 0 over all 2,436 dominance-comparable pairs.',
+            'Ties remain, and are permitted: the scale is compressed at the bottom, where EEE, DEE and UUU all sit at 5. Only a strictly better profile scoring strictly worse is a defect.'
           ],
           _columns: [
             'signature',
             'grades',
-            'rank_vector (A*=6 … E=1, sorted strongest-first)',
+            'rank_vector (mapAlevelGradeToRank: A*=7, A=6, B=5, C=4, D=3, E=2, U=1; sorted strongest-first)',
             'academic_performance',
             'isolated_total_score',
             'isolated_band',
@@ -1088,12 +1097,12 @@ describe('golden — IB (task B)', () => {
       serializeTable(
         {
           _readme: REGEN_NOTE,
-          _source: 'calculateIbTotalScore, src/lib/scoring/student_scoring.ts:435',
+          _source: 'calculateIbTotalScore, src/lib/scoring/student_scoring.ts',
           _method:
             'effective_total = (ib_total_points ?? 0) + (ib_core_points ?? 0) — the /42 subject sum plus /3 core, per the wizard contract. Sweeps subject sums 20–42 × core 0–3 plus null/zero edges and two out-of-contract /45-scale rows. Contextual rows add a constant envelope (life_sciences cluster, three HL 6s, english_required=false, activities capped) so student_band is reachable.',
           _known_bugs: [
-            'F-13: nothing enforces the /42 contract. The two ib_total_points=45 rows show the double-count — 45+3 is treated as 48 and clamps to the top band.',
-            'calculateIbTotalScore uses `if (!totalPoints) return 0`, so an effective total of 0 is indistinguishable from null.'
+            'STILL OPEN — F-13: nothing enforces the /42 contract. The two ib_total_points=45 rows show the double-count — 45+3 is treated as 48 and clamps to the top band.',
+            'STILL OPEN: calculateIbTotalScore uses `if (!totalPoints) return 0`, so an effective total of 0 is indistinguishable from null.'
           ],
           row_count: rows.length
         },
@@ -1111,7 +1120,7 @@ describe('golden — IB (task B)', () => {
       serializeTable(
         {
           _readme: REGEN_NOTE,
-          _source: 'calculateIbHlStrength, src/lib/scoring/student_scoring.ts:542',
+          _source: 'calculateIbHlStrength, src/lib/scoring/student_scoring.ts',
           _method:
             'All 84 three-HL-subject grade multisets over 7…1, then HL-count variants (0, 1, 2 and 4 HLs) to exercise the top-3 slice. Subject NAMES are held constant so rigour_score does not move with the grades. ib_total_points is null throughout, so academic_performance is 0 and total_score = ib_hl_strength + rigour_score, each rounded separately (audit F-09).',
           row_count: rows.length
@@ -1129,7 +1138,7 @@ describe('golden — IB (task B)', () => {
       serializeTable(
         {
           _readme: REGEN_NOTE,
-          _source: 'calculateEeRelevance, src/lib/scoring/student_scoring.ts:564',
+          _source: 'calculateEeRelevance, src/lib/scoring/student_scoring.ts',
           _method:
             'Keyword match over ee_subject + ee_title + ee_summary against EE_RELEVANCE_RULES[clusters[0]]: direct 10, related 5, else 0. Substring matching is naive — "Visual Arts" matches the "art" keyword.',
           row_count: rows.length
@@ -1149,12 +1158,12 @@ describe('golden — ACT (task B)', () => {
       serializeTable(
         {
           _readme: REGEN_NOTE,
-          _source: 'calculateActScore, src/lib/scoring/student_scoring.ts:467',
+          _source: 'calculateActScore, src/lib/scoring/student_scoring.ts',
           _method:
             'Composite swept null and 0–36, read from lifestyle_preference.act_score. Every row carries the three A_LEVEL-shaped subjects the intake form actually emits for an ACT student.',
           _known_bugs: [
-            'F-04: rigour_score is 0 in EVERY row. calculateRigourScore filters ACT students on `level === "AP"`, and no code path in the app produces AP — StudentIntakeForm only ever emits A_LEVEL. Up to 15 of 200 points are unreachable for every ACT student. Captured, not corrected.',
-            'calculateActScore uses `if (!actScore) return 0`, so composite 0 is indistinguishable from null.'
+            'F-04 is FIXED. rigour_score is 13 in every row, not 0. calculateRigourScore used to filter ACT students on `level === "AP"` while StudentIntakeForm only ever emits A_LEVEL, so the filter matched nothing and up to 15 of 200 points were unreachable for every ACT student; it now accepts both levels, which also heals the rows already in the database.',
+            'STILL OPEN: calculateActScore uses `if (!actScore) return 0`, so composite 0 is indistinguishable from null — the act_composite:null and act_composite:0 rows are identical.'
           ],
           row_count: rows.length
         },
@@ -1186,10 +1195,10 @@ describe('golden — ACT (task B)', () => {
       serializeTable(
         {
           _readme: REGEN_NOTE,
-          _source: 'calculateRigourScore, src/lib/scoring/student_scoring.ts:384-392',
+          _source: 'calculateRigourScore, src/lib/scoring/student_scoring.ts',
           _method:
-            'One ACT student (composite 32) scored four times with the same three subjects at different `level` values. Only the AP row reaches RigourTable.ACT.',
-          _known_bugs: ['F-04: the A_LEVEL row is what every real ACT student gets; the AP row is unreachable dead configuration.'],
+            'One ACT student (composite 32) scored four times with the same three subjects at different `level` values. Both A_LEVEL and AP now reach RigourTable.ACT; HL does not, and is recorded to show that.',
+          _known_bugs: ['F-04 is FIXED, and this table is its regression test: the A_LEVEL row (what every real ACT student gets) and the AP row (what RigourTable.ACT was written for) both score 13. They used to read 0 and 13. If they diverge again, every real ACT student silently loses about a band.'],
           row_count: rows.length
         },
         'rows',
@@ -1212,14 +1221,14 @@ describe('golden — end-to-end student profiles (task C)', () => {
       'student-profiles.golden.json',
       serializeTree({
         _readme: REGEN_NOTE,
-        _source: 'scoreStudentProfile, src/lib/scoring/student_scoring.ts:700',
+        _source: 'scoreStudentProfile, src/lib/scoring/student_scoring.ts',
         _method:
           'Full StudentScoreResult per profile — total_score, student_band, every breakdown component, the activities sub-breakdown, and both flag arrays. Profiles 01–04 are reused verbatim from __tests__/scoring_validation/phase1_profiles.ts. Object keys are sorted recursively; flag arrays keep their production order because that order is itself behaviour.',
         _known_bugs: [
-          'F-01: profiles 11 and 12 (A*A*D and AAD) score academic_performance 8 — the catch-all — despite being strong profiles.',
-          'F-04: profile 13 (ACT 34) has rigour_score 0.',
-          'F-09: breakdown components are each rounded separately and need not sum to total_score.',
-          'F-10: tests_and_english takes Math.max over LNAT/UCAT/English rather than summing, so English evidence is invisible whenever an admissions test scores higher.'
+          'F-01 is FIXED. Profiles 11 and 12 (A*A*D and AAD) now score academic_performance 67 and 46; they scored the catch-all 8 before, below signatures they strictly dominate.',
+          'F-04 is FIXED. Profile 13 (ACT 34) now has rigour_score 13; it was 0.',
+          'STILL OPEN — F-09: breakdown components are each rounded separately and need not sum to total_score.',
+          'STILL OPEN — F-10: tests_and_english takes Math.max over LNAT/UCAT/English rather than summing, so English evidence is invisible whenever an admissions test scores higher.'
         ],
         profile_count: records.length,
         profiles: records

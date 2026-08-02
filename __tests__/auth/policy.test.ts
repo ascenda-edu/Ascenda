@@ -14,7 +14,11 @@ jest.mock('@/lib/supabase/server', () => ({
   createServerSupabaseClient: (...args: never[]) => createServerSupabaseClient(...args)
 }));
 
-import { canActAsCounsellor } from '@/lib/api/guards';
+import {
+  canActAsCounsellor,
+  filterActionableStudentIds,
+  isActionableStudent
+} from '@/lib/api/guards';
 import type { Identity } from '@/lib/auth/identity';
 import {
   actionForPath,
@@ -99,6 +103,120 @@ describe('agreement with src/lib/api/guards.ts', () => {
     // deliberately not added to profileTable -> guards.ts sees `data: null`
     expect(await canActAsCounsellor(stubSupabase() as never, asUser(id))).toBe(false);
     expect(actsAsCounsellor(id)).toBe(false);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The SUBJECT half of counsellor authorisation, singular and bulk.
+ *
+ * `isActionableStudent`'s fail-closed branch was already pinned (by
+ * `can()`'s "refuses an unknown subject id" above). `filterActionableStudentIds`
+ * — the bulk twin — was not: a reviewer flipped `if (error || !data) return []`
+ * to `return unique`, authorising every id in the request body on a `profiles`
+ * read error, and all 1,541 tests stayed green.
+ *
+ * That asymmetry is backwards from the risk. The code comment on the bulk
+ * function says why: "one request that names N students writes N rows and, where
+ * a notification trigger is attached, fires N notifications into N different
+ * people's feeds." The comment is the claim; this block is the enforcement.
+ *
+ * The two are asserted TOGETHER, case for case, so they cannot drift into
+ * disagreeing about what an unknown id or an unreadable table means.
+ */
+describe('the subject guard, singular and bulk, agree and fail closed', () => {
+  const READ_ERROR = { message: 'permission denied for table profiles', code: '42501' };
+
+  /**
+   * A profiles stub supporting the singular `.eq().maybeSingle()` and the bulk
+   * `.in()`.
+   *
+   * `failOn` is per-method on purpose. The bulk function calls
+   * `canActAsCounsellor` FIRST, which itself reads `profiles` through `.eq()` —
+   * so breaking both reads would deny at the caller check and never reach the
+   * subject branch under test. Failing only `.in()` puts a verified counsellor in
+   * front of an unreadable subject list, which is the case that matters.
+   */
+  const subjectStub = (failOn: 'none' | 'eq' | 'in' = 'none') => ({
+    from: (table: string) => {
+      expect(table).toBe('profiles');
+      const rowsFor = (ids: string[]) =>
+        ids.filter((id) => profileTable.has(id)).map((id) => ({ id, role: profileTable.get(id) }));
+      return {
+        select: () => ({
+          eq: (_column: string, id: string) => ({
+            maybeSingle: async () =>
+              failOn === 'eq'
+                ? { data: null, error: READ_ERROR }
+                : { data: rowsFor([id])[0] ?? null, error: null }
+          }),
+          in: async (_column: string, ids: string[]) =>
+            failOn === 'in' ? { data: null, error: READ_ERROR } : { data: rowsFor(ids), error: null }
+        })
+      };
+    }
+  });
+
+  const counsellor = asUser(identity({ userId: 'c-1', role: 'counsellor' }));
+
+  beforeEach(() => {
+    profileTable.set('c-1', 'counsellor');
+    profileTable.set('stu-1', 'student');
+    profileTable.set('stu-2', 'student');
+    profileTable.set('c-2', 'counsellor');
+  });
+
+  it('admits real students and refuses non-students and unknown ids — both forms', async () => {
+    const client = subjectStub() as never;
+
+    expect(await isActionableStudent(client, 'stu-1')).toBe(true);
+    expect(await isActionableStudent(client, 'c-2')).toBe(false);
+    expect(await isActionableStudent(client, 'ghost')).toBe(false);
+
+    expect(await filterActionableStudentIds(client, counsellor, ['stu-1', 'c-2', 'ghost'])).toEqual([
+      'stu-1'
+    ]);
+  });
+
+  it('returns only the allowed subset — an out-of-scope id is dropped, not carried', async () => {
+    // The shape the decks/assign route depends on: two ids in, one authorised.
+    expect(
+      await filterActionableStudentIds(subjectStub() as never, counsellor, ['stu-1', 'c-2'])
+    ).toEqual(['stu-1']);
+  });
+
+  it('FAILS CLOSED on a subject read error — singular AND bulk', async () => {
+    // Singular: an unverifiable subject is not a subject you may write against.
+    expect(await isActionableStudent(subjectStub('eq') as never, 'stu-1')).toBe(false);
+
+    // Bulk, with the caller's own counsellor check succeeding: acting on NONE of
+    // them, not all of them. `return unique` here is the mutation that survived
+    // the whole suite, and it authorises every id in the request body.
+    const brokenBulk = subjectStub('in') as never;
+    expect(await filterActionableStudentIds(brokenBulk, counsellor, ['stu-1', 'stu-2'])).toEqual([]);
+    // Explicitly NOT null — null means "not a counsellor" (403) and would let an
+    // operator misread an outage as an authorisation failure.
+    expect(await filterActionableStudentIds(brokenBulk, counsellor, ['stu-1'])).not.toBeNull();
+  });
+
+  it('fails closed on the CALLER check too — an unreadable counsellor row is a 403, not a pass', async () => {
+    expect(await filterActionableStudentIds(subjectStub('eq') as never, counsellor, ['stu-1'])).toBeNull();
+  });
+
+  it('distinguishes "not a counsellor" (null) from "no valid subjects" (empty)', async () => {
+    profileTable.set('s-1', 'student');
+    const student = asUser(identity({ userId: 's-1', role: 'student' }));
+
+    expect(await filterActionableStudentIds(subjectStub() as never, student, ['stu-1'])).toBeNull();
+    expect(await filterActionableStudentIds(subjectStub() as never, counsellor, ['c-2'])).toEqual([]);
+    expect(await filterActionableStudentIds(subjectStub() as never, counsellor, [])).toEqual([]);
+  });
+
+  it('deduplicates without widening — a repeated id is authorised once', async () => {
+    expect(
+      await filterActionableStudentIds(subjectStub() as never, counsellor, ['stu-1', 'stu-1', 'c-2'])
+    ).toEqual(['stu-1']);
   });
 });
 

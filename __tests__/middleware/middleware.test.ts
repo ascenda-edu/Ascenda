@@ -38,6 +38,9 @@
  * weakness AND says so, so nobody mistakes it for authentication.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { NextRequest } from 'next/server';
 
 /* ── the Supabase double ─────────────────────────────────────────────────────
@@ -284,9 +287,10 @@ describe('/api/* fails closed', () => {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 describe('an anonymous visitor on a protected page', () => {
-  // Every prefix the file lists. Adding one to PROTECTED_PREFIXES without a
-  // matching entry here is fine; REMOVING one fails loudly, which is the
-  // direction that matters.
+  // The behavioural expectation, written out by hand. Adding a prefix to
+  // PROTECTED_PREFIXES without a matching entry here is fine; REMOVING one fails
+  // loudly, which is the direction that matters. The three-way agreement test at
+  // the bottom of this block cross-checks it against the real constant.
   const PROTECTED = [
     '/dashboard',
     '/profile',
@@ -333,13 +337,34 @@ describe('an anonymous visitor on a protected page', () => {
   });
 
   it('every prefix in the matcher is also in PROTECTED_PREFIXES', () => {
-    // The matcher decides what runs; PROTECTED_PREFIXES decides what is
-    // guarded. A prefix in the first but not the second executes middleware and
-    // is then waved through — the shape of a silently-public route.
-    const matcherGroup = (config.matcher as string[]).find((entry) => entry.includes('|'))!;
-    const fromMatcher = matcherGroup.slice(matcherGroup.indexOf('(') + 1, matcherGroup.indexOf(')')).split('|');
+    // The matcher decides what RUNS; PROTECTED_PREFIXES decides what is GUARDED.
+    // A prefix in the first but not the second executes middleware and is then
+    // waved through — the shape of a silently-public route.
+    //
+    // This used to compare the matcher against `PROTECTED` — the hand-written
+    // copy above — which is not the constant the shipped code branches on. Both
+    // lists could be edited together and the real one left behind, and the test
+    // would still be green. `PROTECTED_PREFIXES` is module-private (exporting it
+    // is a change to `src/middleware.ts`, which this branch does not own), so
+    // the real value is read off the source text instead.
+    const source = readFileSync(join(__dirname, '../../src/middleware.ts'), 'utf8');
+    const literal = source.match(/const PROTECTED_PREFIXES = \[([\s\S]*?)\];/);
+    // Self-check: a scan that silently finds nothing is the failure mode that
+    // makes source-reading tests vacuous.
+    expect(literal).not.toBeNull();
+    const realPrefixes = [...literal![1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
+    expect(realPrefixes.length).toBeGreaterThan(10);
 
-    expect(fromMatcher.map((segment) => `/${segment}`).sort()).toEqual([...PROTECTED].sort());
+    const matcherGroup = (config.matcher as string[]).find((entry) => entry.includes('|'))!;
+    const fromMatcher = matcherGroup
+      .slice(matcherGroup.indexOf('(') + 1, matcherGroup.indexOf(')'))
+      .split('|')
+      .map((segment) => `/${segment}`);
+
+    // Three-way agreement: matcher == the real constant == what this file
+    // asserts the behaviour to be. Any two drifting apart fails here.
+    expect([...fromMatcher].sort()).toEqual([...realPrefixes].sort());
+    expect([...realPrefixes].sort()).toEqual([...PROTECTED].sort());
   });
 });
 

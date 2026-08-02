@@ -94,12 +94,21 @@ const validBody = {
  *   .from('guardian_links').select(_, {head}).eq(...).eq(...) -> { count }
  * `count` is how many ACTIVE links the caller has; 0 means "not a parent".
  */
+const guardianLinkFilters: Array<[string, unknown]> = [];
 const guardianLinkCount = (count: number) =>
   jest.fn(() => ({
     select: jest.fn(() => ({
-      eq: jest.fn(() => ({
-        eq: jest.fn(() => Promise.resolve({ count, error: null })),
-      })),
+      // Recorded, not discarded: WHICH parent's links are counted is the whole
+      // question parent mode turns on.
+      eq: jest.fn((column: string, value: unknown) => {
+        guardianLinkFilters.push([column, value]);
+        return {
+          eq: jest.fn((c2: string, v2: unknown) => {
+            guardianLinkFilters.push([c2, v2]);
+            return Promise.resolve({ count, error: null });
+          }),
+        };
+      }),
     })),
   }));
 
