@@ -26,7 +26,21 @@ import {
 import { DataError } from '@/lib/data/errors';
 import { resetLogSink, setLogSink, type LogEntry } from '@/lib/observability/logger';
 
-type Call = { table: string; select: string };
+/**
+ * `filters` is the security-critical field, and it was missing.
+ *
+ * This type used to be `{ table, select }` — so the suite asserted WHICH TABLE
+ * and WHICH COLUMNS every loader reads, and never WHOSE DATA. A reviewer proved
+ * the consequence by deleting `.eq('profile_id', profileId)` from all five
+ * loaders — a cross-tenant read of every student's applications — and all 1,069
+ * tests stayed green. There was nowhere in the recorder to put a filter, and
+ * `profile_id` appeared nowhere in this directory.
+ *
+ * A test that pins the column list but not the scope defends the cosmetic half
+ * of a data-access layer.
+ */
+type Filter = [method: 'eq' | 'in', column: string, value: unknown];
+type Call = { table: string; select: string; filters: Filter[] };
 
 const fakeClient = (result: { data: unknown; error: unknown }, calls: Call[]) => {
   const query = {
@@ -34,15 +48,21 @@ const fakeClient = (result: { data: unknown; error: unknown }, calls: Call[]) =>
       calls[calls.length - 1].select = select;
       return query;
     },
-    eq: () => query,
-    in: () => query,
+    eq: (column: string, value: unknown) => {
+      calls[calls.length - 1].filters.push(['eq', column, value]);
+      return query;
+    },
+    in: (column: string, value: unknown) => {
+      calls[calls.length - 1].filters.push(['in', column, value]);
+      return query;
+    },
     order: () => query,
     then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve(result).then(resolve, reject),
   };
   return {
     from(table: string) {
-      calls.push({ table, select: '' });
+      calls.push({ table, select: '', filters: [] });
       return query;
     },
   } as unknown as SupabaseClient<Database>;
@@ -68,19 +88,53 @@ describe('the loaders send the shared column constants', () => {
       fakeClient({ data: [], error: null }, calls),
       'profile-1'
     );
-    expect(calls).toEqual([{ table, select: expected }]);
+    expect(calls).toEqual([{ table, select: expected, filters: [['eq', 'profile_id', 'profile-1']] }]);
   });
 
   it('documents', async () => {
     const calls: Call[] = [];
     await loadDocumentsForApplications(fakeClient({ data: [], error: null }, calls), ['app-1']);
-    expect(calls).toEqual([{ table: 'documents', select: DOCUMENT_SELECT }]);
+    expect(calls).toEqual([
+      { table: 'documents', select: DOCUMENT_SELECT, filters: [['in', 'application_id', ['app-1']]] }
+    ]);
   });
 
   it('tier lookup', async () => {
     const calls: Call[] = [];
     await loadTierByProgram(fakeClient({ data: [], error: null }, calls), 'profile-1', ['prog-1']);
-    expect(calls).toEqual([{ table: 'student_matches', select: MATCH_TIER_SELECT }]);
+    expect(calls).toEqual([
+      {
+        table: 'student_matches',
+        select: MATCH_TIER_SELECT,
+        filters: [['eq', 'profile_id', 'profile-1'], ['in', 'program_id', ['prog-1']]]
+      }
+    ]);
+  });
+});
+
+describe('every loader scopes to the caller', () => {
+  // Stated as its own property rather than left implicit in the shape
+  // assertions above, because THIS is the one that fails if someone drops an
+  // `.eq()` while refactoring. Asserted per loader so the failure names which.
+  it.each([
+    ['board', loadApplicationBoard],
+    ['tasks', loadApplicationsWithTasks],
+    ['labels', loadApplicationLabels]
+  ])('%s filters on the caller profile_id', async (_name, load) => {
+    const calls: Call[] = [];
+    await (load as (c: SupabaseClient<Database>, id: string) => Promise<unknown>)(
+      fakeClient({ data: [], error: null }, calls),
+      'owner-under-test'
+    );
+    expect(calls).toHaveLength(1);
+    expect(calls[0].filters).toContainEqual(['eq', 'profile_id', 'owner-under-test']);
+  });
+
+  it('the tier lookup scopes to the caller AND the requested programmes', async () => {
+    const calls: Call[] = [];
+    await loadTierByProgram(fakeClient({ data: [], error: null }, calls), 'owner-under-test', ['p-1', 'p-2']);
+    expect(calls[0].filters).toContainEqual(['eq', 'profile_id', 'owner-under-test']);
+    expect(calls[0].filters).toContainEqual(['in', 'program_id', ['p-1', 'p-2']]);
   });
 });
 

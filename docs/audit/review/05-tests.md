@@ -4,7 +4,9 @@
 
 **Question asked.** The register (`docs/audit/13-remaining-work.md:14-15`) claims 265 → **1,069 tests** and 13.1% → **~25%+ coverage**, and those numbers are being used to argue the refactor is safe. How much of that is real?
 
-**Method.** Read the suites; re-measured coverage; ran a **28-mutation experiment** in a scratch copy of the repo (`/private/tmp/.../scratchpad/repo`) — **no tracked file was modified, nothing was committed, no production DB was contacted**; audited golden-file provenance across the 11 commits; ran the full suite four times to test determinism, plus a three-timezone experiment; checked every skip; and read the CI wiring to see which of these tests actually gate anything.
+**Method.** Read the suites; re-measured coverage; ran a mutation experiment — **20 distinct production-code mutations**, each a single realistic edit, plus timezone and control arms, totalling ~30 full-suite executions — in a scratch copy of the repo (`/private/tmp/.../scratchpad/repo`). **No tracked file was modified, nothing was committed, no production database was contacted.** Also: audited golden-file provenance across the 11 commits; ran the full suite four times for determinism plus a 12-run isolation study of the one suite that flaked; checked every skip; and read the CI wiring to see which of these tests actually gate anything.
+
+Raw output for every run is in Appendix A, so each claim below is reproducible.
 
 ---
 
@@ -19,7 +21,9 @@
 3. **The two production fixes with the largest blast radius have zero coverage.** `src/middleware.ts` (0%, 236 lines) and `src/lib/profile/persist-intake.ts` (0%, 220 lines — the Phase 2 "could destroy a student's data" fix). Both were changed on this branch.
 4. **773 lines of RLS/authz tests under `__tests__/db/` have never run and nothing can run them.** Not in CI, not in `package.json`, not in any script. Honest headers, wrong location.
 
-**Numbers I'd stand behind:** of 1,069 tests, roughly **60–75 are vacuous or non-discriminating** (~6%), concentrated in six files, plus **~30 more that are real but inert in CI** because of the timezone issue. The problem is not fake tests. It is a **coverage shape** in which the number rises while the highest-severity failure modes — scoping, middleware authz, persistence, timezone — stay outside the tested surface.
+**Numbers I'd stand behind:** of 1,069 tests, roughly **60–75 are vacuous or non-discriminating** (~6%), concentrated in six files, plus **6 more that are real but inert in CI** because of the timezone issue (§9), plus **773 lines of SQL that are not tests at all** because nothing runs them (§8). The problem is not fake tests — **15 of 20 injected bugs were caught**, several by a dozen tests at once. It is a **coverage shape** in which the number rises while the highest-severity failure modes — query scoping, middleware authz, persistence, timezone — stay outside the tested surface.
+
+**How much of the 1,069 is real safety?** Most of it, for the domain logic it covers: scoring, tiering, the counsellor cohort pipeline, search-result paging, error dispositions and the profile intake round trip are genuinely defended, and I could not break them without something going red. What it does **not** buy is the thing the branch is named for. `security/phase0-contain` closed authz holes; the test suite added alongside cannot detect their reopening. Four of the four surviving mutations are authz-, scoping- or persistence-shaped.
 
 ---
 
@@ -184,13 +188,71 @@ Seven hand-rolled doubles. **Their fidelity varies enormously, and the variance 
 
 Each mutation is a single realistic edit applied to a scratch copy of the repo, the **full 1,069-test suite** run, then reverted. `[NEG]` marks a mutation I expected to survive.
 
-### 4.1 Results
+**20 distinct mutations: 15 caught, 4 survived, 1 caught only by accident.**
 
-<!--MUTATION_TABLE-->
+### 4.1 Caught — the tests discriminate
 
-### 4.2 What the results mean
+| # | Mutation (file → edit) | Failures |
+|---|---|---|
+| M1 | `rec-letter-workflow.tsx`: `parseLocalDate(iso)` → `new Date(iso)` — revert the date-only fix | **2** tests, 1 suite |
+| M3 / M15 | `match-tier.ts`: `safe: 80` → `70` — revert to the drifted threshold | **2** tests, 1 suite |
+| M4 | `completion.ts`: drop `english_status` from `COMPLETION_COLUMNS` — the exact shipped bug | **1** test (`cohort-loader.test.ts:454`) |
+| M6 | `student_scoring.ts`: A-level `AAD: 46 → 8` — reintroduce an F-01 dominance inversion | **4** tests, 1 suite |
+| M8 | `use-search-results.ts`: delete `if (signal.aborted) return` from the `catch` | **1** test, 1 suite |
+| M9 | `errors.ts`: leak the raw driver message into the user-facing `DataError` | **4** tests, **2** suites |
+| M10 | `matching/service.ts`: swallow a totally-failed `course_scoring_v1` batch instead of throwing (F-03b) | **2** tests, 1 suite |
+| M11 | `identity.ts`: `parseRole(data?.role)` → `(data?.role as Role) ?? 'student'` — fail-open role parsing | **2** tests, 1 suite |
+| M12 | `policy.ts`: `if (!resource) return false` → `return granted.has(action)` (F2/F3/F6) | **1** test, 1 suite |
+| M14 | `dialog.tsx`: remove the focus-restore-to-opener block | **13** tests, **6** suites |
+| T1 | `select.tsx`: delete `if (next === '') return` — **revert the F-A Radix hydration fix** | **5** tests, 1 suite |
+| T2 | `intake-logic.ts`: nationality `join(', ')` → `join(',')` | **4** tests, **2** suites |
+| T3 | `intake-options.ts`: IB HL cap `3` → `4` | **3** tests, **3** suites |
+| T4 | `intake-logic.ts`: drop `.trim()` from the nationality split | **1** test — *predicted to survive; it did not* |
+| T6 | `dates.ts`: gut `parseLocalDate` to `new Date(value)` — **under a non-UTC zone** | **8** tests, 5 suites (LA) / 3 suites (Tokyo) |
 
-<!--MUTATION_ANALYSIS-->
+Three of these deserve comment.
+
+**M2 — the timezone fixture verifies itself.** Repointing `jest.environment-tz-west.js` from `America/Los_Angeles` to `UTC` makes the *guard* test (`'runs west of Greenwich, so the assertions below cannot pass vacuously'`) fail — while the two real assertions **pass**, confirming the author's claim that in UTC they would be vacuous. Pinned back to LA, reverting the production fix (M1) fails them. The environment is load-bearing *and* self-checking. This is the best-constructed test artefact in the branch.
+
+**M14 — the UI suite earns its keep despite §2.6.** Removing two lines from `dialog.tsx` fails 13 tests across `dialog`, `command-palette`, `help-thread-drawer`, `analytics-drilldown`, `universities-deck-dialogs` and `assistant-mobile-rail`. Most individual assertions in those files test Radix; the *focus-restore* assertions test this repo, and they are load-bearing across six call sites.
+
+**T1 settles the F-A provenance question.** The characterization suite and the `select.tsx` fix ship in the same commit (`da1f438`), so there is no commit where the tests exist against unfixed code, and the claim "each new test was verified to discriminate by reverting the fix" was unverifiable from history. It is now verified: reverting the fix fails **5** tests, and the two tests the file explicitly labels `CONTROL:` stay green — exactly as designed.
+
+**M4 corrected my prediction.** I expected `cohort-loader.test.ts:453` to be a tautology (it is — both sides interpolate the same constant), but line **454** backstops it with a literal `toContain('english_status')`, and that is what fires.
+
+### 4.2 Survived — these are the dangerous ones
+
+| # | Mutation | Result | What it means |
+|---|---|---|---|
+| **M7** | `applications.ts`: delete `.eq('profile_id', profileId)` from **all five** loaders | **1069 / 1069 pass** | A cross-tenant read — any student's board, tasks, labels, summaries and documents returned for any caller — is invisible to the entire suite |
+| **M13** | `identity.ts`: `.eq('id', user.id)` → `.eq('role', user.id)` | **1069 / 1069 pass** | The *exact* find-and-replace bug class that already shipped in this repo (`'counsellor.student'`), on the module that resolves who the user is |
+| **M5** | `persist-intake.ts`: neuter the failure rollback | **1069 / 1069 pass** | The Phase 2 "could destroy a student's data" fix is entirely unverified |
+| **T5** | `middleware.ts`: `needsOnboarding = false` — never redirect an incomplete profile | **1069 / 1069 pass** | 236 lines of routing and authz logic at 0% coverage |
+
+M7 and M13 share one root cause: **the doubles discard filter arguments** (§3). Both are ~20-line fixes, and the correct pattern already exists two directories away (`__tests__/counsellor/decks.test.ts:373`, `__tests__/counsellor/cohort-loader.test.ts:443`).
+
+### 4.3 Caught, but only by accident
+
+| # | Mutation | Result |
+|---|---|---|
+| M16 | `identity.ts`: replace React `cache()` with a **global** module-level memo (a cross-request identity leak: user A's identity served to user B on the same warm server) | `__tests__/auth/identity-cache.test.ts` — **the file that exists to guard this property — PASSED.** `__tests__/auth/identity.test.ts` failed 13 tests as collateral, because a module-level memo poisons its shared module instance |
+
+`identity-cache.test.ts` is honest in its header about mocking React's `cache` (correctly: the real one is a passthrough outside a request scope, so a test against it would pass either way). What the header does not say is that its memoise-forever stand-in has **no scope semantics**, so the suite cannot distinguish `cache()` from a global memo. Its strongest-named test — `'a fresh request re-resolves — the memo is per request, not global'` — simulates a new request with `jest.resetModules()`, which also resets a module-level memo. That test asserts a property of `jest.resetModules()`.
+
+It is a valid "the wrapper is still there" regression guard. It is not evidence of per-request scoping, and it reads like it is.
+
+### 4.4 The timezone result in full
+
+Gutting `parseLocalDate` to `new Date(value)` and running the same mutated tree under three zones:
+
+| Zone | Failures | |
+|---|---|---|
+| **`TZ=UTC`** — what `ubuntu-latest` runs | **2 tests, 1 suite** | both in `__tests__/matching/date-only-render.test.tsx`, the *only* file pinned to `jest.environment-tz-west.js` |
+| `TZ=America/Los_Angeles` | 8 tests, 5 suites | `chat/context`, `chat/student-read-tools`, `checklist/due-label`, `counsellor/derivations`, `matching/date-only-render` |
+| `TZ=Asia/Tokyo` | 8 tests, 3 suites | `counsellor/cohort-loader`, `counsellor/derivations`, `matching/date-only-render` |
+| **Control** — unmutated tree, all three zones | **0** | the suite is genuinely timezone-robust, so the failures above are real detections |
+
+**In CI, one file stands between this bug class and production.** Six further tests across four suites would catch it on a developer's machine and are silent on the runner. See §9.
 
 ---
 
@@ -286,13 +348,21 @@ Under `TZ=UTC` these are the same instant. So **any test that would catch the re
 The branch built exactly the right tool for this — `jest.environment-tz-west.js`, which pins `America/Los_Angeles` in the worker's real context (the header correctly explains why `process.env.TZ = …` inside a test file does nothing). **It is used by exactly one file.**
 
 ```
-test files touching date logic:   19
-test files using tz-west:          1   (__tests__/matching/date-only-render.test.tsx)
+test files referencing the date helpers or date-only columns:  19
+test files pinned to a non-UTC zone:                            1
+                                        (__tests__/matching/date-only-render.test.tsx)
 ```
 
 That one file is excellent — see M1/M2 below. Everything else that claims to guard the date-only bug class — `__tests__/counsellor/derivations.test.ts:189, 227-261`, `__tests__/counsellor/cohort-loader.test.ts:584-592`, `__tests__/checklist/due-label.test.ts`, `__tests__/ui/analytics-drilldown.test.tsx` and the rest — runs in the ambient zone, which in CI is UTC, where the assertions cannot discriminate.
 
-<!--TZ_RESULT-->
+**Verified by experiment (§4.4).** Gutting `parseLocalDate` and running the same tree under three timezones:
+
+- **`TZ=UTC` (CI): 2 failures**, both inside `date-only-render.test.tsx` — the one file using the fixture.
+- `TZ=America/Los_Angeles`: **8** failures across 5 suites.
+- `TZ=Asia/Tokyo`: **8** failures across 3 suites.
+- Unmutated control under all three zones: **0** failures, so the suite is timezone-robust and the extra failures are genuine detections, not ambient noise.
+
+So six tests across four suites (`chat/context`, `chat/student-read-tools`, `checklist/due-label`, `counsellor/derivations`, `counsellor/cohort-loader`) **do** guard the date-only bug class on a developer's machine and are **silent in CI**. They are not vacuous tests — they are real tests that CI's timezone makes inert. That is arguably worse, because they read as coverage on the exact bug this project keeps re-shipping, and they are the reason `parseLocalDate` regressions would reach production through a green pipeline.
 
 This is the single highest-leverage fix in the review: adding `/** @jest-environment ./jest.environment-tz-west.js */` to the date-sensitive suites costs one line each and converts ~30 currently-inert tests into real guards.
 
@@ -300,7 +370,23 @@ This is the single highest-leverage fix in the review: adding `/** @jest-environ
 
 ## 10. Determinism
 
-<!--DETERMINISM_RESULT-->
+Four full-suite runs, then a 12-run isolation study of the one suite that failed.
+
+| Run | Mode | Result |
+|---|---|---|
+| 1 | `--runInBand` | 1069 / 1069 pass — 99.9 s |
+| 2 | `--runInBand` | **1 failed**, 1068 passed — `__tests__/hooks/use-search-results.test.ts` — 110.3 s |
+| 3 | `--runInBand` | 1069 / 1069 pass — 108.0 s |
+| 4 | default (parallel) | 1069 / 1069 pass — 85.6 s |
+| 5–16 | `use-search-results.test.ts` alone, ×12, idle machine | **48 / 48 pass, twelve times out of twelve** |
+
+**Diagnosis: a load-sensitivity flake, not an ordering dependency.** Run 2 happened while the machine was at load ~20 (the mutation matrix was running concurrently); the isolation study at load ~5 could not reproduce it in 12 attempts. The mechanism is visible in the source: `use-search-results.test.ts` makes **22 `waitFor(...)` calls with no explicit timeout**, so all use React Testing Library's 1000 ms default, and `src/hooks/use-search-results.ts` uses no timers of its own — so the only thing bounding those waits is how fast the event loop gets scheduled. Under CPU starvation a 1 s budget is marginal.
+
+**No ordering dependency, no in-band-only test, no parallel-only test.** The parallel run was both green and *faster* (85.6 s vs ~106 s), so `--runInBand` is not masking cross-file state leakage — it is only there for the Node ≥22 webstorage clash documented in `jest.environment-node.js`.
+
+**It is still a real CI risk.** `.github/workflows/ci.yml:125` runs `npm test -- --runInBand` on a 2-core GitHub runner — the most starved environment this suite will ever see — and the Jest job has **no retry** (`retries: 1` is configured for Playwright only). A one-in-four flake rate under load, on a required check, is how teams learn to re-run red builds without reading them. Raising the `waitFor` timeout for that file (or setting `asyncUtilTimeout` globally) costs one line.
+
+Separately: **the golden suite is genuinely deterministic** — its header claims "no clock, no RNG, no I/O", and the byte-exact comparisons passed identically across all seven full runs I did (4 determinism + 3 timezone controls).
 
 ---
 
@@ -325,4 +411,217 @@ Ranked by confidence bought back per unit of effort:
 
 ## Appendix A — mutation matrix, raw output
 
-<!--RAW_MUTATIONS-->
+```text
+════════════════════════════════════════════
+MUTATION: M4 [NEG CTRL] completion.ts: drop english_status from COMPLETION_COLUMNS (the exact shipped middleware bug)
+  file: src/lib/profile/completion.ts
+  applied to 1 of 1 site(s)
+FAIL __tests__/counsellor/cohort-loader.test.ts (10.72 s)
+Test Suites: 1 failed, 62 passed, 63 total
+Tests:       1 failed, 1068 passed, 1069 total
+════════════════════════════════════════════
+MUTATION: M5 [NEG CTRL] persist-intake.ts: neuter the failure rollback (data-loss fix claimed in Phase 2)
+  file: src/lib/profile/persist-intake.ts
+  applied to 1 of 1 site(s)
+Test Suites: 63 passed, 63 total
+Tests:       1069 passed, 1069 total
+════════════════════════════════════════════
+MUTATION: M6 student_scoring.ts: A-level table AAD 46 -> 8 (reintroduce an F-01 dominance inversion)
+  file: src/lib/scoring/student_scoring.ts
+  applied to 1 of 1 site(s)
+FAIL __tests__/scoring/scoring-golden.test.ts (7.762 s)
+Test Suites: 1 failed, 62 passed, 63 total
+Tests:       4 failed, 1065 passed, 1069 total
+════════════════════════════════════════════
+MUTATION: M7 [NEG CTRL] applications.ts: drop .eq('profile_id', profileId) everywhere (cross-tenant read)
+  file: src/lib/data/applications.ts
+  applied to 5 of 5 site(s)
+Test Suites: 63 passed, 63 total
+Tests:       1069 passed, 1069 total
+════════════════════════════════════════════
+MUTATION: M8 use-search-results.ts: drop the aborted guard in catch (stale reject shows an error banner)
+  file: src/hooks/use-search-results.ts
+  applied to 1 of 1 site(s)
+FAIL __tests__/hooks/use-search-results.test.ts (15.44 s)
+Test Suites: 1 failed, 62 passed, 63 total
+Tests:       1 failed, 1068 passed, 1069 total
+════════════════════════════════════════════
+MUTATION: M9 errors.ts: leak the raw driver message into the user-facing DataError message
+  file: src/lib/data/errors.ts
+  applied to 1 of 1 site(s)
+FAIL __tests__/counsellor/cohort-loader.test.ts (15.561 s)
+FAIL __tests__/data/errors.test.ts
+Test Suites: 2 failed, 61 passed, 63 total
+Tests:       4 failed, 1065 passed, 1069 total
+════════════════════════════════════════════
+MUTATION: M10 matching/service.ts: swallow a totally-failed course_scoring batch instead of throwing (F-03b)
+  file: src/lib/matching/service.ts
+  applied to 1 of 1 site(s)
+FAIL __tests__/matching/score-programs.test.ts
+Test Suites: 1 failed, 62 passed, 63 total
+Tests:       2 failed, 1067 passed, 1069 total
+════════════════════════════════════════════
+MUTATION: M11 identity.ts: fail-open role parsing (skip parseRole, trust the DB column)
+  file: src/lib/auth/identity.ts
+  applied to 1 of 1 site(s)
+FAIL __tests__/auth/identity.test.ts
+Test Suites: 1 failed, 62 passed, 63 total
+Tests:       2 failed, 1067 passed, 1069 total
+════════════════════════════════════════════
+MUTATION: M12 policy.ts: subject-scoped action answers the coarse question when no resource is given (F2/F3/F6)
+  file: src/lib/auth/policy.ts
+  applied to 1 of 1 site(s)
+FAIL __tests__/auth/policy.test.ts
+Test Suites: 1 failed, 62 passed, 63 total
+Tests:       1 failed, 1068 passed, 1069 total
+════════════════════════════════════════════
+MUTATION: M13 [NEG CTRL] identity.ts: .eq('id', user.id) -> .eq('role', user.id) (the find-and-replace bug class)
+  file: src/lib/auth/identity.ts
+  applied to 1 of 1 site(s)
+Test Suites: 63 passed, 63 total
+Tests:       1069 passed, 1069 total
+════════════════════════════════════════════
+MUTATION: M14 dialog.tsx: remove the focus-restore-to-opener block
+  file: src/components/ui/dialog.tsx
+  applied to 1 of 1 site(s)
+FAIL __tests__/ui/analytics-drilldown.test.tsx
+FAIL __tests__/ui/assistant-mobile-rail.test.tsx
+FAIL __tests__/ui/command-palette.test.tsx
+FAIL __tests__/ui/dialog.test.tsx (6.927 s)
+FAIL __tests__/ui/help-thread-drawer.test.tsx
+FAIL __tests__/ui/universities-deck-dialogs.test.tsx (6.412 s)
+Test Suites: 6 failed, 57 passed, 63 total
+Tests:       13 failed, 1056 passed, 1069 total
+════════════════════════════════════════════
+MUTATION: M15 match-tier.ts: revert safe threshold 80 -> 70 (the drifted value)
+  file: src/lib/matching/match-tier.ts
+  applied to 1 of 1 site(s)
+FAIL __tests__/counsellor/cohort-loader.test.ts
+Test Suites: 1 failed, 62 passed, 63 total
+Tests:       2 failed, 1067 passed, 1069 total
+════════════════════════════════════════════
+MUTATION: M16 [NEG CTRL] identity.ts: replace React cache() with a GLOBAL module-level memo (cross-request identity leak)
+  file: src/lib/auth/identity.ts
+  applied to 1 of 1 site(s)
+FAIL __tests__/auth/identity.test.ts
+Test Suites: 1 failed, 62 passed, 63 total
+Tests:       13 failed, 1056 passed, 1069 total
+ALL-DONE
+
+════════════════════════════════════════════
+MUTATION: T1 select.tsx: remove the empty-value guard (revert the F-A Radix hydration fix)
+  file: src/components/ui/select.tsx
+  applied to 1 of 1 site(s)
+FAIL __tests__/profile/intake-form/intake-form.characterization.test.tsx (81.468 s)
+Test Suites: 1 failed, 62 passed, 63 total
+Tests:       5 failed, 1064 passed, 1069 total
+════════════════════════════════════════════
+MUTATION: T2 intake-logic.ts: nationality join(', ') -> join(',')
+  file: src/lib/profile/intake-logic.ts
+  applied to 1 of 1 site(s)
+FAIL __tests__/profile/intake-form/intake-form.characterization.test.tsx (82.678 s)
+FAIL __tests__/profile/intake-logic.test.ts
+Test Suites: 2 failed, 61 passed, 63 total
+Tests:       4 failed, 1065 passed, 1069 total
+════════════════════════════════════════════
+MUTATION: T3 intake-options.ts: IB HL cap 3 -> 4
+  file: src/lib/profile/intake-options.ts
+  applied to 1 of 1 site(s)
+FAIL __tests__/profile/intake-form/intake-form.characterization.test.tsx (81.639 s)
+FAIL __tests__/profile/intake-logic.test.ts (7.633 s)
+FAIL __tests__/profile/intake-options.test.ts
+Test Suites: 3 failed, 60 passed, 63 total
+Tests:       3 failed, 1066 passed, 1069 total
+════════════════════════════════════════════
+MUTATION: T4 [NEG CTRL] intake-logic.ts: drop .trim() from nationality split (round-trip blind spot)
+  file: src/lib/profile/intake-logic.ts
+  applied to 1 of 1 site(s)
+FAIL __tests__/profile/intake-logic.test.ts (9.402 s)
+Test Suites: 1 failed, 62 passed, 63 total
+Tests:       1 failed, 1068 passed, 1069 total
+════════════════════════════════════════════
+MUTATION: T5 [NEG CTRL] middleware.ts: never redirect an incomplete profile to the wizard
+  file: src/middleware.ts
+  applied to 1 of 1 site(s)
+Test Suites: 63 passed, 63 total
+Tests:       1069 passed, 1069 total
+ALL-DONE-2
+
+parseLocalDate gutted to new Date(value)
+════════ T6a  TZ=UTC  (what GitHub Actions ubuntu-latest runs) ════════
+FAIL __tests__/matching/date-only-render.test.tsx
+Test Suites: 1 failed, 62 passed, 63 total
+Tests:       2 failed, 1067 passed, 1069 total
+════════ T6b  TZ=America/Los_Angeles (a real user west of Greenwich) ════════
+FAIL __tests__/chat/context.test.ts
+FAIL __tests__/chat/student-read-tools.test.ts
+FAIL __tests__/checklist/due-label.test.ts
+FAIL __tests__/counsellor/derivations.test.ts
+FAIL __tests__/matching/date-only-render.test.tsx (5.486 s)
+Test Suites: 5 failed, 58 passed, 63 total
+Tests:       8 failed, 1061 passed, 1069 total
+════════ T6c  TZ=Asia/Tokyo (a real user east of Greenwich) ════════
+FAIL __tests__/counsellor/cohort-loader.test.ts
+FAIL __tests__/counsellor/derivations.test.ts
+FAIL __tests__/matching/date-only-render.test.tsx
+Test Suites: 3 failed, 60 passed, 63 total
+Tests:       8 failed, 1061 passed, 1069 total
+════════ CONTROL: unmutated tree under the same three zones ════════
+-- TZ=UTC
+Tests:       1069 passed, 1069 total
+-- TZ=America/Los_Angeles
+Tests:       1069 passed, 1069 total
+-- TZ=Asia/Tokyo
+Tests:       1069 passed, 1069 total
+ALL-DONE-3
+
+════════ DETERMINISM ════════
+=== RUN 1 (--runInBand) ===
+Test Suites: 63 passed, 63 total
+Tests:       1069 passed, 1069 total
+Time:        99.938 s, estimated 147 s
+=== RUN 2 (--runInBand) ===
+FAIL __tests__/hooks/use-search-results.test.ts (5.243 s)
+FAIL __tests__/hooks/use-search-results.test.ts (5.243 s)
+Test Suites: 1 failed, 62 passed, 63 total
+Tests:       1 failed, 1068 passed, 1069 total
+Time:        110.259 s
+=== RUN 3 (--runInBand) ===
+Test Suites: 63 passed, 63 total
+Tests:       1069 passed, 1069 total
+Time:        108.04 s, estimated 146 s
+=== RUN 4 (default parallel) ===
+Test Suites: 63 passed, 63 total
+Tests:       1069 passed, 1069 total
+Time:        85.645 s
+DETERMINISM_DONE
+
+════════ FLAKE ISOLATION (use-search-results.test.ts alone, x12) ════════
+load at start:  4:19  up 9 days, 16:16, 1 user, load averages: 4.86 6.52 8.14
+--- solo run 1 ---
+Tests:       48 passed, 48 total
+--- solo run 2 ---
+Tests:       48 passed, 48 total
+--- solo run 3 ---
+Tests:       48 passed, 48 total
+--- solo run 4 ---
+Tests:       48 passed, 48 total
+--- solo run 5 ---
+Tests:       48 passed, 48 total
+--- solo run 6 ---
+Tests:       48 passed, 48 total
+--- solo run 7 ---
+Tests:       48 passed, 48 total
+--- solo run 8 ---
+Tests:       48 passed, 48 total
+--- solo run 9 ---
+Tests:       48 passed, 48 total
+--- solo run 10 ---
+Tests:       48 passed, 48 total
+--- solo run 11 ---
+Tests:       48 passed, 48 total
+--- solo run 12 ---
+Tests:       48 passed, 48 total
+FLAKE-DONE
+```
+

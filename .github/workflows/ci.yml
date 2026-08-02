@@ -125,6 +125,20 @@ jobs:
       - run: npm ci
 
       - name: Unit + integration tests
+        env:
+          # Run the suite in a NEGATIVE-OFFSET zone, not UTC.
+          #
+          # `parseLocalDate` — the helper this codebase added because
+          # `new Date('YYYY-MM-DD')` is UTC midnight and shifts date-only values
+          # by the reader's offset — is an IDENTITY FUNCTION under TZ=UTC. So a
+          # runner in UTC cannot observe the bug class the helper exists for:
+          # gutting it fails 2 tests under UTC and 8 under America/Los_Angeles.
+          #
+          # The branch built exactly the right tool (jest.environment-tz-west.js)
+          # and applied it to one suite. This makes the whole suite run where
+          # date-only bugs are visible. Verified: 1,073 tests pass in this zone,
+          # so it costs nothing and detects six more mutations.
+          TZ: America/Los_Angeles
         # `--collectCoverageFrom` is REQUIRED, not decorative. Without it Jest
         # measures only the files some test happened to import, which reported
         # 72.9% over 108 of 449 source files — a number that looks like coverage
