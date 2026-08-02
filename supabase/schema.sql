@@ -936,11 +936,47 @@ grant execute on function public.auth_role() to authenticated;
 -- statement (InitPlan) instead of per row — a bare call meant ~30k+ profiles
 -- lookups on catalogue-sized scans.
 
--- Profiles policies
+-- Profiles policies.
+--
+-- Backported from 20260801110000_profiles_insert_guard.sql. This file previously
+-- declared `profiles_self_access` with NO `for` clause — which PostgreSQL reads
+-- as FOR ALL, i.e. SELECT + INSERT + UPDATE + DELETE — while the role-guard
+-- trigger below was registered `before update` ONLY. So from the browser console
+-- of any signed-in account, with the anon key that ships in the bundle:
+--
+--     delete from profiles where id = auth.uid();          -- FOR ALL covers DELETE
+--     insert into profiles (id, role) values (auth.uid(), 'admin');  -- no trigger
+--
+-- auth_role() then returns 'admin', satisfying all 20 admin policies — every one
+-- of which is FOR ALL. The trigger's author reasoned about exactly this attack
+-- and closed the UPDATE path; FOR ALL quietly granted two more verbs than the
+-- trigger covered.
+--
+-- The fix was written as a migration and NOT backported here for a day, which
+-- meant a database built from this file still shipped the escalation. Verbs are
+-- split explicitly below, and there is deliberately NO self-DELETE policy:
+-- deleting a profile cascades ~20 tables of student PII with no soft delete and
+-- no recovery. That is an account closure, not a row write.
 drop policy if exists profiles_self_access on profiles;
+drop policy if exists profiles_self_select on profiles;
+drop policy if exists profiles_self_update on profiles;
+drop policy if exists profiles_self_insert on profiles;
 drop policy if exists profiles_admin_view on profiles;
-create policy profiles_self_access on profiles
-  using (auth.uid() = id) with check (auth.uid() = id);
+
+create policy profiles_self_select on profiles
+  for select to authenticated
+  using (id = (select auth.uid()));
+
+create policy profiles_self_update on profiles
+  for update to authenticated
+  using (id = (select auth.uid()))
+  with check (id = (select auth.uid()));
+
+-- Self-heal path: a user may create their OWN profile row, as a student only.
+create policy profiles_self_insert on profiles
+  for insert to authenticated
+  with check (id = (select auth.uid()) and role = 'student');
+
 create policy profiles_admin_view on profiles
   for select using ((select auth_role()) = 'admin');
 
@@ -1327,7 +1363,9 @@ $$;
 
 drop trigger if exists trg_guard_profile_role on profiles;
 create trigger trg_guard_profile_role
-  before update on profiles
+  -- INSERT as well as UPDATE. Registered `before update` only, this guard was
+  -- walked around by delete-then-insert (see the profiles policy note above).
+  before insert or update on profiles
   for each row
   execute function public.guard_profile_role_change();
 
