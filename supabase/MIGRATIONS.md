@@ -29,7 +29,7 @@ to say what was applied.
 
 ---
 
-## 0. WHAT IS ACTUALLY APPLIED — probed 2026-08-02, not inferred
+## 0. WHAT IS ACTUALLY APPLIED — probed 2026-08-03, not inferred
 
 `npm run db:probe` (`scripts/db-probe.ts`) answers this from the database. It is
 read-only, safe on production, and safe to re-run. **Run it before and after any
@@ -37,24 +37,52 @@ migration session.** It exists because `apply-sql.ts` runs `client.query(sql)` a
 prints only "✓ Applied", so the §4 SELECT executed and threw its rows away — which
 is why the "Applied?" column below stayed inference for months.
 
-**Result: 31 of 35 markers present, 4 missing.**
+**Result: 35 of 35 markers present, 0 missing.** `20260801120000` has no probe
+marker (it replaces a function body — the `—` case in §1) and is **NOT applied**;
+see below.
 
-### Applied today, in this order
+### Release A — applied 2026-08-03, in this order
+
+All six verified present by `npm run db:probe` afterwards, and the two properties
+that matter checked directly against `pg_policies` / `pg_proc`.
 
 | File | Effect |
 |---|---|
-| `20260801110000_profiles_insert_guard` | **closes the privilege escalation** — until this landed, any user could self-promote to admin, which defeated every other policy |
-| `20260801122000_counsellor_assignments` | additive (assignment table + backfill) |
-| `20260802110000_notification_bounds` | payload bound + the C9 pre-flight; the only remaining file with no `is_admin()` dependency |
+| `20260801115000_admin_helper_and_verb_split` | **closes a live hole** — `parent_contacts_all` / `parent_messages_all` / `student_documents_counsellor_all` were `for all`, i.e. blanket DELETE for every signed-in user. Now 0 `FOR ALL` policies remain and DELETE on all three is `is_admin()`. Also creates `is_admin()`, which unblocked the four below |
+| `20260801130000_reconcile_missing_tables` | codifies tables that existed in production and in no schema file. Its earlier `is_admin() does not exist` failure (2026-08-02) is resolved |
+| `20260802100000_indexes_extensions_and_rls_gaps` | FK indexes, extensions, RLS gaps |
+| `20260802130000_erasure_audit_and_retention` | `audit_log`, `deletion_requests`, 5 audit triggers, notification expiry. **Data change:** over-cap notification titles/bodies were truncated in place by the backfill |
+| `20260802140000_guardian_links_parity` | guardian_links read/write policies + `guardian_links_not_self` (validated) |
+| `20260802120000_student_matches_delete_policy` | adds `matches_self_delete` + `student_matches_profile_program_key`, and de-duplicated the cache. Verified afterwards: **0 duplicate `(profile_id, program_id)` groups** |
 
-### The 4 still missing, and why each is deliberate
+**The posture was deliberately left OPEN.** Verified after the fact:
+`can_act_as_counsellor()` is still `select auth.uid() is not null`. Release A
+changed *who may DELETE*, not *who counts as a counsellor* — every policy in
+`20260801115000` calls `can_act_as_counsellor()` by name and inherits whatever
+posture is deployed.
+
+**C7 part (b) is now merged** (`service.ts` uses
+`.upsert(batch, { onConflict: 'profile_id,program_id' })`). It was safe only
+because the unique index was applied FIRST — that ordering is one-way, and
+deploying the upsert against a database without the index breaks `/matches` at
+`42P10`.
+
+### Still not applied — 1 file, and it is a product decision
 
 | File | Blocked on |
 |---|---|
 | `20260801120000_close_counsellor_access` | **PRODUCT DECISION — deferred by the owner on 2026-08-03.** The app is still in development and /counsellor must stay visible to everyone. Its §1 rewrites `can_act_as_counsellor()` and its header requires both portal flags set to `false` in the same commit; applying it now would close access at the database while the app still renders the portal — **every counsellor page empty, on real data, with no error.** `__tests__/db/portal-flag-agreement.test.ts` enforces the pairing |
-| `20260802120000_student_matches_delete_policy` | needs **C7 part (b)** (the `upsert` on `onConflict: 'profile_id,program_id'`) deployed in the same release. Ship it earlier and every match-cache rebuild fails at `42P10`, breaking `/matches` for every student |
-| `20260802130000_erasure_audit_and_retention` | ~~needs `is_admin()`~~ **UNBLOCKED 2026-08-03** — apply `20260801115000` first |
-| `20260802140000_guardian_links_parity` | ~~same~~ **UNBLOCKED 2026-08-03** — same |
+
+**Release B, when that decision is made, is not just this file.** Flipping
+`PARENT_PORTAL_OPEN_TO_ALL` to `false` locks **every non-admin out of `/parent`**:
+`portal:parent` is granted only to `admin` in `ROLE_ACTIONS`, and `'parent'` is
+not a value of `profiles.role` (`profiles_role_check`, and `ROLES` in
+`src/lib/auth/identity.ts`). Add the role and grant the action FIRST. The flip
+also turns 4 suites / 9 tests red — they pin the current posture by design
+(`__tests__/auth/policy.test.ts:253,258`, `__tests__/chat/mode.test.ts:62`,
+`__tests__/chat/actions-execute-route.test.ts`, `__tests__/chat/route.test.ts`;
+3 of the 9 are cascade from shared fixture state). And `schema.sql` must be
+backported in the same commit or the agreement test fails.
 
 ### 2026-08-03: the deferral no longer blocks the chain
 
@@ -70,37 +98,72 @@ every policy in them calls `can_act_as_counsellor()` *by name* and inherits what
 posture is deployed. Applied against today's open form, counsellors-meaning-everyone
 keep select/insert/update unchanged and only DELETE narrows to admins.
 
-**It also closes a live hole.** `for all` includes DELETE, and
-`can_act_as_counsellor()` is currently `auth.uid() is not null`, so
-`parent_contacts_all`, `parent_messages_all` and `student_documents_counsellor_all`
-each read "any signed-in user may DELETE". One PostgREST `.delete()` wipes every
-parent contact, every parent↔counsellor message, or every student document row —
-unaudited, unrecoverable without a restore. That is live right now.
+**It also closed a live hole.** `for all` includes DELETE, and
+`can_act_as_counsellor()` is `auth.uid() is not null`, so `parent_contacts_all`,
+`parent_messages_all` and `student_documents_counsellor_all` each read "any
+signed-in user may DELETE". One PostgREST `.delete()` would wipe every parent
+contact, every parent↔counsellor message, or every student document row —
+unaudited, unrecoverable without a restore. **Closed 2026-08-03** by Release A;
+0 `FOR ALL` policies remain on those three tables.
 
-So the remaining work is: **apply `20260801115000` now** (portal unaffected), then
-`20260801130000`, `20260802100000`, `20260802140000`, `20260802130000`,
-optionally `20260802150000`. What is left after that is one release —
-`20260801120000` + both flags to `false` + C7(b) + `20260802120000` — whenever the
-portal closes.
+The split also corrected the *shape* of the release. The four `is_admin()`
+dependants were never gated on the product decision — only on a helper that
+happened to live in the same file. And `20260802120000` was gated on C7(b), not
+on the posture either. So five of the six files, plus the app change, shipped
+without any product decision being made. **Only `20260801120000` is left**, and it
+is Release B above.
+
+`20260802150000_drop_redundant_indexes` remains unapplied and optional — pure
+index cleanup, deliberately out of Release A.
+
+### Known drift, found 2026-08-03 — `20260801122000` was never backported
+
+`20260801122000_counsellor_assignments` is applied to the remote but **nothing
+from it is in `schema.sql`**: not `counsellor_assignments`, not its two indexes,
+and not `counsels_student()`, `is_guardian_of()`, `visible_student_ids()` or
+`writable_student_ids()`.
+
+Consequence, and it is reproducible: **`schema.sql` alone can no longer build a
+database that `20260802130000` will apply to.** Replaying Release A against a base
+of `ci-db-stub.sql` + `schema.sql` fails at
+
+```
+ERROR: function public.visible_student_ids() does not exist
+```
+
+because `20260802130000` calls it. This is invisible to CI, because
+`ci-db-check.sh` replays the whole migrations directory in filename order and
+`20260801122000` sorts first — so the function exists by the time it is needed.
+It only bites a from-scratch `schema.sql` build.
+
+Backporting is NOT a one-line fix: `visible_student_ids()` is `language sql`, so
+its body is parsed at creation time and `counsellor_assignments` must exist first.
+The table, both indexes and all four functions have to go in together. Left as a
+follow-up rather than done hastily — it changes nothing about what production
+runs, and Release A did not depend on it.
 
 ### Two probe markers are NOT trustworthy — read this before believing the table
 
 The probe checks for one object per migration, which is a proxy, and two of those
 proxies pre-date their migration:
 
-- **`20260801130000_reconcile_missing_tables` reports APPLIED but has NOT run.** It
-  failed here today with `function public.is_admin() does not exist` and rolled
-  back. Its marker is `table student_activities` — and the entire point of that
-  file is to codify tables that **already existed in production and in no schema
-  file** (commit `434b79f`). So the marker was present before the migration
-  existed. It is a structural false positive, not a bug in the probe's SQL.
-- **`20260802100000_indexes_extensions_and_rls_gaps` reports APPLIED** and was never
-  applied by this session either. Its marker index may have been created by an
-  earlier search-index migration. Treat as UNKNOWN.
+- **`20260801130000_reconcile_missing_tables`** reported APPLIED on 2026-08-02
+  when it had **not** run — it failed with `function public.is_admin() does not
+  exist` and rolled back. Its marker is `table student_activities`, and the entire
+  point of that file is to codify tables that **already existed in production and
+  in no schema file** (commit `434b79f`), so the marker predated the migration. A
+  structural false positive, not a bug in the probe's SQL. *(Both are genuinely
+  applied as of Release A, 2026-08-03 — but the marker is still a weak proxy.)*
+- **`20260802100000_indexes_extensions_and_rls_gaps`** reported APPLIED on
+  2026-08-02 without having been applied; its marker index may have been created
+  by an earlier search-index migration. *(Also genuinely applied by Release A.)*
 
-Both need a second, migration-specific marker before their row can be trusted.
-**A green probe line is evidence, not proof** — the same caution the rest of this
-document is built on.
+Both still need a second, migration-specific marker before their row can be
+trusted on its own. **A green probe line is evidence, not proof** — the same
+caution the rest of this document is built on. Release A did not rely on these
+two lines: every file is idempotent and proven twice-replayable by
+`./scripts/ci-db-local.sh`, so both were re-applied regardless of what the probe
+claimed.
 
 ---
 

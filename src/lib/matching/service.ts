@@ -926,12 +926,13 @@ export const loadMatchesForProfile = async (
     // filtered away by RLS" (migration 20260802120000 §5a).
     //
     // Postgres does NOT error on an RLS-filtered DELETE — it removes zero rows
-    // and reports success. There has never been a DELETE policy on
-    // student_matches (matches_self is SELECT, matches_self_write INSERT,
+    // and reports success. Until 20260802120000 there was no DELETE policy on
+    // student_matches at all (matches_self is SELECT, matches_self_write INSERT,
     // matches_self_update UPDATE, matches_admin is admin-only), so for a student
-    // this clear has always been a no-op that reported success, and the insert
-    // below then piled 300 more rows on top of everything already there. That is
-    // how the table grows without bound.
+    // this clear was a no-op that reported success, and the insert below then
+    // piled 300 more rows on top of everything already there. That is how the
+    // table grew without bound. `matches_self_delete` (applied 2026-08-03) is
+    // what makes the clear actually clear.
     const { data: cleared, error: deleteError } = await supabase
       .from('student_matches')
       .delete()
@@ -943,18 +944,33 @@ export const loadMatchesForProfile = async (
       if ((cleared?.length ?? 0) === 0) {
         // Not necessarily wrong — a first-time student has nothing cached — but
         // it is indistinguishable from the RLS no-op above, and that ambiguity
-        // is the finding. Once 20260802120000 lands this should only ever be a
-        // genuinely empty cache.
+        // is the finding. Now that 20260802120000 is applied (matches_self_delete
+        // exists), this should only ever be a genuinely empty cache; a zero-row
+        // clear on a profile that HAS rows means the policy did not apply.
         console.warn(
           `Cleared 0 cached match rows for profile ${profileId} before rebuilding. ` +
-            'If this profile had a cache, the DELETE was filtered by RLS and the rebuild ' +
-            'will duplicate rather than replace (see migration 20260802120000).'
+            'If this profile had a cache, the DELETE was filtered by RLS despite ' +
+            'matches_self_delete (see migration 20260802120000).'
         );
       }
-      // Insert in batches to avoid payload size limits
+      // Insert in batches to avoid payload size limits.
+      //
+      // UPSERT, not insert — C7 part (b), the app half of 20260802120000 §5b.
+      // `student_matches_profile_program_key` (unique on (profile_id, program_id))
+      // now exists, so a partially-cleared cache CONVERGES here instead of
+      // raising 23505 and failing the whole rebuild. `onConflict` must name the
+      // columns in the SAME ORDER as that index — PostgREST passes the string
+      // straight through to ON CONFLICT (…), and a mismatched order infers no
+      // index and fails at 42P10.
+      //
+      // ORDERING, and it is one-way: this edit is only safe because the index is
+      // applied (verified on the remote 2026-08-03). Deploying it against a
+      // database without the index breaks /matches for every student at 42P10.
       for (let i = 0; i < cachePayload.length; i += 500) {
         const batch = cachePayload.slice(i, i + 500);
-        const { error: insertError } = await supabase.from('student_matches').insert(batch);
+        const { error: insertError } = await supabase
+          .from('student_matches')
+          .upsert(batch, { onConflict: 'profile_id,program_id' });
         if (insertError) {
           console.warn(`Failed to persist cached matches batch ${i} — clearing partial cache`, insertError);
           // This rollback was the one write in src/ that discarded its error
