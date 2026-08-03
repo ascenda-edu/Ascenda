@@ -1,6 +1,6 @@
 # Ascenda · Counsellor demo · Sunday 18 May 2026
 
-This is the playbook for the Sunday call with Sarah. It maps every beat in Raf's [Rough Demo Plan](https://github.com/Ascenda123/Ascenda/blob/main/docs/rough-demo-plan.docx) to the specific UI affordances we've built, and notes what to *click* live on the preview URL.
+This is the playbook for the Sunday call with Sarah. It maps every beat in Raf's [Rough Demo Plan](https://github.com/ascenda-edu/Ascenda/blob/main/docs/rough-demo-plan.docx) to the specific UI affordances we've built, and notes what to *click* live on the preview URL.
 
 **Preview URL (branch `feat/applications-work`):** https://ascenda-git-feat-applications-work-cxz5mw6fk2-6983s-projects.vercel.app
 

@@ -2,8 +2,11 @@
 
 **Scope:** CI/CD, environments, configuration, secrets, observability, release process, testing
 infrastructure, database change management, repo hygiene.
-**Repo:** `github.com/Ascenda123/Ascenda` (private), deploys to Vercel `ascenda-ashy.vercel.app`,
-Supabase project `alpkbobbasxvubogkark`.
+**Repo:** `github.com/ascenda-edu/Ascenda` (private), deploys to Vercel `ascenda-ashy.vercel.app`,
+Supabase project `alpkbobbasxvubogkark`. (Audited while the repo was still
+`github.com/Ascenda123/Ascenda`; transferred to the `ascenda-edu` org 2026-08-03. Command output
+quoted below therefore names the old path — the findings are unchanged, and branch protection is
+still unavailable because the org is on the Free plan.)
 **Audited at:** commit `e5da2dc` (main), 2026-08-01. Read-only; no repo files modified, no
 production database contacted.
 
