@@ -80,7 +80,7 @@ describe('portal access: the app and the database must agree', () => {
     // until the flags follow. This one just proves the migration is present, so
     // the pair above cannot silently pass because a file was deleted.
     const migration = readFileSync(
-      join(ROOT, 'supabase', 'migrations', '20260801120000_close_counsellor_access_and_split_write_policies.sql'),
+      join(ROOT, 'supabase', 'migrations', '20260801120000_close_counsellor_access.sql'),
       'utf8'
     );
     expect(migration).toContain('is_counsellor()');

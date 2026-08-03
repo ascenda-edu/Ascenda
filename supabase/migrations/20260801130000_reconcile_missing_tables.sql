@@ -21,9 +21,16 @@
 --
 -- Ordering note: this file sorts LAST of the 2026-08-01 set, and must. Its
 -- simulation_results policy calls public.is_admin(), which is created by
--- 20260801120000. Named 100000 first, which would have failed on replay — caught
--- by reasoning about the CI job's replay order, not by the job itself, since the
--- job has not yet been observed running.
+-- 20260801115000_admin_helper_and_verb_split.sql. Named 100000 first, which would
+-- have failed on replay — caught by reasoning about the CI job's replay order,
+-- not by the job itself, since the job has not yet been observed running.
+--
+-- THIS IS THE MIGRATION THAT FAILED IN PRODUCTION on 2026-08-02, with
+-- `function public.is_admin() does not exist`. is_admin() lived in
+-- 20260801120000, which also closed the counsellor portal and so could not be
+-- applied; the helper was split out into 20260801115000 on 2026-08-03 precisely
+-- to unblock this file. The CI replay never caught it because supabase/schema.sql
+-- defines is_admin() itself — see the DRIFT note there.
 
 -- ── student_activities ───────────────────────────────────────────────────────
 -- Structured extracurricular entries. Written by persist-intake's

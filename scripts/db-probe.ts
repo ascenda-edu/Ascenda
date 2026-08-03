@@ -76,7 +76,13 @@ const EXPECTED: ReadonlyArray<readonly [file: string, kind: string, obj: string]
   ['20260723120000_search_facet_indexes', 'index', 'idx_programs_study_level'],
   ['20260724100000_search_polish', 'index', 'idx_programs_admission_test'],
   ['20260801110000_profiles_insert_guard', 'policy', 'profiles_self_insert'],
-  ['20260801120000_close_counsellor_access', 'function', 'is_admin'],
+  ['20260801115000_admin_helper_and_verb_split', 'policy', 'parent_contacts_admin_delete'],
+  // 20260801120000_close_counsellor_access has NO marker and cannot get one: its
+  // only change is a `create or replace function` body, which leaves no
+  // distinguishable catalogue object (MIGRATIONS.md §1 legend, "—"). Probe it by
+  // reading the body — `select prosrc from pg_proc where proname =
+  // 'can_act_as_counsellor'`; the open form matches `auth.uid() is not null`.
+  // is_admin() moved to 20260801115000, which is why this row no longer claims it.
   ['20260801122000_counsellor_assignments', 'table', 'counsellor_assignments'],
   ['20260801130000_reconcile_missing_tables', 'table', 'student_activities'],
   ['20260802100000_indexes_extensions_and_rls_gaps', 'index', 'idx_programs_course_name_trgm'],

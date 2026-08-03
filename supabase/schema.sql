@@ -1331,8 +1331,26 @@ as $$
   select auth.uid() is not null;
 $$;
 
--- From 20260801120000. is_counsellor() spans 'counsellor' AND 'admin', so it
--- cannot express "admin only" — which the destructive-verb policies need.
+-- From 20260801115000_admin_helper_and_verb_split.sql (was 20260801120000 until
+-- that file was split on 2026-08-03). is_counsellor() spans 'counsellor' AND
+-- 'admin', so it cannot express "admin only" — which the destructive-verb
+-- policies need.
+--
+-- ⚠️  DRIFT — PROVEN for this function. is_admin() is NOT present on production:
+--     20260801130000 failed there on 2026-08-02 with `function public.is_admin()
+--     does not exist`, which is only possible if it is absent. Yet the `database`
+--     gate builds its base from THIS file, so the base already HAS is_admin() and
+--     the gate cannot reproduce that production failure. A green gate did not
+--     mean the migration would apply.
+--
+--     SUSPECTED, NOT PROVEN: simulation_results_admin and
+--     student_activities_counsellor_read below are also backported from
+--     20260801130000, which rolled back cleanly — so they are probably absent
+--     too. But their TABLES pre-existed production (commit 434b79f), so the
+--     policies cannot be inferred from the table's presence, and nothing here
+--     has read production. Do not delete them from this file on inference.
+--     Resolve with `npm run db:probe`, then reconcile in one commit.
+--     See MIGRATIONS.md §0.
 create or replace function public.is_admin()
 returns boolean
 language sql

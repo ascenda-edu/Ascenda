@@ -120,7 +120,7 @@ const ROLE_ACTIONS: Record<Role, readonly Action[]> = {
 /**
  * ⚑ THE SINGLE LINE TO FLIP WHEN THE COUNSELLOR MIGRATION LANDS.
  *
- * `supabase/migrations/20260801120000_close_counsellor_access_and_split_write_policies.sql`
+ * `supabase/migrations/20260801120000_close_counsellor_access.sql`
  * is written but NOT applied. It rewrites `can_act_as_counsellor()` from
  * `auth.uid() is not null` back to `is_counsellor() or is_demo_account()`.
  *

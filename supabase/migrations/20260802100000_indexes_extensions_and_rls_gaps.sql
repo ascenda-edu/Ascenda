@@ -43,8 +43,10 @@
 --    declared in NO sql file and used by NO index.
 --
 -- ── Ordering constraint (files apply in FILENAME order) ──────────────────────
--- Must sort AFTER 20260801120000_close_counsellor_access_and_split_write_policies
--- .sql, which defines public.is_admin(). The archive-table policies below call
+-- Must sort AFTER 20260801115000_admin_helper_and_verb_split.sql, which defines
+-- public.is_admin(). (It was 20260801120000 until that file was split on
+-- 2026-08-03; the helper moved to the earlier, posture-independent half so it
+-- could be applied without closing the counsellor portal.) The policies below call
 -- it. Sorting this file earlier would abort the replay with 42883 on a fresh
 -- database — the failure mode this repo hit three times on 2026-08-01.
 -- It must also sort after 20260716120000 (guardian_links) and 20260801130000

@@ -82,8 +82,9 @@
 --   • 20260801122000_counsellor_assignments.sql — section 1's SELECT policy
 --     calls public.visible_student_ids(), and section 3 puts an audit trigger ON
 --     counsellor_assignments. Both fail with 42883/42P01 if this runs first.
---   • 20260801120000_close_counsellor_access_and_split_write_policies.sql —
---     section 4's counsellor_notes_delete policy calls public.is_admin().
+--   • 20260801115000_admin_helper_and_verb_split.sql — section 4's
+--     counsellor_notes_delete policy calls public.is_admin(). (Was
+--     20260801120000 until the 2026-08-03 split moved the helper earlier.)
 --   • 20260716120000_guardian_links.sql — section 3 audits that table too.
 -- The 20260802 prefix satisfies all three. No dependency on 20260802100000 or
 -- 20260802120000.

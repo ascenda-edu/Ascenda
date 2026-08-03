@@ -21,7 +21,7 @@ import { can } from '@/lib/auth/policy';
  * constant instead of a hunt through ten routes.
  *
  * ⚑ TO CLOSE IT: apply
- * `supabase/migrations/20260801120000_close_counsellor_access_and_split_write_policies.sql`
+ * `supabase/migrations/20260801120000_close_counsellor_access.sql`
  * (written, not applied — and read its own prerequisite header first) and set
  * `COUNSELLOR_PORTAL_OPEN_TO_ALL = false` in `src/lib/auth/policy.ts`. App and
  * DB must move together: closing this layout alone still leaves RLS returning

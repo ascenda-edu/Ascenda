@@ -959,6 +959,11 @@ create policy profiles_self_update on profiles
 
 One expression, repeated. Read scope = `visible_student_ids()`; write scope = the owner, or `writable_student_ids()` for counsellor-authored records.
 
+> *(2026-08-03: this file was split — the posture change below stayed in
+> `20260801120000_close_counsellor_access.sql`, while `is_admin()` and the verb
+> split moved to `20260801115000_admin_helper_and_verb_split.sql`. The original
+> name is kept in this paragraph because it records round 1.)*
+>
 > **Relationship to the in-flight Phase 0 migration.** `20260801120000_close_counsellor_access_and_split_write_policies.sql` moves the posture from **bare-boolean → role**: `can_act_as_counsellor()` becomes `is_counsellor() or is_demo_account()`, so a counsellor sees every student instead of every user seeing every student. That is the right emergency move and this section does not conflict with it — it is the **next** step, moving role → **relationship**, so a counsellor sees only their own caseload. Ship Phase 0 first; the policies below then replace it table by table, and §G drops the helper once nothing references it. The three `for delete … using (is_admin())` policies Phase 0 adds should be kept as-is; the sections below deliberately grant no DELETE on those tables, so Phase 0's admin-only delete remains the sole path.
 
 ```sql

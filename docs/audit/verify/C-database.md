@@ -468,6 +468,7 @@ duplicate `(profile_id, program_id)` in one batch does not wipe the cache.
 ### C8 — `20260801120000`, the BREAKING security migration, has no verification block
 Severity: **P2** latent risk
 Location: `supabase/migrations/20260801120000_close_counsellor_access_and_split_write_policies.sql` (whole file)
+<br>*(2026-08-03: that file was split. The posture change stayed in `20260801120000_close_counsellor_access.sql`; `is_admin()` and the verb split moved to `20260801115000_admin_helper_and_verb_split.sql`, which is posture-independent and applies with the portals open. See MIGRATIONS.md §0.)*
 Regression?: **NEW**
 
 Evidence: it is the only one of the ten with no terminal `do $$ … raise exception … end $$;`.

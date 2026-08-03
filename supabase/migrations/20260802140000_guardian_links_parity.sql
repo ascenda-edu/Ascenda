@@ -55,8 +55,9 @@
 -- ── Ordering constraint (files apply in FILENAME order) ──────────────────────
 -- Must sort AFTER:
 --   • 20260716120000_guardian_links.sql — the table itself;
---   • 20260801120000_close_counsellor_access_and_split_write_policies.sql —
---     public.is_admin(), called by both write policies (42883 otherwise);
+--   • 20260801115000_admin_helper_and_verb_split.sql — public.is_admin(), called
+--     by both write policies (42883 otherwise). Was 20260801120000 until the
+--     2026-08-03 split moved the helper earlier;
 --   • 20260801122000_counsellor_assignments.sql — public.writable_student_ids(),
 --     called by the counsellor read policy (42883 otherwise).
 -- The 20260802140000 prefix satisfies all three.

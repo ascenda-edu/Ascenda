@@ -51,14 +51,37 @@ is why the "Applied?" column below stayed inference for months.
 
 | File | Blocked on |
 |---|---|
-| `20260801120000_close_counsellor_access` | **PRODUCT DECISION.** Its §1 rewrites `can_act_as_counsellor()` and its header requires both portal flags set to `false` in the same commit. The portals are deliberately open during development, so applying this would close counsellor access at the database while the app still renders the portal — **every counsellor page empty, on real data, with no error.** `__tests__/db/portal-flag-agreement.test.ts` enforces the pairing |
-| `20260802130000_erasure_audit_and_retention` | needs `is_admin()`, i.e. blocked behind the row above |
-| `20260802140000_guardian_links_parity` | same |
+| `20260801120000_close_counsellor_access` | **PRODUCT DECISION — deferred by the owner on 2026-08-03.** The app is still in development and /counsellor must stay visible to everyone. Its §1 rewrites `can_act_as_counsellor()` and its header requires both portal flags set to `false` in the same commit; applying it now would close access at the database while the app still renders the portal — **every counsellor page empty, on real data, with no error.** `__tests__/db/portal-flag-agreement.test.ts` enforces the pairing |
 | `20260802120000_student_matches_delete_policy` | needs **C7 part (b)** (the `upsert` on `onConflict: 'profile_id,program_id'`) deployed in the same release. Ship it earlier and every match-cache rebuild fails at `42P10`, breaking `/matches` for every student |
+| `20260802130000_erasure_audit_and_retention` | ~~needs `is_admin()`~~ **UNBLOCKED 2026-08-03** — apply `20260801115000` first |
+| `20260802140000_guardian_links_parity` | ~~same~~ **UNBLOCKED 2026-08-03** — same |
 
-So the remaining work is **one release**: apply `20260801120000`, flip both portal
-flags to `false`, merge C7(b), apply the other three, deploy. Nothing else is
-outstanding on the database.
+### 2026-08-03: the deferral no longer blocks the chain
+
+`is_admin()` used to be defined only inside `20260801120000`, so deferring that
+file also blocked every migration that calls it — which is why
+`20260801130000` failed here on 2026-08-02 with `function public.is_admin() does
+not exist`. That coupling was **incidental**: `is_admin()` is `role = 'admin'` and
+has nothing to do with counsellor posture.
+
+`20260801120000` was therefore split. `20260801115000_admin_helper_and_verb_split.sql`
+now carries `is_admin()` and the verb split — both **posture-independent**, because
+every policy in them calls `can_act_as_counsellor()` *by name* and inherits whatever
+posture is deployed. Applied against today's open form, counsellors-meaning-everyone
+keep select/insert/update unchanged and only DELETE narrows to admins.
+
+**It also closes a live hole.** `for all` includes DELETE, and
+`can_act_as_counsellor()` is currently `auth.uid() is not null`, so
+`parent_contacts_all`, `parent_messages_all` and `student_documents_counsellor_all`
+each read "any signed-in user may DELETE". One PostgREST `.delete()` wipes every
+parent contact, every parent↔counsellor message, or every student document row —
+unaudited, unrecoverable without a restore. That is live right now.
+
+So the remaining work is: **apply `20260801115000` now** (portal unaffected), then
+`20260801130000`, `20260802100000`, `20260802140000`, `20260802130000`,
+optionally `20260802150000`. What is left after that is one release —
+`20260801120000` + both flags to `false` + C7(b) + `20260802120000` — whenever the
+portal closes.
 
 ### Two probe markers are NOT trustworthy — read this before believing the table
 
@@ -129,12 +152,13 @@ document is built on.
 | 31 | `20260723120000_search_facet_indexes.sql` | search facet indexes | ✅ | applied 2026-07-23 (search redesign) |
 | 32 | `20260723130000_search_filter_options_loose_scan.sql` | `search_filter_options()` loose scan | ✅ | same |
 | 33 | `20260724100000_search_polish.sql` | `idx_programs_admission_test`, `idx_programs_field_tuition`, `shortlisted_programs` | 🟡 | index `idx_programs_admission_test`. `schema.sql` is one migration behind here (§1.5B). `shortlisted_programs` may or may not exist remotely — `shortlist-store.ts` feature-detects and falls back to `localStorage`, so the app cannot tell you either. **Probe this one.** |
-| 34 | `20260801110000_profiles_insert_guard.sql` | **F0 fix** — split `profiles_self_access`, `profiles_self_insert`, INSERT-side role guard | ❌ | policy `profiles_self_insert` |
-| 35 | `20260801120000_close_counsellor_access_and_split_write_policies.sql` | restores the real counsellor test, `is_admin()`, splits 3 `FOR ALL` policies | ❌ | function `is_admin` |
-| 36 | `20260801122000_counsellor_assignments.sql` | `counsellor_assignments` + relationship helpers + backfill | ❌ | table `counsellor_assignments` |
+| 34 | `20260801110000_profiles_insert_guard.sql` | **F0 fix** — split `profiles_self_access`, `profiles_self_insert`, INSERT-side role guard | ✅ | **APPLIED 2026-08-02** (§0, probed). | policy `profiles_self_insert` |
+| 34a | `20260801115000_admin_helper_and_verb_split.sql` | `is_admin()`, splits 3 `FOR ALL` policies by verb (DELETE → admin) | ❌ | **POSTURE-INDEPENDENT — safe to apply with the portals open.** Split out of `20260801120000` on 2026-08-03. Policy `parent_contacts_admin_delete` |
+| 35 | `20260801120000_close_counsellor_access.sql` | restores the real counsellor test | ❌ **DEFERRED — product decision, 2026-08-03** | — (its only change is a function body; nothing distinguishable in the catalogue). Probe by reading `prosrc` for `can_act_as_counsellor`: the open form matches `auth.uid() is not null` |
+| 36 | `20260801122000_counsellor_assignments.sql` | `counsellor_assignments` + relationship helpers + backfill | ✅ | **APPLIED 2026-08-02** (§0, probed). | table `counsellor_assignments` |
 | 37 | `20260801130000_reconcile_missing_tables.sql` | `student_activities`, `simulation_results` | ❌ *(no-op on remote — they already exist there)* | table `student_activities` |
 | 38 | `20260802100000_indexes_extensions_and_rls_gaps.sql` | `pg_trgm`, 14 FK indexes, query-shape indexes, `cities`/archive RLS | ❌ | index `idx_programs_course_name_trgm` |
-| 39 | `20260802110000_notification_bounds.sql` | `trg_bound_notification_payload`, `counsellor_notification_targets(uuid)`, deck message cap | ❌ | trigger `trg_bound_notification_payload` |
+| 39 | `20260802110000_notification_bounds.sql` | `trg_bound_notification_payload`, `counsellor_notification_targets(uuid)`, deck message cap | ✅ | **APPLIED 2026-08-02** (§0, probed). Trigger `trg_bound_notification_payload` |
 | 40 | `20260802120000_student_matches_delete_policy_and_uniqueness.sql` | `matches_self_delete`, de-dup, unique index | ❌ | index `student_matches_profile_program_key` |
 | 41 | `20260802130000_erasure_audit_and_retention.sql` | `deletion_requests`, `request_account_deletion()`, `audit_log`, notification retention | ❌ | table `audit_log` |
 | 42 | `20260802140000_guardian_links_parity.sql` | student/counsellor read + admin write on `guardian_links` | ❌ | policy `guardian_links_student_read` |
@@ -180,16 +204,17 @@ produces a `42883` (function does not exist) partway through, on a database that
 is now half-migrated.
 
 ```
- 1. 20260801110000_profiles_insert_guard.sql                       SAFE      ← FIRST, ALONE
- 2. 20260801120000_close_counsellor_access_and_split_write_...     BREAKING  ← needs an app deploy
- 3. 20260801122000_counsellor_assignments.sql                      SAFE
- 4. 20260801130000_reconcile_missing_tables.sql                    SAFE      (no-op on remote)
- 5. 20260802100000_indexes_extensions_and_rls_gaps.sql             SAFE      ← 30–60 s of blocked WRITES
- 6. 20260802110000_notification_bounds.sql                         SAFE
- 7. 20260802120000_student_matches_delete_policy_and_...           BREAKING  ← needs service.ts
- 8. 20260802140000_guardian_links_parity.sql                       SAFE
- 9. 20260802130000_erasure_audit_and_retention.sql                 SAFE      ← see note
-10. 20260802150000_drop_redundant_indexes.sql                      OPTIONAL  ← blocks READS. Quiet window.
+ 1. 20260801110000_profiles_insert_guard.sql                       ✅ APPLIED 2026-08-02
+ 2. 20260801115000_admin_helper_and_verb_split.sql                 SAFE      ← APPLY NOW. Portal stays open.
+ 3. 20260801120000_close_counsellor_access.sql                     BREAKING  ← DEFERRED (product decision)
+ 4. 20260801122000_counsellor_assignments.sql                      ✅ APPLIED 2026-08-02
+ 5. 20260801130000_reconcile_missing_tables.sql                    SAFE      ← unblocked by step 2
+ 6. 20260802100000_indexes_extensions_and_rls_gaps.sql             SAFE      ← 30–60 s of blocked WRITES
+ 7. 20260802110000_notification_bounds.sql                         ✅ APPLIED 2026-08-02
+ 8. 20260802120000_student_matches_delete_policy_and_...           BREAKING  ← needs service.ts (C7b)
+ 9. 20260802140000_guardian_links_parity.sql                       SAFE      ← unblocked by step 2
+10. 20260802130000_erasure_audit_and_retention.sql                 SAFE      ← unblocked by step 2
+11. 20260802150000_drop_redundant_indexes.sql                      OPTIONAL  ← blocks READS. Quiet window.
 ```
 
 **Hard constraints, each of which will fail the replay if violated:**
@@ -197,7 +222,8 @@ is now half-migrated.
 | Constraint | Why |
 |---|---|
 | `20260801110000` **before** `20260801120000` | Everything `120000` adds routes authorisation through `profiles.role`. Until F0 is closed, `insert into profiles (id, role) values (auth.uid(), 'admin')` reopens all of it in one call — and `120000` reads as though the counsellor surface had been secured. |
-| `20260801120000` **before** `20260801130000` | `simulation_results_admin` calls `is_admin()`, created by `120000`. This file was originally named `…100000` and would have aborted the replay. |
+| `20260801115000` **before** `20260801130000` | `simulation_results_admin` calls `is_admin()`, created by `115000`. **This is the constraint that broke production on 2026-08-02** (`function public.is_admin() does not exist`), back when `is_admin()` lived in `20260801120000` and could not be applied without closing the portal. |
+| `20260801115000` **before** `20260801120000` | Closing the posture while the three `FOR ALL` policies survive narrows blanket DELETE from "every signed-in user" to "every counsellor" and stops there — still one PostgREST `.delete()` from wiping the table, now wearing the look of a finished security migration. `20260801120000`'s assertion 1 enforces this and was proven to fire. |
 | `20260801120000` **before** `20260802100000` | the archive-table policies call `is_admin()`. |
 | `20260801122000` **before** `20260802110000` | `notification_recipient_allowed()` and `counsellor_notification_targets(uuid)` both read `counsellor_assignments` (42P01 otherwise). |
 | `20260702120000` **before** `20260802110000` | **New on 2026-08-02.** `20260802110000` now `create or replace`s the ZERO-ARGUMENT `counsellor_notification_targets()` — previously it only added a one-argument overload and touched nothing that already existed. `create or replace` on a function that does not exist yet is a plain create, so this does not *fail*; it would instead leave the demo account out of the duty pool on a database built without `20260702120000`. Already applied on the remote and present in `schema.sql`, so this constrains a from-scratch build, not the remote. |
