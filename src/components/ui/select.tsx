@@ -36,7 +36,67 @@ const selectTriggerVariants = cva(
   }
 );
 
-const Select = SelectPrimitive.Root;
+/**
+ * `SelectPrimitive.Root`, with one guard: an `onValueChange('')` is swallowed.
+ *
+ * ── The bug this fixes ──────────────────────────────────────────────────────
+ * Inside a `<form>`, Radix renders a hidden native `<select>` (`SelectBubbleInput`)
+ * so the value participates in native form submission. Its `<option>`s are
+ * registered by each `SelectItem`'s OWN effect, and the bubble input does
+ * `setValue.call(select, value); select.dispatchEvent(new Event('change'))`.
+ *
+ * On the first effect flush the option set is still empty, so assigning a value
+ * the native element does not yet know about yields `''` — and the dispatched
+ * change event hands that empty string back to the application as though the
+ * user had just chosen it.
+ *
+ * In this app that fired on the profile wizard's hydration effect, which sets
+ * every field from the saved payload on mount. `wizard/page.tsx` starts a
+ * returning student on their first INCOMPLETE step and passes the payload in, so
+ * anyone finishing their profile across two sittings was rendered onto step 2 or
+ * 3 and immediately had their saved graduation year, school type, subject levels,
+ * A-level grades, TOK/EE grades and English test type silently blanked. The
+ * wizard then refused to advance, reporting those fields as missing.
+ *
+ * ── Why swallowing '' is acceptable HERE — and its limits ───────────────────
+ * An earlier version of this comment claimed Radix forbids an empty-string
+ * `SelectItem` value, making `''` unreachable "by construction". **That is
+ * false** for the installed `@radix-ui/react-select@2.3.7`: no such invariant
+ * exists, and `hasEmptyValueOption` in its source exists precisely to SUPPORT
+ * empty-value items. A reviewer disproved the claim by rendering
+ * `<SelectItem value="">None</SelectItem>` — it mounts fine, and under this
+ * wrapper clicking it does nothing at all, silently.
+ *
+ * So the real justification is narrower and needs re-checking when it changes:
+ * every Select in this app today uses a SENTINEL for its empty option
+ * ('NONE', 'any', …), never `value=""`, so no legitimate clear routes through
+ * `onValueChange`. That was verified across all current call sites, not derived
+ * from a library guarantee.
+ *
+ * **If you add a Select with `<SelectItem value="">`, it will not work.** Give it
+ * a sentinel value, or clear it from the controlled parent (setting `value=""`
+ * directly does not route through here). Radix's native form-reset listener also
+ * resolves to `''` and is swallowed — latent only because nothing in `src/` uses
+ * `<button type="reset">`.
+ *
+ * Applied at the wrapper so the fix holds app-wide rather than being
+ * re-remembered per call site — but it is a targeted workaround for a library
+ * bug, not an invariant.
+ */
+const Select = ({
+  onValueChange,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>) => (
+  <SelectPrimitive.Root
+    {...props}
+    onValueChange={(next) => {
+      if (next === '') return;
+      onValueChange?.(next);
+    }}
+  />
+);
+Select.displayName = 'Select';
+
 const SelectGroup = SelectPrimitive.Group;
 const SelectValue = SelectPrimitive.Value;
 

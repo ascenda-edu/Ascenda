@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { filterNavByRole, isNavActive, NAV_ITEMS } from './navigation';
-import { useUserRole } from '@/hooks/use-user-role';
+import { useRole } from '@/lib/auth/role-context';
 import { useSupabase } from '@/hooks/useSupabase';
 import { LogOut, MoreHorizontal } from 'lucide-react';
 
@@ -13,7 +13,8 @@ export const MobileNav = () => {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = useSupabase();
-  const role = useUserRole();
+  // Server-resolved (RoleProvider in DashboardShell); no browser round trip.
+  const role = useRole();
   const items = filterNavByRole(NAV_ITEMS, role, pathname);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
@@ -23,7 +24,12 @@ export const MobileNav = () => {
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleSignOut = async () => {
+  // Synchronous `() => void` boundary. A rejected `signOut()` used to leave the
+  // click doing nothing at all — no navigation, no message, the user still
+  // looking at the signed-in shell. Log it and route to /login regardless:
+  // middleware remains the authority on whether the session actually ended, and
+  // a button that visibly does nothing is the one outcome that explains nothing.
+  const handleSignOut = (): void => {
     if (!confirmSignOut) {
       setConfirmSignOut(true);
       if (confirmTimer.current) clearTimeout(confirmTimer.current);
@@ -31,9 +37,15 @@ export const MobileNav = () => {
       return;
     }
     if (confirmTimer.current) clearTimeout(confirmTimer.current);
-    await supabase.auth.signOut();
-    router.refresh();
-    router.push('/login');
+    supabase.auth
+      .signOut()
+      .catch((err: unknown) => {
+        console.error('sign out failed', err);
+      })
+      .finally(() => {
+        router.refresh();
+        router.push('/login');
+      });
   };
 
   useEffect(

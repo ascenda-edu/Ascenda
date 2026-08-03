@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { requireIdentity } from '@/lib/auth/identity';
 import { DashboardShell } from '@/components/layout/shell';
 import { PROFILE_STEPS, type StepCompletionMap, type StepKey } from '@/lib/profile/steps';
 import { buildStepCompletion, type ProfileRecordGroup } from '@/lib/profile/completion';
@@ -21,14 +21,11 @@ export const metadata: Metadata = {
 };
 
 export default async function ProfilePage() {
+  // One memoised identity lookup for the whole request (@/lib/auth/identity):
+  // replaces the copy-pasted getUser()+redirect guard and yields the role the
+  // shell needs, so the browser stops re-deriving it.
+  const identity = await requireIdentity();
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
-  }
 
   // maybeSingle(): new users legitimately have no row yet — .single() turns
   // that into a discarded PGRST116 error that also masks real failures.
@@ -42,16 +39,16 @@ export default async function ProfilePage() {
     { data: admissionsTests },
     { data: scores }
   ] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
-    supabase.from('student_personal_information').select('*').eq('profile_id', user.id).maybeSingle(),
-    supabase.from('student_academic_input').select('*').eq('profile_id', user.id).maybeSingle(),
-    supabase.from('student_lifestyle_preference').select('*').eq('profile_id', user.id).maybeSingle(),
-    supabase.from('student_subjects').select('subject_name,level,grade_value').eq('profile_id', user.id),
+    supabase.from('profiles').select('*').eq('id', identity.userId).maybeSingle(),
+    supabase.from('student_personal_information').select('*').eq('profile_id', identity.userId).maybeSingle(),
+    supabase.from('student_academic_input').select('*').eq('profile_id', identity.userId).maybeSingle(),
+    supabase.from('student_lifestyle_preference').select('*').eq('profile_id', identity.userId).maybeSingle(),
+    supabase.from('student_subjects').select('subject_name,level,grade_value').eq('profile_id', identity.userId),
     supabase
       .from('student_admissions_tests')
       .select('test_type,status,score_numeric,percentile')
-      .eq('profile_id', user.id),
-    supabase.from('student_scores').select('*').eq('profile_id', user.id).maybeSingle()
+      .eq('profile_id', identity.userId),
+    supabase.from('student_scores').select('*').eq('profile_id', identity.userId).maybeSingle()
   ]);
 
   const pathwayInsight = summarisePathwayStatus(
@@ -85,7 +82,7 @@ export default async function ProfilePage() {
     personal?.first_name || personal?.last_name
       ? `${personal?.first_name ?? ''} ${personal?.last_name ?? ''}`.trim()
       : profile?.full_name;
-  const profileEmail = personal?.email ?? user?.email ?? '';
+  const profileEmail = personal?.email ?? identity.email ?? '';
   const formatClusterLabel = (value: string) =>
     value
       .split(',')
@@ -152,7 +149,7 @@ export default async function ProfilePage() {
     .slice(0, 3) as { title: string; detail: string }[];
 
   return (
-    <DashboardShell>
+    <DashboardShell role={identity.role}>
       <PageHero
         tone="student"
         eyebrow="Your profile"
