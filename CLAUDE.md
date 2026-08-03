@@ -100,13 +100,24 @@ SUPABASE_PROJECT_ID
 
 ## Deployment
 
-- **Vercel project:** `ascenda` under the `cxz5mw6fk2-6983s-projects` org. The old
-  `ascenda-ashy.vercel.app` alias is DEAD (`DEPLOYMENT_NOT_FOUND`) — it did not survive the
-  repo/org move. Get the current production URL from the deployment itself rather than
-  hardcoding another alias that will rot:
-  `gh api repos/ascenda-edu/Ascenda/deployments --jq '.[0].id'` then
-  `gh api repos/ascenda-edu/Ascenda/deployments/<id>/statuses --jq '.[0].environment_url'`
+- **Production:** https://ascendaedu.com (and `www.`). This is the canonical URL.
+- **Vercel project:** `ascenda` under the `cxz5mw6fk2-6983s-projects` org.
+- `ascenda-ashy.vercel.app` was **deliberately disabled** and routed to `ascendaedu.com`; it now
+  returns 404. Don't restore it or cite it — the mock address bar in
+  `components/landing/hero-app-tour.tsx` already says `ascendaedu.com`.
 - **Branch:** `main` → auto-deploys to production
+- **Domain coupling is config-only, not code.** `auth/callback/route.ts` builds its redirect with
+  `new URL(next, req.url)` — origin-relative, so it follows whatever host serves it. Nothing in
+  `src/` reads `NEXT_PUBLIC_SITE_URL` (it is declared `optional()` in `lib/env.ts` and consumed
+  nowhere). So a domain change needs no code edit, but DOES need:
+  1. `NEXT_PUBLIC_SITE_URL` updated in Vercel **and** `.env.local` — both still said
+     `ascenda-ashy.vercel.app` after the cutover. Harmless today only because nothing reads it;
+     it becomes a live bug the moment something does.
+  2. **Supabase → Authentication → URL Configuration**: Site URL and the redirect allowlist must
+     include `https://ascendaedu.com/auth/callback`. The app only calls `signInWithPassword`
+     (domain-independent) and `exchangeCodeForSession`, so password login is unaffected — but the
+     first invite, magic link or password recovery after the cutover lands on a dead URL, or is
+     rejected outright, if the allowlist still names the old alias.
 - **CI:** GitHub Actions runs lint, typecheck, test, and a production build (placeholder Supabase env vars). Route-handler tests run in a node environment via the `./jest.environment-node.js` wrapper (Node ≥22 webstorage clash — see the file header)
 
 ## Gotchas
