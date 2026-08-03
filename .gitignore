@@ -22,3 +22,6 @@ supabase/imports/**/*.csv
 
 # Supabase CLI local state (project ref, pooler URL, versions)
 supabase/.temp/
+
+# Sibling repo, cloned separately — NOT a submodule of this repo (see PR: broke Vercel clones)
+Ascenda-Data-Collection/
