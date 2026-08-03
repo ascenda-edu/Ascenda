@@ -8,7 +8,7 @@
 | | |
 |---|---|
 | **URL** | https://ascenda-ashy.vercel.app |
-| **Login** | `greg@workiflow.com` / `AscendaDemo!2026` |
+| **Login** | `greg@workiflow.com` / `«DEMO_USER_PASSWORD»` |
 | **Browser** | Chrome, clean profile (no extensions), full screen, 100% zoom |
 | **Backup** | A second tab pre-logged-in. If the first session drops, switch tabs and keep talking. |
 

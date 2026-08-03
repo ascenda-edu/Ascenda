@@ -9,8 +9,34 @@
  * Usage: SUPABASE_DB_URL=... tsx scripts/apply-sql.ts <path-to.sql>
  */
 import { readFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, sep } from 'node:path';
 import { Client } from 'pg';
+
+// ── Hard refusal: supabase/migrations/_applied_archive/ ──────────────────────
+// Those files are APPLIED and DESTRUCTIVE ON REPLAY — 20250308120000 renames the
+// live 119k-row catalogue to archive_raw_* and promotes the empty *_v2 tables in
+// its place. Moving them out of supabase/migrations/ took them out of every
+// glob, but this script takes a FILENAME, so the move did nothing at all to stop
+// `npm run db:apply supabase/migrations/_applied_archive/<file>` from running one
+// against production. That is the exact command the archive README warns about.
+// See docs/audit/verify/C-database.md finding C5.
+//
+// This runs BEFORE the SUPABASE_DB_URL check on purpose, so the refusal is
+// testable with no environment and cannot be reached by way of a connection.
+const refuseIfArchived = (candidate: string) => {
+  const normalised = resolve(candidate).split(sep);
+  if (normalised.includes('_applied_archive')) {
+    console.error(
+      `✗ Refusing to apply ${candidate}\n` +
+        '  It is in supabase/migrations/_applied_archive/ — already applied to production\n' +
+        '  and DESTRUCTIVE on replay (it archives the live catalogue and promotes empty\n' +
+        '  tables in its place). supabase/schema.sql already reflects its result; a\n' +
+        '  database that needs those objects should be built from schema.sql.\n' +
+        '  See supabase/migrations/_applied_archive/README.md.',
+    );
+    process.exit(1);
+  }
+};
 
 // Load .env.local (tsx does not do this automatically).
 (() => {
@@ -30,6 +56,8 @@ if (!file) {
   console.error('Usage: tsx scripts/apply-sql.ts <path-to.sql>');
   process.exit(1);
 }
+
+refuseIfArchived(file);
 
 const connectionString = process.env.SUPABASE_DB_URL;
 if (!connectionString) {
