@@ -15,7 +15,8 @@ import {
   deriveUpcomingDeadlines,
   type CohortStats,
 } from '@/lib/counsellor/data';
-import type { CounsellorStudent } from '@/lib/counsellor/types';
+import type { ApplicationStatus, CounsellorStudent } from '@/lib/counsellor/types';
+import { STAGE_ORDER } from '@/lib/counsellor/stage-colors';
 
 // loadCohort is a whole-cohort load and every tool here starts from it — one
 // multi-tool turn (or the execute endpoint's resume loop) would otherwise run
@@ -51,8 +52,11 @@ const fullName = (s: CounsellorStudent): string =>
   `${s.personal.firstName} ${s.personal.lastName}`.trim() || 'Student';
 
 // Application status tallies — compact enough to hand the model per student.
-const statusSummary = (s: CounsellorStudent) => {
-  const summary = { planning: 0, in_progress: 0, submitted: 0, decision: 0 };
+// Built from STAGE_ORDER, so a new application status is tallied automatically.
+// The hand-written object literal this replaced had no `enrolled` key, which would
+// have made `summary.enrolled` NaN the moment enrolments became representable.
+const statusSummary = (s: CounsellorStudent): Record<ApplicationStatus, number> => {
+  const summary = Object.fromEntries(STAGE_ORDER.map((k) => [k, 0])) as Record<ApplicationStatus, number>;
   for (const a of s.applications) summary[a.status] += 1;
   return summary;
 };

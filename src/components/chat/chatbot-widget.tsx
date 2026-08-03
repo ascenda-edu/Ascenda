@@ -378,10 +378,12 @@ export function ChatbotWidget() {
   // Carry the recent exchange into a new Assistant conversation and jump
   // there. Error bubbles and legacy action metadata are stripped — only clean
   // role+content rows travel. Widget history is left intact.
-  const handoffToAssistant = async () => {
+  // Synchronous `() => void` boundary around an async body — see the comment on
+  // the promise chain at the bottom of this function.
+  const handoffToAssistant = (): void => {
     if (handoffBusy) return;
     setHandoffBusy(true);
-    try {
+    const run = async (): Promise<void> => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -410,12 +412,29 @@ export function ChatbotWidget() {
       }
       setIsOpen(false);
       router.push(`${assistantPathForMode(mode)}?c=${id}`);
-    } catch (err) {
-      console.warn('[chat] handoff failed:', err);
-      setHandoffBusy(false);
-      return;
-    }
-    setHandoffBusy(false);
+    };
+
+    // A failed handoff used to be console-only: the user clicked "Continue in
+    // Assistant", the spinner stopped, and absolutely nothing happened — no
+    // navigation, no message, no way to tell whether the conversation had been
+    // copied. Say so in the thread, using the same error-bubble treatment the
+    // streaming failures already use.
+    run()
+      .catch((err: unknown) => {
+        console.warn('[chat] handoff failed:', err);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `handoff-error-${Date.now()}`,
+            role: 'assistant',
+            content: "Couldn't move this conversation to the Assistant. Your messages are still here — try again in a moment.",
+            error: true,
+          },
+        ]);
+      })
+      .finally(() => {
+        setHandoffBusy(false);
+      });
   };
 
   const handleSubmit = (e: React.FormEvent) => {

@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/api/rate-limit';
-import { ACTIVE_CHILD_COOKIE } from '@/lib/parent/active-child';
+import { ACTIVE_CHILD_COOKIE } from '@/features/parent';
 import { buildContextForMode, buildStarterSuggestions } from '@/lib/chat/context';
 import { contextCacheKey, getCachedContext, setCachedContext } from '@/lib/chat/cache';
 import { resolveChatMode } from '@/lib/chat/mode';

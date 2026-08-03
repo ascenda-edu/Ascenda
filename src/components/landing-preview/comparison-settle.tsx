@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { MotionValue, motion, useScroll, useSpring, useTransform } from 'framer-motion';
 import { ArrowRight, Check, X } from 'lucide-react';
 import { MatchCard, TaskRow } from '@/components/landing/product-widgets';

@@ -75,10 +75,14 @@ export function HelpRequestModal({ open, onOpenChange, app }: HelpRequestModalPr
 
   if (!app) return null;
 
-  const handleSubmit = async () => {
+  // Synchronous `() => void` event-handler boundary around an async body. An
+  // `async` function handed to `onClick`/`onDrop`/`onChange` returns a promise
+  // the DOM discards, so a rejection is swallowed and the user is told nothing;
+  // the terminal `.catch` below is the only exit for a failure.
+  const handleSubmit = (): void => {
     if (submitting) return;
     setSubmitting(true);
-    try {
+    const run = async (): Promise<void> => {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData?.user?.id;
       if (!userId) {
@@ -107,16 +111,20 @@ export function HelpRequestModal({ open, onOpenChange, app }: HelpRequestModalPr
         variant: 'success'
       });
       onOpenChange(false);
-    } catch (err) {
-      console.error('help request submit failed', err);
-      showToast({
-        title: "Couldn't send request",
-        description: 'Check your connection and try again',
-        variant: 'error'
+    };
+
+    run()
+      .catch((err: unknown) => {
+        console.error('help request submit failed', err);
+        showToast({
+          title: "Couldn't send request",
+          description: 'Check your connection and try again',
+          variant: 'error'
+        });
+      })
+      .finally(() => {
+        setSubmitting(false);
       });
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   return (

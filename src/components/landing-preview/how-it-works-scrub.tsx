@@ -606,9 +606,17 @@ function StepMorph({ p, scrub }: PinnedStageCtx) {
         // change a row's height also changes the grid's width. Fonts are the one
         // exception: they swap in without a resize and move every text metric here.
         let live = true;
-        document.fonts?.ready.then(() => {
-            if (live) measure();
-        });
+        document.fonts?.ready
+            .then(() => {
+                if (live) measure();
+            })
+            // Purely cosmetic: `measure()` has already run once above, so a
+            // rejected font-loading promise only means the layout is not
+            // re-measured after a font swap. Nothing to show the visitor, but
+            // the rejection must not float.
+            .catch((err: unknown) => {
+                console.warn('how-it-works: font-ready remeasure skipped', err);
+            });
         const observer = new ResizeObserver(measure);
         observer.observe(grid);
         return () => {

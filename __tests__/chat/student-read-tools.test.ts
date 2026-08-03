@@ -14,6 +14,11 @@ jest.mock('@/lib/counsellor/data', () => ({
 
 import { resolvePrograms } from '@/lib/counsellor/data';
 import { STUDENT_READ_TOOLS } from '@/lib/chat/tools/student-read';
+import {
+  filtersFor,
+  recordingClient,
+  type RecordedCall,
+} from '../helpers/supabase-recorder';
 
 const ctx: ToolContext = { supabase: {} as never, userId: 'stu-1', mode: 'student' };
 const tool = (name: string): ReadTool => STUDENT_READ_TOOLS.find((t) => t.name === name)!;
@@ -26,13 +31,14 @@ const dayOut = (n: number): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const thenable = (result: unknown) => {
-  const builder: Record<string, unknown> = {};
-  for (const m of ['select', 'eq', 'order', 'limit']) builder[m] = jest.fn(() => builder);
-  builder.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
-    Promise.resolve(result).then(resolve, reject);
-  return builder;
-};
+/**
+ * The double used to be a bag of `jest.fn(() => builder)` whose arguments were
+ * discarded, so `profile_id` appeared nowhere in this directory and deleting the
+ * scope filter from either read tool left all 1,541 tests green. It now records
+ * `[method, column, value]` — see `__tests__/helpers/supabase-recorder.ts`.
+ */
+const clientFor = (table: string, result: { data?: unknown; error?: unknown }, calls: RecordedCall[]) =>
+  recordingClient({ [table]: result }, calls);
 
 describe('get_my_applications toWidgets', () => {
   const t = tool('get_my_applications');
@@ -95,20 +101,21 @@ describe('get_my_matches', () => {
     (resolvePrograms as jest.Mock).mockResolvedValue(
       new Map([['prog-1', { courseName: 'CS', university: 'Oxford', country: 'UK' }]])
     );
-    const supabase = {
-      from: jest.fn(() =>
-        thenable({
-          data: [
-            {
-              program_id: 'prog-1',
-              score: 87.6,
-              breakdown: { tier: 'Reach', eligibility: 150, academicFit: -5, preferenceFit: 0, outcomes: 'x' },
-            },
-          ],
-          error: null,
-        })
-      ),
-    };
+    const calls: RecordedCall[] = [];
+    const supabase = clientFor(
+      'student_matches',
+      {
+        data: [
+          {
+            program_id: 'prog-1',
+            score: 87.6,
+            breakdown: { tier: 'Reach', eligibility: 150, academicFit: -5, preferenceFit: 0, outcomes: 'x' },
+          },
+        ],
+        error: null,
+      },
+      calls
+    );
 
     const res = await t.execute({ ...ctx, supabase: supabase as never }, {});
     const first = (res.results as Array<Record<string, unknown>>)[0];
@@ -134,6 +141,36 @@ describe('get_my_matches', () => {
   it('toWidgets returns null on empty results / error', () => {
     expect(t.toWidgets!({ results: [], note: 'none' })).toBeNull();
     expect(t.toWidgets!({ error: 'boom' })).toBeNull();
+  });
+});
+
+/**
+ * The scope property, stated on its own rather than left implicit in the payload
+ * tests above.
+ *
+ * These tools take no student id — they read "the signed-in student's" rows, and
+ * `.eq('profile_id', ctx.userId)` is the ONLY thing that makes that true. Delete
+ * either line and a student asking the assistant "what are my matches?" receives
+ * the highest-scoring rows across the whole table: other students' programme
+ * matches, rendered into a chat widget.
+ */
+describe('every student read tool scopes to the caller', () => {
+  it.each([
+    ['get_my_matches', 'student_matches'],
+    ['get_my_shortlist', 'shortlisted_programs'],
+  ])('%s filters on the caller profile_id', async (toolName, table) => {
+    (resolvePrograms as jest.Mock).mockResolvedValue(new Map());
+    const calls: RecordedCall[] = [];
+    const supabase = clientFor(table, { data: [], error: null }, calls);
+
+    await tool(toolName).execute({ ...ctx, supabase: supabase as never }, {});
+
+    expect(calls.map((c) => c.table)).toContain(table);
+    expect(filtersFor(calls, table)).toContainEqual(['eq', 'profile_id', 'stu-1']);
+    // No filter may name a profile other than the caller's.
+    for (const [, column, value] of filtersFor(calls, table)) {
+      if (column === 'profile_id') expect(value).toBe('stu-1');
+    }
   });
 });
 

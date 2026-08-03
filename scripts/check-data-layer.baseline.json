@@ -1,0 +1,5 @@
+{
+  "_readme": "Direct PostgREST call sites (.from / .rpc) outside src/lib/data, comments stripped and Supabase Storage excluded. May shrink, never grow. See scripts/check-data-layer.mjs.",
+  "total": 183,
+  "files": 50
+}

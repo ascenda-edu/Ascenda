@@ -5,6 +5,7 @@ import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { ScholarshipExplorer } from '@/components/scholarships/scholarship-explorer';
 import type { Scholarship } from '@/components/scholarships/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getIdentity } from '@/lib/auth/identity';
 
 export const metadata: Metadata = {
   title: 'Scholarships'
@@ -53,6 +54,10 @@ const sampleScholarships: Scholarship[] = [
 ];
 
 export default async function ScholarshipsPage() {
+  // Chrome only — not a guard (middleware already gates /scholarships). It feeds
+  // the shell's `role` so the nav stops re-deriving it in the browser, and is
+  // memoised per request by React `cache()`.
+  const identity = await getIdentity();
   const supabase = await createServerSupabaseClient();
   // `scholarships` is not yet a real table — this query returns nothing today and
   // the page falls back to sample data (clearly labelled below). When a live feed
@@ -91,7 +96,7 @@ export default async function ScholarshipsPage() {
   ];
 
   return (
-    <DashboardShell>
+    <DashboardShell role={identity?.role ?? null}>
       <PageHero
         tone="student"
         eyebrow="Scholarships"

@@ -21,6 +21,7 @@ import type {
   DeckTheme,
 } from '@/lib/types/demo-tables';
 import { canActAsCounsellor } from '@/lib/api/guards';
+import { unwrap } from '@/lib/data/errors';
 import { nameMap, resolvePrograms } from '@/lib/counsellor/data';
 
 type Client = SupabaseClient<Database>;
@@ -81,15 +82,11 @@ export interface StudentQuestDeck {
   quests: StudentQuest[];
 }
 
-const unwrap = <T,>(
-  res: { data: T | null; error: { message?: string } | null },
-  label: string
-): T | null => {
-  if (res.error) {
-    throw new Error(`deck data: ${label} query failed — ${res.error.message ?? 'unknown error'}`);
-  }
-  return res.data;
-};
+// `unwrap` used to be redefined here, identical to the copies in
+// counsellor/data.ts and parent/data.ts apart from its label prefix. It now
+// comes from @/lib/data/errors: same disposition (throw — a failed deck read
+// must not render as "no decks assigned"), but logged, and without PostgREST's
+// message travelling to the error boundary. Contexts are `decks.<thing>`.
 
 // ── route guard ───────────────────────────────────────────────────────────────
 
@@ -122,7 +119,7 @@ export async function loadDecks(supabase: Client, counsellorId: string): Promise
       .select('*')
       .eq('counsellor_id', counsellorId)
       .order('created_at', { ascending: false }),
-    'decks'
+    'decks.list'
   ) ?? []) as CounsellorDeckRow[];
   if (deckRows.length === 0) return [];
 
@@ -133,11 +130,11 @@ export async function loadDecks(supabase: Client, counsellorId: string): Promise
       .in('deck_id', deckIds)
       .order('position', { ascending: true })
       .order('created_at', { ascending: true })
-      .then((res: any) => unwrap(res, 'deck cards') ?? []),
+      .then((res: any) => unwrap(res, 'decks.cards') ?? []),
     tbl(supabase, 'deck_assignments')
       .select('*')
       .in('deck_id', deckIds)
-      .then((res: any) => unwrap(res, 'deck assignments') ?? []),
+      .then((res: any) => unwrap(res, 'decks.assignments') ?? []),
   ])) as [DeckProgramRow[], DeckAssignmentRow[]];
 
   const [programs, students] = await Promise.all([
@@ -310,7 +307,7 @@ export async function loadStudentQuestDecks(
       .select('*')
       .eq('student_profile_id', studentProfileId)
       .order('created_at', { ascending: false }),
-    'student assignments'
+    'decks.studentAssignments'
   ) ?? []) as DeckAssignmentRow[];
   if (assignments.length === 0) return [];
 
@@ -319,18 +316,18 @@ export async function loadStudentQuestDecks(
     tbl(supabase, 'counsellor_decks')
       .select('id, name, theme')
       .in('id', deckIds)
-      .then((res: any) => unwrap(res, 'assigned decks') ?? []),
+      .then((res: any) => unwrap(res, 'decks.assignedDecks') ?? []),
     tbl(supabase, 'counsellor_deck_programs')
       .select('*')
       .in('deck_id', deckIds)
       .order('position', { ascending: true })
       .order('created_at', { ascending: true })
-      .then((res: any) => unwrap(res, 'assigned deck cards') ?? []),
+      .then((res: any) => unwrap(res, 'decks.assignedCards') ?? []),
     supabase
       .from('applications')
       .select('program_id')
       .eq('profile_id', studentProfileId)
-      .then((res) => unwrap(res, 'student applications') ?? []),
+      .then((res) => unwrap(res, 'decks.studentApplications') ?? []),
   ])) as [Pick<CounsellorDeckRow, 'id' | 'name' | 'theme'>[], DeckProgramRow[], { program_id: string }[]];
 
   const programs = await resolvePrograms(supabase, cardRows.map((c) => c.program_id));

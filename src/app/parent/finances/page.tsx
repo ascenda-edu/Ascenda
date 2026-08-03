@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import { PageHero } from '@/components/layout/page-hero';
 import { AnimatedSection } from '@/components/layout/animated-section';
-import { loadChildFinances } from '@/lib/parent/data';
-import { formatGbp } from '@/lib/parent/currency';
-import { resolveParentContext } from '../_lib/context';
-import { ChildSwitcher } from '../_components/child-switcher';
-import { NoLinkedChildren } from '../_components/no-linked-children';
-import { CostExplorer } from './_cost-explorer';
+import {
+  ChildSwitcher,
+  CostExplorer,
+  NoLinkedChildren,
+  formatGbp,
+  loadChildFinances,
+  resolveParentContext,
+} from '@/features/parent';
 
 export const metadata: Metadata = { title: 'Finances · Parent' };
 export const dynamic = 'force-dynamic';

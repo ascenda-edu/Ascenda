@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { requireRole } from '@/lib/auth/identity';
 import { PageHero } from '@/components/layout/page-hero';
 import { FlaskConical } from 'lucide-react';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
@@ -71,9 +72,8 @@ export default async function SimulationPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
-    .from('profiles').select('role').eq('id', user.id).single();
-  if (profile?.role !== 'admin') redirect('/dashboard');
+  // See the note in src/app/admin/page.tsx — same discarded-error shape, same fix.
+  await requireRole('admin');
 
   const { data: rows } = await (supabase as any)
     .from('simulation_results')

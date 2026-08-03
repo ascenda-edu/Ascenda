@@ -12,25 +12,11 @@ import {
   type SeedTask,
   type TaskApplicationOption
 } from '@/components/applications/cross-application-tasks';
+import { loadApplicationsWithTasks } from '@/lib/data/applications';
+import type { ApplicationTasksRow } from '@/lib/data/columns';
 
 export const metadata: Metadata = {
   title: 'Tasks'
-};
-
-type ChecklistJoin = {
-  id: string;
-  task_name: string;
-  status: 'todo' | 'doing' | 'done';
-  due_date: string | null;
-};
-
-type ApplicationJoin = {
-  id: string;
-  program: {
-    name: string | null;
-    universities: { name: string | null } | null;
-  } | null;
-  application_checklist: ChecklistJoin[] | null;
 };
 
 export default async function TasksPage() {
@@ -43,25 +29,12 @@ export default async function TasksPage() {
     redirect('/login');
   }
 
-  const { data: applicationRows, error: applicationsError } = await supabase
-    .from('applications')
-    .select(`
-      id,
-      program:programs(name:course_name, universities(name)),
-      application_checklist(id, task_name, status, due_date)
-    `)
-    .eq('profile_id', user.id)
-    // Stable row order or the "(1)"/"(2)" label-collision suffixes below can
-    // swap which application they denote between refreshes.
-    .order('id', { ascending: true });
+  // Ordered by id inside the loader, so the "(1)"/"(2)" label-collision
+  // suffixes below cannot swap which application they denote between refreshes.
+  // A failed query hits the error boundary (unwrap) — rendering the "No tasks
+  // yet" empty state to a user who has tasks is worse than an error page.
+  const apps = await loadApplicationsWithTasks(supabase, user.id);
 
-  // A failed query must hit the error boundary — rendering the "No tasks yet"
-  // empty state to a user who has tasks is worse than an error page.
-  if (applicationsError) {
-    throw new Error(`tasks: applications query failed — ${applicationsError.message}`);
-  }
-
-  const apps = ((applicationRows ?? []) as unknown as ApplicationJoin[]) ?? [];
   // Two applications at the same university would otherwise share a label —
   // merging their task groups and rendering identical <select> options. Prefer
   // "University — Programme" for collisions; number anything that still
@@ -71,7 +44,7 @@ export default async function TasksPage() {
     const uni = app.program?.universities?.name;
     if (uni) uniCounts.set(uni, (uniCounts.get(uni) ?? 0) + 1);
   }
-  const baseLabel = (app: ApplicationJoin) => {
+  const baseLabel = (app: ApplicationTasksRow) => {
     const uni = app.program?.universities?.name;
     const programme = app.program?.name;
     if (uni && programme && (uniCounts.get(uni) ?? 0) > 1) return `${uni} — ${programme}`;
@@ -94,7 +67,7 @@ export default async function TasksPage() {
       labelById.set(app.id, base);
     }
   }
-  const appLabel = (app: ApplicationJoin) => labelById.get(app.id) ?? 'Application';
+  const appLabel = (app: ApplicationTasksRow) => labelById.get(app.id) ?? 'Application';
 
   const applicationOptions: TaskApplicationOption[] = apps.map((app) => ({
     id: app.id,

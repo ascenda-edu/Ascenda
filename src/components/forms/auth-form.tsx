@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useTransition, type FormEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AuthError } from '@supabase/supabase-js';
@@ -14,7 +13,6 @@ import { Label } from '@/components/ui/label';
 import { isProfileComplete } from '@/lib/profile/completion';
 
 export const AuthForm = () => {
-  const router = useRouter();
   const supabase = useSupabase();
   const [error, setError] = useState<string | null>(null);
   const [authServiceReady, setAuthServiceReady] = useState(true);
@@ -27,16 +25,30 @@ export const AuthForm = () => {
 
   useEffect(() => {
     let isMounted = true;
-    supabase.auth.getSession().then(({ error: sessionError }) => {
-      if (!isMounted) return;
-      if (sessionError) {
-        console.error('Supabase auth unavailable', sessionError);
-        setAuthServiceReady(false);
-        setError((prev) => prev ?? 'We could not reach the sign-in service. Please refresh and try again.');
-      } else {
-        setAuthServiceReady(true);
-      }
-    });
+    const reportAuthUnavailable = (cause: unknown) => {
+      console.error('Supabase auth unavailable', cause);
+      setAuthServiceReady(false);
+      setError((prev) => prev ?? 'We could not reach the sign-in service. Please refresh and try again.');
+    };
+    supabase.auth
+      .getSession()
+      .then(({ error: sessionError }) => {
+        if (!isMounted) return;
+        if (sessionError) {
+          reportAuthUnavailable(sessionError);
+        } else {
+          setAuthServiceReady(true);
+        }
+      })
+      // The whole point of this probe is to detect "auth is unreachable", and a
+      // rejected getSession (offline, DNS, CORS) is the most literal form of
+      // that — but it arrives as a rejection rather than an `error` field, so
+      // without this catch the page stayed in its optimistic `ready` state and
+      // showed no banner at all.
+      .catch((cause: unknown) => {
+        if (!isMounted) return;
+        reportAuthUnavailable(cause);
+      });
 
     return () => {
       isMounted = false;
@@ -101,26 +113,59 @@ export const AuthForm = () => {
       return;
     }
     startTransition(async () => {
-      const { error: signInError, data } = await supabase.auth.signInWithPassword(values);
+      try {
+        const { error: signInError, data } = await supabase.auth.signInWithPassword(values);
 
-      if (signInError) {
-        setError(formatAuthError(signInError));
-        return;
+        if (signInError) {
+          setError(formatAuthError(signInError));
+          return;
+        }
+
+        const redirectTarget = await determineRedirectTarget(data.user?.id);
+
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(RETURNING_USER_STORAGE_KEY, 'true');
+        }
+
+        // A FULL document navigation, deliberately — not `router.refresh()` +
+        // `router.push()`.
+        //
+        // That pair is what put people back on the login page after a
+        // *successful* sign-in. `refresh()` re-fetches the RSC payload for the
+        // page you are still on — `/login` — and middleware now sees a session
+        // there, so it answers that fetch with a redirect to `/role-select`.
+        // The App Router cannot reconcile a redirect on a refresh of the
+        // current route, so it falls back to a hard reload, which cancels the
+        // `push()` racing alongside it. You end up exactly where you started,
+        // signed in, staring at the login form again — and then "bypass" the
+        // login by typing /dashboard, because the session was valid all along.
+        //
+        // A hard navigation has none of those moving parts: one request, the
+        // fresh cookie on it, middleware routes it once.
+        window.location.assign(redirectTarget);
+      } catch (submitError) {
+        // A rejection here (rather than a populated `signInError`) left the
+        // form with the spinner cleared and no message — the user pressed
+        // Sign in and nothing at all happened.
+        console.error('sign-in failed', submitError);
+        setError('We could not sign you in just now. Please check your connection and try again.');
       }
+    });
+  };
 
-      const redirectTarget = await determineRedirectTarget(data.user?.id);
-
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(RETURNING_USER_STORAGE_KEY, 'true');
-      }
-
-      router.refresh();
-      router.push(redirectTarget);
+  // react-hook-form's handleSubmit returns a promise. Handing it straight to
+  // `onSubmit` discards it, so a throw from validation or from `onSubmit` would
+  // leave the form inert with no message.
+  const submitForm = form.handleSubmit(onSubmit);
+  const handleFormSubmit = (event: FormEvent<HTMLFormElement>): void => {
+    submitForm(event).catch((submitError: unknown) => {
+      console.error('login form submit failed', submitError);
+      setError('Something went wrong submitting the form. Please try again.');
     });
   };
 
   return (
-    <form className="form-stack" onSubmit={form.handleSubmit(onSubmit)}>
+    <form className="form-stack" onSubmit={handleFormSubmit}>
       <div className="form-field">
         <Label htmlFor="email">
           Email

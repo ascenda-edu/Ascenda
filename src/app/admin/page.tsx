@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { requireRole } from '@/lib/auth/identity';
 import { PageHero } from '@/components/layout/page-hero';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { ImportPanel } from './_components/import-panel';
@@ -28,11 +29,13 @@ export default async function AdminPage() {
     redirect('/login');
   }
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-
-  if (profile?.role !== 'admin') {
-    redirect('/dashboard');
-  }
+  // Was `const { data: profile } = …` with the error discarded. That failed
+  // closed only by accident — `undefined?.role !== 'admin'` — so an unreadable
+  // profiles row (RLS change, outage) locked every admin out with nothing logged
+  // and nothing distinguishing it from a legitimate denial. requireRole binds the
+  // error, resolves identity ONCE per request via React cache(), and is the same
+  // rule the API routes' requireAdminUser applies.
+  await requireRole('admin');
 
   const { data: sourcesData } = await supabase.from('sources').select('*').order('last_scraped_at', { ascending: false });
   const sources = (sourcesData ?? []) as SourceRow[];

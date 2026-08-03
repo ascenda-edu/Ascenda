@@ -1,51 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getBrowserSupabaseClient } from '@/lib/supabase/client';
+/**
+ * DEPRECATED SHIM — kept so nothing outside this refactor breaks.
+ *
+ * This hook used to BE the role: it read `sessionStorage['ascenda-session-role']`
+ * / `localStorage['ascenda-role']` first and only then asked the database, via
+ * `auth.getUser()` + a `profiles` query, in the browser. Four layout components
+ * that render on every page each called it independently
+ * (docs/audit/11-security-authz.md F8).
+ *
+ * The role is now resolved ONCE on the server (`@/lib/auth/identity`, memoised
+ * per request) and handed to the client through `<RoleProvider>`. The
+ * implementation moved to `@/lib/auth/role-context` — including the client
+ * derivation, which survives only as a fallback for surfaces that do not yet
+ * pass a server role.
+ *
+ * New code should call `useRole()` from `@/lib/auth/role-context` directly, and
+ * must not treat either as an authorisation input: authorisation is
+ * `can(identity, action, resource)` in `@/lib/auth/policy`, server-side.
+ */
 
-export const useUserRole = () => {
-  const [role, setRole] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Initialise from storage first (fast path, avoids nav flicker on subsequent loads)
-    const sessionRole = sessionStorage.getItem('ascenda-session-role');
-    const localRole = localStorage.getItem('ascenda-role');
-    if (sessionRole || localRole) {
-      setRole(sessionRole ?? localRole);
-    }
-
-    // If the user explicitly selected a role this session, don't overwrite it with the DB value
-    if (sessionRole) return;
-
-    const supabase = getBrowserSupabaseClient();
-    supabase.auth
-      .getUser()
-      .then(({ data }) => {
-        const userId = data?.user?.id;
-        if (!userId) {
-          setRole(null);
-          return null;
-        }
-        return supabase.from('profiles').select('role').eq('id', userId).single();
-      })
-      .then((response) => {
-        if (response && 'data' in response) {
-          setRole(response.data?.role ?? null);
-        }
-      })
-      .catch(() => {
-        setRole(null);
-      });
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (role) {
-      localStorage.setItem('ascenda-role', role);
-    } else {
-      localStorage.removeItem('ascenda-role');
-    }
-  }, [role]);
-
-  return role;
-};
+export { useRole as useUserRole, SESSION_ROLE_KEY, LOCAL_ROLE_KEY } from '@/lib/auth/role-context';

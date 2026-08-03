@@ -1,0 +1,30 @@
+// Typecheck for scripts/*.ts.  Run: npm run typecheck:scripts (also chained into
+// `npm run typecheck`, so the one gate CI already runs covers both).
+//
+// WHY A SECOND CONFIG. tsconfig.json excludes "scripts", so `tsc --noEmit` never
+// looked at any of it. `const x: number = "nope"` appended to scripts/apply-sql.ts
+// — the one-off applier that runs migrations against the PRODUCTION database — left
+// `npm run typecheck` at exit 0. Everything under scripts/ runs through `tsx`, which
+// STRIPS types without checking them, so nothing else would have caught it either.
+// (e2e/ and __tests__/ were always covered; scripts/ was the only excluded source dir.)
+//
+// It is a separate file rather than dropping "scripts" from the main `exclude` so the
+// app config stays exactly what Next and the editor see: these are Node CLI programs,
+// not part of the bundle, and they want `types: ["node"]` without `jest`.
+//
+// NOT COVERED, deliberately: the .mjs gate scripts (check-bundle-budget, check-data-layer,
+// check-design-tokens, check-deadcode). `allowJs` is false and turning it on here would
+// pull in every .js in the repo. They are plain Node with no type annotations to check.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // Node CLI programs — no DOM, no jest globals.
+    "types": ["node"],
+    // Two projects sharing one .tsbuildinfo name is a stale-cache trap; these
+    // scripts are small enough that the incremental cache buys nothing.
+    "incremental": false
+  },
+  "include": ["scripts/**/*.ts"],
+  "exclude": ["node_modules", ".next"]
+}

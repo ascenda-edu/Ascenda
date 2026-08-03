@@ -1,7 +1,7 @@
 'use client';
 
 import {
-    ReactNode,
+    type ReactNode,
     createContext,
     useCallback,
     useContext,

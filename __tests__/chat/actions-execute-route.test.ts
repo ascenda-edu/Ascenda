@@ -288,6 +288,172 @@ describe('POST /api/chat/actions/execute', () => {
     });
   });
 
+  /* ────────────────────────────────────────────────────────────────────────
+   * Mode escalation.
+   *
+   * Every test above runs with `mode: 'student'`, which short-circuits
+   * `resolveChatMode` (student is the least-privileged mode and is granted
+   * unconditionally). So reverting this route to read `conversation.mode`
+   * directly — the escalation the guard was written to close — left all 13
+   * green.
+   *
+   * The row is written by the BROWSER. `chat_conversations_all_own` constrains
+   * only `owner_id = auth.uid()`, nothing about `mode`, so a student can POST a
+   * conversation with `mode: 'counsellor'` straight to PostgREST and then
+   * execute counsellor write tools through here. `resolveChatMode` is the floor;
+   * the persisted mode is the ceiling; the route requires BOTH.
+   *
+   * `resolveChatMode` is deliberately NOT mocked in this block — mocking it
+   * would test that the route calls a function, not that the escalation is
+   * refused. It runs for real against a profiles stub.
+   * ──────────────────────────────────────────────────────────────────────── */
+  describe('mode escalation', () => {
+    /**
+     * Adds the `profiles` read `canActAsCounsellor` makes to the auth stub, and
+     * records its filter — the role must be looked up for the CALLER.
+     */
+    const roleFilters: Array<[string, unknown]> = [];
+    const clientWithRole = (role: string | null) => ({
+      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'user-123', email: 'u@x.com' } } }) },
+      from: jest.fn((table: string) => {
+        expect(table).toBe('profiles');
+        return {
+          select: jest.fn(() => ({
+            eq: jest.fn((column: string, value: unknown) => {
+              roleFilters.push([column, value]);
+              return {
+                maybeSingle: jest.fn().mockResolvedValue({
+                  data: role === null ? null : { id: 'user-123', role },
+                  error: null
+                })
+              };
+            })
+          }))
+        };
+      })
+    });
+
+    beforeEach(() => {
+      roleFilters.length = 0;
+    });
+
+    const inConversationMode = (mode: string) => {
+      (getConversation as jest.Mock).mockResolvedValue({
+        id: 'conv-1',
+        owner_id: 'user-123',
+        mode,
+        title: 'T'
+      });
+    };
+
+    it('403s a STUDENT executing inside a conversation row that claims counsellor mode', async () => {
+      // The row says counsellor; the caller is a student. This is the escalation.
+      (createRouteHandlerSupabaseClient as jest.Mock).mockReturnValue(clientWithRole('student'));
+      inConversationMode('counsellor');
+
+      const res = await POST(executeRequest(validBody));
+
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ error: 'Not available for this conversation' });
+      // Nothing downstream of the guard may run.
+      expect(getWriteTool).not.toHaveBeenCalled();
+      expect(claimMessageAction).not.toHaveBeenCalled();
+      expect(writeTool.execute).not.toHaveBeenCalled();
+    });
+
+    it('gives a STUDENT no write capability inside a conversation row that claims parent mode', async () => {
+      // WHAT CHANGED AND WHY (audit A1). This used to assert a 403 from
+      // `resolveChatMode`, which refused parent mode without an active
+      // guardian_link. While PARENT_PORTAL_OPEN_TO_ALL is true the portal
+      // renders all six /parent/* routes to everyone, so that refusal 403'd the
+      // assistant on every message for any account without a link. The mode
+      // check now tracks the flag.
+      //
+      // The security property is UNCHANGED and is what this test now asserts
+      // directly: parent mode carries no write tools. Verified against the REAL
+      // registry — `toolsForMode('parent')` is empty, so `getWriteTool(name,
+      // 'parent')` is null for every name. The old assertion could not see that
+      // at all, because `getWriteTool` is mocked in this file and answered
+      // regardless of mode.
+      //
+      // Data access is likewise unchanged: `buildParentContext` scopes on
+      // `loadLinkedChildren(userId)` and returns the "no linked children"
+      // prompt with no child data, and the one parent tool is gated on
+      // `hasParentContact`, which derives from that same context.
+      (getWriteTool as jest.Mock).mockImplementation(
+        (name: string, mode: string) => (mode === 'parent' ? null : writeTool)
+      );
+      inConversationMode('parent');
+
+      const response = await POST(executeRequest(validBody));
+
+      // No write tool resolves, so the action cannot run. The status is a 4xx
+      // either way; what matters is that nothing executed.
+      expect(response.status).toBeGreaterThanOrEqual(400);
+      expect(writeTool.execute).not.toHaveBeenCalled();
+      expect(claimMessageAction).not.toHaveBeenCalled();
+      // The mode actually reached the registry — if this were resolving as
+      // 'student' the tool would have been handed over.
+      expect(getWriteTool).toHaveBeenCalledWith(expect.any(String), 'parent');
+    });
+
+    it('the real registry grants parent mode no tools at all — the check above is not a mock artefact', () => {
+      // Guards the premise of the previous test against the registry changing.
+      // If a parent-mode tool is ever added, this fails and the mode gate in
+      // `resolveChatMode` has to be reconsidered.
+      const { toolsForMode } = jest.requireActual<typeof import('@/lib/chat/tools/registry')>(
+        '@/lib/chat/tools/registry'
+      );
+      expect(toolsForMode('parent')).toEqual([]);
+    });
+
+    it('lets a real counsellor execute in a counsellor conversation, and resolves the tool in that mode', async () => {
+      (createRouteHandlerSupabaseClient as jest.Mock).mockReturnValue(clientWithRole('counsellor'));
+      inConversationMode('counsellor');
+
+      const res = await POST(executeRequest(validBody));
+      await res.text();
+
+      expect(res.status).toBe(200);
+      // The mode the tool is looked up in, and the mode the tool executes in,
+      // are both the RESOLVED one.
+      expect(roleFilters).toEqual([['id', 'user-123']]);
+      expect(getWriteTool).toHaveBeenCalledWith('create_task', 'counsellor');
+      expect(writeTool.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ mode: 'counsellor' }),
+        expect.anything()
+      );
+    });
+
+    it('403s when the persisted mode is unrecognised — the ceiling check, not just the floor', async () => {
+      // resolveChatMode falls back to 'student' for an unknown mode. Granting
+      // that would silently downgrade the caller into a different assistant than
+      // the row describes; the route requires the two to AGREE.
+      (createRouteHandlerSupabaseClient as jest.Mock).mockReturnValue(clientWithRole('admin'));
+      inConversationMode('superuser');
+
+      expect((await POST(executeRequest(validBody))).status).toBe(403);
+      expect(writeTool.execute).not.toHaveBeenCalled();
+    });
+
+    it('holds a counsellor to the mode their conversation was created in, not their entitlement', async () => {
+      // A counsellor IS entitled to counsellor mode, but this conversation was
+      // created as a student one. The persisted mode is the ceiling, so the
+      // tool must be resolved in 'student' — the row's mode — even though the
+      // caller could have had more.
+      (createRouteHandlerSupabaseClient as jest.Mock).mockReturnValue(clientWithRole('counsellor'));
+      inConversationMode('student');
+
+      const res = await POST(executeRequest(validBody));
+      await res.text();
+
+      // Agreement holds here, so this one PASSES — the assertion is that the
+      // mode used is the row's, not the caller's maximum entitlement.
+      expect(res.status).toBe(200);
+      expect(getWriteTool).toHaveBeenCalledWith('create_task', 'student');
+    });
+  });
+
   it('still streams the outcome when every model fails — the write is never masked', async () => {
     // Each model rejection is warned about on purpose; assert it rather than
     // letting three stack traces print.

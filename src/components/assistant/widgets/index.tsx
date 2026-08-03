@@ -30,14 +30,14 @@ import { AtRiskWidget } from './at-risk-widget';
 // field drift is possible — a widget that throws must degrade to "not
 // rendered", never unmount the whole workspace.
 class WidgetErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
+  override state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
   }
-  componentDidCatch(error: unknown) {
+  override componentDidCatch(error: unknown) {
     console.warn('[assistant] widget render failed:', error);
   }
-  render() {
+  override render() {
     return this.state.failed ? null : this.props.children;
   }
 }

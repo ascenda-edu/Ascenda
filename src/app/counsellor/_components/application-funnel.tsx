@@ -1,30 +1,42 @@
 import { cn } from '@/lib/utils';
-import { APPLICATION_STATUS_VISUAL, type ApplicationStatusTone } from '@/lib/theme/categories';
+import { APPLICATION_STATUS_VISUAL } from '@/lib/theme/categories';
+import {
+  FUNNEL_STAGES,
+  FUNNEL_STAGE_TO_STATUS,
+  STAGE_LABEL,
+  type FunnelStage
+} from '@/lib/counsellor/stage-colors';
 import type { CohortStats } from './types';
 
 interface ApplicationFunnelProps {
   funnel: CohortStats['appFunnel'];
   totalStudents?: number;
-  activeStage?: 'planning' | 'inProgress' | 'submitted' | 'decision' | null;
-  onSelectStage?: (stage: 'planning' | 'inProgress' | 'submitted' | 'decision') => void;
-  onNavigateStage?: (stage: 'planning' | 'inProgress' | 'submitted' | 'decision') => void;
+  activeStage?: FunnelStage | null;
+  onSelectStage?: (stage: FunnelStage) => void;
+  onNavigateStage?: (stage: FunnelStage) => void;
 }
 
 // Stage colours are APPLICATION_STATUS_VISUAL's, so this funnel can no longer drift
 // from the kanban board and the analytics stage chart (they disagreed on all four
 // stages before — see lib/counsellor/stage-colors.ts). The selected ring is
 // `primary` for every stage: it means "you picked this", not "this stage is blue".
-const stage = (key: 'planning' | 'inProgress' | 'submitted' | 'decision', tone: ApplicationStatusTone, label: string) => {
-  const v = APPLICATION_STATUS_VISUAL[tone];
-  return { key, label, color: v.bg, text: v.text, border: v.border, active: 'ring-2 ring-primary ring-offset-2' };
+//
+// The stage list is now DERIVED from FUNNEL_STAGE_TO_STATUS rather than hand-written,
+// so a new application status shows up here automatically. Hand-writing it is how
+// `enrolled` ended up absent from the funnel entirely.
+const stage = (key: FunnelStage) => {
+  const v = APPLICATION_STATUS_VISUAL[FUNNEL_STAGE_TO_STATUS[key]];
+  return {
+    key,
+    label: STAGE_LABEL[FUNNEL_STAGE_TO_STATUS[key]],
+    color: v.bg,
+    text: v.text,
+    border: v.border,
+    active: 'ring-2 ring-primary ring-offset-2'
+  };
 };
 
-const STAGES = [
-  stage('planning', 'planning', 'Planning'),
-  stage('inProgress', 'in_progress', 'In Progress'),
-  stage('submitted', 'submitted', 'Submitted'),
-  stage('decision', 'decision', 'Decision')
-];
+const STAGES = FUNNEL_STAGES.map(stage);
 
 export const ApplicationFunnel = ({ funnel, totalStudents, activeStage, onSelectStage, onNavigateStage }: ApplicationFunnelProps) => {
   const denominator = totalStudents ?? (Object.values(funnel).reduce((a, b) => a + b, 0) || 1);

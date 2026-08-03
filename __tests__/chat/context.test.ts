@@ -16,7 +16,7 @@ jest.mock('@/lib/counsellor/data', () => ({
   ),
 }));
 
-jest.mock('@/lib/parent/data', () => ({
+jest.mock('@/features/parent', () => ({
   loadLinkedChildren: jest.fn(),
   pickActiveChild: jest.fn(),
   loadChildOverview: jest.fn(),
@@ -34,7 +34,13 @@ import {
   pickActiveChild,
   loadChildOverview,
   loadChildThread,
-} from '@/lib/parent/data';
+} from '@/features/parent';
+import {
+  filtersFor,
+  recordingClient,
+  type RecordedCall,
+  type TableResult,
+} from '../helpers/supabase-recorder';
 
 // ── student-mode supabase mock ───────────────────────────────────────────────
 
@@ -45,56 +51,52 @@ const iso = (daysFromToday: number): string => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-type BuilderResult = { data?: unknown; error?: unknown; count?: number };
-
-const makeBuilder = (result: BuilderResult) => {
-  const builder: Record<string, unknown> = {};
-  for (const method of ['select', 'eq', 'order', 'limit', 'in']) {
-    builder[method] = jest.fn(() => builder);
-  }
-  builder.maybeSingle = jest.fn(async () => ({ data: result.data ?? null, error: null }));
-  builder.then = (resolve: (v: BuilderResult) => unknown) =>
-    Promise.resolve({ data: null, error: null, ...result }).then(resolve);
-  return builder;
-};
-
-const studentSupabase = () => {
-  const tables: Record<string, unknown> = {
-    student_personal_information: makeBuilder({
-      data: { first_name: 'Maya', last_name: 'Chen', email: 'm@x.com', nationality: 'SG', resident_country: 'Singapore' },
-    }),
-    student_academic_input: makeBuilder({
-      data: {
-        programme_type: 'IB', school_name: 'ASH', school_country: 'SG',
-        graduation_year: 2027, intended_clusters: ['cs'], english_required: true, english_status: 'met',
-      },
-    }),
-    student_lifestyle_preference: makeBuilder({ data: null }), // lifestyle step incomplete
-    student_subjects: makeBuilder({ count: 4 }),
-    applications: makeBuilder({
-      data: [
-        {
-          id: 'app-1',
-          status: 'in_progress',
-          program_id: 'prog-1',
-          program: {
-            name: 'Computer Science',
-            universities: { name: 'Oxford', country: 'UK' },
-            deadlines: [{ name: 'UCAS', deadline_date: iso(4) }],
-          },
-          application_checklist: [
-            { task_name: 'Essay', status: 'todo', due_date: iso(-2) }, // overdue
-            { task_name: 'Reference', status: 'done', due_date: null },
-          ],
+/**
+ * The double records `[method, column, value]` for every `.eq()`/`.in()`.
+ *
+ * It used to be `jest.fn(() => builder)` per method, arguments discarded — so
+ * repointing all five of this module's reads at another student's profile id
+ * (`.eq('profile_id', 'someone-else')`) left every test in this file green while
+ * another student's name, nationality, school, grades and matches were
+ * serialised into the model's system prompt. See the scope describe below.
+ */
+const STUDENT_TABLE_RESULTS: Record<string, TableResult> = {
+  student_personal_information: {
+    data: { first_name: 'Maya', last_name: 'Chen', email: 'm@x.com', nationality: 'SG', resident_country: 'Singapore' },
+  },
+  student_academic_input: {
+    data: {
+      programme_type: 'IB', school_name: 'ASH', school_country: 'SG',
+      graduation_year: 2027, intended_clusters: ['cs'], english_required: true, english_status: 'met',
+    },
+  },
+  student_lifestyle_preference: { data: null }, // lifestyle step incomplete
+  student_subjects: { count: 4 },
+  applications: {
+    data: [
+      {
+        id: 'app-1',
+        status: 'in_progress',
+        program_id: 'prog-1',
+        program: {
+          name: 'Computer Science',
+          universities: { name: 'Oxford', country: 'UK' },
+          deadlines: [{ name: 'UCAS', deadline_date: iso(4) }],
         },
-      ],
-    }),
-    student_matches: makeBuilder({
-      data: [{ program_id: 'prog-1', score: 87.4, breakdown: { tier: 'Match' } }],
-    }),
-  };
-  return { from: jest.fn((table: string) => tables[table]) };
+        application_checklist: [
+          { task_name: 'Essay', status: 'todo', due_date: iso(-2) }, // overdue
+          { task_name: 'Reference', status: 'done', due_date: null },
+        ],
+      },
+    ],
+  },
+  student_matches: {
+    data: [{ program_id: 'prog-1', score: 87.4, breakdown: { tier: 'Match' } }],
+  },
 };
+
+const studentSupabase = (calls: RecordedCall[] = []) =>
+  recordingClient(STUDENT_TABLE_RESULTS, calls);
 
 // Error-path tests below spy on console.warn so the *expected* warning doesn't
 // dump a stack trace into the run. Restoring here (rather than at the end of a
@@ -135,6 +137,30 @@ describe('buildContextForMode — student', () => {
       nextDeadlineDays: 4,
     });
     expect(result.parentContactId).toBeUndefined();
+  });
+
+  /**
+   * The whole point of the student context is that it is THIS student's record.
+   * Every read here is scoped by one `.eq('profile_id', userId)` and nothing
+   * else; there is no id in the request to cross-check against. Asserted per
+   * table so a failure names which read lost its scope.
+   */
+  it.each([
+    'student_personal_information',
+    'student_academic_input',
+    'student_lifestyle_preference',
+    'student_subjects',
+    'applications',
+    'student_matches',
+  ])('scopes the %s read to the caller and to nobody else', async (table) => {
+    const calls: RecordedCall[] = [];
+    await buildContextForMode(studentSupabase(calls) as never, 'student', 'user-1');
+
+    const filters = filtersFor(calls, table);
+    expect(filters).toContainEqual(['eq', 'profile_id', 'user-1']);
+    for (const [, column, value] of filters) {
+      if (column === 'profile_id') expect(value).toBe('user-1');
+    }
   });
 });
 

@@ -70,7 +70,20 @@ const config: Config = {
     // app/ or components/ — which left `ring-primary/25`, `border-warning/40` and
     // `border-info/40` emitting nothing, so those rings/borders fell back to Tailwind's
     // default blue and to `border-border` grey.
-    './src/lib/**/*.{js,ts}'
+    // `.tsx` too: src/lib/auth/role-context.tsx is a component living under lib,
+    // and the moment it grows a className the `{js,ts}`-only glob would drop it.
+    './src/lib/**/*.{js,ts,jsx,tsx,mdx}',
+    // The feature slices. `src/features/parent/ui/` was `src/app/parent/_components/`
+    // until this branch, i.e. covered by `./src/app/**` — the move dropped it out of
+    // `content` entirely and five utilities stopped being emitted at all
+    // (`min-w-[180px]`, `max-w-[75%]`, `text-primary-foreground/60`, `focus:ring-ring`,
+    // `sm:min-h-[560px]`): the parent chat bubbles lost their width cap and the
+    // composer focus ring fell back to the browser default.
+    './src/features/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/hooks/**/*.{js,ts,jsx,tsx,mdx}',
+    // NOTE: this list is per-DIRECTORY. Any new top-level directory under src/ that
+    // can hold a class string must be added here in the same commit that creates it,
+    // or its utilities silently do not exist in the stylesheet. Nothing errors.
   ],
   theme: {
     container: {

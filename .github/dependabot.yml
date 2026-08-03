@@ -1,0 +1,55 @@
+# Dependabot lives HERE, in the repo, not only in GitHub's UI settings.
+#
+# It was enabled through the web UI during the 2026-07-16 security-settings pass and
+# that configuration was invisible to anyone reading the tree: not reviewable in a
+# diff, not portable to a fork, and silently lost if the repo is transferred. This
+# file is the source of truth; the UI toggle is not.
+#
+# Grouping is deliberate. Ungrouped, this repo produces ~15 PRs a week across
+# @radix-ui/*, @tiptap/*, @typescript-eslint/* and the Next toolchain, and a
+# 15-PR-a-week bot is a bot whose PRs nobody reads.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Security fixes are never grouped with anything else and never batched —
+      # they should land on their own, readable, and fast.
+      radix:
+        patterns: ['@radix-ui/*']
+      tiptap:
+        patterns: ['@tiptap/*']
+      typescript-eslint:
+        patterns: ['@typescript-eslint/*', 'eslint', 'eslint-*']
+      testing:
+        patterns: ['jest', 'jest-*', 'ts-jest', '@testing-library/*', '@playwright/*']
+      types:
+        patterns: ['@types/*']
+    ignore:
+      # Pinned deliberately — 1.x removes the deprecated icon aliases this codebase
+      # uses app-wide. See CLAUDE.md > Gotchas. Unpin with a codemod, not a bump.
+      - dependency-name: lucide-react
+        versions: ['1.x']
+      # `next` majors are a project, not a dependency bump (see the Next 15 + React 19
+      # upgrade, PR #30). Minors and patches still come through.
+      - dependency-name: next
+        update-types: ['version-update:semver-major']
+      - dependency-name: react
+        update-types: ['version-update:semver-major']
+      - dependency-name: react-dom
+        update-types: ['version-update:semver-major']
+
+  # The workflow pins every action to a commit SHA (see .github/workflows/ci.yml).
+  # A SHA pin does not float, so without this the actions would silently rot at
+  # whatever they were pinned to. Dependabot reads the `# vN` trailing comment and
+  # opens a PR that moves both the SHA and the comment.
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3

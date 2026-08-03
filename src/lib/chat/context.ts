@@ -10,6 +10,7 @@ import type { Database } from '@/lib/types/database';
 import { buildStepCompletion, type ProfileRecordGroup } from '@/lib/profile/completion';
 import { PROFILE_STEPS } from '@/lib/profile/steps';
 import { daysUntil } from '@/lib/utils/dates';
+import { loadApplicationBoard } from '@/lib/data/applications';
 import {
   loadCohort,
   deriveCohortStats,
@@ -22,7 +23,7 @@ import {
   pickActiveChild,
   loadChildOverview,
   loadChildThread,
-} from '@/lib/parent/data';
+} from '@/features/parent';
 import type { ChatMode } from './prompts';
 
 type Client = SupabaseClient<Database>;
@@ -80,27 +81,16 @@ const deadlinePhrase = (days: number): string => {
 
 // ─── Student ────────────────────────────────────────────────────────────────
 
-type StudentAppRecord = {
-  id: string;
-  status: string;
-  program_id: string;
-  program?: {
-    name?: string | null;
-    universities?: { name?: string | null; country?: string | null } | null;
-    deadlines?: Array<{ name: string; deadline_date?: string | null }> | null;
-  } | null;
-  application_checklist?: Array<{
-    task_name: string;
-    status: 'todo' | 'doing' | 'done';
-    due_date?: string | null;
-  }> | null;
-};
+// The local `StudentAppRecord` that used to live here was the third of four
+// hand-written descriptions of the applications embed, and the only one missing
+// the programme id and the intake. It is now `ApplicationBoardRow`, derived from
+// the generated schema — see lib/data/columns.ts for why there is one shape.
 
 async function buildStudentContext(
   supabase: Client,
   userId: string
 ): Promise<{ body: string; signals: ContextSignals }> {
-  const [personalRes, academicRes, lifestyleRes, subjectsRes, appsRes, matchesRes] =
+  const [personalRes, academicRes, lifestyleRes, subjectsRes, apps, matchesRes] =
     await Promise.all([
       supabase
         .from('student_personal_information')
@@ -123,22 +113,13 @@ async function buildStudentContext(
         .from('student_subjects')
         .select('id', { count: 'exact', head: true })
         .eq('profile_id', userId),
-      supabase
-        .from('applications')
-        .select(
-          `
-          id,
-          status,
-          program_id,
-          program:programs(
-            name:course_name,
-            universities(name,country),
-            deadlines(name, deadline_date)
-          ),
-          application_checklist(task_name, status, due_date)
-        `
-        )
-        .eq('profile_id', userId),
+      // Disposition: unwrap (inside loadApplicationBoard). This read used to
+      // take `appsRes.data ?? []` on failure, which told the model "Applications:
+      // none tracked yet" — the assistant then advised a student with a full
+      // board on how to start their first application. Throwing lands in
+      // buildContextForMode's catch, which is this module's stated posture:
+      // degrade to "context unavailable", never assert something false.
+      loadApplicationBoard(supabase, userId),
       supabase
         .from('student_matches')
         .select('program_id, score, breakdown')
@@ -162,7 +143,6 @@ async function buildStudentContext(
   const firstName = personalRes.data?.first_name ?? null;
 
   // Applications: status, earliest deadline, open/overdue tasks.
-  const apps = ((appsRes.data ?? []) as unknown as StudentAppRecord[]) ?? [];
   let openTasks = 0;
   let overdueTasks = 0;
   let nextDeadline: { label: string; days: number } | null = null;
@@ -178,8 +158,7 @@ async function buildStudentContext(
     const uni = app.program?.universities?.name ?? 'University';
     const programme = app.program?.name ?? 'Programme';
     const deadlines = (app.program?.deadlines ?? [])
-      .filter((d): d is { name: string; deadline_date: string } => Boolean(d.deadline_date))
-      .map((d) => ({ name: d.name, days: daysUntil(d.deadline_date) }))
+      .flatMap((d) => (d.deadline_date ? [{ name: d.name, days: daysUntil(d.deadline_date) }] : []))
       .filter((d) => d.days >= 0)
       .sort((a, b) => a.days - b.days);
     const earliest = deadlines[0];
@@ -190,7 +169,7 @@ async function buildStudentContext(
     const deadlineText = earliest
       ? `next deadline ${earliest.name} ${deadlinePhrase(earliest.days)}`
       : 'no upcoming deadline';
-    return `- ${uni} — ${programme}: status ${app.status}, ${deadlineText}, ${plural(open.length, 'open task')}`;
+    return `- ${uni} — ${programme}: status ${app.status ?? 'planning'}, ${deadlineText}, ${plural(open.length, 'open task')}`;
   });
 
   // Top matches from the student_matches cache (tier lives in breakdown JSON).
@@ -263,7 +242,7 @@ async function buildCounsellorContext(
   const sections = [
     'COUNSELLOR COHORT',
     `Cohort: ${plural(stats.total, 'student')}, avg profile completion ${stats.avgCompletion}%, ${stats.flagged} flagged, ${stats.deadlinesThisWeek} deadlines this week.`,
-    `Application funnel: ${stats.appFunnel.planning} planning, ${stats.appFunnel.inProgress} in progress, ${stats.appFunnel.submitted} submitted, ${stats.appFunnel.decision} awaiting decision.`,
+    `Application funnel: ${stats.appFunnel.planning} planning, ${stats.appFunnel.inProgress} in progress, ${stats.appFunnel.submitted} submitted, ${stats.appFunnel.decision} awaiting decision, ${stats.appFunnel.enrolled} enrolled.`,
     alerts.length > 0
       ? `At-risk alerts:\n${alerts
           .map(

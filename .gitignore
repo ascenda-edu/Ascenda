@@ -25,3 +25,10 @@ supabase/.temp/
 
 # Sibling repo, cloned separately — NOT a submodule of this repo (see PR: broke Vercel clones)
 Ascenda-Data-Collection/
+
+# Playwright: HTML report, per-run artifacts (traces/screenshots), and the
+# signed-in storage state written by e2e/auth.setup.e2e.ts — that last one is a
+# live session cookie and must never be committed.
+playwright-report/
+test-results/
+.playwright/

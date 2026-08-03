@@ -309,12 +309,24 @@ const baseStudent: StudentProfilePayload = {
     english_score_overall: null,
     admissions_tests: []
   },
+  activities_list: [],
   lifestyle_preference: {
     teaching_style: 'academic',
     desired_location_type: 'london',
     campus_size: 'medium',
     extracurricular_interests: ['Sports/fitness'],
-    other_extracurriculars: null
+    other_extracurriculars: null,
+    leadership_roles: [],
+    commitment_level: null,
+    key_activities: [],
+    sat_score: null,
+    act_score: null,
+    intl_experience: [],
+    work_experience: null,
+    work_experience_summary: null,
+    ambition_statement: null,
+    epq_subject: null,
+    epq_title: null
   }
 };
 
@@ -418,7 +430,7 @@ const runDemo = (student: StudentProfilePayload, label: string) => {
   console.log(`\nTop matches for ${label} (${score.student_band})`);
   matches.forEach((match, index) => {
     console.log(
-      `${index + 1}. ${match.university} • ${match.course} -> ${match.chance_percent}% (${match.tier_fit})${match.excluded ? ' [Excluded]' : ''}`
+      `${index + 1}. ${match.university} • ${match.course} -> ${match.chance_percent}% (${match.admission_band})${match.excluded ? ' [Excluded]' : ''}`
     );
   });
 };

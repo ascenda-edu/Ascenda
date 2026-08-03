@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { DashboardShell } from '@/components/layout/shell';
 import { SectionNav } from '@/components/layout/section-nav';
 import { PLANNER_SECTION_ITEMS } from '@/components/layout/navigation';
+import { getIdentity } from '@/lib/auth/identity';
 
 /**
  * Owns the shell for the three planner routes (/applications, /tasks, /documents) so
@@ -17,10 +18,18 @@ import { PLANNER_SECTION_ITEMS } from '@/components/layout/navigation';
  *
  * The `redirect('/login')` guards stay in the pages. A Next layout does not re-run on
  * client-side navigation, so it is not a place to enforce access; this is chrome only.
+ *
+ * `getIdentity()` below is chrome too, and is NOT a guard — it is the nullable read,
+ * deliberately, feeding the shell's `role` so the four nav components stop
+ * re-deriving it in the browser (docs/audit/11-security-authz.md F8). Memoised per
+ * request by React `cache()`, so it costs nothing once the pages under here move to
+ * the same seam.
  */
-export default function ApplicationsLayout({ children }: { children: ReactNode }) {
+export default async function ApplicationsLayout({ children }: { children: ReactNode }) {
+  const identity = await getIdentity();
+
   return (
-    <DashboardShell nav={<SectionNav items={PLANNER_SECTION_ITEMS} />}>
+    <DashboardShell role={identity?.role ?? null} nav={<SectionNav items={PLANNER_SECTION_ITEMS} />}>
       {children}
     </DashboardShell>
   );
