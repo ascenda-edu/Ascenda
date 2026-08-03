@@ -23,6 +23,13 @@ updates:
         patterns: ['@radix-ui/*']
       tiptap:
         patterns: ['@tiptap/*']
+      # @tanstack/react-query and @tanstack/react-query-devtools are PEER-LOCKED:
+      # devtools X declares `@tanstack/react-query: ^X`, and both are pinned
+      # exactly. Ungrouped, Dependabot split one release into PRs #61 and #64, and
+      # merging devtools alone would have violated its own peer range. They must
+      # move in one commit.
+      tanstack:
+        patterns: ['@tanstack/*']
       # Named `lint`, not `typescript-eslint`: the patterns below also match
       # `eslint` and `eslint-config-next`, so the old name produced PR titles like
       # "bump the typescript-eslint group with 2 updates" for what was actually an
