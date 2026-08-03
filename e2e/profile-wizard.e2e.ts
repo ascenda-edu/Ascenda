@@ -83,11 +83,29 @@ const GRADUATION_YEAR = String(new Date().getFullYear() + 1);
 
 // ── Interaction helpers ──────────────────────────────────────────────────────
 
-/** Radix `<Select>`: open by aria-label, choose by visible option text. */
+/**
+ * Radix `<Select>`: open by aria-label, choose by visible option text.
+ *
+ * The close assertion is on THIS TRIGGER's `aria-expanded`, not on
+ * `getByRole('listbox')).toHaveCount(0)`.
+ *
+ * That previous form was a race and it flaked in CI (PR #66: this spec failed, then
+ * passed on Playwright's retry, so the job was green only because of the retry).
+ * Radix keeps the portalled listbox MOUNTED through its exit animation, so a
+ * page-wide "no listbox exists" assertion waits on animation timing rather than on
+ * state — and it polls for the full 15s timeout before failing. `aria-expanded` on
+ * the trigger flips with the component's open state, synchronously, so there is
+ * nothing to race.
+ *
+ * Scoping to the trigger also means a second Select left open elsewhere on the step
+ * can no longer make this helper fail for a reason that has nothing to do with the
+ * field it was asked to set.
+ */
 const chooseFromSelect = async (page: Page, label: string, option: string) => {
-  await page.getByRole('combobox', { name: label, exact: true }).click();
+  const trigger = page.getByRole('combobox', { name: label, exact: true });
+  await trigger.click();
   await page.getByRole('option', { name: option, exact: true }).click();
-  await expect(page.getByRole('listbox')).toHaveCount(0);
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 };
 
 /** Hand-rolled country/subject combobox: type, then click the filtered option. */
