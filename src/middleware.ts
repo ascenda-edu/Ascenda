@@ -1,11 +1,44 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import type { Database } from '@/lib/types/database';
-import { COMPLETION_COLUMNS, isProfileComplete } from '@/lib/profile/completion';
+import { COMPLETION_COLUMNS, isProfileEssentialComplete } from '@/lib/profile/completion';
+import { isOnboardingExempt } from '@/lib/onboarding/destination';
+
+/**
+ * The short-lived verdict cache, and the reason it carries a version.
+ *
+ * This cookie caches "does this user still need the setup flow" for up to 12h so
+ * a protected navigation costs zero queries instead of four. That is safe only
+ * while the cached answer means the same thing as a freshly-computed one.
+ *
+ * The 2026-08-03 re-tiering broke that: the threshold moved from all five wizard
+ * steps to the three ESSENTIAL ones, so a cookie written the hour before a deploy
+ * can say `pending` about a user the new rule considers complete. That is not
+ * merely stale — it is unrecoverable. The `pending` fast path below redirects to
+ * `/welcome` without re-querying, `/welcome` reads the database fresh, sees a
+ * complete profile and forwards them onward, and middleware bounces them right
+ * back. ERR_TOO_MANY_REDIRECTS until the cookie ages out an hour later.
+ *
+ * The old redirect target hid this: `/profile/wizard` is exempt from the gate, so
+ * a wrong `pending` cost a wasted screen and terminated. `/welcome` forwards, so
+ * it loops. `lib/onboarding/destination.ts` closed the role-shaped version of
+ * exactly this bug; this is the cache-shaped one.
+ *
+ * So the name carries the rule-set version, and a cookie from any other version
+ * is simply not found — one re-query, then correct. **Bump this whenever the
+ * completeness threshold changes** (today: `isProfileEssentialComplete`).
+ *
+ * `onboarding_complete` deliberately does NOT get the same treatment. A stale
+ * value there is still *correct*: it was written under a stricter rule, and
+ * "complete under all five steps" implies "complete under the three essentials",
+ * so it can only ever cause a redirect to be skipped — never a wrong one.
+ */
+const ONBOARDING_STATUS_COOKIE = 'onboarding_status_v2';
 
 const PROTECTED_PREFIXES = [
   '/dashboard',
   '/profile',
+  '/welcome',
   '/matches',
   '/applications',
   '/admin',
@@ -159,7 +192,7 @@ export async function middleware(req: NextRequest) {
       return false;
     }
 
-    const statusCookie = req.cookies.get('onboarding_status')?.value;
+    const statusCookie = req.cookies.get(ONBOARDING_STATUS_COOKIE)?.value;
     if (statusCookie) {
       const [userId, status, timestamp] = statusCookie.split(':');
       const ageMinutes = timestamp ? (Date.now() - Number(timestamp)) / (1000 * 60) : Number.POSITIVE_INFINITY;
@@ -216,7 +249,16 @@ export async function middleware(req: NextRequest) {
       lifestyle: lifestyleResponse.data
     };
 
-    const needsOnboarding = !isProfileComplete(completionRecords);
+    // ESSENTIALS, not the full five steps. `isProfileComplete` includes the two
+    // booster steps, whose own completion rule is "a lifestyle row exists" —
+    // gating the entire app on those meant a new student met a five-screen form
+    // before they had seen a single university. See src/lib/profile/steps.ts.
+    //
+    // The cookie names below still say `onboarding_*` and now cache the
+    // essentials verdict. That is intentional: renaming them would make every
+    // already-issued cookie miss, and the value they carry ("does this user
+    // still need the setup flow") has not changed meaning, only threshold.
+    const needsOnboarding = !isProfileEssentialComplete(completionRecords);
 
     if (!needsOnboarding) {
       response.cookies.set('onboarding_complete', user.id, {
@@ -225,14 +267,14 @@ export async function middleware(req: NextRequest) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production'
       });
-      response.cookies.set('onboarding_status', `${user.id}:complete:${Date.now()}`, {
+      response.cookies.set(ONBOARDING_STATUS_COOKIE, `${user.id}:complete:${Date.now()}`, {
         path: '/',
         maxAge: 60 * 60 * 24 * 7,
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production'
       });
     } else {
-      response.cookies.set('onboarding_status', `${user.id}:pending:${Date.now()}`, {
+      response.cookies.set(ONBOARDING_STATUS_COOKIE, `${user.id}:pending:${Date.now()}`, {
         path: '/',
         maxAge: 60 * 60 * 12,
         httpOnly: true,
@@ -261,7 +303,13 @@ export async function middleware(req: NextRequest) {
     return redirectResponse;
   }
 
-  if (user && isProtected && !pathname.startsWith('/profile') && !pathname.startsWith('/counsellor') && !pathname.startsWith('/parent') && !pathname.startsWith('/role-select')) {
+  // The exemption list lives in `@/lib/onboarding/destination`, NOT inline here.
+  // Every destination this block can redirect to must be exempt from it, or the
+  // redirect target gets re-checked, fails again, and redirects again — an
+  // infinite loop, and the one failure mode this block can produce that a user
+  // cannot escape. `/welcome` forwards onward, so `resolveWelcomeDestination`
+  // needs to consult the same list; a second copy is how the two drift apart.
+  if (user && isProtected && !isOnboardingExempt(pathname)) {
     // Skip the onboarding check on the very first request after OAuth callback —
     // the session cookie has just been written and downstream DB reads can race.
     // Let the page render; the next request will hit the onboarding check normally.
@@ -269,9 +317,25 @@ export async function middleware(req: NextRequest) {
     if (!isFreshAuth) {
       const needsOnboarding = await getOnboardingStatus(res);
       if (needsOnboarding) {
+        // `/welcome`, not `/profile/wizard`. Middleware deliberately does NOT
+        // decide whether this user has already seen the welcome screen: that
+        // answer lives in `profiles.onboarding`, and reading it here would add a
+        // fifth query to the hot path of every protected navigation. `/welcome`
+        // is a server component that reads it once and forwards a returning
+        // user straight to the wizard — so the cost is paid only by users who
+        // are actually mid-setup, and only as one extra redirect.
+        //
+        // `?from=` preserves where they were headed so the flow can return them
+        // there instead of dumping everyone on /dashboard. It carries the SEARCH
+        // string too — a student deep-linked to `/course/123?tab=fees` was
+        // otherwise returned to `/course/123` with the tab silently dropped.
+        // `search` is cleared first so the incoming query cannot leak into
+        // /welcome's own params, then `from` is set as a single encoded value.
         const redirectUrl = req.nextUrl.clone();
-        redirectUrl.pathname = '/profile/wizard';
-        redirectUrl.searchParams.set('onboarding', 'true');
+        const target = `${pathname}${req.nextUrl.search}`;
+        redirectUrl.pathname = '/welcome';
+        redirectUrl.search = '';
+        redirectUrl.searchParams.set('from', target);
         const redirectResponse = NextResponse.redirect(redirectUrl);
         applyCookies(res, redirectResponse);
         return redirectResponse;
@@ -284,7 +348,7 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/(dashboard|profile|matches|applications|admin|university-search|course|shortlist|scholarships|counsellor|parent|role-select|inbox|assistant|toolbox|appointment)(.*)',
+    '/(dashboard|profile|welcome|matches|applications|admin|university-search|course|shortlist|scholarships|counsellor|parent|role-select|inbox|assistant|toolbox|appointment)(.*)',
     '/login',
     '/signup',
     // Every API route runs through the fail-closed check at the top of

@@ -294,6 +294,10 @@ describe('an anonymous visitor on a protected page', () => {
   const PROTECTED = [
     '/dashboard',
     '/profile',
+    // The onboarding welcome screen. Guarded like any other signed-in surface:
+    // it greets the user by name and reads their profile, so an anonymous
+    // visitor must be bounced to /login rather than shown an empty greeting.
+    '/welcome',
     '/matches',
     '/applications',
     '/admin',
@@ -420,16 +424,32 @@ describe('/signup is retired', () => {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 describe('the onboarding redirect', () => {
+  /**
+   * Where an incomplete student is sent, and what they were reaching for.
+   *
+   * The destination changed from `/profile/wizard?onboarding=true` to
+   * `/welcome?from=…` when onboarding grew a welcome screen. Middleware
+   * deliberately does NOT decide whether this user has already seen that screen
+   * — that answer lives in `profiles.onboarding`, and reading it here would add
+   * a fifth query to every protected navigation. `/welcome` forwards a
+   * returning user straight on to the wizard.
+   *
+   * `from` is what makes the flow return people to the page they actually
+   * wanted instead of dumping everyone on /dashboard.
+   */
+  const welcomeFrom = (path: string) => `/welcome?from=${encodeURIComponent(path)}`;
+  const WELCOME = welcomeFrom('/dashboard');
+
   beforeEach(() => {
     sessionUser = USER;
   });
 
-  it('sends an incomplete profile to the wizard', async () => {
+  it('sends an incomplete profile to the welcome flow', async () => {
     // Nothing seeded: every completion record is null.
     const response = await middleware(request('/dashboard', SESSION_COOKIE));
 
     expect(response.status).toBe(307);
-    expect(location(response)).toBe('/profile/wizard?onboarding=true');
+    expect(location(response)).toBe(WELCOME);
   });
 
   it('lets a complete profile through', async () => {
@@ -446,7 +466,9 @@ describe('the onboarding redirect', () => {
     async (path) => {
       const response = await middleware(request(path, SESSION_COOKIE));
 
-      expect(location(response)).toBe('/profile/wizard?onboarding=true');
+      // Each carries its OWN `from`, not a hardcoded /dashboard — that is what
+      // returns the student to the page they were actually reaching for.
+      expect(location(response)).toBe(welcomeFrom(path));
     }
   );
 
@@ -459,6 +481,24 @@ describe('the onboarding redirect', () => {
       expect(dbCalls).toEqual([]);
     }
   );
+
+  it('carries the query string in `from`, not just the pathname', async () => {
+    // A student deep-linked into a tab was returned to the bare route, silently
+    // dropping the thing they had actually clicked.
+    const response = await middleware(request('/course/123?tab=fees', SESSION_COOKIE));
+
+    expect(location(response)).toBe(welcomeFrom('/course/123?tab=fees'));
+  });
+
+  it('does not let the incoming query leak into /welcome as its own params', async () => {
+    // `search` is cleared before `from` is set, so an inbound `?from=` cannot
+    // survive into the redirect and pre-empt the real one.
+    const response = await middleware(request('/dashboard?from=/evil', SESSION_COOKIE));
+
+    const url = new URL(location(response)!, ORIGIN);
+    expect(url.pathname).toBe('/welcome');
+    expect(url.searchParams.getAll('from')).toEqual(['/dashboard?from=/evil']);
+  });
 
   it('is skipped for one request after the OAuth callback', async () => {
     // The session cookie has just been written and the completion reads can race
@@ -516,7 +556,7 @@ describe('the onboarding redirect', () => {
       // The guard must not become a blanket "never redirect".
       const response = await middleware(request('/dashboard', SESSION_COOKIE));
 
-      expect(location(response)).toBe('/profile/wizard?onboarding=true');
+      expect(location(response)).toBe(WELCOME);
     });
   });
 
@@ -547,7 +587,7 @@ describe('the onboarding redirect', () => {
 
       const response = await middleware(request('/dashboard', SESSION_COOKIE));
 
-      expect(location(response)).toBe('/profile/wizard?onboarding=true');
+      expect(location(response)).toBe(WELCOME);
     });
 
     it('selects english_status from the database in the first place', async () => {
@@ -601,7 +641,7 @@ describe('the onboarding redirect', () => {
 
     const response = await middleware(request('/dashboard', SESSION_COOKIE));
 
-    expect(location(response)).toBe('/profile/wizard?onboarding=true');
+    expect(location(response)).toBe(WELCOME);
   });
 
   /* ── the cookie fast paths ───────────────────────────────────────────────── */
@@ -612,13 +652,13 @@ describe('the onboarding redirect', () => {
     const response = await middleware(request('/dashboard', SESSION_COOKIE));
 
     expect(response.cookies.get('onboarding_complete')?.value).toBe(USER.id);
-    expect(response.cookies.get('onboarding_status')?.value).toMatch(new RegExp(`^${USER.id}:complete:\\d+$`));
+    expect(response.cookies.get('onboarding_status_v2')?.value).toMatch(new RegExp(`^${USER.id}:complete:\\d+$`));
   });
 
   it('writes a pending status cookie when it is not', async () => {
     const response = await middleware(request('/dashboard', SESSION_COOKIE));
 
-    expect(response.cookies.get('onboarding_status')?.value).toMatch(new RegExp(`^${USER.id}:pending:\\d+$`));
+    expect(response.cookies.get('onboarding_status_v2')?.value).toMatch(new RegExp(`^${USER.id}:pending:\\d+$`));
     expect(response.cookies.get('onboarding_complete')).toBeUndefined();
   });
 
@@ -638,17 +678,46 @@ describe('the onboarding redirect', () => {
       request('/dashboard', { ...SESSION_COOKIE, onboarding_complete: 'somebody-else' })
     );
 
-    expect(location(response)).toBe('/profile/wizard?onboarding=true');
+    expect(location(response)).toBe(WELCOME);
     expect(dbCalls).toHaveLength(4);
   });
 
   it('a fresh pending status cookie redirects without querying', async () => {
     const response = await middleware(
-      request('/dashboard', { ...SESSION_COOKIE, onboarding_status: `${USER.id}:pending:${Date.now()}` })
+      request('/dashboard', { ...SESSION_COOKIE, onboarding_status_v2: `${USER.id}:pending:${Date.now()}` })
     );
 
-    expect(location(response)).toBe('/profile/wizard?onboarding=true');
+    expect(location(response)).toBe(WELCOME);
     expect(dbCalls).toEqual([]);
+  });
+
+  it('ignores a pending cookie written under the previous rule set', async () => {
+    // The regression this pins is an INESCAPABLE REDIRECT LOOP, not a stale screen.
+    //
+    // The completeness threshold moved from all five wizard steps to the three
+    // essentials. A cookie written in the hour before that deploy can therefore say
+    // `pending` about a student the new rule considers complete — and the fast path
+    // above redirects on it without re-querying. The target is now `/welcome`, which
+    // reads the database fresh, sees a complete profile, and forwards them straight
+    // back to where middleware will bounce them again. The browser gives up.
+    //
+    // The old target `/profile/wizard` is exempt from the gate, so the same wrong
+    // verdict used to terminate. That is why this could not have been caught before
+    // the redirect target moved.
+    //
+    // The cookie NAME carries the rule-set version, so a pre-deploy cookie is simply
+    // not found: four queries, the right answer, no loop.
+    completeProfile();
+
+    const response = await middleware(
+      request('/dashboard', {
+        ...SESSION_COOKIE,
+        onboarding_status: `${USER.id}:pending:${Date.now()}`
+      })
+    );
+
+    expect(dbCalls).toHaveLength(4);
+    expect(passedThrough(response)).toBe(true);
   });
 
   it('an hour-old pending status cookie is re-checked against the database', async () => {
@@ -659,7 +728,7 @@ describe('the onboarding redirect', () => {
     const response = await middleware(
       request('/dashboard', {
         ...SESSION_COOKIE,
-        onboarding_status: `${USER.id}:pending:${anHourAndOneMinuteAgo}`
+        onboarding_status_v2: `${USER.id}:pending:${anHourAndOneMinuteAgo}`
       })
     );
 
@@ -669,7 +738,7 @@ describe('the onboarding redirect', () => {
 
   it('a complete status cookie promotes itself to the long-lived cookie', async () => {
     const response = await middleware(
-      request('/dashboard', { ...SESSION_COOKIE, onboarding_status: `${USER.id}:complete:${Date.now()}` })
+      request('/dashboard', { ...SESSION_COOKIE, onboarding_status_v2: `${USER.id}:complete:${Date.now()}` })
     );
 
     expect(passedThrough(response)).toBe(true);

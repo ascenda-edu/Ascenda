@@ -62,6 +62,12 @@ create table if not exists profiles (
   country text,
   locale text,
   time_zone text,
+  -- Backported from migrations/20260803120000_onboarding_state.sql. Onboarding
+  -- breadcrumbs (welcome seen, tour completed, checklist dismissed, boosters
+  -- skipped); shape owned by src/lib/onboarding/state.ts, never an
+  -- authorisation input. Absent keys mean "not done", so pre-existing rows
+  -- behave exactly like brand-new ones.
+  onboarding jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default timezone('utc', now())
 );
 
@@ -140,6 +146,27 @@ create table if not exists student_lifestyle_preference (
   campus_size campus_size_preference,
   extracurricular_interests text[],
   other_extracurriculars text,
+  -- The three step-4 columns. Present on the remote and in the generated
+  -- `src/lib/types/database.ts`, but they were in NO file in this repo until
+  -- now — a from-scratch database built from here did not have them.
+  --
+  -- That became load-bearing on 2026-08-03: `COMPLETION_COLUMNS.lifestyle`
+  -- (src/lib/profile/completion.ts) selects all three, because the booster steps
+  -- now check CONTENT rather than row-existence. On a database without them that
+  -- select returns 42703, and middleware's completeness check fails open — so no
+  -- one is locked out, but the onboarding gate silently never fires and every
+  -- profile-percentage readout in the app is wrong.
+  --
+  -- NOTE: this table has further undocumented drift — the remote also carries
+  -- sat_score, act_score, intl_experience, work_experience,
+  -- work_experience_summary, ambition_statement, epq_subject and epq_title.
+  -- Those are deliberately NOT guessed at here: the generated types say
+  -- `number | null` for the scores, which is both `int` and `numeric`, and a
+  -- wrong type in this file is worse than an absent one. Re-dump the remote
+  -- schema to close the rest. See [[migrations-schema-drift]].
+  leadership_roles text[],
+  commitment_level text,
+  key_activities text[],
   updated_at timestamptz not null default timezone('utc', now())
 );
 

@@ -26,12 +26,19 @@ const clearOnboardingCache = async () => {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production'
   });
-  cookieStore.set('onboarding_status', '', {
-    path: '/',
-    maxAge: 0,
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production'
-  });
+  // Both the current name and the one it replaced. Clearing only the current one
+  // would leave a pre-rename cookie sitting in the browser for its remaining 12h;
+  // nothing reads it today, but it would come back to life the moment the version
+  // suffix is bumped again and happens to land back on an old name.
+  // See ONBOARDING_STATUS_COOKIE in src/middleware.ts.
+  for (const name of ['onboarding_status_v2', 'onboarding_status']) {
+    cookieStore.set(name, '', {
+      path: '/',
+      maxAge: 0,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production'
+    });
+  }
 };
 
 export const saveStudentIntake = async (payload: StudentProfilePayload) => {

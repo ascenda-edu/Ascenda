@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
-import { PROFILE_STEPS } from '@/lib/profile/steps';
+import { PROFILE_STEPS, FIRST_BOOSTER_STEP_INDEX } from '@/lib/profile/steps';
 import { cn } from '@/lib/utils';
 import type {
   AdmissionsTestType, EnglishStatus, EnglishTestType,
@@ -31,6 +31,7 @@ import {
 } from '@/lib/profile/intake-logic';
 import { validateStep, validateStep1, validateStep2, validateStep3, validatePayload, stepForFieldKey } from '@/lib/profile/intake-validation';
 import { saveStudentIntake } from '../actions';
+import { markOnboardingStep } from '@/lib/onboarding/actions';
 import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -950,6 +951,28 @@ export const StudentIntakeForm = ({
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); handleFinalSubmit(); };
 
+  /**
+   * "Skip for now" — submit with the booster steps left empty.
+   *
+   * This is the same submit the Review step performs, not a separate write
+   * path, and that is the point: one code path means a skipped profile and a
+   * completed one cannot diverge in what they persist. `handleFinalSubmit`
+   * validates steps 1-3 only, so a student who has filled those in gets saved;
+   * one who has not is sent back to the offending step with the errors shown,
+   * exactly as if they had reached Review.
+   *
+   * The breadcrumb is fire-and-forget. It records that this student chose to
+   * defer, which the dashboard checklist uses to phrase its nudge — losing it
+   * costs a slightly less specific prompt, so it must never delay or block the
+   * save the student actually asked for.
+   */
+  const handleSkipBoosters = useCallback(() => {
+    void markOnboardingStep('skipped_boosters_at').catch(() => {
+      /* breadcrumb only — see above */
+    });
+    handleFinalSubmit();
+  }, [handleFinalSubmit]);
+
   useEffect(() => {
     contentTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [currentStep]);
@@ -968,6 +991,21 @@ export const StudentIntakeForm = ({
   // Divided by the number of TRANSITIONS (TOTAL_STEPS - 1), not the number of steps:
   // over TOTAL_STEPS the bar topped out at 83% on the final Review step.
   const progressPct = Math.round(((currentStep - 1) / (TOTAL_STEPS - 1)) * 100);
+
+  /**
+   * Whether to offer "Skip for now" beside Next.
+   *
+   * Two conditions, and both matter. The student must be standing ON a booster
+   * step — offering an exit from step 2 would be a lie, since submitting there
+   * fails validation and throws them backwards. And steps 1-3 must already
+   * validate, because those are what `runMatching` needs; a skip that produced
+   * an empty matches page is worse than no skip at all.
+   */
+  const canSkipBoosters =
+    currentStep >= FIRST_BOOSTER_STEP_INDEX &&
+    stepCompletion[1] &&
+    stepCompletion[2] &&
+    stepCompletion[3];
 
   /** aria-invalid / aria-describedby props for an errored input. */
   const a11yError = (key: string) =>
@@ -1004,6 +1042,7 @@ export const StudentIntakeForm = ({
               const stepNum = idx + 1;
               const isCurrent = stepNum === currentStep;
               const isDone = stepCompletion[stepNum];
+              const isBooster = step.tier === 'booster';
               return (
                 <button
                   key={step.key}
@@ -1027,9 +1066,25 @@ export const StudentIntakeForm = ({
                     {isDone && !isCurrent ? <Check className="w-3 h-3" /> : stepNum}
                   </span>
                   <span className="truncate">{step.title}</span>
+                  {/* Say which steps are optional, in the place the student is
+                      already looking to judge how much is left. Without this the
+                      "Skip for now" button appears with no explanation of what
+                      is being skipped or what it costs. */}
+                  {isBooster ? (
+                    <span className="ml-auto shrink-0 text-label font-medium uppercase tracking-wide text-muted-foreground/70">
+                      Optional
+                    </span>
+                  ) : null}
                 </button>
               );
             })}
+
+            {/* The boundary itself. Three steps in, everything the ranking
+                engine needs exists — the rest only sharpens it. */}
+            <p className="px-3 pt-2 text-xs leading-relaxed text-muted-foreground">
+              Steps 1–{FIRST_BOOSTER_STEP_INDEX - 1} unlock your matches. The last two make the ranking sharper — you
+              can add them whenever.
+            </p>
 
             {/* Review */}
             <button
@@ -2143,9 +2198,32 @@ export const StudentIntakeForm = ({
             </Button>
 
             {currentStep < TOTAL_STEPS ? (
-              <Button type="button" size="sm" onClick={goNext} className="gap-1.5">
-                Next <ChevronRight className="w-4 h-4" />
-              </Button>
+              <div className="flex items-center gap-2">
+                {/* Skip the boosters and submit.
+                    Only offered from the first booster step onward, because
+                    `handleFinalSubmit` validates steps 1-3 and bounces to the
+                    first offending one. Offering it on step 2 would look like an
+                    exit and behave like a validation error.
+                    Steps 4-5 are all-optional fields, so submitting from here
+                    writes them as nulls — and `writeStudentIntake` upserts the
+                    lifestyle row regardless, which is the row `runMatching`
+                    requires. See src/lib/profile/steps.ts. */}
+                {canSkipBoosters ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSkipBoosters}
+                    disabled={isSaving || submitted}
+                    className="gap-1.5 text-muted-foreground"
+                  >
+                    Skip for now
+                  </Button>
+                ) : null}
+                <Button type="button" size="sm" onClick={goNext} className="gap-1.5">
+                  Next <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
             ) : (
               <Button
                 type="submit" size="sm"

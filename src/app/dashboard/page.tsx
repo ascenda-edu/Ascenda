@@ -19,7 +19,17 @@ import { ProfileProgressCard } from '@/components/dashboard/hub/profile-progress
 import { PipelineCard, type PipelineStage } from '@/components/dashboard/hub/pipeline-card';
 import { CounsellorCard } from '@/components/dashboard/hub/counsellor-card';
 import { QuickLinks } from '@/components/dashboard/hub/quick-links';
-import { buildStepCompletion, type ProfileRecordGroup } from '@/lib/profile/completion';
+import {
+  buildStepCompletion,
+  isProfileComplete,
+  isProfileEssentialComplete,
+  type ProfileRecordGroup
+} from '@/lib/profile/completion';
+import { GettingStartedCard } from '@/components/dashboard/hub/getting-started-card';
+import { summariseChecklist } from '@/lib/onboarding/checklist';
+import { probeHasShortlist } from '@/lib/onboarding/signals';
+import { DashboardTour } from '@/components/onboarding/dashboard-tour';
+import { readOnboardingState, hasSeen } from '@/lib/onboarding/state';
 import { PROFILE_STEPS } from '@/lib/profile/steps';
 import { countUnreadForStudent, listInboxRequests, resolveProfileNames } from '@/lib/demo/help-request-client';
 import { DEMO_COUNSELLOR } from '@/lib/demo/counsellor';
@@ -94,6 +104,8 @@ export default async function DashboardPage() {
     academicResponse,
     lifestyleResponse,
     subjectsResponse,
+    matchCountResponse,
+    hasShortlist,
     helpResult,
     meetingResponse
   ] = await Promise.all([
@@ -128,6 +140,21 @@ export default async function DashboardPage() {
       .eq('profile_id', identity.userId)
       .maybeSingle(),
     supabase.from('student_subjects').select('id').eq('profile_id', identity.userId),
+    // Onboarding checklist signals. Both are `head: true` COUNTS — index probes
+    // that return no rows — not reads. In particular this does NOT trip the
+    // match COMPUTE the note below is about: it asks whether a `student_matches`
+    // row already exists, which is precisely the "has the ranking ever run for
+    // this student" question the checklist needs, and is answered from the
+    // index without scoring anything.
+    supabase
+      .from('student_matches')
+      .select('id', { count: 'exact', head: true })
+      .eq('profile_id', identity.userId)
+      .limit(1),
+    // Resolves to `boolean | null`; `null` means the table is unreachable on
+    // this database, which drops the shortlist item from the checklist rather
+    // than stranding it permanently unticked. See lib/onboarding/signals.ts.
+    probeHasShortlist(supabase, identity.userId),
     // NOTE: matches are deliberately NOT loaded here — an uncached match
     // compute can take tens of seconds, so the matches cell streams in behind
     // Suspense (see MatchesPeek) instead of blocking the whole hub.
@@ -279,6 +306,21 @@ export default async function DashboardPage() {
     const resolved = names.get(meetingRow.counsellor_profile_id);
     meetingCounsellorName = resolved && resolved.length > 0 ? resolved : null;
   }
+  // ── Onboarding checklist ────────────────────────────────────────────────
+  // Placed here, after `helpRequests` resolves, because every signal is DERIVED
+  // from state already loaded above — the checklist stores nothing about which
+  // items are ticked. See lib/onboarding/checklist.ts for why that matters.
+  const onboardingState = await readOnboardingState(supabase, identity.userId);
+  const checklistSummary = summariseChecklist({
+    essentialsComplete: isProfileEssentialComplete(records),
+    profileComplete: isProfileComplete(records),
+    hasMatches: (matchCountResponse.count ?? 0) > 0,
+    hasShortlist,
+    hasApplication: applications.length > 0,
+    hasTask: checklist.length > 0,
+    hasAskedForHelp: helpRequests.length > 0
+  });
+
   const firstNameOf = (fullName: string) => fullName.split(/\s+/)[0];
   const inboxFirstName = inboxCounsellorName ? firstNameOf(inboxCounsellorName) : DEMO_COUNSELLOR.firstName;
   const meetingFirstName = meetingCounsellorName ? firstNameOf(meetingCounsellorName) : DEMO_COUNSELLOR.firstName;
@@ -454,12 +496,24 @@ export default async function DashboardPage() {
       />
 
       <div className="space-y-6">
+        {/* Row 0 — getting started. ABOVE the priority spine on purpose: while
+            it renders, this student has something more basic outstanding than
+            anything "Next up" can suggest. It removes itself once the list is
+            done or dismissed, so it does not permanently displace the spine.
+            Rendered bare, with NO wrapper div: it carries its own `data-tour`
+            anchor, and a wrapper would outlive the card and keep claiming a
+            `space-y-6` slot after it hid itself. */}
+        <GettingStartedCard
+          summary={checklistSummary}
+          initiallyDismissed={hasSeen(onboardingState, 'checklist_dismissed_at')}
+        />
+
         {/* Row 1 — the priority spine + profile progress */}
         <div className="grid gap-6 lg:grid-cols-12">
-          <AnimatedSection className="lg:col-span-8">
+          <AnimatedSection className="lg:col-span-8" data-tour="next-up">
             <NextUpCard items={visibleFocus} />
           </AnimatedSection>
-          <AnimatedSection className="lg:col-span-4" delay={0.05}>
+          <AnimatedSection className="lg:col-span-4" delay={0.05} data-tour="profile-progress">
             <ProfileProgressCard percent={completionPercent} steps={profileSteps} nextStepTitle={nextStep?.title ?? null} />
           </AnimatedSection>
         </div>
@@ -487,7 +541,7 @@ export default async function DashboardPage() {
               />
             </HubCard>
           </AnimatedSection>
-          <AnimatedSection className="md:col-span-2 lg:col-span-1" delay={0.11}>
+          <AnimatedSection className="md:col-span-2 lg:col-span-1" delay={0.11} data-tour="counsellor-card">
             <CounsellorCard
               counsellor={cardCounsellor}
               openThreads={openThreads.length}
@@ -519,7 +573,7 @@ export default async function DashboardPage() {
               />
             </HubCard>
           </AnimatedSection>
-          <AnimatedSection className="lg:col-span-7" delay={0.08}>
+          <AnimatedSection className="lg:col-span-7" delay={0.08} data-tour="matches-peek">
             <Suspense fallback={<MatchesPeekSkeleton />}>
               <MatchesPeek profileId={identity.userId} />
             </Suspense>
@@ -537,6 +591,12 @@ export default async function DashboardPage() {
           <QuickLinks />
         </AnimatedSection>
       </div>
+
+      {/* First run only. `autoStart` is false once the tour has been finished or
+          dismissed, and the component renders nothing in that case — so this is
+          inert for every visit after the first. It is mounted last so its portal
+          target exists below everything it points at. */}
+      <DashboardTour autoStart={!hasSeen(onboardingState, 'tour_completed_at')} />
     </DashboardShell>
   );
 }

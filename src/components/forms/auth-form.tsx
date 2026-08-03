@@ -10,7 +10,7 @@ import { useSupabase } from '@/hooks/useSupabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { isProfileComplete } from '@/lib/profile/completion';
+import { COMPLETION_COLUMNS, isProfileEssentialComplete } from '@/lib/profile/completion';
 
 export const AuthForm = () => {
   const supabase = useSupabase();
@@ -64,18 +64,27 @@ export const AuthForm = () => {
       return '/dashboard';
     }
 
+    // Column lists come from COMPLETION_COLUMNS, never written out here — the
+    // header of `lib/profile/completion.ts` explains what a hand-written subset
+    // cost last time: an omitted `english_status` silently flipped the answer for
+    // every student who chose "Not sure", because a column that is not selected
+    // reads back identically to one that was never filled in.
     const [personalResponse, academicResponse, lifestyleResponse, subjectResponse] = await Promise.all([
       supabase
         .from('student_personal_information')
-        .select('first_name,last_name,email,nationality,resident_country')
+        .select(COMPLETION_COLUMNS.personal)
         .eq('profile_id', userId)
         .maybeSingle(),
       supabase
         .from('student_academic_input')
-        .select('programme_type,school_name,school_country,graduation_year,intended_clusters,english_required,english_status')
+        .select(COMPLETION_COLUMNS.academicInput)
         .eq('profile_id', userId)
         .maybeSingle(),
-      supabase.from('student_lifestyle_preference').select('extracurricular_interests').eq('profile_id', userId).maybeSingle(),
+      supabase
+        .from('student_lifestyle_preference')
+        .select(COMPLETION_COLUMNS.lifestyle)
+        .eq('profile_id', userId)
+        .maybeSingle(),
       supabase.from('student_subjects').select('id').eq('profile_id', userId)
     ]);
 
@@ -86,13 +95,18 @@ export const AuthForm = () => {
       return '/dashboard';
     }
 
-    const needsOnboarding = !isProfileComplete({
+    // Same threshold as `middleware.ts` — essentials, not all five steps. These
+    // two must agree: if this sent a booster-incomplete student to /dashboard
+    // while middleware still gated them, they would be bounced right back out,
+    // and if it gated harder than middleware they would see a setup screen the
+    // app was perfectly willing to let them skip.
+    const needsOnboarding = !isProfileEssentialComplete({
       personal: personalResponse.data ?? null,
       academicInput: academicResponse.data ?? null,
       subjectCount: subjectResponse.data?.length ?? 0,
       lifestyle: lifestyleResponse.data ?? null
     });
-    return needsOnboarding ? '/profile/wizard' : '/dashboard';
+    return needsOnboarding ? '/welcome' : '/dashboard';
   };
 
   const formatAuthError = (authError: AuthError) => {

@@ -20,15 +20,33 @@ interface AnimatedSectionProps {
    * a landmark to a plain div, which costs screen-reader users the page's structure.
    */
   as?: 'div' | 'section' | 'article' | 'aside';
+  /**
+   * Anchor for the onboarding spotlight (`components/onboarding/product-tour.tsx`),
+   * which finds its targets by `[data-tour="…"]`.
+   *
+   * Declared explicitly rather than spreading a `...rest`: this wrapper is used
+   * in ~40 places and an open spread invites arbitrary DOM props onto a
+   * motion element, where an unrecognised one is dropped silently. A named prop
+   * fails at the type level instead — which is what would have caught the first
+   * attempt here, where `data-tour` was passed and quietly went nowhere.
+   */
+  'data-tour'?: string;
 }
 
-export function AnimatedSection({ children, className, delay = 0, as = 'div' }: AnimatedSectionProps) {
+export function AnimatedSection({
+  children,
+  className,
+  delay = 0,
+  as = 'div',
+  'data-tour': dataTour
+}: AnimatedSectionProps) {
   const showTarget = typeof fadeUp.show === 'object' ? fadeUp.show as Record<string, unknown> : {};
   const showTransition = (showTarget.transition ?? {}) as Record<string, unknown>;
   const Motion = motion[as];
 
   return (
     <Motion
+      data-tour={dataTour}
       className={cn(className)}
       variants={{
         hidden: fadeUp.hidden,

@@ -99,6 +99,18 @@ jest.mock('@/app/profile/actions', () => ({
 }));
 
 /**
+ * The wizard's "Skip for now" button records an onboarding breadcrumb. Mocked
+ * for the same reason `@/app/profile/actions` is: it is a `'use server'` module
+ * that reaches `@/lib/supabase/server`, and pulling the server runtime into this
+ * jsdom suite is both slow and unnecessary — the behaviour under test is which
+ * step the form lands on, not what it writes.
+ */
+const markOnboardingStep = jest.fn(async (_key: string) => ({ success: true as const }));
+jest.mock('@/lib/onboarding/actions', () => ({
+  markOnboardingStep: (key: string) => markOnboardingStep(key)
+}));
+
+/**
  * An in-memory URL, wired through `useSyncExternalStore` so a `router.push`
  * re-renders the tree with the new `useSearchParams()`. The real
  * `useSearchParamState` hook (which owns `?step=`) runs unmodified on top of
@@ -610,7 +622,21 @@ describe('step navigation', () => {
     renderForm({ initialStep: 6 });
     expect(screen.getByRole('button', { name: /Personal info/ })).toHaveAccessibleName('1 Personal info');
     expect(screen.getByRole('button', { name: /Your studies/ })).toHaveAccessibleName('2 Your studies');
-    expect(screen.getByRole('button', { name: /Lifestyle/ })).toHaveAccessibleName('5 Lifestyle');
+    // "Optional" is part of the accessible name for booster steps, not just a
+    // visual badge: a screen-reader user choosing whether to keep going needs
+    // the same "you can stop here" signal a sighted user gets from the label.
+    expect(screen.getByRole('button', { name: /Lifestyle/ })).toHaveAccessibleName('5 Lifestyle Optional');
+  });
+
+  it('marks booster steps optional and essential steps not', () => {
+    renderForm({ initialStep: 6 });
+    expect(screen.getByRole('button', { name: /Activities/ })).toHaveAccessibleName(/Optional$/);
+    expect(screen.getByRole('button', { name: /Lifestyle/ })).toHaveAccessibleName(/Optional$/);
+    // The three that gate entry must NOT be labelled optional — that is the
+    // whole distinction the tiering rests on.
+    expect(screen.getByRole('button', { name: /Personal info/ })).not.toHaveAccessibleName(/Optional/);
+    expect(screen.getByRole('button', { name: /Your studies/ })).not.toHaveAccessibleName(/Optional/);
+    expect(screen.getByRole('button', { name: /Grades & tests/ })).not.toHaveAccessibleName(/Optional/);
   });
 
   it('the CURRENT step keeps its number even when complete', () => {
