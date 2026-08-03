@@ -13,6 +13,64 @@ import { scoreStudentProfile } from '@/lib/scoring/student_scoring';
 type Client = SupabaseClient<Database>;
 
 /**
+ * Replace every row this student owns in `table` with `rows`, restoring the
+ * previous rows if the insert fails.
+ *
+ * PostgREST has no multi-statement transaction, so the original
+ * delete-then-insert was genuinely destructive: if the insert failed — a
+ * constraint violation, a dropped connection, a timeout between the two calls —
+ * the delete had already committed and the student's subjects, activities or
+ * admissions tests were **gone, permanently, with no recovery path**. The
+ * failure surfaced as "couldn't save your profile", which does not sound like
+ * "your subject list has been erased".
+ *
+ * This is a compensating transaction, not an atomic one: a crash between the
+ * failed insert and the restore still loses data. It converts the common failure
+ * from silent permanent loss into "nothing changed, the save failed", which is
+ * the property that matters. The atomic fix needs a uniqueness constraint per
+ * table so this can become a single upsert + scoped delete — that is step 15 of
+ * the migration plan in `docs/audit/12-database-design.md`, and it is BREAKING,
+ * so it is deliberately not done here.
+ */
+const replaceOwnedRows = async (
+  supabase: Client,
+  table: 'student_subjects' | 'student_admissions_tests' | 'student_activities',
+  userId: string,
+  rows: Record<string, unknown>[]
+): Promise<void> => {
+  // Snapshot first — this is the only copy of the data once the delete lands.
+  const { data: previous, error: readError } = await (supabase as any)
+    .from(table)
+    .select('*')
+    .eq('profile_id', userId);
+  if (readError) throw new Error(readError.message);
+
+  const { error: deleteError } = await (supabase as any)
+    .from(table)
+    .delete()
+    .eq('profile_id', userId);
+  if (deleteError) throw new Error(deleteError.message);
+
+  if (rows.length === 0) return;
+
+  const { error: insertError } = await (supabase as any).from(table).insert(rows);
+  if (!insertError) return;
+
+  // Put back exactly what was there, ids included, so the student's data is not
+  // collateral damage of a failed save.
+  if (previous && previous.length > 0) {
+    const { error: restoreError } = await (supabase as any).from(table).insert(previous);
+    if (restoreError) {
+      throw new Error(
+        `${table}: insert failed (${insertError.message}) AND restoring the previous rows failed ` +
+          `(${restoreError.message}). ${previous.length} row(s) may have been lost.`
+      );
+    }
+  }
+  throw new Error(insertError.message);
+};
+
+/**
  * Upserts a full student intake payload for `userId`. Throws on any write error
  * (except score computation, which is best-effort). Does NOT touch cookies or
  * revalidate caches — callers in a request context handle that themselves.
@@ -99,51 +157,46 @@ export const writeStudentIntake = async (
   });
   if (lifestyleError) throw new Error(lifestyleError.message);
 
-  // Structured activity entries (delete-then-insert).
-  const { error: activitiesDeleteError } = await (supabase as any)
-    .from('student_activities').delete().eq('profile_id', userId);
-  if (activitiesDeleteError) throw new Error(activitiesDeleteError.message);
-  if (payload.activities_list && payload.activities_list.length > 0) {
-    const activityRows = payload.activities_list.map((a, i) => ({
+  // Structured activity entries.
+  await replaceOwnedRows(
+    supabase,
+    'student_activities',
+    userId,
+    (payload.activities_list ?? []).map((a, i) => ({
       profile_id: userId,
       category: a.category,
       level: a.level ?? null,
       duration: a.duration ?? null,
       highlight: a.highlight ?? null,
-      sort_order: a.sort_order ?? i,
-    }));
-    const { error: activitiesInsertError } = await (supabase as any)
-      .from('student_activities').insert(activityRows);
-    if (activitiesInsertError) throw new Error(activitiesInsertError.message);
-  }
+      sort_order: a.sort_order ?? i
+    }))
+  );
 
-  const { error: subjectDeleteError } = await supabase.from('student_subjects').delete().eq('profile_id', userId);
-  if (subjectDeleteError) throw new Error(subjectDeleteError.message);
-  if (academic_input.subject_list.length > 0) {
-    const subjectRows = academic_input.subject_list.map((subject) => ({
+  await replaceOwnedRows(
+    supabase,
+    'student_subjects',
+    userId,
+    academic_input.subject_list.map((subject) => ({
       profile_id: userId,
       subject_name: subject.subject_name,
       // Cast: generated DB types lag the schema (AP added by migration 20260611120000).
       level: subject.level as any,
       grade_value: subject.grade_value === null ? null : String(subject.grade_value)
-    }));
-    const { error: subjectInsertError } = await supabase.from('student_subjects').insert(subjectRows);
-    if (subjectInsertError) throw new Error(subjectInsertError.message);
-  }
+    }))
+  );
 
-  const { error: testsDeleteError } = await supabase.from('student_admissions_tests').delete().eq('profile_id', userId);
-  if (testsDeleteError) throw new Error(testsDeleteError.message);
-  if (academic_input.admissions_tests.length > 0) {
-    const testRows = academic_input.admissions_tests.map((test) => ({
+  await replaceOwnedRows(
+    supabase,
+    'student_admissions_tests',
+    userId,
+    academic_input.admissions_tests.map((test) => ({
       profile_id: userId,
       test_type: test.test_type,
       status: test.status,
       score_numeric: test.score_numeric,
       percentile: test.percentile
-    }));
-    const { error: testInsertError } = await supabase.from('student_admissions_tests').insert(testRows);
-    if (testInsertError) throw new Error(testInsertError.message);
-  }
+    }))
+  );
 
   // Score is best-effort (matches the original action's behavior).
   try {

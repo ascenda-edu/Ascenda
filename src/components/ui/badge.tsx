@@ -43,10 +43,35 @@ const badgeVariants = cva(
         // text and only measures 3.58:1 as text on a dark card.
         primary: 'border-primary/25 bg-primary/10 text-primary-ink',
         outline: 'border-border bg-transparent text-foreground',
+        /**
+         * Geometry only — no border/fill/text colour of its own.
+         *
+         * This exists for the class-string tone tables that still live in
+         * `src/lib` (`counsellor/deck-theme.ts`, `theme/categories.ts`,
+         * `counsellor/stage-colors.ts`) and for the `{label, color}` badge
+         * payloads the counsellor analytics builds. Those hand out a *bundle*
+         * (`border-warning/40 bg-warning-subtle text-warning`), not a variant
+         * name, so pinning a real variant underneath them would only make
+         * tailwind-merge arbitrate three groups for nothing.
+         *
+         * `<Badge variant="bare" className={TABLE[k].badge}>` therefore takes
+         * the pill geometry from here and the colour from the table — one
+         * definition of the shape, zero behaviour change at the call site.
+         * Delete this variant once those tables emit `BadgeVariant`
+         * (docs/audit/09-design-system.md, HIGH-4).
+         */
+        bare: '',
       },
       size: {
         /** The canonical chip. Pixel-identical to `TONE[*].chip`. */
         default: 'px-2.5 py-0.5 text-xs',
+        /**
+         * 11px, for chips inside a dense row — a notification kind, a meeting
+         * status, a deck rarity. `.text-label` is the named 11px step and is
+         * registered in tailwind-merge's font-size group (`lib/utils.ts`), so it
+         * survives beside the tone colour in either order.
+         */
+        sm: 'px-2 py-0.5 text-label',
         /** Roomier, for a badge sitting beside an h2/h3 rather than inside a row. */
         lg: 'px-3 py-1 text-sm',
       },

@@ -4,8 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { createServerActionSupabaseClient } from '@/lib/supabase/server';
 import type { StudentProfilePayload } from '@/lib/profile/intake-types';
-import { scoreStudentProfile } from '@/lib/scoring/student_scoring';
-import { buildStudentProfilePayload } from '@/lib/scoring/student_score_loader';
+import { describeIntakeIssues, formatIntakeIssues, studentProfilePayloadSchema } from '@/lib/profile/intake-schema';
 import { writeStudentIntake } from '@/lib/profile/persist-intake';
 
 const ensureUser = async () => {
@@ -37,8 +36,34 @@ const clearOnboardingCache = async () => {
 
 export const saveStudentIntake = async (payload: StudentProfilePayload) => {
   try {
+    // Authenticate FIRST. This is a public POST endpoint, so an anonymous caller
+    // must not be able to probe the payload schema by submitting shapes and
+    // reading back which fields were rejected.
     const { supabase, userId } = await ensureUser();
-    await writeStudentIntake(supabase, userId, payload);
+
+    // Only now is the body worth parsing. The `StudentProfilePayload` annotation
+    // is erased at runtime, so this parse is the only thing standing between
+    // caller-controlled JSON and a six-table write. `parsed.data` is used below
+    // rather than `payload` so unknown keys are stripped before that write.
+    const parsed = studentProfilePayloadSchema.safeParse(payload);
+    if (!parsed.success) {
+      console.error('Profile intake validation failed', formatIntakeIssues(parsed.error));
+      return {
+        success: false,
+        // Name the offending fields. The previous generic sentence left a student
+        // who had, say, typed past the 4,000-character limit on "career
+        // aspiration" with no way to discover WHICH answer was the problem — the
+        // step validators do not check length, so nothing was highlighted and the
+        // save failed identically every retry. A validation error the user cannot
+        // act on is a lockout.
+        //
+        // Field PATHS only, never the submitted values: this string reaches the
+        // browser and the values are a minor's personal data.
+        message: `Some of your answers could not be saved: ${describeIntakeIssues(parsed.error)}. Please shorten or correct them and try again.`
+      };
+    }
+
+    await writeStudentIntake(supabase, userId, parsed.data);
 
     await clearOnboardingCache();
     revalidatePath('/profile');
@@ -51,34 +76,11 @@ export const saveStudentIntake = async (payload: StudentProfilePayload) => {
   }
 };
 
-export const recalculateStudentScore = async () => {
-  const { supabase, userId } = await ensureUser();
-  const payload = await buildStudentProfilePayload(supabase, userId);
-  if (!payload) {
-    throw new Error('Profile intake data is incomplete');
-  }
-  const scoring = scoreStudentProfile(payload);
-  const { error } = await supabase.from('student_scores').upsert({
-    profile_id: userId,
-    total_score: scoring.total_score,
-    student_band: scoring.student_band,
-    eligibility_flags: scoring.eligibility_flags,
-    readiness_flags: scoring.readiness_flags,
-    breakdown: scoring.breakdown
-  });
-  if (error) {
-    throw new Error(error.message);
-  }
-  revalidatePath('/profile');
-  revalidatePath('/dashboard');
-  return { success: true };
-};
-
-export const resubmitStudentProfile = async () => {
-  const { supabase, userId } = await ensureUser();
-  const payload = await buildStudentProfilePayload(supabase, userId);
-  if (!payload) {
-    return { success: false, message: 'Profile intake data is incomplete.' };
-  }
-  return saveStudentIntake(payload);
-};
+// `recalculateStudentScore` and `resubmitStudentProfile` were removed here.
+//
+// Both had zero callers, but every export of a `'use server'` module is
+// registered as a live POST endpoint — so they were reachable surface that no
+// code path exercised and no test covered. `recalculateStudentScore` also
+// duplicated `POST /api/profile/recalculate-score` line for line, which is the
+// version the app actually calls; two copies of a scoring write is exactly the
+// drift this refactor is removing.
