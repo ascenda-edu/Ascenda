@@ -237,25 +237,11 @@ export const ADMIN_SECTION_ITEMS: SectionNavItem[] = [
   { label: 'Simulation', href: '/admin/simulation' },
 ];
 
-export const COUNSELLOR_SECTION_ITEMS: SectionNavItem[] = [
-  { label: 'Overview', href: '/counsellor', exact: true },
-  { label: 'Inbox', href: '/counsellor/inbox' },
-  { label: 'Students', href: '/counsellor/students' },
-  { label: 'Universities', href: '/counsellor/universities' },
-  { label: 'Analytics', href: '/counsellor/analytics' },
-  { label: 'Deadlines', href: '/counsellor/deadlines' },
-  { label: 'Documents', href: '/counsellor/documents' },
-  { label: 'Outcomes', href: '/counsellor/outcomes' },
-  { label: 'Applications', href: '/counsellor/applications' },
-];
-
-export const PARENT_SECTION_ITEMS: SectionNavItem[] = [
-  { label: 'Overview', href: '/parent', exact: true },
-  { label: 'Progress', href: '/parent/progress' },
-  { label: 'Deadlines', href: '/parent/deadlines' },
-  { label: 'Finances', href: '/parent/finances' },
-  { label: 'Messages', href: '/parent/messages' },
-];
+// NO COUNSELLOR_/PARENT_SECTION_ITEMS. Those two portals don't get a section nav:
+// unlike the student side, where the top bar is one pill per segment and the section
+// nav is the level below it, `filterNavByRole` hands the ENTIRE top bar over to the
+// portal's own destinations on /counsellor and /parent routes. A section nav there
+// repeated the bar directly above it. See the comments in their layouts.
 
 export const isNavActive = (item: NavItem, pathname: string) => {
   if (!pathname) return false;
