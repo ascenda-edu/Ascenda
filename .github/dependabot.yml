@@ -23,7 +23,12 @@ updates:
         patterns: ['@radix-ui/*']
       tiptap:
         patterns: ['@tiptap/*']
-      typescript-eslint:
+      # Named `lint`, not `typescript-eslint`: the patterns below also match
+      # `eslint` and `eslint-config-next`, so the old name produced PR titles like
+      # "bump the typescript-eslint group with 2 updates" for what was actually an
+      # ESLint 10 + Next 16 toolchain major (PR #54). A group name that misdescribes
+      # its own contents is how a major bump gets waved through as routine.
+      lint:
         patterns: ['@typescript-eslint/*', 'eslint', 'eslint-*']
       testing:
         patterns: ['jest', 'jest-*', 'ts-jest', '@testing-library/*', '@playwright/*']
@@ -41,6 +46,35 @@ updates:
       - dependency-name: react
         update-types: ['version-update:semver-major']
       - dependency-name: react-dom
+        update-types: ['version-update:semver-major']
+      # `eslint-config-next` majors TRACK `next` majors — 16.x carries
+      # @next/eslint-plugin-next@16, which lints for APIs Next 15.5.21 does not have.
+      # Ignoring `next` majors above while accepting this one was the same upgrade
+      # wearing a different name.
+      #
+      # Proven unmergeable today, not merely risky (PR #54, closed): eslint-config-next@16
+      # depends on eslint-plugin-react@^7.37.0, and 7.37.5 declares
+      # `peerDependencies.eslint: "^3 || … || ^9.7"` — no ESLint 10 support at all.
+      # Reproduced: `react/display-name` throws
+      # `contextOrFilename.getFilename is not a function` under eslint 10.
+      # Revisit as part of the Next 16 upgrade, once upstream ships an
+      # ESLint-10-compatible eslint-plugin-react.
+      - dependency-name: eslint-config-next
+        update-types: ['version-update:semver-major']
+      # ESLint majors change the config API itself. 10 removed the context shape
+      # eslint-plugin-react still uses, and `eslint.config.mjs` wraps
+      # eslint-config-next in FlatCompat — which cannot wrap the native flat config
+      # that v16 now exports (`Converting circular structure to JSON`). Both are
+      # migrations, not bumps.
+      - dependency-name: eslint
+        update-types: ['version-update:semver-major']
+      # zod is pinned EXACTLY (not `^`) at 3.22.4 because `src/lib/env.ts` is
+      # documented as load-bearing on zod-3 `ZodEffects` abort semantics —
+      # "Verified against zod@3.22.4" — and three other modules validate with it
+      # (intake-schema.ts, validation/auth.ts, api/admin/import/validation.ts).
+      # A major here is a validation-behaviour change, so it goes through
+      # __tests__/env.test.ts deliberately rather than arriving as a bot PR.
+      - dependency-name: zod
         update-types: ['version-update:semver-major']
 
   # The workflow pins every action to a commit SHA (see .github/workflows/ci.yml).
