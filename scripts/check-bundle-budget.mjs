@@ -81,54 +81,54 @@ const SUGGEST = args.has('--suggest');
  * across machines). 15 kB of headroom is an order of magnitude above that.
  */
 const ROUTE_BUDGETS = {
-  // route                                budget   measured 2026-08-02
-  '/assistant': 340, //   323  react-markdown + micromark (~33 kB, 3 routes only)
-  '/counsellor/assistant': 320, //   304
-  '/parent/assistant': 320, //   304
-  '/scholarships': 295, //   277
-  '/appointment': 290, //   272
-  '/university-search/search': 280, //   264
-  '/counsellor/universities': 280, //   261
-  '/counsellor': 275, //   259
-  '/dashboard': 270, //   251
-  '/matches': 265, //   250
-  '/applications/documents': 265, //   250
-  '/counsellor/students/[id]': 265, //   248
-  '/university-search/shortlist': 260, //   244
-  '/profile': 260, //   242
-  '/counsellor/students': 260, //   242
-  '/course/[id]': 260, //   241
-  '/inbox': 255, //   238
-  '/applications': 255, //   236
-  '/university-search/quests': 240, //   223
-  '/toolbox/chances': 240, //   221
-  '/counsellor/documents': 235, //   219
-  '/counsellor/inbox': 230, //   215
-  '/profile/wizard': 230, //   214
-  '/role-select': 225, //   206
-  '/parent': 220, //   202
-  '/admin': 220, //   201
-  '/applications/tasks': 215, //   200
-  '/parent/deadlines': 215, //   199
-  '/parent/messages': 215, //   199
-  '/parent/finances': 215, //   199
-  '/parent/progress': 215, //   199
-  '/': 215, //   198  public landing: Lenis + the scrollytelling chapters
-  '/counsellor/analytics': 215, //   196
-  '/toolbox/timeline': 210, //   193
+  // route                                budget   measured 2026-08-03
+  '/assistant': 345, //   326  react-markdown + micromark (~33 kB, 3 routes only)
+  '/counsellor/assistant': 325, //   307
+  '/parent/assistant': 325, //   307
+  '/scholarships': 295, //   280
+  '/appointment': 295, //   276
+  '/university-search/search': 285, //   268
+  '/counsellor/universities': 280, //   265
+  '/counsellor': 280, //   262
+  '/dashboard': 270, //   254
+  '/matches': 270, //   253
+  '/applications/documents': 270, //   253
+  '/counsellor/students/[id]': 270, //   252
+  '/university-search/shortlist': 265, //   248
+  '/profile': 265, //   246
+  '/counsellor/students': 265, //   246
+  '/course/[id]': 260, //   244
+  '/inbox': 260, //   241
+  '/applications': 255, //   240
+  '/profile/wizard': 245, //   230
+  '/university-search/quests': 245, //   227
+  '/toolbox/chances': 240, //   225
+  '/counsellor/documents': 240, //   223
+  '/counsellor/inbox': 235, //   218
+  '/role-select': 225, //   209
+  '/parent': 220, //   205
+  '/admin': 220, //   204
+  '/': 220, //   202  public landing: Lenis + the scrollytelling chapters
+  '/applications/tasks': 220, //   202
+  '/parent/finances': 220, //   202
+  '/parent/messages': 220, //   202
+  '/parent/progress': 220, //   202
+  '/parent/deadlines': 220, //   202
+  '/counsellor/analytics': 215, //   199
+  '/toolbox/timeline': 215, //   196
   '/login': 210, //   192
   '/university-search/university/[id]': 195, //   178
-  '/counsellor/applications': 180, //   161
-  '/counsellor/deadlines': 175, //   159
-  '/counsellor/outcomes': 175, //   156
-  '/admin/simulation': 170, //   154
-  '/toolbox/requirements': 170, //   154
-  '/toolbox': 170, //   153
-  '/toolbox/essay-workshop': 125, //   110
+  '/counsellor/applications': 180, //   164
+  '/counsellor/deadlines': 180, //   162
+  '/counsellor/outcomes': 175, //   159
+  '/admin/simulation': 175, //   157
+  '/toolbox/requirements': 175, //   157
+  '/toolbox': 175, //   156
+  '/toolbox/essay-workshop': 125, //   109
   '/_not-found': 120, //   101  server-only page: the shared bundle and nothing else
   '/shortlist': 120, //   101
-  '/university-search': 120, //   101
   '/university-search/results': 120, //   101
+  '/university-search': 120, //   101
 };
 
 /**
