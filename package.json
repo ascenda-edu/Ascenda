@@ -33,6 +33,7 @@
     "test:e2e:smoke": "playwright test --project=smoke",
     "test:e2e:install": "playwright install --with-deps chromium",
     "e2e:user": "tsx --tsconfig tsconfig.json scripts/create-e2e-user.ts",
+    "e2e:user:delete": "tsx --tsconfig tsconfig.json scripts/create-e2e-user.ts --delete",
     "test:golden": "jest __tests__/scoring/",
     "test:golden:update": "UPDATE_GOLDEN=1 jest __tests__/scoring/",
     "seed": "echo 'Run supabase/schema.sql and supabase/seed.sql via Supabase SQL editor'",

@@ -31,14 +31,21 @@
  * Then export what it prints and run the spec:
  *   E2E_EMAIL=… E2E_PASSWORD=… npm run test:e2e
  *
- * To delete it afterwards: Supabase dashboard → Authentication → Users.
+ * To remove it afterwards:
+ *   npm run e2e:user:delete
+ *
+ * That deletes the `profiles` row FIRST so the `on delete cascade` on every
+ * `student_*` table runs, then the auth user. Doing it the other way round —
+ * which is what the Supabase dashboard's "delete user" button does — leaves the
+ * profile and all six tables of student data orphaned, because `profiles.id` has
+ * no foreign key to `auth.users`.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const loadEnvFile = (filename: string): void => {
   const filePath = path.resolve(process.cwd(), filename);
@@ -74,10 +81,66 @@ if (!SUPABASE_URL || !SERVICE_ROLE) {
 /** Fixed so re-running targets the same row instead of littering auth.users. */
 const E2E_EMAIL = process.env.E2E_EMAIL ?? 'ascenda+e2e@example.invalid';
 
+/**
+ * Remove the account and everything it owns.
+ *
+ * ORDER MATTERS. Every `student_*` table references `profiles(id) on delete
+ * cascade`, but `profiles.id` has NO foreign key to `auth.users` (it is a plain
+ * `primary key default gen_random_uuid()`). So deleting the auth user first
+ * orphans the profile row and all six tables of student data under it, invisibly.
+ * Delete the profile FIRST and let the cascade run, then the auth user.
+ */
+const destroy = async (supabase: SupabaseClient) => {
+  let id: string | null = null;
+  for (let page = 1; page <= 20 && !id; page += 1) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw new Error(`listUsers failed: ${error.message}`);
+    if (data.users.length === 0) break;
+    id = data.users.find((u) => u.email === E2E_EMAIL)?.id ?? null;
+  }
+
+  if (!id) {
+    console.log(`Nothing to delete — no auth user with email ${E2E_EMAIL}.`);
+    return;
+  }
+
+  // Report what the cascade is about to take, so the deletion is not silent.
+  for (const table of [
+    'student_personal_information',
+    'student_academic_input',
+    'student_subjects',
+    'student_lifestyle_preference',
+    'student_activities',
+    'student_scores',
+    'student_matches'
+  ] as const) {
+    const { count, error } = await supabase
+      .from(table)
+      .select('*', { count: 'exact', head: true })
+      .eq('profile_id', id);
+    if (!error) console.log(`  ${String(count ?? 0).padStart(4)} rows in ${table}`);
+  }
+
+  const { error: profileError } = await supabase.from('profiles').delete().eq('id', id);
+  if (profileError) throw new Error(`profiles delete failed: ${profileError.message}`);
+  console.log('✓ Deleted the profiles row (cascaded every student_* row above).');
+
+  const { error: userError } = await supabase.auth.admin.deleteUser(id);
+  if (userError) throw new Error(`deleteUser failed: ${userError.message}`);
+  console.log(`✓ Deleted the auth user ${id} (${E2E_EMAIL}).`);
+  console.log('');
+  console.log('Recreate it any time with: npm run e2e:user');
+};
+
 const main = async () => {
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE, {
     auth: { autoRefreshToken: false, persistSession: false }
   });
+
+  if (process.argv.includes('--delete')) {
+    await destroy(supabase);
+    return;
+  }
 
   // 24 bytes of entropy, printed once. Never written to the repo.
   const password = `E2e-${crypto.randomBytes(18).toString('base64url')}`;
