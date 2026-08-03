@@ -101,6 +101,33 @@ const chooseFromCombobox = async (page: Page, input: Locator, value: string) => 
 const chipIn = (scope: Locator | Page, name: string) =>
   scope.getByRole('button', { name, exact: true }).first();
 
+/**
+ * Select a chip, rather than toggling it.
+ *
+ * Chips are TOGGLES — `Chip` in StudentIntakeForm.tsx renders
+ * `aria-pressed={selected}` and its onClick flips the value. So a bare `.click()`
+ * is NOT idempotent: on a fresh account it selects, and on an account that
+ * already holds this profile it DESELECTS.
+ *
+ * That is precisely why this spec passed the first time it ever ran in CI and
+ * failed every run after. Each run completes the wizard and SAVES, so the next
+ * run loads step 2 with `intended_clusters` already set, the bare click turned it
+ * back off, and step 2's own validation refused to advance
+ * ("Select at least one subject area") — leaving the spec waiting 15s for a
+ * "Grades & tests" heading that could never appear. The app was right; the spec
+ * was assuming an empty form.
+ *
+ * Asserting the end state also means a chip that is disabled (the primary
+ * cluster group disables the others once one is chosen) fails here, naming the
+ * chip, instead of surfacing as a timeout two steps later.
+ */
+const selectChip = async (chip: Locator) => {
+  if ((await chip.getAttribute('aria-pressed')) !== 'true') {
+    await chip.click();
+  }
+  await expect(chip).toHaveAttribute('aria-pressed', 'true');
+};
+
 const gotoStep = async (page: Page, step: string) => {
   await page.goto(`/profile/wizard?step=${step}`);
   // The step heading and the step body are separate AnimatePresence blocks;
@@ -129,16 +156,17 @@ test.describe('profile wizard — six-step happy path round trip', () => {
     await expect(page.getByRole('heading', { name: 'Your studies' })).toBeVisible();
 
     // ── 2. Studies ─────────────────────────────────────────────────────────
-    await chipIn(page.locator('[data-field="academic_input.programme_type"]'), 'IB Diploma').click();
+    await selectChip(chipIn(page.locator('[data-field="academic_input.programme_type"]'), 'IB Diploma'));
     await page.getByLabel('School name').fill(PROFILE.schoolName);
     await chooseFromCombobox(page, page.getByLabel('School country'), PROFILE.schoolCountry);
     await page.getByLabel(/^School city/).fill(PROFILE.schoolCity);
     await chooseFromSelect(page, 'School type', PROFILE.schoolType);
     await chooseFromSelect(page, 'Graduation year', GRADUATION_YEAR);
-    await page
-      .locator('[data-field="academic_input.intended_clusters"]')
-      .getByRole('button', { name: new RegExp(PROFILE.cluster) })
-      .click();
+    await selectChip(
+      page
+        .locator('[data-field="academic_input.intended_clusters"]')
+        .getByRole('button', { name: new RegExp(PROFILE.cluster) })
+    );
     await page.getByLabel(/^Career aspiration/).fill(PROFILE.careerAspiration);
 
     await page.getByRole('button', { name: 'Next', exact: true }).click();
@@ -153,14 +181,14 @@ test.describe('profile wizard — six-step happy path round trip', () => {
       await page.getByPlaceholder('1–7').nth(i).fill(subject.grade);
     }
 
-    await chipIn(page.locator('[data-field="academic_input.ib_math_pathway"]'), PROFILE.mathsPathway).click();
+    await selectChip(chipIn(page.locator('[data-field="academic_input.ib_math_pathway"]'), PROFILE.mathsPathway));
     await page.getByLabel(/^Core points/).fill(PROFILE.corePoints);
     await chooseFromSelect(page, 'TOK grade', PROFILE.tokGrade);
     await chooseFromSelect(page, 'EE grade', PROFILE.eeGrade);
 
-    await chipIn(page.locator('[data-field="academic_input.english_required"]'), 'Yes').click();
+    await selectChip(chipIn(page.locator('[data-field="academic_input.english_required"]'), 'Yes'));
     await chooseFromSelect(page, 'Test type', PROFILE.englishTest);
-    await chipIn(page.locator('[data-field="academic_input.english_status"]'), PROFILE.englishStatus).click();
+    await selectChip(chipIn(page.locator('[data-field="academic_input.english_status"]'), PROFILE.englishStatus));
     await page.getByLabel(/^Overall score/).fill(PROFILE.englishScore);
 
     await page.getByRole('button', { name: 'Next', exact: true }).click();
@@ -168,9 +196,9 @@ test.describe('profile wizard — six-step happy path round trip', () => {
 
     // ── 4. Activities ──────────────────────────────────────────────────────
     await page.getByRole('button', { name: 'Add activity' }).click();
-    await chipIn(page, PROFILE.activity.category).click();
-    await chipIn(page, PROFILE.activity.level).click();
-    await chipIn(page, PROFILE.activity.duration).click();
+    await selectChip(chipIn(page, PROFILE.activity.category));
+    await selectChip(chipIn(page, PROFILE.activity.level));
+    await selectChip(chipIn(page, PROFILE.activity.duration));
     await page.getByPlaceholder(/hackathon|Best delegate|award/i).first().fill(PROFILE.activity.highlight);
     await page.getByPlaceholder(/biomedical sciences/).fill(PROFILE.ambition);
 
@@ -178,10 +206,10 @@ test.describe('profile wizard — six-step happy path round trip', () => {
     await expect(page.getByRole('heading', { name: 'Life at university' })).toBeVisible();
 
     // ── 5. Lifestyle ───────────────────────────────────────────────────────
-    await chipIn(page, PROFILE.teachingStyle).click();
-    await chipIn(page, PROFILE.locationType).click();
-    await chipIn(page, PROFILE.campusSize).click();
-    await chipIn(page, PROFILE.extracurricular).click();
+    await selectChip(chipIn(page, PROFILE.teachingStyle));
+    await selectChip(chipIn(page, PROFILE.locationType));
+    await selectChip(chipIn(page, PROFILE.campusSize));
+    await selectChip(chipIn(page, PROFILE.extracurricular));
 
     await page.getByRole('button', { name: 'Next', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Review & confirm' })).toBeVisible();
