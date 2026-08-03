@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast';
 import { useSupabase } from '@/hooks/useSupabase';
 import { insertHelpRequest } from '@/lib/demo/help-request-client';
+import { parseLocalDate } from '@/lib/utils/dates';
 import type { RecLetterRequest, RecLetterStatus } from '@/lib/data/student-demo-data';
 
 const REMIND_STORAGE_KEY = 'ascenda-letter-reminders';
@@ -73,8 +74,11 @@ interface RecLetterWorkflowProps {
   letters: RecLetterRequest[];
 }
 
+// `requestedDate` is a date-only string ('YYYY-MM-DD'). `new Date()` parses
+// that as UTC midnight, which renders one calendar day early for every user
+// west of Greenwich — parse it as a LOCAL date instead.
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return parseLocalDate(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
 export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
@@ -105,10 +109,14 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
   // counsellor to chase the recommender on the student's behalf.
   // This is the honest version of the demo claim: the chase happens
   // through the platform, not out-of-band email.
-  const handleRemind = async (letter: RecLetterRequest) => {
+  // Synchronous `() => void` event-handler boundary around an async body. An
+  // `async` function handed to `onClick`/`onDrop`/`onChange` returns a promise
+  // the DOM discards, so a rejection is swallowed and the user is told nothing;
+  // the terminal `.catch` below is the only exit for a failure.
+  const handleRemind = (letter: RecLetterRequest): void => {
     if (busy) return;
     setBusy(letter.id);
-    try {
+    const run = async (): Promise<void> => {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData?.user?.id;
       if (!userId) {
@@ -149,12 +157,16 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
         description: 'Tracked in your counsellor inbox',
         variant: 'success'
       });
-    } catch (err) {
-      console.error('rec-letter remind failed', err);
-      showToast({ title: "Couldn't send reminder", variant: 'error' });
-    } finally {
-      setBusy(null);
-    }
+    };
+
+    run()
+      .catch((err: unknown) => {
+        console.error('rec-letter remind failed', err);
+        showToast({ title: "Couldn't send reminder", variant: 'error' });
+      })
+      .finally(() => {
+        setBusy(null);
+      });
   };
 
   return (

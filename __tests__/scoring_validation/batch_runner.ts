@@ -123,9 +123,9 @@ function printBreakdown(profile: StudentProfilePayload) {
 function printMatches(profile: StudentProfilePayload, result: ReturnType<typeof scoreStudentProfile>) {
   const matches = rankCourseMatches(profile, result, CATALOGUE as EnrichedCourseRecord[]);
 
-  const reach   = matches.filter(m => !m.excluded && m.tier_fit === 'Reach');
-  const target  = matches.filter(m => !m.excluded && m.tier_fit === 'Target');
-  const safety  = matches.filter(m => !m.excluded && m.tier_fit === 'Safety');
+  const reach   = matches.filter(m => !m.excluded && m.admission_band === 'Reach');
+  const target  = matches.filter(m => !m.excluded && m.admission_band === 'Target');
+  const safety  = matches.filter(m => !m.excluded && m.admission_band === 'Safety');
 
   const printRow = (m: (typeof matches)[0]) =>
     report(`    ${pad(m.university, 35)} ${pad(m.course.slice(0, 30), 30)} ${m.chance_percent}%`);
@@ -151,16 +151,26 @@ function printMatches(profile: StudentProfilePayload, result: ReturnType<typeof 
 
 // ── Runner ────────────────────────────────────────────────────────────────────
 
+export type BatchSummaryRow = { label: string; band: string; score: number; actBoost: number };
+
+/**
+ * Returns the summary rows as well as printing them.
+ *
+ * It used to return `void`, which left its only caller — the "Full batch report"
+ * test — with nothing to assert but `expect(true).toBe(true)`. A test that
+ * cannot fail is worse than no test: it inflates the count with a false green.
+ * Handing the rows back lets that test check the report against the scorer.
+ */
 export function runBatch(
   batch: Array<{ label: string; profile: StudentProfilePayload }>,
   title = 'Scoring Batch Run'
-) {
+): BatchSummaryRow[] {
   report(`\n${'▓'.repeat(80)}`);
   report(`  ASCENDA SCORING VALIDATOR — ${title}`);
   report(`  Weights: commitment max=${ACTIVITIES_WEIGHTS.commitment['exceptional']}  cap=${ACTIVITIES_WEIGHTS.max_total}`);
   report(`${'▓'.repeat(80)}`);
 
-  const summary: Array<{ label: string; band: string; score: number; actBoost: number }> = [];
+  const summary: BatchSummaryRow[] = [];
 
   batch.forEach(({ label, profile }) => {
     printHeader(label);
@@ -185,6 +195,8 @@ export function runBatch(
     report(`  ${pad(label, 45)} ${e} ${pad(band, 12)} ${String(score).padEnd(7)} +${actBoost}`);
   });
   report('');
+
+  return summary;
 }
 
 // ── Direct execution ──────────────────────────────────────────────────────────

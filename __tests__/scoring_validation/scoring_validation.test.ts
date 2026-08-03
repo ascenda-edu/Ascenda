@@ -128,11 +128,36 @@ describe('Phase 1 — Band & activity boost assertions', () => {
   });
 });
 
-// ── Full batch report (always passes, for visual inspection) ─────────────────
+// ── Full batch report ────────────────────────────────────────────────────────
 
 describe('Phase 1 — Full batch report', () => {
-  it('prints full scoring report (visual inspection)', () => {
-    runBatch(PHASE1_PROFILES, 'Phase 1 — 4 Synthetic Profiles');
-    expect(true).toBe(true); // always passes — inspect console output
+  /**
+   * This test used to be `expect(true).toBe(true); // always passes`.
+   *
+   * It was honest about it — the report exists for visual inspection — but a
+   * test that cannot fail is a false green, and "1,541 tests pass" should not
+   * include one. `runBatch` now returns its summary rows, so the report can be
+   * checked against the scorer instead of against nothing.
+   *
+   * No new baseline is introduced: the expected values are recomputed from
+   * `scoreStudentProfile` here, so this asserts that the REPORT agrees with the
+   * engine, not that either produces a particular number. If runBatch silently
+   * skipped a profile, mislabelled a row, or reported a stale score, this fails.
+   */
+  it('reports one row per profile, and every row agrees with the scorer', () => {
+    const summary = runBatch(PHASE1_PROFILES, 'Phase 1 — 4 Synthetic Profiles');
+
+    expect(summary).toHaveLength(PHASE1_PROFILES.length);
+    expect(summary.map((row) => row.label)).toEqual(PHASE1_PROFILES.map((p) => p.label));
+
+    for (const [index, { profile }] of PHASE1_PROFILES.entries()) {
+      const expected = scoreStudentProfile(profile);
+      expect(summary[index]).toEqual({
+        label: PHASE1_PROFILES[index].label,
+        band: expected.student_band,
+        score: expected.total_score,
+        actBoost: expected.breakdown.activities.total
+      });
+    }
   });
 });

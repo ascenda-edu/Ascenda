@@ -2,8 +2,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { filterVisiblePrograms, getFlaggedProgramIds } from '../catalog/visibility';
 import type { Database } from '../types/database';
 import type { EnrichedMatch, MissingProfileSection } from './types';
-import type { MatchTier } from './match-tier';
+import { matchTierFromScore, type MatchTier } from './match-tier';
 import type { StudentProfilePayload } from '@/lib/profile/intake-types';
+import { logger } from '@/lib/observability/logger';
 import { scoreStudentProfile } from '@/lib/scoring/student_scoring';
 import { mapIntakeRowsToPayload } from '@/lib/scoring/student_score_loader';
 import type { CourseRecord, EnrichedCourseRecord } from '@/lib/tiering/course_tiering';
@@ -386,8 +387,10 @@ export const loadMatchesForProfile = async (
               if (!programName || !universityName || !universityCountry) return null;
 
               const cachedTier = (breakdown.tier as MatchTier | undefined) ?? null;
-              const fallbackTier: MatchTier =
-                (row.score ?? 0) >= 70 ? 'Safe' : (row.score ?? 0) >= 50 ? 'Match' : 'Reach';
+              // Thresholds come from ./match-tier. This used to hardcode
+              // >=70/>=50, disagreeing with the search surfaces on every score in
+              // the 70-79 band.
+              const fallbackTier: MatchTier = matchTierFromScore(row.score) ?? 'Reach';
 
               return {
                 program: {
@@ -682,10 +685,22 @@ export const loadMatchesForProfile = async (
   const allUniIds = [...new Set(enrichedCourses.map((c) => c.university_id).filter(Boolean))];
   const recognitionByUniId = new Map<string, number>();
   if (allUniIds.length > 0) {
-    const { data: recData } = await supabase
+    const { data: recData, error: recError } = await supabase
       .from('universities')
       .select('id, recognition_score')
       .in('id', allUniIds);
+    // Discarding this error (audit E-05) left every university on the default
+    // of 3 — see the `?? 3` at the cachePayload mapper below and the sort key
+    // that reads this map. The match list is then ordered as if no university
+    // were more recognised than any other, which is a different ranking served
+    // and cached for 24h with no signal that anything failed.
+    if (recError) {
+      console.error(
+        'Failed to load recognition scores — the match list will be ordered as if every ' +
+          'university had the default recognition of 3',
+        recError
+      );
+    }
     for (const row of (recData ?? []) as Array<{ id: string; recognition_score: number }>) {
       if (row.id && typeof row.recognition_score === 'number') {
         recognitionByUniId.set(row.id, row.recognition_score);
@@ -719,16 +734,16 @@ export const loadMatchesForProfile = async (
     .filter((match) => !match.excluded);
 
   if (process.env.MATCH_DEBUG === '1') {
-    const byTier = {
-      Safety: ranked.filter((m) => m.tier_fit === 'Safety').length,
-      Target: ranked.filter((m) => m.tier_fit === 'Target').length,
-      Reach: ranked.filter((m) => m.tier_fit === 'Reach').length,
-      Hard: ranked.filter((m) => m.tier_fit === 'Harder-than-reach').length
+    const byBand = {
+      Safety: ranked.filter((m) => m.admission_band === 'Safety').length,
+      Target: ranked.filter((m) => m.admission_band === 'Target').length,
+      Reach: ranked.filter((m) => m.admission_band === 'Reach').length,
+      Hard: ranked.filter((m) => m.admission_band === 'Harder-than-reach').length
     };
     const sample = ranked.slice(0, 8).map((m) => ({
       uni: m.university,
       course: m.course,
-      tier: m.tier_fit,
+      band: m.admission_band,
       chance: m.chance_percent,
       courseTier: m.course_tier
     }));
@@ -737,7 +752,7 @@ export const loadMatchesForProfile = async (
       studentIb: studentPayload.academic_input.ib_total_points,
       enrichedCount: enrichedCourses.length,
       rankedCount: ranked.length,
-      byTier,
+      byBand,
       sample
     });
   }
@@ -747,10 +762,17 @@ export const loadMatchesForProfile = async (
   const courseLookup = new Map(enrichedCourses.map((course) => [toKey(course), course]));
   const courseByProgramId = new Map(enrichedCourses.map((course) => [course.program_id, course]));
 
-  // Apply result limit per-tier to ensure balanced Reach/Match/Safe representation.
-  // Without this, a top-N cut returns only Safety results (highest admission %).
-  // After capping, we pin programs from high-recognition universities (score ≥ 9) that
-  // would otherwise be cut off — prestigious schools always appear as Reach options.
+  // Apply the result limit per ADMISSION BAND so the set spans a range of
+  // difficulties. Without this, a top-N cut returns only Safety results (highest
+  // admission %). After capping, we pin programs from high-recognition
+  // universities (score ≥ 9) that would otherwise be cut off — prestigious
+  // schools always appear among the hardest options.
+  //
+  // This balances WHICH courses are returned. It does not decide what tier they
+  // are labelled with; that is `matchTierFromScore` below, applied to the same
+  // number the card prints. Keeping selection and labelling separate is what
+  // stopped the percentile pass that used to sit under this from relabelling a
+  // 41%-chance programme "Safe".
   //
   // The set is built at computeLimit — at least FULL_CACHE_LIMIT — not the
   // caller's resultLimit, and the caller's slice is taken when returning. The
@@ -762,9 +784,9 @@ export const loadMatchesForProfile = async (
   let limited: RankedCourseMatch[];
   if (computeLimit) {
     const perTier = Math.ceil(computeLimit / 3);
-    const safety = ranked.filter((m) => m.tier_fit === 'Safety').slice(0, perTier);
-    const target = ranked.filter((m) => m.tier_fit === 'Target').slice(0, perTier);
-    const reachAll = ranked.filter((m) => m.tier_fit === 'Reach' || m.tier_fit === 'Harder-than-reach');
+    const safety = ranked.filter((m) => m.admission_band === 'Safety').slice(0, perTier);
+    const target = ranked.filter((m) => m.admission_band === 'Target').slice(0, perTier);
+    const reachAll = ranked.filter((m) => m.admission_band === 'Reach' || m.admission_band === 'Harder-than-reach');
     const reach = reachAll.slice(0, perTier);
 
     // Pin top-recognition universities that got cut off from the Reach cap
@@ -790,19 +812,24 @@ export const loadMatchesForProfile = async (
     limited = ranked;
   }
 
-  const assignTierFromFit = (fit: RankedCourseMatch['tier_fit']): MatchTier => {
-    if (fit === 'Safety') return 'Safe';
-    if (fit === 'Target') return 'Match';
-    return 'Reach';
-  };
-
-  let matches: EnrichedMatch[] = limited
+  // The tier is derived from `chance_percent` — the number this same object
+  // publishes as `score` and the card prints next to the pill — so the label can
+  // never contradict the figure beside it, and so the tier persisted in
+  // `breakdown.tier` agrees with the `score` column persisted alongside it. The
+  // cached read path at :393 already recomputes with `matchTierFromScore(row.score)`
+  // when the key is missing; before this, the write path used a different rule
+  // (`assignTierFromFit`, an IB-points-gap band), so a cache hit and a cache miss
+  // could label the same row differently.
+  //
+  // `?? 'Reach'` is unreachable in practice — `chance_percent` is a clamped
+  // integer — but stays as the conservative choice if that ever changes.
+  const scoredMatches: EnrichedMatch[] = limited
     .map((match) => {
       const course =
         (match.program_id ? courseByProgramId.get(match.program_id) : null) ??
         courseLookup.get(toKey(match));
       if (!course) return null;
-      const tier: MatchTier = assignTierFromFit(match.tier_fit);
+      const tier: MatchTier = matchTierFromScore(match.chance_percent) ?? 'Reach';
       return {
         program: {
           id: course.program_id,
@@ -836,25 +863,27 @@ export const loadMatchesForProfile = async (
     })
     .filter((value): value is EnrichedMatch => value !== null);
 
-  // Redistribute tiers by score percentile when the engine collapses everything
-  // into one tier (common when catalog programs lack real selectivity data).
-  // Semantically correct: Reach = lowest admission chance relative to the set,
-  // Safe = highest. Ensures students always see a useful Reach/Match/Safe spread.
-  const tierCounts = matches.reduce((acc, m) => { acc[m.tier] = (acc[m.tier] ?? 0) + 1; return acc; }, {} as Record<MatchTier, number>);
-  const dominantTierPct = Math.max(...Object.values(tierCounts)) / (matches.length || 1);
-  if (dominantTierPct > 0.75 && matches.length >= 6) {
-    const sorted = [...matches].sort((a, b) => b.score - a.score);
-    const n = sorted.length;
-    matches = sorted.map((m, i) => {
-      const pct = i / n;
-      const tier: MatchTier = pct < 0.35 ? 'Safe' : pct < 0.65 ? 'Match' : 'Reach';
-      return { ...m, tier };
-    });
-  }
+  // DELETED HERE: a percentile reassignment that fired whenever one tier held
+  // >75% of the set (and >= 6 results) and rewrote every tier by RANK — top 35%
+  // Safe, next 30% Match, rest Reach. It ran after the tier was computed and
+  // before the cache write, so rank-derived tiers were what got persisted into
+  // `breakdown.tier` and read back by /applications and the counsellor surfaces.
+  //
+  // It was a third implementation of the tier rule, and the only one that could
+  // detach the label from the number entirely: a student whose best chance was
+  // 41% got a "Safe" badge, and an 87% programme in the bottom third got
+  // "Reach". Its stated purpose — "students always see a useful Reach/Match/Safe
+  // spread" — is a SELECTION concern, and the per-band caps above already serve
+  // it by choosing a spread of admission difficulties. Relabelling to
+  // manufacture a spread makes the label mean nothing.
+  //
+  // Consequence, stated plainly: a student whose whole result set scores under
+  // 60 now sees three Reach groups' worth of programmes under one Reach heading
+  // instead of a fabricated Safe/Match/Reach split. That is the true answer.
 
   // Apply recognition-boosted sort: well-known universities surface before unknown
   // ones when admission chances are similar (up to +5 pts boost for score-10 schools).
-  matches = matches
+  const matches: EnrichedMatch[] = scoredMatches
     .map((m) => ({ m, key: m.score + ((recognitionByUniId.get(m.university.id) ?? 3) / 10) * 5 }))
     .sort((a, b) => b.key - a.key)
     .map((x) => x.m);
@@ -892,17 +921,74 @@ export const loadMatchesForProfile = async (
     // duplicate rows); if any insert batch fails, wipe the partial cache —
     // an empty cache recomputes next request, but a truncated one would be
     // served as authoritative for the full 24h TTL.
-    const { error: deleteError } = await supabase.from('student_matches').delete().eq('profile_id', profileId);
+    // `.select('id')` makes PostgREST return the deleted rows, which is the only
+    // way to tell "nothing was cached" apart from "the DELETE was silently
+    // filtered away by RLS" (migration 20260802120000 §5a).
+    //
+    // Postgres does NOT error on an RLS-filtered DELETE — it removes zero rows
+    // and reports success. Until 20260802120000 there was no DELETE policy on
+    // student_matches at all (matches_self is SELECT, matches_self_write INSERT,
+    // matches_self_update UPDATE, matches_admin is admin-only), so for a student
+    // this clear was a no-op that reported success, and the insert below then
+    // piled 300 more rows on top of everything already there. That is how the
+    // table grew without bound. `matches_self_delete` (applied 2026-08-03) is
+    // what makes the clear actually clear.
+    const { data: cleared, error: deleteError } = await supabase
+      .from('student_matches')
+      .delete()
+      .eq('profile_id', profileId)
+      .select('id');
     if (deleteError) {
       console.warn('Failed to clear cached matches — skipping cache rebuild', deleteError);
     } else {
-      // Insert in batches to avoid payload size limits
+      if ((cleared?.length ?? 0) === 0) {
+        // Not necessarily wrong — a first-time student has nothing cached — but
+        // it is indistinguishable from the RLS no-op above, and that ambiguity
+        // is the finding. Now that 20260802120000 is applied (matches_self_delete
+        // exists), this should only ever be a genuinely empty cache; a zero-row
+        // clear on a profile that HAS rows means the policy did not apply.
+        console.warn(
+          `Cleared 0 cached match rows for profile ${profileId} before rebuilding. ` +
+            'If this profile had a cache, the DELETE was filtered by RLS despite ' +
+            'matches_self_delete (see migration 20260802120000).'
+        );
+      }
+      // Insert in batches to avoid payload size limits.
+      //
+      // UPSERT, not insert — C7 part (b), the app half of 20260802120000 §5b.
+      // `student_matches_profile_program_key` (unique on (profile_id, program_id))
+      // now exists, so a partially-cleared cache CONVERGES here instead of
+      // raising 23505 and failing the whole rebuild. `onConflict` must name the
+      // columns in the SAME ORDER as that index — PostgREST passes the string
+      // straight through to ON CONFLICT (…), and a mismatched order infers no
+      // index and fails at 42P10.
+      //
+      // ORDERING, and it is one-way: this edit is only safe because the index is
+      // applied (verified on the remote 2026-08-03). Deploying it against a
+      // database without the index breaks /matches for every student at 42P10.
       for (let i = 0; i < cachePayload.length; i += 500) {
         const batch = cachePayload.slice(i, i + 500);
-        const { error: insertError } = await supabase.from('student_matches').insert(batch);
+        const { error: insertError } = await supabase
+          .from('student_matches')
+          .upsert(batch, { onConflict: 'profile_id,program_id' });
         if (insertError) {
           console.warn(`Failed to persist cached matches batch ${i} — clearing partial cache`, insertError);
-          await supabase.from('student_matches').delete().eq('profile_id', profileId);
+          // This rollback was the one write in src/ that discarded its error
+          // (audit E-04). If the wipe fails, the truncated cache it was meant to
+          // remove stays — and a truncated cache is served as authoritative for
+          // the full 24h TTL, so the student silently sees a subset of their
+          // matches. It must be loud: nothing downstream can detect this state.
+          const { error: rollbackError } = await supabase
+            .from('student_matches')
+            .delete()
+            .eq('profile_id', profileId);
+          if (rollbackError) {
+            console.error(
+              `Failed to clear the partial match cache for profile ${profileId} — ` +
+                'a TRUNCATED cache will be served as authoritative until the 24h TTL expires',
+              rollbackError
+            );
+          }
           break;
         }
       }
@@ -917,6 +1003,16 @@ export const loadMatchesForProfile = async (
   };
 };
 
+/** Raised when EVERY course_scoring_v1 batch failed — see the note on
+ * `scoreProgramsForProfile`. Exported so a caller can distinguish an
+ * infrastructure failure from "this student has no scorable programmes". */
+export class CourseScoringUnavailableError extends Error {
+  constructor(readonly batchCount: number, readonly batchError?: unknown) {
+    super(`course_scoring_v1 unavailable — all ${batchCount} batch(es) failed`);
+    this.name = 'CourseScoringUnavailableError';
+  }
+}
+
 // ── On-demand scoring ───────────────────────────────────────────────────────
 //
 // Scores an explicit list of programs for a student, regardless of whether
@@ -926,11 +1022,29 @@ export const loadMatchesForProfile = async (
 // selection concerns, not score validity, so none apply here. Uses the same
 // classifier as the ranked path (classifyCourseChance), so a program that IS
 // in the cache gets the identical number from either source.
+//
+// UNKNOWN IS A VALUE. A program with no row in course_scoring_v1 maps to
+// `null`, never to a number. It used to be classified against an all-null
+// course record, whose documented defaults (courseScore ?? 40 →
+// tierImpliedMinIb(40) = 25) handed a median student 90% and, via the ≥80
+// tier cut, a confident "Safe". A program we know nothing about is now
+// rendered as "fit unknown" (getFitScoreVisuals already has that branch and
+// UniversityCard omits the ring entirely) rather than as the best result on
+// the page.
+//
+// FAILURE IS NOT ABSENCE. A failed batch is logged and, if some batches
+// succeeded, degrades only its own ids to `null` — dropping 50 good scores
+// because one batch of 200 timed out is worse for the student than an honest
+// per-program "unknown", and `null` can no longer be mistaken for a
+// confident score. But when EVERY batch fails the result is indistinguishable
+// from "no program is scorable", so that case throws: the route turns it into
+// a 5xx that monitoring can see, while the search page's existing best-effort
+// catch keeps rendering cards with no fit score.
 export const scoreProgramsForProfile = async (
   supabase: Client,
   profileId: string,
   programIds: string[]
-): Promise<Record<string, number>> => {
+): Promise<Record<string, number | null>> => {
   const ids = [...new Set(programIds)].filter(Boolean);
   if (!ids.length) return {};
 
@@ -977,14 +1091,38 @@ export const scoreProgramsForProfile = async (
       .in('course_id', batch)
   );
   const courseRows: CourseScoringRow[] = [];
-  for (const { data, error } of batchResults) {
-    // Best-effort: a failed batch just yields no rows — those ids fall through
-    // to the null-input fallback below rather than failing the whole page.
-    if (error) continue;
+  let failedBatches = 0;
+  let firstBatchError: unknown = null;
+  for (let batchIndex = 0; batchIndex < batchResults.length; batchIndex++) {
+    const { data, error } = batchResults[batchIndex];
+    if (error) {
+      // Never silent: a swallowed batch used to be indistinguishable from a
+      // catalogue with no scoring rows, and the fallback below turned it into
+      // a page of confident "Safe" cards.
+      failedBatches += 1;
+      firstBatchError ??= error;
+      logger.error('course_scoring_v1 batch failed while scoring programs', error, {
+        profileId,
+        batchIndex,
+        batchCount: batchResults.length,
+        requestedIds: ids.length
+      });
+      continue;
+    }
     courseRows.push(...((data as unknown as CourseScoringRow[]) ?? []));
   }
+  if (batchResults.length > 0 && failedBatches === batchResults.length) {
+    throw new CourseScoringUnavailableError(batchResults.length, firstBatchError);
+  }
+  if (failedBatches > 0) {
+    logger.warn('Returning partial fit scores — some course_scoring_v1 batches failed', {
+      profileId,
+      failedBatches,
+      batchCount: batchResults.length
+    });
+  }
 
-  const scores: Record<string, number> = {};
+  const scores: Record<string, number | null> = {};
   for (const row of courseRows) {
     const pid = String(row.program_id ?? row.course_id ?? '');
     if (!pid) continue;
@@ -1006,17 +1144,12 @@ export const scoreProgramsForProfile = async (
     scores[pid] = classifyCourseChance(studentIb, mapCourseScoringRow(row)).chancePercent;
   }
 
-  // Programs absent from the scoring view still get a score — classify with
-  // null course data (the classifier's documented defaults kick in), so no
-  // card is ever left blank.
-  const nullCourse = {
-    min_ib_score: null,
-    total_course_score: null,
-    course_selectivity_score: null
-  } as unknown as EnrichedCourseRecord;
-  const fallbackScore = classifyCourseChance(studentIb, nullCourse).chancePercent;
+  // Programs absent from the scoring view (or in a batch that failed) are
+  // explicitly UNKNOWN. The key is present so the caller can tell "we looked
+  // and there is nothing" apart from "we never asked", and can cache the
+  // answer; the value is null so nothing downstream can read it as a score.
   for (const id of ids) {
-    if (!(id in scores)) scores[id] = fallbackScore;
+    if (!(id in scores)) scores[id] = null;
   }
 
   return scores;
