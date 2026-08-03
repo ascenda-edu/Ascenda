@@ -13,6 +13,7 @@ import {
   type FitTier,
   type ApplicationStatusTone
 } from '@/lib/theme/categories';
+import { STAGE_LABEL } from '@/lib/counsellor/stage-colors';
 import { NotesPanel } from './notes-panel';
 import { PortfolioBalance } from './portfolio-balance';
 import { EvolutionTimeline } from '@/components/profile/evolution-timeline';
@@ -53,11 +54,14 @@ const statusStyle = (status: ApplicationStatusTone) => {
   return cn(v.text, v.bg, v.border);
 };
 
+// Labels come from STAGE_LABEL (the counsellor section's one label table) so this
+// panel can't disagree with the kanban column headers or the funnel bars.
 const APP_STATUS: Record<ApplicationStatusTone, { label: string; color: string }> = {
-  planning: { label: 'Planning', color: statusStyle('planning') },
-  in_progress: { label: 'In Progress', color: statusStyle('in_progress') },
-  submitted: { label: 'Submitted', color: statusStyle('submitted') },
-  decision: { label: 'Decision', color: statusStyle('decision') }
+  planning: { label: STAGE_LABEL.planning, color: statusStyle('planning') },
+  in_progress: { label: STAGE_LABEL.in_progress, color: statusStyle('in_progress') },
+  submitted: { label: STAGE_LABEL.submitted, color: statusStyle('submitted') },
+  decision: { label: STAGE_LABEL.decision, color: statusStyle('decision') },
+  enrolled: { label: STAGE_LABEL.enrolled, color: statusStyle('enrolled') }
 };
 
 function formatDate(iso: string) {

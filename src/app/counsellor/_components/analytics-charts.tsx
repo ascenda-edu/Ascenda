@@ -212,7 +212,10 @@ const FUNNEL_STAGES = [
   { key: 'planning' as const, label: 'Planning', color: 'bg-info-fill', hoverColor: 'hover:bg-info-fill/85', textColor: 'text-info', textOnFill: 'text-info-foreground' },
   { key: 'inProgress' as const, label: 'In Progress', color: 'bg-warning-fill', hoverColor: 'hover:bg-warning-fill/85', textColor: 'text-warning', textOnFill: 'text-warning-foreground' },
   { key: 'submitted' as const, label: 'Submitted', color: 'bg-success-fill', hoverColor: 'hover:bg-success-fill/85', textColor: 'text-success', textOnFill: 'text-success-foreground' },
-  { key: 'decision' as const, label: 'Decision Received', color: 'bg-feature-fill', hoverColor: 'hover:bg-feature-fill/85', textColor: 'text-feature', textOnFill: 'text-feature-foreground' }
+  { key: 'decision' as const, label: 'Decision Received', color: 'bg-feature-fill', hoverColor: 'hover:bg-feature-fill/85', textColor: 'text-feature', textOnFill: 'text-feature-foreground' },
+  // enrolled = primary, matching APPLICATION_STATUS_VISUAL.enrolled. The terminal
+  // stage of the funnel wears the brand accent rather than a sixth status hue.
+  { key: 'enrolled' as const, label: 'Enrolled', color: 'bg-primary', hoverColor: 'hover:bg-primary/85', textColor: 'text-primary-ink', textOnFill: 'text-primary-foreground' }
 ];
 
 // Synthetic "last year" funnel for the year-on-year comparison toggle. Builds
@@ -222,7 +225,8 @@ const buildPriorYearFunnel = (current: CohortStats['appFunnel']): CohortStats['a
   planning: Math.max(0, Math.round(current.planning * 1.12)),
   inProgress: Math.max(0, Math.round(current.inProgress * 0.92)),
   submitted: Math.max(0, Math.round(current.submitted * 0.78)),
-  decision: Math.max(0, Math.round(current.decision * 0.65))
+  decision: Math.max(0, Math.round(current.decision * 0.65)),
+  enrolled: Math.max(0, Math.round(current.enrolled * 0.55))
 });
 
 const formatDelta = (current: number, prior: number): { label: string; tone: string } => {

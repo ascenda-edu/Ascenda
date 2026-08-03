@@ -6,6 +6,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
+import {
+  FUNNEL_STAGES,
+  FUNNEL_STAGE_TO_STATUS,
+  STAGE_LABEL,
+  type FunnelStage
+} from '@/lib/counsellor/stage-colors';
 import { StudentCard } from './student-card';
 import type { DashboardFilter } from '../page';
 
@@ -22,12 +28,12 @@ type SortKey = 'name' | 'completion' | 'matchScore' | 'lastActive';
 type ProgrammeFilter = 'all' | 'IB' | 'A_LEVEL';
 type FlagFilter = 'all' | 'flagged' | 'clear';
 
-const STAGE_MAP: Record<string, string> = {
-  planning: 'Planning',
-  inProgress: 'In Progress',
-  submitted: 'Submitted',
-  decision: 'Decision'
-};
+// Funnel-stage key → human label, derived from the two shared tables rather than
+// hand-listed. The hand-listed version had no `enrolled` entry, so filtering the
+// roster by the Enrolled funnel bar rendered an `undefined` filter chip.
+const STAGE_MAP: Record<string, string> = Object.fromEntries(
+  FUNNEL_STAGES.map((stage) => [stage, STAGE_LABEL[FUNNEL_STAGE_TO_STATUS[stage]]])
+);
 
 const TIER_MAP: Record<string, string> = {
   reach: 'Reach',
@@ -80,7 +86,8 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
 
     // Apply dashboard-level (external) filters first
     if (externalFilter?.type === 'stage' && externalFilter.value) {
-      const stageValue = externalFilter.value === 'inProgress' ? 'in_progress' : externalFilter.value;
+      const stageValue =
+        FUNNEL_STAGE_TO_STATUS[externalFilter.value as FunnelStage] ?? externalFilter.value;
       list = list.filter((s) => s.applications.some((app) => app.status === stageValue));
     } else if (externalFilter?.type === 'tier' && externalFilter.value) {
       const targetTier = TIER_MAP[externalFilter.value];

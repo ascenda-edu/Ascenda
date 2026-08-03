@@ -1,0 +1,84 @@
+// Dead-code detection. Run: npm run lint:deadcode
+//
+// (knip parses knip.json as JSONC, so these comments are legal. An extra "//" *key*
+//  is not — knip rejects unrecognised keys.)
+//
+// BLOCKING, as a per-category RATCHET. `npm run lint:deadcode` no longer runs knip
+// directly — it runs scripts/check-deadcode.mjs, which runs knip with the JSON reporter
+// and compares the count of each issue type against scripts/check-deadcode.baseline.json,
+// failing only on an INCREASE.
+//
+// It used to be `knip --no-exit-code`, i.e. exit 0 always, which meant a brand-new
+// unreferenced file was listed in the CI log and passed the build. The burn-down argument
+// for not blocking on the 217 existing findings was right; the exit code was wrong.
+//
+// `npm run lint:deadcode:report` is still the raw, ungated knip output.
+// Suppress FALSE POSITIVES here, with a reason. Never in the ratchet script.
+//
+// FALSE-POSITIVE GUARDS — do not remove without reading these:
+//   * `**/*.d.ts` is in `entry`. src/types/papaparse.d.ts is a 2-line ambient
+//     `declare module` with zero importers by construction; every import-graph tool
+//     calls it unused, and deleting it breaks `npm run typecheck`. Ambient
+//     declarations are graph ROOTS, not leaves.
+//     (docs/audit/10-dead-code-duplication.md:91)
+//   * src/components/landing-preview/ is NOT dead despite the stale name. The live
+//     public `/` route (src/app/page.tsx) imports 9 modules from it, so it is reachable
+//     from the app/**/page.tsx entries below and needs no special-casing — but do not
+//     `ignore` that directory on the assumption that it is leftover preview code.
+//     (docs/audit/10-dead-code-duplication.md:329)
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+
+  "entry": [
+    "src/app/**/{page,layout,route,error,loading,not-found,template,default,global-error}.{ts,tsx}",
+    "src/middleware.ts",
+    // Does not exist yet. Kept because SYNTHESIS.md section 7 lands it for Sentry, and a
+    // future instrumentation.ts with no importers must not be reported as dead on arrival.
+    "src/instrumentation.ts",
+    // Ambient declarations are roots, never leaves. See the papaparse note above.
+    "**/*.d.ts",
+    "__tests__/**/*.{ts,tsx}",
+    "scripts/**/*.{ts,mts,cts,mjs,cjs,js}"
+  ],
+
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "__tests__/**/*.{ts,tsx}",
+    "scripts/**/*.{ts,mts,cts,mjs,cjs,js}",
+    "*.{ts,mjs,cjs,js}"
+  ],
+
+  // Build-chain packages consumed by config rather than by an import statement, so
+  // knip cannot see the edge. Each one is genuinely in use.
+  "ignoreDependencies": [
+    "baseline-browser-mapping", // browserslist data, pinned deliberately
+    "jest-environment-node" // required by jest.environment-node.js; ships inside jest
+  ],
+
+  // The route-handler tests select their environment with a Jest DOCBLOCK:
+  //   /** @jest-environment ./jest.environment-node.js */
+  // Jest resolves that path against rootDir; knip resolves it against the test file,
+  // so it reports 9 phantom unresolved imports. False positive — suppress it.
+  // (See CLAUDE.md > Deployment for why the wrapper exists.)
+  "ignoreUnresolved": ["./jest.environment-node.js"],
+
+  "ignoreBinaries": ["supabase"],
+
+  // The `next` plugin's own defaults already cover src/app/** + src/middleware.ts; the
+  // top-level `entry` above restates them so the contract survives a plugin change.
+  // No `next: { entry: [...] }` override here — duplicating it only produces
+  // "redundant entry pattern" hints.
+
+  "jest": {
+    "config": ["jest.config.ts"],
+    "entry": ["jest.setup.ts", "jest.environment-node.js", "__tests__/**/*.{ts,tsx}"]
+  },
+
+  "eslint": { "config": ["eslint.config.mjs"] },
+  "postcss": { "config": ["postcss.config.js"] },
+  "tailwind": { "config": ["tailwind.config.ts"] },
+
+  // Exported symbols in entry files (pages, route handlers) are consumed by the
+  // framework, not by an import — never report them.
+  "includeEntryExports": false
+}

@@ -56,9 +56,20 @@ export const useHelpThread = (
 
   useEffect(() => {
     let cancelled = false;
-    supabase.auth.getUser().then(({ data }) => {
-      if (!cancelled) setCurrentProfileId(data?.user?.id ?? null);
-    });
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (!cancelled) setCurrentProfileId(data?.user?.id ?? null);
+      })
+      // getUser() reaches the network, so it can reject (offline, auth server
+      // down). Unhandled, that surfaced as an unhandled rejection and left
+      // `currentProfileId` null for the life of the mount — which used to mean
+      // every reply typed into this drawer was silently discarded while the
+      // student was toasted "Reply sent". `reply()` now throws in that state, so
+      // the caller reports the failure; this catch keeps the rejection handled.
+      .catch(() => {
+        if (!cancelled) setCurrentProfileId(null);
+      });
     return () => {
       cancelled = true;
     };
@@ -225,8 +236,17 @@ export const useHelpThread = (
 
   const reply = useCallback(
     async (body: string, authorRole: 'student' | 'counsellor') => {
-      if (!requestId || !currentProfileId || !request) return;
+      // THROW, do not return. `handleReply` treats a resolved promise as "sent":
+      // it clears the composer and shows a success toast. A silent return there
+      // destroys the student's message and tells them it went through. The
+      // trigger is real — `currentProfileId` is null whenever the unawaited
+      // `auth.getUser()` above failed.
+      if (!requestId || !currentProfileId || !request) {
+        throw new Error('Cannot send reply: the thread or the current user is not loaded yet.');
+      }
       const trimmed = body.trim();
+      // An empty body is the one case that is genuinely a no-op rather than a
+      // failure — the caller already guards on `!replyText.trim()`.
       if (!trimmed) return;
       // Optimistic append: show the message immediately, reconcile with the
       // server row on success, roll back on error (caller shows the toast).

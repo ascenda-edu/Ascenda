@@ -28,6 +28,7 @@ import {
   Users,
   type LucideIcon
 } from 'lucide-react';
+import { matchTierFromScore, type MatchTier } from '@/lib/matching/match-tier';
 import { parseLocalDate } from '@/lib/utils/dates';
 
 /**
@@ -211,16 +212,41 @@ export const PRIORITY_LABEL: Record<ApplicationPriority, string> = {
   watch: 'Keep an eye on'
 };
 
-export type ApplicationStatusTone = 'planning' | 'in_progress' | 'submitted' | 'decision';
+/**
+ * One key per value of the `application_status` Postgres enum — no more, no fewer.
+ * Consumers (`lib/counsellor/stage-colors.ts`, the funnel, the kanban) index this
+ * table WITHOUT a cast so that adding a status to the enum is a compile error here
+ * rather than an `undefined.text` crash at runtime.
+ *
+ * `enrolled` is `primary`, not a sixth hue: it is the terminal state of the whole
+ * product, so it gets the brand accent rather than another status colour. It also
+ * stays unambiguous against the two states nearest it — `submitted` (emerald /
+ * success) and `decision` (violet / feature).
+ */
+export type ApplicationStatusTone =
+  | 'planning'
+  | 'in_progress'
+  | 'submitted'
+  | 'decision'
+  | 'enrolled';
 export const APPLICATION_STATUS_VISUAL: Record<ApplicationStatusTone, CategoryVisual> = {
   planning: make('sky', Compass),
   in_progress: make('amber', Timer),
   submitted: make('emerald', CheckCircle2),
-  decision: make('violet', Award)
+  decision: make('violet', Award),
+  enrolled: make('primary', GraduationCap)
 };
 
 /* ─── Reach / Match / Safety tier ───────────────────────────────────── */
 
+/**
+ * Presentation vocabulary for a match tier. The RULE lives in
+ * `lib/matching/match-tier.ts` — this file only decides how each tier LOOKS, and
+ * `classifyFitTier` below derives from the domain rather than restating it.
+ *
+ * Two names for one concept (`safety`/`Safe`) is itself a drift seam; the map
+ * below is the single place they are reconciled.
+ */
 export type FitTier = 'reach' | 'match' | 'safety';
 export const TIER_VISUAL: Record<FitTier, CategoryVisual> = {
   reach: make('rose', TrendingUp),
@@ -233,11 +259,23 @@ export const TIER_LABEL: Record<FitTier, string> = {
   safety: 'Safety'
 };
 
+/** Domain tier → presentation tier. The only place the two vocabularies meet. */
+const MATCH_TIER_TO_FIT_TIER: Record<MatchTier, FitTier> = {
+  Safe: 'safety',
+  Match: 'match',
+  Reach: 'reach'
+};
+
+/**
+ * Classify a fit score for display.
+ *
+ * Delegates to `matchTierFromScore` rather than repeating the thresholds. The
+ * numbers used to be written out here AND, differently, in two lib/ modules —
+ * see the note in lib/matching/match-tier.ts.
+ */
 export const classifyFitTier = (fitScore: number | null | undefined): FitTier | null => {
-  if (typeof fitScore !== 'number' || Number.isNaN(fitScore)) return null;
-  if (fitScore >= 80) return 'safety';
-  if (fitScore >= 60) return 'match';
-  return 'reach';
+  const tier = matchTierFromScore(fitScore);
+  return tier ? MATCH_TIER_TO_FIT_TIER[tier] : null;
 };
 
 /* ─── Document / requirement status ─────────────────────────────────── */

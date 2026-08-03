@@ -89,6 +89,29 @@ const validBody = {
   mode: 'student',
 };
 
+/**
+ * Minimal stand-in for the one PostgREST chain resolveChatMode runs:
+ *   .from('guardian_links').select(_, {head}).eq(...).eq(...) -> { count }
+ * `count` is how many ACTIVE links the caller has; 0 means "not a parent".
+ */
+const guardianLinkFilters: Array<[string, unknown]> = [];
+const guardianLinkCount = (count: number) =>
+  jest.fn(() => ({
+    select: jest.fn(() => ({
+      // Recorded, not discarded: WHICH parent's links are counted is the whole
+      // question parent mode turns on.
+      eq: jest.fn((column: string, value: unknown) => {
+        guardianLinkFilters.push([column, value]);
+        return {
+          eq: jest.fn((c2: string, v2: unknown) => {
+            guardianLinkFilters.push([c2, v2]);
+            return Promise.resolve({ count, error: null });
+          }),
+        };
+      }),
+    })),
+  }));
+
 // Model-fallback tests below spy on console.warn (openStreamWithFallback warns
 // per rejected model). Restoring in afterEach keeps the spy from leaking if an
 // assertion throws mid-test.
@@ -103,6 +126,11 @@ describe('POST /api/chat', () => {
     process.env.GEMINI_API_KEY = 'test-key';
     (createRouteHandlerSupabaseClient as jest.Mock).mockReturnValue({
       auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'user-123' } } }) },
+      // resolveChatMode authorises parent mode against an active guardian_link.
+      // The default fixture IS a linked parent, so the parent-mode tests below
+      // exercise the tool policy rather than re-testing the entitlement check
+      // (which has its own test).
+      from: guardianLinkCount(1),
     });
     (checkRateLimit as jest.Mock).mockReturnValue(true);
     (canActAsCounsellor as jest.Mock).mockResolvedValue(true);
@@ -326,6 +354,32 @@ describe('POST /api/chat', () => {
     const res = await POST(chatRequest({ ...validBody, mode: 'counsellor' }));
     expect(res.status).toBe(403);
     expect(mockGenerate).not.toHaveBeenCalled();
+  });
+
+  it('allows parent mode without a guardian_link while the portal is open to all', async () => {
+    // CHANGED DELIBERATELY (audit A1), not re-baselined. This asserted a 403.
+    // `PARENT_PORTAL_OPEN_TO_ALL` renders all six /parent/* routes to everyone,
+    // so refusing the mode here 403'd the assistant on every message for any
+    // account without a link — most of them during development. It worked on
+    // origin/main. The assistant must not be stricter than its own portal.
+    //
+    // This grants no data: `buildParentContext` scopes on
+    // `loadLinkedChildren(userId)` and, with no link, returns the "no linked
+    // children — general guidance only" prompt carrying no child record, and
+    // the one parent tool is gated on `hasParentContact` from that same
+    // context. `__tests__/chat/mode.test.ts` pins the coupling to the flag;
+    // when it flips to false the link requirement returns automatically.
+    (createRouteHandlerSupabaseClient as jest.Mock).mockReturnValue({
+      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'user-123' } } }) },
+      from: guardianLinkCount(0),
+    });
+    mockGenerate.mockResolvedValueOnce(streamOf([{ text: 'hi' }]));
+
+    const res = await POST(chatRequest({ ...validBody, mode: 'parent' }));
+
+    expect(res.status).toBe(200);
+    // The request reached the model rather than being refused at the gate.
+    expect(mockGenerate).toHaveBeenCalled();
   });
 
   // ── Persistence (assistant surface + conversationId) ───────────────────

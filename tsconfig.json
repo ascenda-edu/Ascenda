@@ -13,8 +13,24 @@
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    // "bundler" is the correct mode for Next 15 — it matches how the bundler
+    // actually resolves (package.json "exports", extensionless imports) instead
+    // of emulating Node's legacy CommonJS algorithm.
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
+    // ── Strictness beyond `strict` ─────────────────────────────────────────
+    // `strict: true` does NOT imply any of these. Each one closes a class of
+    // bug the audit found in this codebase; all four together cost 12 fixes.
+    // Deliberately NOT enabled yet (tracked in docs/audit/06-types-validation.md):
+    //   noUncheckedIndexedAccess    — 174 errors, worth doing, needs its own PR
+    //   exactOptionalPropertyTypes  — 116 errors, ~3/4 of them framer-motion
+    //   noPropertyAccessFromIndexSignature — 583, a debt metric, not a target
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
+    // Makes type-only imports explicit, so erasing them cannot change runtime
+    // behaviour (module side effects, circular-import order).
+    "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
@@ -34,6 +50,18 @@
       }
     ]
   },
+  // ts-node compiles `jest.config.ts` on the fly as CommonJS (this package has no
+  // "type": "module"), and `verbatimModuleSyntax` forbids `export default` in a
+  // CommonJS module — so enabling it above stops Jest reading its own config.
+  // These overrides apply ONLY to ts-node's in-memory compilation; the app and
+  // `tsc --noEmit` are unaffected.
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs",
+      "moduleResolution": "node",
+      "verbatimModuleSyntax": false
+    }
+  },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
@@ -42,6 +70,12 @@
     "**/*.mjs",
     ".next/types/**/*.ts"
   ],
+  // "scripts" is excluded HERE but NOT unchecked: tsconfig.scripts.json covers it,
+  // and `npm run typecheck` runs both. It stays out of this config because these are
+  // Node CLI programs (types: ["node"], no DOM, no jest) and this config is what Next
+  // and the editor read for the app. Do not remove tsconfig.scripts.json from the
+  // `typecheck` script — scripts/apply-sql.ts talks to the production database and was
+  // typechecked by nothing at all until 2026-08-02.
   "exclude": [
     "node_modules",
     "supabase",

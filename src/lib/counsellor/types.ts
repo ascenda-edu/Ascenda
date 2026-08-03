@@ -5,8 +5,25 @@
 // type-only, so the types moved here and the ~900 lines of dummy data were
 // deleted.
 
-export type MatchTier = 'Reach' | 'Match' | 'Safe';
-export type ApplicationStatus = 'planning' | 'in_progress' | 'submitted' | 'decision';
+// Re-exported, not redeclared. This was a second, structurally-identical copy of
+// the union — harmless while both agreed, but a second place to edit and so a
+// second place to disagree. The classification RULE lives beside it.
+// Imported as well as re-exported: a bare `export … from` does not bring the
+// name into this module's scope, and it is used below.
+import type { MatchTier } from '@/lib/matching/match-tier';
+export type { MatchTier };
+/**
+ * Mirrors the `application_status` Postgres enum EXACTLY (see
+ * `Database['public']['Enums']['application_status']`). It used to omit
+ * `enrolled`, and `lib/counsellor/data.ts` papered over the gap by rewriting
+ * `enrolled → decision` on the way in — so the terminal success state the
+ * product exists to produce was invisible to counsellors and uncountable in
+ * the funnel. If a sixth enum value is ever added, add it here too:
+ * `__tests__/counsellor/application-status.test.ts` drives itself off the
+ * generated enum and will fail until every table in this file's orbit
+ * (`STAGE_COLORS`, `APPLICATION_STATUS_VISUAL`) covers it.
+ */
+export type ApplicationStatus = 'planning' | 'in_progress' | 'submitted' | 'decision' | 'enrolled';
 export type NoteType = 'session' | 'flag' | 'update';
 export type DeadlineType = 'early_decision' | 'regular' | 'scholarship' | 'interview';
 export type StudentFlag = 'profile_incomplete' | 'deadline_urgent' | 'no_matches' | 'stalled';

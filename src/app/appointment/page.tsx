@@ -85,7 +85,11 @@ export default function AppointmentPage() {
   const today = new Date();
   const minDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  // Synchronous `() => void` event-handler boundary around an async body. An
+  // `async` function handed to `onClick`/`onSubmit` returns a promise the DOM
+  // discards, so a rejection is swallowed and the user is told nothing; the
+  // terminal `.catch`/`.finally` below is the only exit for a failure.
+  const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     if (!date || !time || submitting) return;
     setError(null);
@@ -101,7 +105,7 @@ export default function AppointmentPage() {
       notes.trim() ? `Notes: ${notes.trim()}` : 'No additional notes.'
     ].join('\n');
 
-    try {
+    const run = async (): Promise<void> => {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData?.user?.id;
       if (!userId) {
@@ -120,12 +124,16 @@ export default function AppointmentPage() {
       });
 
       setSubmitted(true);
-    } catch (err) {
-      console.error('appointment request submit failed', err);
-      setError("Couldn't send your request. Check your connection and try again.");
-    } finally {
-      setSubmitting(false);
-    }
+    };
+
+    run()
+      .catch((err: unknown) => {
+        console.error('appointment request submit failed', err);
+        setError("Couldn't send your request. Check your connection and try again.");
+      })
+      .finally(() => {
+        setSubmitting(false);
+      });
   };
 
   if (submitted) {

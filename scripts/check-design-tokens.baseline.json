@@ -1,0 +1,16 @@
+{
+  "_comment": "Ratchet baseline for scripts/check-design-tokens.mjs. Counts may only go DOWN. A rule at 0 should be deleted from this file so it becomes a hard error. Regenerate with: node scripts/check-design-tokens.mjs --update-baseline",
+  "_generated": "2026-08-01",
+  "counts": {
+    "palette-literal": 245,
+    "hex": 5,
+    "dark-variant": 116,
+    "raw-z": 73,
+    "off-ladder-shadow": 25,
+    "arbitrary-geometry": 92,
+    "template-classname": 25,
+    "subfloor-type": 24,
+    "named-step-as-arbitrary": 54,
+    "dead-opacity": 0
+  }
+}

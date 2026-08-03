@@ -3,18 +3,26 @@ import { redirect } from 'next/navigation';
 import { DashboardShell } from '@/components/layout/shell';
 import { SectionNav } from '@/components/layout/section-nav';
 import { PARENT_SECTION_ITEMS } from '@/components/layout/navigation';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { requireIdentity } from '@/lib/auth/identity';
+import { can } from '@/lib/auth/policy';
 
-// Auth-gated like the counsellor area (any signed-in user can enter in the
-// single-account demo). What a parent can SEE is scoped separately: every
-// page resolves guardian_links via resolveLinkedChildIds() and renders an
-// empty state when the account has no linked children — never the cohort.
+/**
+ * Same move as the counsellor layout: authentication-only became a policy
+ * question (docs/audit/11-security-authz.md F5), with the current answer
+ * preserved exactly.
+ *
+ * /parent stays open to any signed-in user in the single-account demo —
+ * `PARENT_PORTAL_OPEN_TO_ALL` in `@/lib/auth/policy` — but unlike /counsellor
+ * the data behind it is genuinely scoped: every page resolves `guardian_links`
+ * through `resolveParentContext()` and renders an empty state when the account
+ * has no linked children, never the cohort. An uninvited visitor gets an empty
+ * shell.
+ */
 export default async function ParentLayout({ children }: { children: ReactNode }) {
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const identity = await requireIdentity();
 
-  if (!user) {
-    redirect('/login');
+  if (!(await can(identity, 'portal:parent'))) {
+    redirect('/dashboard');
   }
 
   // SectionNav lives HERE, not in each page. A layout is not re-mounted when you
@@ -26,7 +34,7 @@ export default async function ParentLayout({ children }: { children: ReactNode }
   // Passed via the `nav` slot, NOT as a child: children go inside a pathname-keyed
   // transition wrapper and would remount on every navigation.
   return (
-    <DashboardShell nav={<SectionNav items={PARENT_SECTION_ITEMS} />}>
+    <DashboardShell role={identity.role} nav={<SectionNav items={PARENT_SECTION_ITEMS} />}>
       {children}
     </DashboardShell>
   );

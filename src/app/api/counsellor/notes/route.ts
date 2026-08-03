@@ -1,26 +1,49 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
-import { canActAsCounsellor, parseJsonBody } from '@/lib/api/guards';
+import { assertCounsellorMayActOnStudent, parseJsonBody } from '@/lib/api/guards';
 
 const VALID_TYPES = new Set(['session', 'flag', 'update']);
 
-// Persist a counsellor note about a student. RLS (counsellor_notes_insert)
-// requires can_act_as_counsellor() AND author_profile_id = auth.uid();
-// the in-app role check is defense in depth on top of that.
+/**
+ * Longest note we will store. Unbounded text from an authenticated caller is a
+ * cheap way to fill the table (and the counsellor UI) with megabytes per request.
+ */
+const MAX_BODY_LENGTH = 5_000;
+
+// Persist a counsellor note about a student.
+//
+// `studentId` arrives in the request body, so it is caller-controlled and must be
+// authorised against the caller — RLS (counsellor_notes_insert) constrains only
+// `author_profile_id = auth.uid()`, never the SUBJECT of the note. Without the
+// scope check below, any caller who passes the counsellor guard can write a
+// permanent note onto any student's record, and counsellor_notes_select then
+// makes it readable.
 export async function POST(request: NextRequest) {
   const supabase = await createRouteHandlerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  if (!(await canActAsCounsellor(supabase, user))) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
 
   const payload = await parseJsonBody<{ studentId?: string; body?: string; noteType?: string }>(request);
   const { studentId, body, noteType } = payload ?? {};
   if (!studentId || !body?.trim() || !noteType || !VALID_TYPES.has(noteType)) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+  }
+  if (body.length > MAX_BODY_LENGTH) {
+    return NextResponse.json(
+      { error: `Note is too long (max ${MAX_BODY_LENGTH} characters).` },
+      { status: 400 }
+    );
+  }
+
+  const scope = await assertCounsellorMayActOnStudent(supabase, user, studentId);
+  if (!scope.ok) {
+    // 404 for an unknown subject so this endpoint cannot be used to probe which
+    // profile ids exist; 403 once the subject is known to be out of scope.
+    return scope.reason === 'not_found'
+      ? NextResponse.json({ error: 'Not found' }, { status: 404 })
+      : NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const { data, error } = await (supabase as any)
@@ -35,7 +58,10 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    // Do not surface the raw PostgREST message — it names tables, constraints and
+    // RLS policies.
+    console.error('counsellor_notes insert failed:', error.message);
+    return NextResponse.json({ error: 'Could not save note.' }, { status: 400 });
   }
 
   return NextResponse.json({

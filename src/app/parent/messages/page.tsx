@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 import { PageHero } from '@/components/layout/page-hero';
 import { AnimatedSection } from '@/components/layout/animated-section';
-import { loadChildThread } from '@/lib/parent/data';
-import { resolveParentContext } from '../_lib/context';
-import { ChildSwitcher } from '../_components/child-switcher';
-import { NoLinkedChildren } from '../_components/no-linked-children';
-import { ParentThreadPanel } from './_parent-thread';
+import {
+  ChildSwitcher,
+  NoLinkedChildren,
+  ParentThreadPanel,
+  loadChildThread,
+  resolveParentContext,
+} from '@/features/parent';
 
 export const metadata: Metadata = { title: 'Messages · Parent' };
 export const dynamic = 'force-dynamic';

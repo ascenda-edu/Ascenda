@@ -21,6 +21,7 @@ import { UniversityCardSkeleton } from '@/components/university-card-skeleton';
 import { SaveSearchButton } from '@/components/university-search/save-search-button';
 import { SavedSearchesRow } from '@/components/university-search/saved-searches-row';
 import type { Suggestion } from '@/components/university-search/IntelligentSearchBar';
+import { matchesTierFilter } from '@/components/university-search/types';
 import {
   ActiveFilterBar,
   CheckboxFacetList,
@@ -361,8 +362,10 @@ function UnifiedSearchInner() {
         `${result.universityName} ${result.programName} ${result.location}`
           .toLowerCase()
           .includes(normalizedQuery);
-      const matchesTier = result.tier ? filters.tiers.includes(result.tier) : true;
-      return matchesSearch && matchesTier;
+      // `matchesTierFilter` (components/university-search/types) owns the
+      // unscored case — see its doc comment. Inlining the predicate here is what
+      // let it drift into failing open.
+      return matchesSearch && matchesTierFilter(result.tier, filters.tiers);
     });
   }, [results, searchQuery, filters.tiers, filters.programId, filters.universityId]);
 

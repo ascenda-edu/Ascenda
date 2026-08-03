@@ -15,8 +15,9 @@
  *
  * Re-running is safe — every step uses upserts keyed on profile_id.
  *
- * Requires SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_URL (or
- * SUPABASE_URL) in .env.local.
+ * Requires SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_URL (or
+ * SUPABASE_URL) and DEMO_USER_PASSWORD in .env.local. DEMO_USER_PASSWORD has
+ * no default — the script refuses to run without it.
  */
 
 // Load env from .env.local without a dotenv dep.
@@ -55,7 +56,19 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 // wrestling with module resolution.
 const DEMO_EMAIL = 'greg@workiflow.com';
 
-const DEMO_PASSWORD = process.env.DEMO_USER_PASSWORD ?? 'AscendaDemo!2026';
+/** Required env read — no fallback default (never hardcode credentials). */
+const requireEnv = (name: string): string => {
+  const value = process.env[name];
+  if (!value) {
+    console.error(
+      `Missing ${name}. Set it in .env.local (no default is provided) before running this script.`
+    );
+    process.exit(1);
+  }
+  return value;
+};
+
+const DEMO_PASSWORD = requireEnv('DEMO_USER_PASSWORD');
 const DEMO_FULL_NAME = 'Greg Franck';
 
 const getClient = (): SupabaseClient => {
@@ -371,6 +384,18 @@ const DEMO_MATCHES: Array<{
     outcomes: number;
   };
 }> = [
+  // Each `tier` below MUST agree with `matchTierFromScore(score)` from
+  // src/lib/matching/match-tier.ts — Safe >= 80, Match >= 60, else Reach. These
+  // rows are written straight into `student_matches.breakdown.tier`, which every
+  // read path prefers over recomputation, so a seeded row that disagrees with the
+  // rule is indistinguishable from a real row that disagrees with it and hides
+  // exactly the bug it should expose. The Match rows here scored 38-45 and the
+  // Safe rows 72-77 — the Match ones contradicted even the OLD 70/50 rule.
+  //
+  // The pairing is asserted from the source by
+  // __tests__/tiering/tier-rule-singularity.test.ts; this file deliberately
+  // imports nothing from src/ so the seed keeps running standalone.
+  //
   // ── Reach (<30% admission chance) ────────────────────────────────────────
   {
     programId: '37b7597a-c85b-54b7-a263-f88b3e277344',
@@ -454,7 +479,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: 'dbc9c060-5d51-5871-80d6-d59d4821a4f4',
     tier: 'Match',
-    score: 45,
+    score: 68,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',
@@ -480,7 +505,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: 'c4678f36-8c52-5439-8fcb-6cd1181aa984',
     tier: 'Match',
-    score: 42,
+    score: 65,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',
@@ -506,7 +531,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: '0994d437-27c3-5231-8bd5-a1d011a61f3d',
     tier: 'Match',
-    score: 38,
+    score: 62,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',
@@ -533,7 +558,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: 'e31ba780-1145-5a2f-9ef3-2c094d9165dc',
     tier: 'Safe',
-    score: 77,
+    score: 90,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',
@@ -559,7 +584,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: 'a4fc623f-ab72-5995-8e45-59c250c0a49f',
     tier: 'Safe',
-    score: 75,
+    score: 86,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',
@@ -585,7 +610,7 @@ const DEMO_MATCHES: Array<{
   {
     programId: '172c5384-481a-5bfc-a827-009382b991b6',
     tier: 'Safe',
-    score: 72,
+    score: 82,
     breakdown: {
       program_name: 'Computer Science',
       program_field: 'Computer Science',
@@ -664,7 +689,7 @@ const main = async () => {
   console.log('\nDone.');
   console.log(`  Profile id: ${profileId}`);
   console.log(`  Email:      ${DEMO_EMAIL}`);
-  console.log(`  Password:   ${DEMO_PASSWORD}`);
+  console.log('  Password:   (the value of DEMO_USER_PASSWORD in your .env.local)');
   console.log('\nLog in, run profile completeness once, then matches will use the demo tier mix.');
 };
 

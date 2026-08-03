@@ -10,14 +10,24 @@ import type { WriteTool, ToolContext, ToolActionProposal, ToolActionResult } fro
 import { MAX_SUBJECT_LENGTH, MAX_BODY_LENGTH } from '@/lib/chat/actions';
 import { insertHelpRequest } from '@/lib/demo/help-request-client';
 import { nameMap } from '@/lib/counsellor/data';
+import { isActionableStudent } from '@/lib/api/guards';
 import type { HelpRequestInsert } from '@/lib/types/demo-tables';
 
 const NOTE_TYPES = ['session', 'flag', 'update'] as const;
 type NoteType = (typeof NOTE_TYPES)[number];
 
-// A UUID is 36 chars of hex + hyphens. Loose match — RLS is the real gate; this
-// only rejects obvious junk before hitting the DB.
-const UUID_RE = /^[0-9a-f-]{36}$/i;
+/** Refusal shared by both write tools when the named subject is out of scope. */
+const OUT_OF_SCOPE: ToolActionResult = {
+  ok: false,
+  message: "Couldn't complete that action.",
+  error: 'not an assignable student',
+};
+
+// Real UUID shape. The previous `/^[0-9a-f-]{36}$/i` matched any 36-character
+// run of hex digits and hyphens — including 36 hyphens — so it rejected almost
+// nothing. Format validation is not authorisation either way: the subject is
+// authorised in execute() via isActionableStudent.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const asString = (v: unknown): string => (typeof v === 'string' ? v : '');
 
@@ -87,6 +97,12 @@ const addStudentNote: WriteTool = {
   },
   async execute(ctx: ToolContext, params): Promise<ToolActionResult> {
     try {
+      // `student_id` originates in model output, which the conversation content
+      // influences — so it is authorised here, not trusted.
+      if (!(await isActionableStudent(ctx.supabase, params.student_id as string))) {
+        return OUT_OF_SCOPE;
+      }
+
       const { data, error } = await (ctx.supabase as any)
         .from('counsellor_notes')
         .insert({
@@ -166,6 +182,12 @@ const messageStudent: WriteTool = {
   },
   async execute(ctx: ToolContext, params): Promise<ToolActionResult> {
     try {
+      // Same rule as add_counsellor_note: the subject named by the model is
+      // authorised before a row that notifies that student is written.
+      if (!(await isActionableStudent(ctx.supabase, params.student_id as string))) {
+        return OUT_OF_SCOPE;
+      }
+
       // The opening body IS the thread's first message (rendered attributed to
       // initiated_by); the student's notification fires via trg_help_request_notify
       // — do NOT insert a notification here.

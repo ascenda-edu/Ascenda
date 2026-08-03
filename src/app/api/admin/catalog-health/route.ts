@@ -1,16 +1,7 @@
-import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
-
-const safeTokenEqual = (a: string, b: string): boolean => {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
-};
-
-const unauthorized = () =>
-  NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+import { reportDataError } from '@/lib/data/errors';
+import { hasValidAdminBearer, requireAdminUser } from '../admin-guard';
 
 // Lightweight health check to verify catalog data is present and key fields are usable.
 export async function GET(request: Request) {
@@ -20,21 +11,15 @@ export async function GET(request: Request) {
   // CLI/cron use) OR an authenticated admin user. Without one of these the
   // endpoint must not leak catalogue data — previously the bearer check was
   // opt-in, leaving the route fully public whenever ADMIN_API_KEY was unset.
-  const adminKey = process.env.ADMIN_API_KEY;
-  const header = request.headers.get('authorization');
-  const token = header?.replace(/^Bearer\s+/i, '');
-  const hasValidBearer = Boolean(adminKey && token && safeTokenEqual(token, adminKey));
-
-  if (!hasValidBearer) {
-    const {
-      data: { user }
-    } = await supabase.auth.getUser();
-    if (!user) return unauthorized();
-
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-    if (profile?.role !== 'admin') {
-      return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 });
-    }
+  //
+  // The bearer path deliberately SKIPS the role check: it is not a user, it has
+  // no profile, and the key IS the authorisation. It is the only such path in
+  // /api/admin — `import` and `update-deadlines` accept no bearer at all, so a
+  // leaked key cannot be used to write to the catalogue, only to read these two
+  // counts and three sample rows.
+  if (!hasValidAdminBearer(request)) {
+    const { user, response } = await requireAdminUser(supabase, 'catalog-health');
+    if (!user) return response;
   }
 
   const [{ count: universityCount, error: uniErr }, { count: programCount, error: progErr }] =
@@ -44,8 +29,12 @@ export async function GET(request: Request) {
     ]);
 
   if (uniErr || progErr) {
-    const err = uniErr ?? progErr;
-    return NextResponse.json({ ok: false, error: err?.message ?? 'Count failed' }, { status: 500 });
+    // Disposition: fail the response. This route's ONE job is to report whether
+    // the catalogue is readable — degrading to `counts: { universities: 0 }`
+    // would answer "the catalogue is empty" to the question "is the catalogue
+    // reachable", which is the exact confusion this endpoint exists to resolve.
+    const failure = reportDataError('admin.catalogHealth.counts', uniErr ?? progErr);
+    return NextResponse.json({ ok: false, error: failure.message }, { status: 500 });
   }
 
   // Pull a couple of sample programs with the new UCAS fields to confirm availability.
@@ -57,7 +46,8 @@ export async function GET(request: Request) {
     .limit(3);
 
   if (sample.error) {
-    return NextResponse.json({ ok: false, error: sample.error.message }, { status: 500 });
+    const failure = reportDataError('admin.catalogHealth.sample', sample.error);
+    return NextResponse.json({ ok: false, error: failure.message }, { status: 500 });
   }
 
   return NextResponse.json({

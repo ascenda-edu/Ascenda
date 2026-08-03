@@ -1,16 +1,20 @@
 'use client';
 
-import { useEffect, useCallback, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, GraduationCap, MapPin, ArrowUpRight, Search, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { EmptyState } from '@/components/ui/empty-state';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
-
-// Mirrors the focusable-element query in help-thread-drawer.tsx so the modal
-// traps focus with the same semantics as the shared Dialog primitive.
-const FOCUSABLE =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /* ─── Types ──────────────────────────────────────────────────────────────────── */
 
@@ -43,8 +47,15 @@ interface DrilldownPanelProps {
 export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
-  const modalRef = useRef<HTMLDivElement | null>(null);
-  const previouslyFocused = useRef<HTMLElement | null>(null);
+
+  // Radix keeps DialogContent mounted for the length of the exit animation, by
+  // which time `data` is already null. Retaining the last non-null value lets the
+  // close animation render the panel it is animating away, rather than blanking
+  // it a frame before it leaves.
+  const [snapshot, setSnapshot] = useState<DrilldownState | null>(data);
+  useEffect(() => {
+    if (data) setSnapshot(data);
+  }, [data]);
 
   // Reset search when modal opens/changes
   useEffect(() => {
@@ -52,61 +63,7 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
     setExpanded(null);
   }, [data?.title]);
 
-  // Move focus into the modal on open, restore it to the trigger on close.
-  useEffect(() => {
-    if (data) {
-      previouslyFocused.current = document.activeElement as HTMLElement | null;
-      const node = modalRef.current;
-      const target = node?.querySelector<HTMLElement>(FOCUSABLE) ?? node;
-      target?.focus();
-    } else {
-      previouslyFocused.current?.focus?.();
-    }
-  }, [data]);
-
-  // Trap Tab focus within the modal while it's open.
-  const onTrapKeyDown = (event: ReactKeyboardEvent) => {
-    if (event.key !== 'Tab') return;
-    const node = modalRef.current;
-    if (!node) return;
-    const focusables = Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-      (el) => el.offsetParent !== null
-    );
-    if (focusables.length === 0) {
-      event.preventDefault();
-      return;
-    }
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    const active = document.activeElement;
-    if (event.shiftKey && active === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && active === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-
-  // Escape to close
-  useEffect(() => {
-    if (!data) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [data, onClose]);
-
-  // Lock body scroll when open
-  useEffect(() => {
-    if (data) {
-      document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = ''; };
-    }
-  }, [data]);
-
-  const filtered = data?.items.filter((item) => {
+  const filtered = snapshot?.items.filter((item) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     const s = item.student;
@@ -123,119 +80,114 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
   }, []);
 
   return (
-    <AnimatePresence>
-      {/* z-modal is the app's modal layer (see ui/dialog.tsx). At z-50 this tied with
-          the navbar and lost to the chat panel (z-panel), which painted over it. */}
-      {data && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 sm:p-6">
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
-            onClick={onClose}
-          />
+    // Radix Dialog owns the focus trap, Escape, scroll lock, `aria-modal`,
+    // `aria-labelledby`/`describedby` and focus restore. The hand-rolled
+    // FOCUSABLE query, onTrapKeyDown, Escape listener, body-overflow lock and
+    // previouslyFocused ref this file used to carry are all deleted — keeping any
+    // of them would double-handle the same key. z-modal now comes from
+    // DialogContent, which is where the "at z-50 this lost to the chat panel"
+    // regression was fixed for good.
+    <Dialog
+      open={Boolean(data)}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+    >
+      {snapshot && (
+        <DialogContent className="flex max-h-[min(85vh,720px)] w-full max-w-2xl flex-col rounded-3xl">
+          {/* ── Accent bar ──────────────────────────────────────────────────── */}
+          <div className={cn('h-1 w-full', snapshot.accentColor)} />
 
-          {/* Modal */}
-          <motion.div
-            ref={modalRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label={data.title}
-            tabIndex={-1}
-            onKeyDown={onTrapKeyDown}
-            initial={{ opacity: 0, scale: 0.96, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 12 }}
-            transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-            className="relative z-raised flex max-h-[min(85vh,720px)] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-border bg-background shadow-e-4 outline-none"
-          >
-            {/* ── Accent bar ──────────────────────────────────────────────────── */}
-            <div className={cn('h-1 w-full', data.accentColor)} />
+          {/* ── Header ──────────────────────────────────────────────────────── */}
+          <div className="flex items-start gap-4 px-6 pt-5 pb-4">
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="text-xl font-bold leading-tight text-foreground">
+                {snapshot.title}
+              </DialogTitle>
+              {/* Always rendered: Radix wires aria-describedby to it, and a modal
+                  with no accessible description warns in development. When the
+                  caller has no subtitle, the student count is the honest one. */}
+              <DialogDescription
+                className={cn(
+                  'mt-1 text-sm text-muted-foreground',
+                  !snapshot.subtitle && 'sr-only'
+                )}
+              >
+                {snapshot.subtitle
+                  ?? `${snapshot.items.length} student${snapshot.items.length !== 1 ? 's' : ''}`}
+              </DialogDescription>
+            </div>
+            <DialogClose
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </DialogClose>
+          </div>
 
-            {/* ── Header ──────────────────────────────────────────────────────── */}
-            <div className="flex items-start gap-4 px-6 pt-5 pb-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-xl font-bold text-foreground leading-tight">{data.title}</p>
-                {data.subtitle && (
-                  <p className="mt-1 text-sm text-muted-foreground">{data.subtitle}</p>
+          {/* ── Summary stats row ───────────────────────────────────────────── */}
+          {snapshot.summaryStats && snapshot.summaryStats.length > 0 && (
+            <div className="mx-6 mb-4 flex gap-2 overflow-x-auto">
+              {snapshot.summaryStats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="flex min-w-0 shrink-0 items-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-3 py-2"
+                >
+                  <span className="text-sm font-bold text-foreground tabular-nums">{stat.value}</span>
+                  <span className="truncate text-xs text-muted-foreground">{stat.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Search ──────────────────────────────────────────────────────── */}
+          {snapshot.items.length > 3 && (
+            <div className="mx-6 mb-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search students…"
+                  aria-label="Search students"
+                  className="form-input rounded-xl py-2.5 pl-9 pr-4"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    aria-label="Clear search"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 )}
               </div>
-              <button
-                onClick={onClose}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
-                aria-label="Close"
-              >
-                <X className="h-5 w-5" />
-              </button>
             </div>
+          )}
 
-            {/* ── Summary stats row ───────────────────────────────────────────── */}
-            {data.summaryStats && data.summaryStats.length > 0 && (
-              <div className="mx-6 mb-4 flex gap-2 overflow-x-auto">
-                {data.summaryStats.map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="flex min-w-0 shrink-0 items-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-3 py-2"
-                  >
-                    <span className="text-sm font-bold text-foreground tabular-nums">{stat.value}</span>
-                    <span className="truncate text-xs text-muted-foreground">{stat.label}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+          {/* ── Count indicator ─────────────────────────────────────────────── */}
+          <div className="mx-6 mb-2 flex items-center justify-between">
+            <p className="eyebrow">
+              {filtered.length === snapshot.items.length
+                ? `${snapshot.items.length} student${snapshot.items.length !== 1 ? 's' : ''}`
+                : `${filtered.length} of ${snapshot.items.length} students`
+              }
+            </p>
+          </div>
 
-            {/* ── Search ──────────────────────────────────────────────────────── */}
-            {data.items.length > 3 && (
-              <div className="mx-6 mb-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search students…"
-                    className="form-input rounded-xl py-2.5 pl-9 pr-4"
-                  />
-                  {search && (
-                    <button
-                      onClick={() => setSearch('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ── Count indicator ─────────────────────────────────────────────── */}
-            <div className="mx-6 mb-2 flex items-center justify-between">
-              <p className="eyebrow">
-                {filtered.length === data.items.length
-                  ? `${data.items.length} student${data.items.length !== 1 ? 's' : ''}`
-                  : `${filtered.length} of ${data.items.length} students`
-                }
-              </p>
-            </div>
-
-            {/* ── Student list ────────────────────────────────────────────────── */}
-            <div className="flex-1 overflow-y-auto px-6 pb-5">
-              {filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted/50 mb-3">
-                    <Search className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm font-medium text-foreground">No students found</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {search ? 'Try a different search term' : 'No students match this filter'}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  {filtered.map(({ student, detail, badge }, i) => {
+          {/* ── Student list ────────────────────────────────────────────────── */}
+          <div className="flex-1 overflow-y-auto px-6 pb-5">
+            {filtered.length === 0 ? (
+              <EmptyState
+                icon={<Search />}
+                title="No students found"
+                description={search ? 'Try a different search term' : 'No students match this filter'}
+              />
+            ) : (
+              <div className="space-y-1.5">
+                {filtered.map(({ student, detail, badge }, i) => {
                     const isExpanded = expanded === student.id;
                     return (
                       <motion.div
@@ -266,12 +218,16 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
                                 {student.personal.firstName} {student.personal.lastName}
                               </span>
                               {badge && (
-                                <span className={cn(
-                                  'shrink-0 rounded-full px-2 py-0.5 text-label font-bold',
-                                  badge.color
-                                )}>
+                                // `badge.color` arrives from _analytics-client.tsx as a
+                                // ready-made tone bundle, so `variant="bare"` takes the
+                                // pill geometry from Badge and leaves the colour alone.
+                                <Badge
+                                  variant="bare"
+                                  size="sm"
+                                  className={cn('shrink-0 font-bold', badge.color)}
+                                >
                                   {badge.label}
-                                </span>
+                                </Badge>
                               )}
                             </div>
                             <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
@@ -349,14 +305,13 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
                           )}
                         </AnimatePresence>
                       </motion.div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </DialogContent>
       )}
-    </AnimatePresence>
+    </Dialog>
   );
 };

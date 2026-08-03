@@ -46,6 +46,8 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
   const [selectedBlocks, setSelectedBlocks] = useState<Set<string>>(new Set());
   const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // null = nothing to say; 'failed' = the clipboard write was rejected.
+  const [copyFailed, setCopyFailed] = useState(false);
   const [draggedBlock, setDraggedBlock] = useState<string | null>(null);
   const [collapsedCats, setCollapsedCats] = useState<Set<BlockCategory>>(new Set());
   const [showActivities, setShowActivities] = useState(false);
@@ -121,7 +123,24 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
   const toggleBlock = (id: string) => { setSelectedBlocks((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; }); };
   const insertBlock = useCallback((block: EssayBuildingBlock) => { if (!editor) return; editor.chain().focus().insertContent(`<p><em>[${block.label}]</em> ${block.detail || block.label}</p>`).run(); setSelectedBlocks((prev) => new Set(prev).add(block.id)); }, [editor]);
   const toggleCat = (cat: BlockCategory) => { setCollapsedCats((prev) => { const n = new Set(prev); n.has(cat) ? n.delete(cat) : n.add(cat); return n; }); };
-  const handleCopy = () => { navigator.clipboard.writeText(editorText); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+  // `writeText` rejects when the page is not a secure context, the document is
+  // not focused, or clipboard permission is denied. Flipping the label to
+  // "Copied" before the write resolves told the student their whole essay was
+  // on the clipboard when it was not — and they would then paste stale content
+  // into a real application form.
+  const handleCopy = (): void => {
+    setCopyFailed(false);
+    navigator.clipboard
+      .writeText(editorText)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => {
+        setCopyFailed(true);
+        setTimeout(() => setCopyFailed(false), 4000);
+      });
+  };
   const handleClear = () => setConfirmClear(true);
   const confirmClearEssay = () => {
     editor?.commands.clearContent();
@@ -373,9 +392,15 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
             <TBtn icon={Undo} active={false} onClick={() => editor?.chain().focus().undo().run()} title="Undo" disabled={!editor?.can().undo()} />
             <TBtn icon={Redo} active={false} onClick={() => editor?.chain().focus().redo().run()} title="Redo" disabled={!editor?.can().redo()} />
             <div className="flex-1" />
-            <button onClick={handleCopy} className="flex items-center gap-1 rounded-md px-2 py-1 text-label font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors">
+            <button
+              onClick={handleCopy}
+              className={cn(
+                'flex items-center gap-1 rounded-md px-2 py-1 text-label font-medium transition-colors hover:bg-muted/50 hover:text-foreground',
+                copyFailed ? 'text-danger' : 'text-muted-foreground'
+              )}
+            >
               {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
-              {copied ? 'Copied' : 'Copy'}
+              {copyFailed ? 'Copy failed' : copied ? 'Copied' : 'Copy'}
             </button>
             <button
               onClick={handleDownload}

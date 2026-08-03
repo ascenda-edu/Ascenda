@@ -110,10 +110,14 @@ export function SendMessageModal({
     onOpenChange(next);
   };
 
-  const handleSubmit = async () => {
+  // Synchronous `() => void` event-handler boundary around an async body. An
+  // `async` function handed to `onClick`/`onSubmit` returns a promise the DOM
+  // discards, so a rejection is swallowed and the user is told nothing; the
+  // terminal `.catch`/`.finally` below is the only exit for a failure.
+  const handleSubmit = (): void => {
     if (submitting) return;
     setSubmitting(true);
-    try {
+    const run = async (): Promise<void> => {
       const { data: userData } = await supabase.auth.getUser();
       const counsellorId = userData?.user?.id;
       if (!counsellorId) {
@@ -143,16 +147,20 @@ export function SendMessageModal({
         variant: 'success'
       });
       onOpenChange(false);
-    } catch (err) {
-      console.error('counsellor message submit failed', err);
-      showToast({
-        title: 'Couldn’t send message',
-        description: 'Check your connection and try again',
-        variant: 'error'
+    };
+
+    run()
+      .catch((err: unknown) => {
+        console.error('counsellor message submit failed', err);
+        showToast({
+          title: 'Couldn’t send message',
+          description: 'Check your connection and try again',
+          variant: 'error'
+        });
+      })
+      .finally(() => {
+        setSubmitting(false);
       });
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   return (

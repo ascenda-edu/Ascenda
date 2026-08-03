@@ -11,8 +11,14 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { AnimatePresence, motion } from 'framer-motion';
 import { PanelLeft, Plus, Sparkles, X } from 'lucide-react';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { useRealtimePoll } from '@/hooks/use-realtime-poll';
@@ -28,7 +34,6 @@ import {
   updateMessageAction,
 } from '@/lib/chat/history';
 import { insertHelpRequest } from '@/lib/demo/help-request-client';
-import { DURATION, EASE } from '@/lib/motion';
 import { isChatAction, type ChatAction } from '@/lib/chat/actions';
 import { mergeWidgets, wrapLegacyToolResults } from '@/lib/chat/widgets';
 import type { ChatMode } from '@/lib/chat/prompts';
@@ -125,6 +130,25 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
     selectedIdRef.current = id;
     setSelectedId(id);
   }, []);
+
+  // The rail is a slide-over on mobile only — at lg+ it is rendered inline beside
+  // the thread. Radix portals the dialog scrim to <body>, where the `lg:hidden`
+  // the old hand-rolled overlay carried cannot reach it, so a rotate-to-landscape
+  // would leave a stray scrim over the desktop layout. Close it at the breakpoint
+  // instead, which is also the correct behaviour: the rail is already visible.
+  useEffect(() => {
+    if (!railOpen) return undefined;
+    const mq = window.matchMedia('(min-width: 1024px)');
+    if (mq.matches) {
+      setRailOpen(false);
+      return undefined;
+    }
+    const onChange = (event: MediaQueryListEvent) => {
+      if (event.matches) setRailOpen(false);
+    };
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [railOpen]);
 
   // ── Data loaders ──────────────────────────────────────────────────────────
   const refreshConversations = useCallback(async () => {
@@ -772,41 +796,30 @@ function AssistantWorkspaceInner({ mode, userId }: { mode: ChatMode; userId: str
         />
       </div>
 
-      {/* Mobile rail slide-over */}
-      <AnimatePresence>
-        {railOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1, transition: { duration: DURATION.fast, ease: EASE } }}
-            exit={{ opacity: 0, transition: { duration: DURATION.exit, ease: EASE } }}
-            className="fixed inset-0 z-modal lg:hidden"
-          >
-            <div
-              className="absolute inset-0 bg-background/60 backdrop-blur-sm"
-              onClick={() => setRailOpen(false)}
-              aria-hidden
-            />
-            <motion.div
-              initial={{ x: '-100%' }}
-              animate={{ x: 0, transition: { duration: DURATION.fast, ease: EASE } }}
-              exit={{ x: '-100%', transition: { duration: DURATION.exit, ease: EASE } }}
-              className="absolute inset-y-0 left-0 flex w-[300px] max-w-[85vw] flex-col p-3"
+      {/* Mobile rail slide-over.
+          Was a bare `fixed inset-0 z-modal` overlay: no role, no aria-modal, no
+          focus trap and no Escape handler, so Tab walked straight out behind the
+          scrim and screen readers never announced a dialog. It is a real modal
+          (it covers the page and blocks the surface underneath), so it is now the
+          shared Dialog primitive in its `left` slide-over form — Radix supplies
+          all four behaviours plus scroll lock and focus restore to the trigger. */}
+      <Dialog open={railOpen} onOpenChange={setRailOpen} align="left">
+        <DialogContent className="flex flex-col border-0 bg-transparent p-3 shadow-none">
+          <DialogTitle className="sr-only">Conversations</DialogTitle>
+          <DialogDescription className="sr-only">
+            Switch between your saved assistant conversations, or start a new one.
+          </DialogDescription>
+          <div className="mb-2 flex justify-end">
+            <DialogClose
+              aria-label="Close conversations"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <div className="mb-2 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setRailOpen(false)}
-                  aria-label="Close conversations"
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="min-h-0 flex-1">{rail}</div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <X className="h-4 w-4" />
+            </DialogClose>
+          </div>
+          <div className="min-h-0 flex-1">{rail}</div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

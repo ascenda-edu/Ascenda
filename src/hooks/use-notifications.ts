@@ -48,10 +48,22 @@ export const useNotifications = (): UseNotificationsResult => {
   // Resolve current profile id once.
   useEffect(() => {
     let cancelled = false;
-    supabase.auth.getUser().then(({ data }) => {
-      if (cancelled) return;
-      setProfileId(data?.user?.id ?? null);
-    });
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (cancelled) return;
+        setProfileId(data?.user?.id ?? null);
+      })
+      // getUser() reaches the network and can reject. Unhandled, that was an
+      // unhandled rejection that left `profileId` null for the life of the
+      // mount, so the bell rendered permanently empty — indistinguishable from
+      // a genuinely empty inbox, and silent. Same hazard as use-help-thread.ts
+      // and use-is-demo-user.ts; `error` is surfaced so it is at least visible.
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        console.error('[useNotifications] could not resolve the current user', error);
+        setProfileId(null);
+      });
     return () => {
       cancelled = true;
     };

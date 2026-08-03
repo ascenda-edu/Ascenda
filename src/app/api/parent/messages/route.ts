@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase/server';
 import { parseJsonBody } from '@/lib/api/guards';
-import { resolveLinkedChildIds } from '@/lib/parent/data';
+import { resolveLinkedChildIds } from '@/features/parent';
 
 const MAX_BODY_LENGTH = 4000;
 const MAX_TEMPLATE_LENGTH = 100;

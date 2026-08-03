@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import { PageHero } from '@/components/layout/page-hero';
 import { AnimatedSection } from '@/components/layout/animated-section';
-import { loadChildDeadlines } from '@/lib/parent/data';
 import { parseLocalDate } from '@/lib/utils/dates';
-import { resolveParentContext } from '../_lib/context';
-import { ChildSwitcher } from '../_components/child-switcher';
-import { NoLinkedChildren } from '../_components/no-linked-children';
-import { DeadlineGroups } from './_deadline-groups';
+import {
+  ChildSwitcher,
+  DeadlineGroups,
+  NoLinkedChildren,
+  loadChildDeadlines,
+  resolveParentContext,
+} from '@/features/parent';
 
 export const metadata: Metadata = { title: 'Deadlines · Parent' };
 export const dynamic = 'force-dynamic';

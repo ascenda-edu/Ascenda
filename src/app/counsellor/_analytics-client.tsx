@@ -9,7 +9,7 @@ import { PageHero } from '@/components/layout/page-hero';
 import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
 import type { CohortStats } from '@/lib/counsellor/data';
-import { STAGE_COLORS } from '@/lib/counsellor/stage-colors';
+import { STAGE_COLORS, FUNNEL_STAGE_TO_STATUS, type FunnelStage } from '@/lib/counsellor/stage-colors';
 import { COMPLETION_VISUAL, TIER_VISUAL } from '@/lib/theme/categories';
 import { CHART_ACCENT, CHART_SERIES } from './_components/chart-palette';
 import {
@@ -59,12 +59,8 @@ const WIDGET_META: Record<AnalyticsWidgetId, { title: string; description: strin
   insights: { title: 'Key Insights', description: 'Cohort takeaways at a glance' }
 };
 
-const STAGE_TO_STATUS: Record<keyof CohortStats['appFunnel'], string> = {
-  planning: 'planning',
-  inProgress: 'in_progress',
-  submitted: 'submitted',
-  decision: 'decision'
-};
+// Stage → status translation is FUNNEL_STAGE_TO_STATUS (lib/counsellor/stage-colors),
+// the one exhaustive mapping. The private copy that lived here omitted `enrolled`.
 
 interface AnalyticsClientProps {
   students: CounsellorStudent[];
@@ -179,8 +175,8 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
     });
   };
 
-  const handleFunnelSelect = (stage: keyof CohortStats['appFunnel'], label: string) => {
-    const statusKey = STAGE_TO_STATUS[stage];
+  const handleFunnelSelect = (stage: FunnelStage, label: string) => {
+    const statusKey = FUNNEL_STAGE_TO_STATUS[stage];
     const items: DrilldownItem[] = [];
     students.forEach((s) => {
       const matchingApps = s.applications.filter((a) => a.status === statusKey);
@@ -194,17 +190,12 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
     });
     // Share the single stage-colour source so the funnel accent matches the
     // Applications view. Keyed by funnel-stage name → ApplicationStatus.
-    const stageColors: Record<string, string> = {
-      planning: STAGE_COLORS.planning.accent,
-      inProgress: STAGE_COLORS.in_progress.accent,
-      submitted: STAGE_COLORS.submitted.accent,
-      decision: STAGE_COLORS.decision.accent
-    };
+    const accent = STAGE_COLORS[statusKey].accent;
     const totalAppsAtStage = items.reduce((a, item) => a + item.student.applications.filter((app) => app.status === statusKey).length, 0);
     setDrilldown({
       title: label,
       subtitle: `${items.length} student${items.length !== 1 ? 's' : ''} with applications at this stage`,
-      accentColor: stageColors[stage] ?? 'bg-primary',
+      accentColor: accent,
       summaryStats: [
         { label: 'students', value: String(items.length) },
         { label: 'applications', value: String(totalAppsAtStage) },

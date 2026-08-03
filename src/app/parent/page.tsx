@@ -14,12 +14,14 @@ import { AnimatedSection } from '@/components/layout/animated-section';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { APPLICATION_STATUS_VISUAL } from '@/lib/theme/categories';
-import { loadChildOverview } from '@/lib/parent/data';
-import type { ChildApplicationStatus } from '@/lib/parent/types';
 import { parseLocalDate, formatRelativeTime } from '@/lib/utils/dates';
-import { resolveParentContext } from './_lib/context';
-import { ChildSwitcher } from './_components/child-switcher';
-import { NoLinkedChildren } from './_components/no-linked-children';
+import {
+  ChildSwitcher,
+  NoLinkedChildren,
+  loadChildOverview,
+  resolveParentContext,
+  type ChildApplicationStatus,
+} from '@/features/parent';
 
 export const metadata: Metadata = { title: 'Overview · Parent' };
 export const dynamic = 'force-dynamic';

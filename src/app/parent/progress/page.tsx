@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 import { PageHero } from '@/components/layout/page-hero';
 import { AnimatedSection } from '@/components/layout/animated-section';
-import { loadChildProgress } from '@/lib/parent/data';
-import { resolveParentContext } from '../_lib/context';
-import { ChildSwitcher } from '../_components/child-switcher';
-import { NoLinkedChildren } from '../_components/no-linked-children';
-import { ProgressBoard } from './_progress-board';
+import {
+  ChildSwitcher,
+  NoLinkedChildren,
+  ProgressBoard,
+  loadChildProgress,
+  resolveParentContext,
+} from '@/features/parent';
 
 export const metadata: Metadata = { title: 'Progress · Parent' };
 export const dynamic = 'force-dynamic';

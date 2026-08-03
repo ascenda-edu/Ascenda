@@ -16,7 +16,7 @@ import {
     X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ProgramSearchResult } from './types';
+import type { ProgramSearchResult } from './types';
 import { cn } from '@/lib/utils';
 import { getFitScoreVisuals } from '@/lib/theme/fit-score';
 

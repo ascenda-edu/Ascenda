@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { DashboardShell } from '@/components/layout/shell';
 import { SectionNav } from '@/components/layout/section-nav';
 import { ADMIN_SECTION_ITEMS } from '@/components/layout/navigation';
+import { getIdentity } from '@/lib/auth/identity';
 
 /**
  * Owns the shell for both admin routes so the chrome survives navigation between
@@ -18,10 +19,18 @@ import { ADMIN_SECTION_ITEMS } from '@/components/layout/navigation';
  * page.tsx / simulation/page.tsx and is NOT hoisted here. A Next layout does not
  * re-run on client-side navigation, so it is not a reliable authorisation boundary —
  * the guard has to live on the thing being protected. This layout is chrome only.
+ *
+ * `getIdentity()` below is NOT a guard and must not be mistaken for one — it is
+ * the nullable read, deliberately, and its only consumer is the nav. It exists
+ * so the four chrome components stop re-deriving the role in the browser
+ * (docs/audit/11-security-authz.md F8). It is free: React `cache()` means the
+ * page's own identity lookup, one component down, reuses this exact result.
  */
-export default function AdminLayout({ children }: { children: ReactNode }) {
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  const identity = await getIdentity();
+
   return (
-    <DashboardShell nav={<SectionNav items={ADMIN_SECTION_ITEMS} />}>
+    <DashboardShell role={identity?.role ?? null} nav={<SectionNav items={ADMIN_SECTION_ITEMS} />}>
       {children}
     </DashboardShell>
   );

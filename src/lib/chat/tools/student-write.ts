@@ -11,6 +11,8 @@ import {
   updateChecklistTaskStatus,
 } from '@/lib/applications/server-actions';
 import { addToShortlist } from '@/lib/shortlist/server';
+import { loadApplicationLabel } from '@/lib/data/applications';
+import { soft } from '@/lib/data/errors';
 import { insertHelpRequest } from '@/lib/demo/help-request-client';
 import { MAX_SUBJECT_LENGTH, MAX_BODY_LENGTH } from '@/lib/chat/actions';
 import { isValidDate, clampText } from '@/lib/utils/dates';
@@ -43,21 +45,33 @@ const actionFailure = (
   failure(result.code === 'not_found' ? notFoundMessage : result.error);
 
 // Resolve a programme's course + university name for confirm-card summaries.
+//
+// Disposition: soft, fallback = null. Every caller reads null as "don't draft a
+// card", which is the honest answer when we cannot describe what the user would
+// be confirming — a card whose summary says "Programme at University" is worse
+// than no card. Previously `if (error || !data) return null` collapsed a driver
+// failure into "no such programme" and logged nothing; the control flow is
+// unchanged, the failure is now visible.
 async function lookupProgram(
   ctx: ToolContext,
   programId: string
 ): Promise<{ course: string; university: string } | null> {
-  const { data, error } = await ctx.supabase
-    .from('programs')
-    .select('id, course_name, universities(name)')
-    .eq('id', programId)
-    .maybeSingle();
-  if (error || !data) return null;
-  const uni = Array.isArray((data as any).universities)
-    ? (data as any).universities[0]
-    : (data as any).universities;
+  const data = soft<{ course_name: string | null; universities: unknown } | null>(
+    await ctx.supabase
+      .from('programs')
+      .select('id, course_name, universities(name)')
+      .eq('id', programId)
+      .maybeSingle(),
+    'chat.lookupProgram',
+    null
+  );
+  if (!data) return null;
+  const uni = (Array.isArray(data.universities) ? data.universities[0] : data.universities) as
+    | { name?: string | null }
+    | null
+    | undefined;
   return {
-    course: (data as any).course_name ?? 'Programme',
+    course: data.course_name ?? 'Programme',
     university: uni?.name ?? 'University',
   };
 }
@@ -144,13 +158,13 @@ const createTask: WriteTool = {
     const applicationId = typeof args.application_id === 'string' ? args.application_id.trim() : '';
     const taskName = clampText(args.task_name, 200);
     if (!applicationId || !taskName) return null;
-    const { data, error } = await ctx.supabase
-      .from('applications')
-      .select('id, program:programs(name:course_name)')
-      .eq('id', applicationId)
-      .maybeSingle();
-    if (error || !data) return null;
-    const course = (data as any).program?.name ?? 'your application';
+    // Same disposition as lookupProgram: soft → null → no card drafted. The
+    // hand-written `id, program:programs(name:course_name)` select this replaces
+    // was a fifth spelling of the programme embed; the loader owns the shape,
+    // the cast and the logging.
+    const application = await loadApplicationLabel(ctx.supabase, applicationId);
+    if (!application) return null;
+    const course = application.program?.name ?? 'your application';
     const dueDate = typeof args.due_date === 'string' && isValidDate(args.due_date) ? args.due_date : '';
     return {
       tool: 'create_task',
@@ -225,14 +239,27 @@ const updateTaskStatus: WriteTool = {
         ? args.status
         : '';
     if (!taskId || !status) return null;
-    const { data, error } = await ctx.supabase
-      .from('application_checklist')
-      .select('id, task_name, status, applications!inner(profile_id)')
-      .eq('id', taskId)
-      .maybeSingle();
-    if (error || !data) return null;
-    if ((data as any).applications?.profile_id !== ctx.userId) return null;
-    const taskName = (data as any).task_name ?? 'this task';
+    // Disposition: soft, fallback = null → no card drafted. Note the ownership
+    // check below is INSIDE the null-guard: an unreadable row can never satisfy
+    // `profile_id === ctx.userId`, so degrading here cannot widen access — it
+    // only declines to draft. (The execute path re-checks ownership server-side
+    // regardless; this lookup exists to write the card's summary.)
+    const task = soft<{ task_name: string | null; applications: unknown } | null>(
+      await ctx.supabase
+        .from('application_checklist')
+        .select('id, task_name, status, applications!inner(profile_id)')
+        .eq('id', taskId)
+        .maybeSingle(),
+      'chat.checklistTask',
+      null
+    );
+    if (!task) return null;
+    const owner = (Array.isArray(task.applications) ? task.applications[0] : task.applications) as
+      | { profile_id?: string | null }
+      | null
+      | undefined;
+    if (owner?.profile_id !== ctx.userId) return null;
+    const taskName = task.task_name ?? 'this task';
     return {
       tool: 'update_task_status',
       title: 'Update task status',

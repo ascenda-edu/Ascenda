@@ -4,6 +4,25 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Manual trigger, on any branch. This is what makes the `database` and `e2e`
+  # admission conditions at the bottom of this file SATISFIABLE: both say "add it
+  # to ci-ok's `needs` the first time it goes green here", and without a way to
+  # run the workflow off a PR, "here" could never happen. Actions > CI > Run workflow.
+  workflow_dispatch:
+
+# A second push to a PR makes the first run's result irrelevant. Without this,
+# slow runs queue behind each other and the reported status lags the branch.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Node version: .nvmrc is the ONE source. It was three answers before —
+# package.json `engines`, this file's NODE_VERSION, and whatever the developer had
+# installed. `node-version-file` below reads .nvmrc, and package.json now says
+# ">=22" to match (Node 20 makes jest.environment-node.js a no-op; see the `test` job).
 
 jobs:
   # GitHub runs PR checks against a merge of head into base *as it was when the
@@ -11,9 +30,9 @@ jobs:
   # that no longer exists — which is how #33 and #34 both passed CI and then
   # landed together untested, having edited the same three files.
   #
-  # "Require branches to be up to date" would prevent this, but it needs GitHub
-  # Pro on a private repo. This is the free approximation, narrowed to the case
-  # that actually matters: base and PR touching the SAME file. A blanket
+  # "Require branches to be up to date" would prevent this, but it needs a paid
+  # GitHub plan on a private repo. This is the free approximation, narrowed to
+  # the case that actually matters: base and PR touching the SAME file. A blanket
   # is-behind-base check would redden every open PR on every push to main, and a
   # warning that fires constantly is a warning nobody reads.
   #
@@ -22,7 +41,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
@@ -48,27 +67,401 @@ jobs:
 
           echo "No shared-file drift against ${BASE} since ${merge_base}."
 
-  build:
+  # ── Static analysis ────────────────────────────────────────────────────────
+  # Split from `test` and `build` so all three run concurrently. Steps use
+  # `if: always()` so ONE run reports EVERY failure, rather than making you fix
+  # them one push at a time.
+  quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        if: always()
+        run: npm run lint
+
+      - name: Module boundaries
+        if: always()
+        # Fences the layering the architecture audit measured as already clean
+        # (zero lib→components, lib→app, components→app edges among 1,350 edges).
+        run: npm run lint:boundaries
+
+      - name: Design tokens
+        if: always()
+        # Ratcheting: fails only when a violation count INCREASES over the
+        # committed baseline. See scripts/check-design-tokens.baseline.json.
+        run: npm run lint:tokens
+
+      - name: Data-layer confinement
+        if: always()
+        # Ratcheting, like the token check: 198 direct .from() call sites still
+        # live outside src/lib/data, so this fails only on an INCREASE. When it
+        # reaches zero, delete the script and use a real no-restricted-syntax rule.
+        run: npm run lint:datalayer
+
+      - name: Dead code
+        if: always()
+        # Ratcheting, per knip issue type, against scripts/check-deadcode.baseline.json.
+        # It used to be `knip --no-exit-code`, i.e. exit 0 ALWAYS — a step that read
+        # like a gate and could not fail. Planting a brand-new unreferenced file
+        # printed it in this log and passed the build. The 217 existing findings are
+        # frozen, not blocking; a new one is red.
+        run: npm run lint:deadcode
+
+      - name: Dependency advisories
+        if: always()
+        # There are three security `overrides` in package.json (brace-expansion, and
+        # postcss/sharp pinned inside next) whose entire purpose is to clear
+        # advisories — and until now nothing checked whether they were still needed
+        # or still sufficient. 0 vulnerabilities at any level as of 2026-08-02, so
+        # this starts green.
+        #
+        # `--audit-level=high` (not `moderate`, not the default): a low/moderate
+        # advisory in a transitive devDependency is a thing to read on a Monday, not
+        # a thing that reddens an unrelated PR at 6pm. Note this step CAN go red
+        # without anyone changing anything — that is what a newly-published advisory
+        # looks like, and it is the point.
+        run: npm audit --audit-level=high
+
+  # ── Tests ──────────────────────────────────────────────────────────────────
+  # Run in BOTH timezones. `docs/audit/AUDIT-PROMPT.md` §1 criterion 1 requires
+  # TZ=UTC *and* TZ=America/Los_Angeles; this job ran only the latter, on the
+  # correct argument that a UTC runner cannot observe the `parseLocalDate` bug
+  # class — which is a reason to ADD the west-coast run, not to DROP the UTC one.
+  # The mirror-image bug (a helper that assumes getTimezoneOffset() > 0, or a test
+  # that only holds in a negative-offset zone) was unobservable in CI.
+  test:
+    name: test (TZ=${{ matrix.tz }})
+    runs-on: ubuntu-latest
+    strategy:
+      # One zone failing must not cancel the other: which zones fail is the
+      # diagnostic.
+      fail-fast: false
+      matrix:
+        include:
+          - tz: UTC
+            label: utc
+          - tz: America/Los_Angeles
+            label: la
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           # Must stay >= 22: jest.environment-node.js exists to strip the
           # experimental localStorage/sessionStorage globals Node 22 introduced,
-          # and on Node 20 that wrapper is a no-op — so CI never exercised the
-          # path every developer machine actually takes.
-          node-version: 22
+          # and on Node 20 that wrapper is a no-op — so CI would never exercise
+          # the path every developer machine actually takes.
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test -- --runInBand
-      - run: npm run build
+
+      - name: Unit + integration tests
+        env:
+          # Run the suite in a NEGATIVE-OFFSET zone, not UTC.
+          #
+          # `parseLocalDate` — the helper this codebase added because
+          # `new Date('YYYY-MM-DD')` is UTC midnight and shifts date-only values
+          # by the reader's offset — is an IDENTITY FUNCTION under TZ=UTC. So a
+          # runner in UTC cannot observe the bug class the helper exists for:
+          # gutting it fails 2 tests under UTC and 8 under America/Los_Angeles.
+          #
+          # The branch built exactly the right tool (jest.environment-tz-west.js)
+          # and applied it to one suite. The matrix runs the whole suite in both
+          # zones. Verified: the suite passes in each, so this costs one runner and
+          # detects six more mutations than UTC alone.
+          TZ: ${{ matrix.tz }}
+        # `--collectCoverageFrom` is REQUIRED, not decorative. Without it Jest
+        # measures only the files some test happened to import, which reported
+        # 72.9% over 108 of 449 source files — a number that looks like coverage
+        # and is not. With it the figure spans the whole tree.
+        run: >-
+          npm test -- --runInBand --coverage
+          --coverageReporters=text-summary --coverageReporters=json-summary
+          --collectCoverageFrom='src/**/*.{ts,tsx}'
+
+      # ~25% of statements across the whole tree, unevenly: lib/counsellor 91%,
+      # use-search-results 93%, app/profile 69% — and several directories at 0.
+      # A single global threshold would be either meaningless or permanently red,
+      # so this reports rather than gates. The useful gate is a per-directory
+      # floor on the pure domain logic (src/lib/scoring, src/lib/matching,
+      # src/features/*/model), which is where a regression is expensive and
+      # coverage is already high enough to hold a line.
+      - name: Coverage summary
+        if: always()
+        run: |
+          {
+            echo '### Coverage'
+            echo '```'
+            node -e '
+              const t = require("./coverage/coverage-summary.json").total;
+              for (const k of ["statements", "branches", "functions", "lines"]) {
+                console.log(k.padEnd(12), (t[k].pct + "%").padStart(7), `(${t[k].covered}/${t[k].total})`);
+              }'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          # Matrix legs cannot share an artifact name, and TZ contains a `/`.
+          name: coverage-${{ matrix.label }}
+          path: coverage/
+          retention-days: 7
+
+  # ── Build + bundle budget ──────────────────────────────────────────────────
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
         env:
           # Placeholders — the build only needs the vars to exist; no page fetches
-          # Supabase at build time (all authed routes are dynamic).
+          # Supabase at build time (all authed routes are dynamic). src/lib/env.ts
+          # is deliberately shaped so these two satisfy every REQUIRED variable.
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder-publishable-key
-          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+
+      - name: Bundle budget
+        # Reads .next/app-build-manifest.json, so it must follow the build.
+        run: npm run check:bundle
+
+  # ── Database: prove the repo can still build a database ────────────────────
+  # The audit found schema.sql aborts partway (it indexes a column its own
+  # CREATE TABLE never declares) and that two live tables exist in no schema file
+  # at all. Nothing caught either, because nothing ever ran this SQL.
+  #
+  # Replaying migrations TWICE also proves they are idempotent — required here,
+  # since they are applied one-off via `npm run db:apply` rather than by a tool
+  # that tracks what it has already run.
+  #
+  # The whole job is `scripts/ci-db-check.sh`, NOT inline steps, so that
+  # `scripts/ci-db-local.sh` can run byte-identical logic against a throwaway
+  # local cluster. The previous inline version had never once been executed —
+  # it died on the first migration for want of a `supabase_realtime` publication
+  # in the stub, and three pre-existing migrations behind that were not
+  # replayable at all. A gate whose only copy lives in a YAML file nobody can run
+  # is a gate nobody runs.
+  #
+  # Three pre-existing migrations are excluded from the replay by a documented,
+  # self-verifying ledger in that script — the job PROVES each excluded file
+  # still fails, so the list cannot become a place to hide a failure. Read the
+  # ledger before adding to it.
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports: ['5432:5432']
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Build the schema and replay every migration, twice
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: ./scripts/ci-db-check.sh
+
+  # ── Browser end-to-end (advisory) ──────────────────────────────────────────
+  # The gate docs/audit/13-remaining-work.md blocks the StudentIntakeForm
+  # decomposition on: jsdom cannot vouch for AnimatePresence exit timing, real
+  # focus movement, or the beforeunload draft flush, so a six-step wizard rewrite
+  # verified only in jsdom is not verified.
+  #
+  # It needs a REAL Supabase account, because /profile/wizard is behind
+  # middleware and the alternative — a test-only bypass in src/middleware.ts —
+  # would mean shipping a way to skip auth. This repo has no secrets configured,
+  # so the job checks for them first and no-ops when they are absent: a check
+  # that fails on every PR is a check someone deletes.
+  #
+  # Same "runs but is not required yet" posture as `database` above: deliberately
+  # NOT in ci-ok's `needs`. See the ADMISSION CONDITION in the ci-ok header for
+  # exactly what has to happen first, and note the honest cost recorded there:
+  # e2e/harness-smoke.e2e.ts needs NO credentials, is the check the middleware unit
+  # test explicitly delegates the `matcher` question to — and is skipped along with
+  # everything else, because every step below is gated on the secrets probe. That
+  # is a real hole, tracked as L8; fixing it means splitting this job, which is a
+  # change that must be observed on a runner before it is trusted.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # ── The credential-free half (ADMISSION CONDITION part 1, L8) ───────────
+      # Unconditional, and BEFORE the secrets probe. `harness-smoke.e2e.ts` needs
+      # no account: it asserts the login form is labelled and that middleware
+      # bounces an anonymous /profile/wizard. That second assertion is the one
+      # __tests__/middleware/middleware.test.ts explicitly delegates the `matcher`
+      # question to — the half that failed in production once — and until this
+      # step existed it never ran, because every step below is gated on secrets
+      # this repo does not have. The job went green having executed nothing.
+      - run: npm ci
+
+      - name: Install Chromium
+        run: npm run test:e2e:install
+
+      - name: Playwright — credential-free smoke
+        run: npm run test:e2e:smoke
+        env:
+          # The same placeholders the `build` job uses. Playwright's `webServer`
+          # starts `npm run dev`, and src/instrumentation.ts asserts the env on
+          # boot — so with nothing set the server exits before the first
+          # navigation and Playwright reports "Process from config.webServer
+          # exited early", which is what the first runner attempt did.
+          #
+          # Placeholders are sufficient BECAUSE of what these two specs assert:
+          # that /login renders labelled fields, and that middleware bounces an
+          # anonymous /profile/wizard. The bounce is decided by the PRESENCE of a
+          # session cookie, never by asking Supabase whether it is valid — see
+          # `hasSessionCookie` in src/middleware.ts. No request reaches Supabase.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+
+      - name: Are E2E secrets configured?
+        id: secrets
+        env:
+          E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+        run: |
+          if [ -n "$E2E_EMAIL" ] && [ -n "$E2E_PASSWORD" ] && [ -n "$NEXT_PUBLIC_SUPABASE_URL" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::E2E secrets are not set — skipping the browser suite. See .github/workflows/ci.yml."
+          fi
+
+      - name: Playwright — the credentialed wizard spec
+        if: steps.secrets.outputs.configured == 'true'
+        run: npm run test:e2e
+        env:
+          E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always() && steps.secrets.outputs.configured == 'true'
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # ── Aggregate gate ─────────────────────────────────────────────────────────
+  # ONE check to require in branch protection. Adding a job above never means
+  # touching the protection settings again — just add it to `needs`.
+  #
+  # `if: always()` plus the explicit result test is load-bearing: without it this
+  # job is SKIPPED when a dependency fails, and GitHub counts a skipped required
+  # check as PASSING.
+  #
+  # ── Why `database` and `e2e` are NOT in `needs`, and what would change that ──
+  #
+  # Both are excluded deliberately. Both exclusions were, until now, PERMANENT BY
+  # CONSTRUCTION — each admission condition depended on a runner result that no
+  # trigger in this file could ever produce. `workflow_dispatch` at the top fixes
+  # that: either job can now be run on a real runner, on any branch, without
+  # opening a PR. The conditions below are therefore satisfiable by someone doing
+  # a specific, named thing.
+  #
+  # `database` — it passes. (The claim that used to sit here, that "its one known
+  # blocker, the missing universities.recognition_score column, is fixed", was
+  # FALSE and was written without a Postgres to check it against: the replay of
+  # 20250308120000 renames the live `universities` away and promotes a
+  # `universities_v2` that never declared the column, so it was dropped again
+  # three files before the index that needs it, and there were four further
+  # blockers behind that. All are now fixed or ledgered in scripts/ci-db-check.sh.)
+  # The full run has been observed green against Postgres 16.14, twice
+  # consecutively — but on a LOCAL cluster. Nothing has ever run it on a GitHub
+  # runner, where the Postgres is a service container, the client is whatever
+  # ubuntu-latest ships, and the collation and locale are not this laptop's.
+  #   ADMISSION CONDITION: run this workflow once via Actions > CI > Run workflow,
+  #   watch the `database` job go green on the runner, then add `database` to
+  #   `needs` in that same observation's PR. One line, one human, one green tick.
+  #
+  # `e2e` — it currently executes NOTHING. With no secrets configured (the state
+  # of this repo) the job runs its probe, prints a ::notice::, and succeeds having
+  # done no work, so "it went green" would mean nothing.
+  #   ADMISSION CONDITION, part 1 (no secrets needed, do this first): split the job
+  #   so `e2e/harness-smoke.e2e.ts` — written to need no credentials, and the check
+  #   __tests__/middleware/middleware.test.ts delegates the `matcher` question to —
+  #   runs unconditionally, and only profile-wizard.e2e.ts stays behind the secrets
+  #   gate. Verify the split with `workflow_dispatch`. That half can then join
+  #   `needs`, which is what makes the unit test's delegation comment true.
+  #   ADMISSION CONDITION, part 2 (owner action): set E2E_EMAIL / E2E_PASSWORD (a
+  #   THROWAWAY account — the spec completes the wizard and saves, overwriting that
+  #   account's student_* rows) plus the two NEXT_PUBLIC_SUPABASE_* vars, against a
+  #   non-production project. Then the full job can join too.
+  #
+  # And the thing that makes all of this weaker than it looks: there is NO BRANCH
+  # PROTECTION on this repo (it needs a paid GitHub plan for a private repo), so
+  # `ci-ok` is not *required* by anything and cannot block a merge today. It is a
+  # correctly-built aggregate gate with nothing wired to it. Wiring it up is the
+  # single highest-value thing on docs/audit/13-remaining-work.md §4.
+  ci-ok:
+    if: always()
+    # `database` joined 2026-08-02: its ADMISSION CONDITION below said "run this
+    # workflow via Actions > CI > Run workflow, watch the job go green on the
+    # runner, then add it to `needs` in that same observation". Done — green on
+    # ubuntu-latest across three consecutive dispatched runs, against the service
+    # container's Postgres rather than a laptop's.
+    #
+    # `e2e` joined 2026-08-02 too, once its part-1 condition was MET AND OBSERVED:
+    # the credential-free half is split out and ran green on ubuntu-latest. It
+    # failed its first runner outing (dev server had no env), which is precisely
+    # why the rule is "observe, then admit" rather than "implement, then admit".
+    #
+    # What this does and does not buy: the job now genuinely executes two specs,
+    # one of which is the anonymous /profile/wizard bounce that
+    # __tests__/middleware/middleware.test.ts delegates the `matcher` question to.
+    # That delegation is now true. Part 2 (E2E_EMAIL / E2E_PASSWORD against a
+    # THROWAWAY account on a non-production project) is still open and owner-only;
+    # until it is set, profile-wizard.e2e.ts is still skipped.
+    needs: [quality, test, build, database, e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify every job succeeded
+        run: |
+          results='${{ join(needs.*.result, ' ') }}'
+          echo "job results: $results"
+          # Fail on an EMPTY list. `join` over an empty `needs` yields '', the
+          # loop below iterates zero times, and this job would print success
+          # having verified nothing — the same fail-open shape as a skipped
+          # dependency counting as a pass.
+          if [ -z "$results" ]; then
+            echo "::error::ci-ok resolved no dependencies — refusing to report success."
+            exit 1
+          fi
+          for r in $results; do
+            if [ "$r" != "success" ]; then
+              echo "::error::A required job did not succeed ($results)"
+              exit 1
+            fi
+          done
+          echo "All required jobs succeeded."

@@ -187,8 +187,16 @@ export const chipsToFilters = (
       case 'sort':
         if (isSortOption(chip.value)) f.sort = chip.value;
         break;
+      // Legacy groups: parsed without error, deliberately dropped. Named
+      // explicitly rather than left to `default` so that ADDING a group to
+      // FilterGroupKey fails this switch until someone decides what it does —
+      // which is exactly how `enrolled` went missing from ApplicationStatus.
+      case 'fitFocus':
+      case 'lifestyle':
+        break;
       default:
-        // fitFocus / lifestyle — legacy, no longer filterable.
+        // saved_searches.filters is jsonb: a row written by an older build can
+        // carry a group this union no longer describes. Ignore it.
         break;
     }
   }
