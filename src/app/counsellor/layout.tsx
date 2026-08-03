@@ -1,8 +1,6 @@
 import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { DashboardShell } from '@/components/layout/shell';
-import { SectionNav } from '@/components/layout/section-nav';
-import { COUNSELLOR_SECTION_ITEMS } from '@/components/layout/navigation';
 import { requireIdentity } from '@/lib/auth/identity';
 import { can } from '@/lib/auth/policy';
 
@@ -39,22 +37,12 @@ export default async function CounsellorLayout({ children }: { children: ReactNo
     redirect('/dashboard');
   }
 
-  // SectionNav lives HERE, not in each page. A layout is not re-mounted when you
-  // navigate between the routes it covers, so the nav's `layoutId` indicator now has
-  // the outgoing and incoming pill in the same commit and can actually slide between
-  // them. Rendered per-page it remounted on every navigation, which left the indicator
-  // correct-but-inert.
-  // Passed via the `nav` slot, NOT as a child: children go inside a pathname-keyed
-  // transition wrapper and would remount on every navigation.
-  //
-  // Two routes gain a nav row they didn't render before: `/counsellor/assistant` and
-  // `/counsellor/students/[id]` (a layout can't be opted out of). Both read correctly —
-  // `Overview` is `exact: true` so nothing is falsely active on /assistant, and the
-  // detail page's `Students` pill stays lit while its breadcrumbs carry the deeper
-  // position.
-  return (
-    <DashboardShell role={identity.role} nav={<SectionNav items={COUNSELLOR_SECTION_ITEMS} />}>
-      {children}
-    </DashboardShell>
-  );
+  // NO SectionNav here, deliberately. On the student side the top bar shows one pill
+  // per *segment* and a section nav is the second level inside it (Explore → Search /
+  // Matches / Shortlist). The counsellor portal has no such split: `filterNavByRole`
+  // replaces the entire top bar with the nine counsellor destinations (grouped into
+  // one "Applications" dropdown by `COUNSELLOR_TOP_NAV`), and the sidebar and mobile
+  // nav list the same nine flat. A section nav here was a second bar repeating the
+  // first, so it's gone — nothing became unreachable.
+  return <DashboardShell role={identity.role}>{children}</DashboardShell>;
 }

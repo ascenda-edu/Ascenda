@@ -6,8 +6,8 @@ import { Skeleton } from '@/components/ui/skeleton';
  * eyebrow, four stat tiles and actions (message button + flag badges), then the
  * `StudentDetailTabs` toolbar row and its two-column panel.
  *
- * No `SectionNav` here — `counsellor/layout.tsx` owns that row for every counsellor
- * route, and a loading file renders inside its layout.
+ * No `SectionNav` here — the counsellor portal has no section-nav row at all; its
+ * destinations live in the top bar (see `counsellor/layout.tsx`).
  */
 export default function StudentDetailLoading() {
   return (
