@@ -100,7 +100,12 @@ SUPABASE_PROJECT_ID
 
 ## Deployment
 
-- **Vercel project:** https://ascenda-ashy.vercel.app
+- **Vercel project:** `ascenda` under the `cxz5mw6fk2-6983s-projects` org. The old
+  `ascenda-ashy.vercel.app` alias is DEAD (`DEPLOYMENT_NOT_FOUND`) — it did not survive the
+  repo/org move. Get the current production URL from the deployment itself rather than
+  hardcoding another alias that will rot:
+  `gh api repos/ascenda-edu/Ascenda/deployments --jq '.[0].id'` then
+  `gh api repos/ascenda-edu/Ascenda/deployments/<id>/statuses --jq '.[0].environment_url'`
 - **Branch:** `main` → auto-deploys to production
 - **CI:** GitHub Actions runs lint, typecheck, test, and a production build (placeholder Supabase env vars). Route-handler tests run in a node environment via the `./jest.environment-node.js` wrapper (Node ≥22 webstorage clash — see the file header)
 
