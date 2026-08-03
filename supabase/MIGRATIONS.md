@@ -29,51 +29,55 @@ to say what was applied.
 
 ---
 
-## 0. APPLIED 2026-08-02 — fact, not inference
+## 0. WHAT IS ACTUALLY APPLIED — probed 2026-08-02, not inferred
 
-Two migrations were applied to the remote today via `npm run db:apply`, in this order.
-Both reported `✓ Applied`, which for these files means their `RAISE EXCEPTION` verification
-blocks passed.
+`npm run db:probe` (`scripts/db-probe.ts`) answers this from the database. It is
+read-only, safe on production, and safe to re-run. **Run it before and after any
+migration session.** It exists because `apply-sql.ts` runs `client.query(sql)` and
+prints only "✓ Applied", so the §4 SELECT executed and threw its rows away — which
+is why the "Applied?" column below stayed inference for months.
 
-| # | File | Result |
-|---|---|---|
-| 1 | `20260801110000_profiles_insert_guard.sql` | ✅ applied — **closes the privilege escalation.** Until now any user could self-promote to admin, which defeated every other policy |
-| 2 | `20260801122000_counsellor_assignments.sql` | ✅ applied — additive (assignment table + backfill) |
+**Result: 31 of 35 markers present, 4 missing.**
 
-### STOPPED HERE, and why — a dependency this ledger did not record
+### Applied today, in this order
 
-`20260801130000_reconcile_missing_tables` **failed**:
+| File | Effect |
+|---|---|
+| `20260801110000_profiles_insert_guard` | **closes the privilege escalation** — until this landed, any user could self-promote to admin, which defeated every other policy |
+| `20260801122000_counsellor_assignments` | additive (assignment table + backfill) |
+| `20260802110000_notification_bounds` | payload bound + the C9 pre-flight; the only remaining file with no `is_admin()` dependency |
 
-```
-✗ Failed to apply SQL: function public.is_admin() does not exist
-```
+### The 4 still missing, and why each is deliberate
 
-It rolled back cleanly — `apply-sql.ts` sends the file as one multi-statement simple query
-and the file declares no explicit `begin`/`commit`, so Postgres's implicit transaction
-covered the whole file. **Nothing was partially applied.** (Verified, not assumed.)
+| File | Blocked on |
+|---|---|
+| `20260801120000_close_counsellor_access` | **PRODUCT DECISION.** Its §1 rewrites `can_act_as_counsellor()` and its header requires both portal flags set to `false` in the same commit. The portals are deliberately open during development, so applying this would close counsellor access at the database while the app still renders the portal — **every counsellor page empty, on real data, with no error.** `__tests__/db/portal-flag-agreement.test.ts` enforces the pairing |
+| `20260802130000_erasure_audit_and_retention` | needs `is_admin()`, i.e. blocked behind the row above |
+| `20260802140000_guardian_links_parity` | same |
+| `20260802120000_student_matches_delete_policy` | needs **C7 part (b)** (the `upsert` on `onConflict: 'profile_id,program_id'`) deployed in the same release. Ship it earlier and every match-cache rebuild fails at `42P10`, breaking `/matches` for every student |
 
-`is_admin()` is defined in exactly one place: `20260801120000_close_counsellor_access`.
-**Four** of the remaining migrations depend on it —
-`20260801130000`, `20260802100000`, `20260802130000`, `20260802140000`.
+So the remaining work is **one release**: apply `20260801120000`, flip both portal
+flags to `false`, merge C7(b), apply the other three, deploy. Nothing else is
+outstanding on the database.
 
-And `20260801120000` **cannot be applied while the portals stay open.** Its §1 rewrites
-`can_act_as_counsellor()` to a real role test; its own header requires
-`COUNSELLOR_PORTAL_OPEN_TO_ALL` and `PARENT_PORTAL_OPEN_TO_ALL` be set to `false` in the
-same commit, and `__tests__/db/portal-flag-agreement.test.ts` enforces that pairing. Applying
-it against the current app would close counsellor access at the database while the app still
-renders the portal to everyone — **every counsellor page would render empty, on real data,
-with no error.**
+### Two probe markers are NOT trustworthy — read this before believing the table
 
-So the rest of the chain is gated on a PRODUCT decision, not on database access:
+The probe checks for one object per migration, which is a proxy, and two of those
+proxies pre-date their migration:
 
-> **The remaining migrations land at the same moment the portals close** — one commit that
-> applies `20260801120000`, flips both flags to `false`, and deploys. Until then they are
-> correctly unapplied.
+- **`20260801130000_reconcile_missing_tables` reports APPLIED but has NOT run.** It
+  failed here today with `function public.is_admin() does not exist` and rolled
+  back. Its marker is `table student_activities` — and the entire point of that
+  file is to codify tables that **already existed in production and in no schema
+  file** (commit `434b79f`). So the marker was present before the migration
+  existed. It is a structural false positive, not a bug in the probe's SQL.
+- **`20260802100000_indexes_extensions_and_rls_gaps` reports APPLIED** and was never
+  applied by this session either. Its marker index may have been created by an
+  earlier search-index migration. Treat as UNKNOWN.
 
-Also still held, for an unrelated reason: **`20260802120000_student_matches_…`** requires
-C7 part (b) (the `upsert` on `onConflict: 'profile_id,program_id'`) to be deployed in the
-same release. Ship it earlier and every match-cache rebuild fails at `42P10`, breaking
-`/matches` for every student.
+Both need a second, migration-specific marker before their row can be trusted.
+**A green probe line is evidence, not proof** — the same caution the rest of this
+document is built on.
 
 ---
 
