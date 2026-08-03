@@ -143,6 +143,53 @@ create table if not exists student_lifestyle_preference (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+-- Structured extracurricular entries.
+--
+-- Present on the remote database and in the generated types, but missing from
+-- this file and from every migration until 2026-08-01 — while
+-- src/lib/profile/persist-intake.ts delete-then-inserts it on EVERY profile save
+-- and throws on error. So any database built from this repo (a preview branch, a
+-- new laptop, the CI `database` job) could not save a student profile at all.
+-- Nothing caught it because nothing had ever built a database from these files.
+-- Backported from 20260801130000_reconcile_missing_tables.sql.
+create table if not exists student_activities (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references profiles(id) on delete cascade,
+  category text not null,
+  level text,
+  duration text,
+  highlight text,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default timezone('utc', now())
+);
+create index if not exists student_activities_profile_idx
+  on student_activities (profile_id, sort_order);
+
+-- Admin-only scoring-simulation output (src/app/admin/simulation/page.tsx).
+-- Same story as student_activities: live on the remote database, absent here.
+create table if not exists simulation_results (
+  id uuid primary key default gen_random_uuid(),
+  run_id text not null,
+  batch_label text not null,
+  profile_name text not null,
+  programme_type text not null,
+  profile_snapshot jsonb,
+  student_score numeric,
+  student_band text,
+  student_ib_equivalent numeric,
+  actual_university text not null,
+  actual_program text not null,
+  actual_country text not null,
+  chance_percent numeric,
+  algorithm_result text,
+  algorithm_notes text,
+  score_breakdown jsonb,
+  validation_pass boolean,
+  created_at timestamptz default timezone('utc', now())
+);
+create index if not exists simulation_results_run_idx
+  on simulation_results (run_id, created_at);
+
 -- Student scores
 create table if not exists student_scores (
   profile_id uuid primary key references profiles(id) on delete cascade,
@@ -187,6 +234,24 @@ create table if not exists universities (
   city_id uuid references cities(id) on delete set null,
   rank_overall int,
   rank_source text,
+  -- Present on the remote database and in the generated types, but missing from
+  -- this file until 2026-08-01 — while idx_universities_recognition_score below
+  -- referenced it. A fresh `psql -f schema.sql` therefore ABORTED at that index,
+  -- and everything after it (roughly half the tables, all 93 policies, all 19
+  -- functions) silently never ran. Nothing caught it because nothing ever
+  -- replayed this file; the CI `database` job now does, on every PR.
+  --
+  -- DECLARED HERE AND NOWHERE ELSE. No migration adds this column — and
+  -- 20250308120000_normalize_course_catalog.sql actively REMOVES it, because it
+  -- renames this table to archive_raw_universities and promotes a
+  -- `universities_v2` (that file, :32-60) which never declared it. That is why
+  -- adding the column here did not, on its own, make the CI `database` job pass:
+  -- the replay dropped it again, and 20260723120000:21 then failed with 42703.
+  -- That migration is a one-time normalization and is now on the not-replayable
+  -- ledger in scripts/ci-db-check.sh. Never re-apply it to a normalized database.
+  --
+  -- Used by search suggestions to prioritise well-known universities (>= 5).
+  recognition_score numeric,
   website text,
   intl_tuition_low numeric,
   intl_tuition_high numeric,
@@ -822,6 +887,11 @@ alter table student_academic_input enable row level security;
 alter table student_subjects enable row level security;
 alter table student_admissions_tests enable row level security;
 alter table student_lifestyle_preference enable row level security;
+-- Both added 2026-08-01. Creating a table WITHOUT enabling RLS leaves it
+-- readable and writable by every authenticated session via PostgREST, so the
+-- `enable` and the `create table` must never be separated.
+alter table student_activities enable row level security;
+alter table simulation_results enable row level security;
 alter table student_scores enable row level security;
 alter table universities enable row level security;
 alter table programs enable row level security;
@@ -866,11 +936,47 @@ grant execute on function public.auth_role() to authenticated;
 -- statement (InitPlan) instead of per row — a bare call meant ~30k+ profiles
 -- lookups on catalogue-sized scans.
 
--- Profiles policies
+-- Profiles policies.
+--
+-- Backported from 20260801110000_profiles_insert_guard.sql. This file previously
+-- declared `profiles_self_access` with NO `for` clause — which PostgreSQL reads
+-- as FOR ALL, i.e. SELECT + INSERT + UPDATE + DELETE — while the role-guard
+-- trigger below was registered `before update` ONLY. So from the browser console
+-- of any signed-in account, with the anon key that ships in the bundle:
+--
+--     delete from profiles where id = auth.uid();          -- FOR ALL covers DELETE
+--     insert into profiles (id, role) values (auth.uid(), 'admin');  -- no trigger
+--
+-- auth_role() then returns 'admin', satisfying all 20 admin policies — every one
+-- of which is FOR ALL. The trigger's author reasoned about exactly this attack
+-- and closed the UPDATE path; FOR ALL quietly granted two more verbs than the
+-- trigger covered.
+--
+-- The fix was written as a migration and NOT backported here for a day, which
+-- meant a database built from this file still shipped the escalation. Verbs are
+-- split explicitly below, and there is deliberately NO self-DELETE policy:
+-- deleting a profile cascades ~20 tables of student PII with no soft delete and
+-- no recovery. That is an account closure, not a row write.
 drop policy if exists profiles_self_access on profiles;
+drop policy if exists profiles_self_select on profiles;
+drop policy if exists profiles_self_update on profiles;
+drop policy if exists profiles_self_insert on profiles;
 drop policy if exists profiles_admin_view on profiles;
-create policy profiles_self_access on profiles
-  using (auth.uid() = id) with check (auth.uid() = id);
+
+create policy profiles_self_select on profiles
+  for select to authenticated
+  using (id = (select auth.uid()));
+
+create policy profiles_self_update on profiles
+  for update to authenticated
+  using (id = (select auth.uid()))
+  with check (id = (select auth.uid()));
+
+-- Self-heal path: a user may create their OWN profile row, as a student only.
+create policy profiles_self_insert on profiles
+  for insert to authenticated
+  with check (id = (select auth.uid()) and role = 'student');
+
 create policy profiles_admin_view on profiles
   for select using ((select auth_role()) = 'admin');
 
@@ -907,6 +1013,17 @@ create policy admissions_admin on student_admissions_tests
   using ((select auth_role()) = 'admin');
 
 -- Lifestyle preferences policies
+-- student_activities owner policy. The counsellor-read and admin policies for
+-- these two tables live further down, WITH the other function-dependent policies
+-- — they call can_act_as_counsellor()/is_admin(), which are not defined until
+-- later in this file, and a policy cannot reference a function that does not yet
+-- exist. Mirrors 20260801130000_reconcile_missing_tables.sql.
+drop policy if exists student_activities_self on student_activities;
+create policy student_activities_self on student_activities
+  for all to authenticated
+  using (profile_id = (select auth.uid()))
+  with check (profile_id = (select auth.uid()));
+
 drop policy if exists lifestyle_self on student_lifestyle_preference;
 drop policy if exists lifestyle_admin on student_lifestyle_preference;
 create policy lifestyle_self on student_lifestyle_preference
@@ -923,6 +1040,21 @@ create policy scores_admin on student_scores
   using ((select auth_role()) = 'admin');
 
 -- Catalog policies
+--
+-- cities: transcribed from 20260719120000_catalog_rls.sql. Without it this file
+-- leaves `cities` as the ONE table in the database with RLS off, and a table
+-- without RLS is readable *and writable* by the anon key that ships in the
+-- browser bundle (MIGRATIONS.md §6 rule 6 — that rule exists because of this
+-- exact table). The migration closed it on the remote; this file reopened it on
+-- every database built from schema.sql alone. See C-database.md finding C6.
+alter table cities enable row level security;
+drop policy if exists cities_read_all on cities;
+drop policy if exists cities_admin on cities;
+create policy cities_read_all on cities for select to public using (true);
+create policy cities_admin on cities for all to public
+  using ((select auth_role()) = 'admin')
+  with check ((select auth_role()) = 'admin');
+
 drop policy if exists universities_read_all on universities;
 drop policy if exists universities_admin on universities;
 create policy universities_read_all on universities for select using (auth.uid() is not null);
@@ -1199,6 +1331,41 @@ as $$
   select auth.uid() is not null;
 $$;
 
+-- From 20260801115000_admin_helper_and_verb_split.sql (was 20260801120000 until
+-- that file was split on 2026-08-03). is_counsellor() spans 'counsellor' AND
+-- 'admin', so it cannot express "admin only" — which the destructive-verb
+-- policies need.
+--
+-- ⚠️  DRIFT — PROVEN for this function. is_admin() is NOT present on production:
+--     20260801130000 failed there on 2026-08-02 with `function public.is_admin()
+--     does not exist`, which is only possible if it is absent. Yet the `database`
+--     gate builds its base from THIS file, so the base already HAS is_admin() and
+--     the gate cannot reproduce that production failure. A green gate did not
+--     mean the migration would apply.
+--
+--     SUSPECTED, NOT PROVEN: simulation_results_admin and
+--     student_activities_counsellor_read below are also backported from
+--     20260801130000, which rolled back cleanly — so they are probably absent
+--     too. But their TABLES pre-existed production (commit 434b79f), so the
+--     policies cannot be inferred from the table's presence, and nothing here
+--     has read production. Do not delete them from this file on inference.
+--     Resolve with `npm run db:probe`, then reconcile in one commit.
+--     See MIGRATIONS.md §0.
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from profiles
+    where id = auth.uid() and role = 'admin'
+  );
+$$;
+
+grant execute on function public.is_admin() to authenticated;
+
 grant execute on function public.is_counsellor() to authenticated;
 grant execute on function public.is_demo_account() to authenticated;
 grant execute on function public.can_act_as_counsellor() to authenticated;
@@ -1209,6 +1376,14 @@ grant execute on function public.can_act_as_counsellor() to authenticated;
 -- could set their own role='admin' from the browser console. Server-side
 -- contexts (service_role key, seed scripts, SQL editor) carry no auth.uid()
 -- and stay trusted.
+--
+-- The INSERT arm is from 20260801110000_profiles_insert_guard.sql and MUST stay
+-- in step with the trigger registration below. On INSERT `old` is NULL, so
+-- `new.role is distinct from old.role` is TRUE for every insert including the
+-- legitimate `role='student'` one — a body without the tg_op branch, paired with
+-- a `before insert or update` trigger, breaks signup on any database built from
+-- this file alone. That exact half-backport shipped once; see
+-- docs/audit/verify/C-database.md finding C2.
 create or replace function public.guard_profile_role_change()
 returns trigger
 language plpgsql
@@ -1216,6 +1391,16 @@ security definer
 set search_path = public
 as $$
 begin
+  if tg_op = 'INSERT' then
+    if auth.uid() is not null
+       and new.role is distinct from 'student'
+       and not exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+    then
+      raise exception 'new profiles must be created with role=student';
+    end if;
+    return new;
+  end if;
+
   if new.role is distinct from old.role then
     if auth.uid() is not null
        and not exists (select 1 from profiles where id = auth.uid() and role = 'admin')
@@ -1229,7 +1414,9 @@ $$;
 
 drop trigger if exists trg_guard_profile_role on profiles;
 create trigger trg_guard_profile_role
-  before update on profiles
+  -- INSERT as well as UPDATE. Registered `before update` only, this guard was
+  -- walked around by delete-then-insert (see the profiles policy note above).
+  before insert or update on profiles
   for each row
   execute function public.guard_profile_role_change();
 
@@ -1242,6 +1429,17 @@ create trigger trg_guard_profile_role
 drop policy if exists profiles_counsellor_read on profiles;
 create policy profiles_counsellor_read on profiles
   for select to authenticated using (public.can_act_as_counsellor());
+
+drop policy if exists student_activities_counsellor_read on student_activities;
+create policy student_activities_counsellor_read on student_activities
+  for select to authenticated
+  using (public.can_act_as_counsellor());
+
+drop policy if exists simulation_results_admin on simulation_results;
+create policy simulation_results_admin on simulation_results
+  for all to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
 
 drop policy if exists personal_counsellor_read on student_personal_information;
 create policy personal_counsellor_read on student_personal_information
