@@ -30,7 +30,7 @@ export function ProgramResultCard({ hit, mode }: ProgramResultCardProps) {
         <p className="truncate text-label text-muted-foreground">{meta}</p>
       </div>
       {hit.level ? (
-        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-label font-medium text-muted-foreground">
+        <span className="shrink-0 rounded-full bg-primary/8 px-2 py-0.5 text-label font-medium text-foreground">
           {hit.level}
         </span>
       ) : null}

@@ -6,6 +6,7 @@ import {
   Calendar,
   CalendarClock,
   CheckCircle2,
+  Circle,
   ClipboardCheck,
   ClipboardList,
   Clock,
@@ -178,17 +179,29 @@ const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
       'flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary-ink ring-1 ring-primary/25',
     bar: 'bg-primary'
   },
+  // Neutral is a TONE, not an absence of one. It used to be `bg-muted/60` +
+  // `border-border`, which put a dead grey pill with a hard edge (near-black in
+  // dark mode, where --border sits at 18% lightness) beside five tinted ones.
+  // It now carries the same faint brand wash as `.surface-chip` in globals.css —
+  // keep the two in step, they are the same pill. Distinct from `primary` above,
+  // which carries indigo TEXT and a stronger edge to mean "brand accent".
   neutral: {
-    text: 'text-muted-foreground',
-    bg: 'bg-muted/40',
-    border: 'border-border',
-    ring: 'ring-border',
-    accent: 'border-l-border',
+    text: 'text-foreground',
+    bg: 'bg-primary/8',
+    border: 'border-primary/15',
+    ring: 'ring-primary/15',
+    accent: 'border-l-primary/30',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-muted/60 text-foreground border border-border',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/8 text-foreground border border-primary/15',
     swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-muted/60 text-foreground ring-1 ring-border',
-    bar: 'bg-muted-foreground/30'
+      'flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/8 text-foreground ring-1 ring-primary/15',
+    // The BAR stays hueless, unlike the chip/swatch above. A bar is read by
+    // comparison against its neighbours, and `bg-primary/30` differs from the
+    // `primary` tone's own `bg-primary` only in alpha — so a neutral bar and a
+    // brand bar side by side were the same colour at two lightnesses, which is
+    // exactly the confusion the `--series-*` ramp needs a 2px ring to avoid.
+    // A pill has no neighbour to be confused with; a bar always does.
+    bar: 'bg-muted-foreground/40'
   }
 };
 
@@ -349,19 +362,56 @@ export const PROFILE_SECTION_VISUAL: Record<ProfileSection, CategoryVisual> = {
 
 /* ─── Profile completion banding ────────────────────────────────────── */
 
-export type CompletionBand = 'low' | 'mid' | 'high' | 'full';
+export type CompletionBand = 'none' | 'low' | 'mid' | 'high' | 'full';
 export const COMPLETION_VISUAL: Record<CompletionBand, CategoryVisual> = {
+  // "Nothing started" is not "failing". Only reachable via `classifyProgress`,
+  // never via `classifyCompletion` — see both below.
+  none: make('neutral', Circle),
   low: make('rose', AlertTriangle),
   mid: make('amber', Target),
   high: make('sky', TrendingUp),
   full: make('emerald', CheckCircle2)
 };
 
+/**
+ * Band a COMPLETION percentage — how much of a fixed, known set of work is done.
+ *
+ * 0% lands in `low` (rose) deliberately, and that is not an oversight: every
+ * caller of this function measures something the user is expected to finish, so
+ * "0% of your profile" and "0% of this student's profile" are genuinely the
+ * worst state, not a neutral one. The counsellor roster
+ * (`_components/student-card.tsx`) and the cohort chart (`_analytics-client.tsx`,
+ * whose lowest bucket is literally labelled `<50%`) both depend on that.
+ *
+ * If you are banding a counter that can legitimately be empty — a task list with
+ * no tasks, a quest deck nobody has opened — you want `classifyProgress`.
+ */
 export const classifyCompletion = (percent: number): CompletionBand => {
   if (percent >= 100) return 'full';
   if (percent >= 75) return 'high';
   if (percent >= 50) return 'mid';
   return 'low';
+};
+
+/**
+ * Band a PROGRESS counter — `completed` of `total`, where not having started is a
+ * legitimate resting state rather than a failure.
+ *
+ * The distinction this draws against `classifyCompletion` is the whole reason it
+ * exists. Feeding a not-yet-started counter through the completion bands paints
+ * it rose, which produced a red "0% ready" chip directly above the task list's
+ * own "Quiet for now ✨" empty state, and a red "0/5 cleared" on a quest deck a
+ * counsellor had only just assigned. Both told a brand-new student they were
+ * failing at something they had not been asked to do yet.
+ *
+ * `total === 0` means there is nothing to be behind on; `completed === 0` means
+ * they have not begun. Neither is danger. Anything past the first item bands
+ * normally, so a student who has done 1 of 8 still reads rose — which is correct,
+ * because by then there IS outstanding work.
+ */
+export const classifyProgress = (completed: number, total: number): CompletionBand => {
+  if (total <= 0 || completed <= 0) return 'none';
+  return classifyCompletion((completed / total) * 100);
 };
 
 /* ─── Scholarship category ──────────────────────────────────────────── */

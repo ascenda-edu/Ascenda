@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { MatchTier } from '@/lib/matching/match-tier';
-import { TrackProgramButton, type TrackLabelVariant } from '@/components/programs/track-program-button';
+import { TrackProgramButton } from '@/components/programs/track-program-button';
 import { getFitScoreVisuals } from '@/lib/theme/fit-score';
 import { countryFlagEmoji } from '@/lib/utils/flag';
 
@@ -22,7 +22,6 @@ export interface UniversityCardProps {
     highlights?: string[];
     actions?: React.ReactNode;
     variant?: 'default' | 'compact';
-    trackingLabelVariant?: TrackLabelVariant;
     hideTrackingButton?: boolean;
     // Pre-normalized display strings supplied by the search page (never raw
     // duration/level/tuition). Optional so matches/shortlist callers stay valid.
@@ -136,7 +135,6 @@ export function UniversityCard({
     highlights = [],
     actions,
     variant = 'default',
-    trackingLabelVariant = 'shortlist',
     hideTrackingButton = false,
     tuitionLabel,
     durationLabel,
@@ -193,7 +191,6 @@ export function UniversityCard({
             universityName={name}
             location={location}
             fitScore={fitScore ?? null}
-            labelVariant={trackingLabelVariant}
             variant="ghost"
             className="h-8 w-8 text-muted-foreground shadow-none hover:translate-y-0 hover:text-primary-ink hover:shadow-none"
             iconOnly
@@ -302,13 +299,13 @@ export function UniversityCard({
                     {highlights.slice(0, 3).map((highlight) => (
                         <span
                             key={highlight}
-                            className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-label font-medium text-foreground/80 dark:bg-muted/30"
+                            className="inline-flex items-center rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-label font-medium text-foreground"
                         >
                             {highlight}
                         </span>
                     ))}
                     {highlights.length > 3 && (
-                        <span className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-label font-medium text-muted-foreground dark:bg-muted/30">
+                        <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-label font-medium text-muted-foreground">
                             +{highlights.length - 3}
                         </span>
                     )}

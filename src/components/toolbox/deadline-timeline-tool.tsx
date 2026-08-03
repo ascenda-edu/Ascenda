@@ -361,7 +361,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
             <div key={month}>
               <div className="flex items-center gap-3 mb-4">
                 <p className="eyebrow">{month}</p>
-                <span className="rounded-full bg-muted/50 px-2 py-0.5 text-label font-medium text-muted-foreground">{items.length} items</span>
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-label font-medium text-primary-ink">{items.length} items</span>
                 <div className="flex-1 h-px bg-border/50" />
               </div>
               <div className="relative border-l-2 border-border pl-6 space-y-4">

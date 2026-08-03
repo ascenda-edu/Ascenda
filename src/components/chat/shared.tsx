@@ -227,7 +227,7 @@ function LegacyActionCard({
         <button
           onClick={onCancel}
           disabled={sending}
-          className="rounded-full border border-border px-3 py-1.5 text-label font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+          className="rounded-full border border-primary/25 px-3 py-1.5 text-label font-medium text-muted-foreground transition-colors hover:bg-primary/8 hover:text-foreground disabled:opacity-50"
         >
           Cancel
         </button>
@@ -399,7 +399,7 @@ function ToolActionCard({
         <button
           onClick={onCancel}
           disabled={sending}
-          className="rounded-full border border-border px-3 py-1.5 text-label font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+          className="rounded-full border border-primary/25 px-3 py-1.5 text-label font-medium text-muted-foreground transition-colors hover:bg-primary/8 hover:text-foreground disabled:opacity-50"
         >
           Cancel
         </button>

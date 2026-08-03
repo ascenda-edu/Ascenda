@@ -150,7 +150,7 @@ export default function RoleSelectPage() {
         transition={{ duration: 0.4 }}
         className="mb-10 text-center"
       >
-        <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-3 py-1 text-xs font-medium shadow-e-1 backdrop-blur">
+        <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1 text-xs font-medium text-foreground shadow-e-1 backdrop-blur">
           <span className="h-2 w-2 rounded-full bg-success-fill" aria-hidden />
           Welcome to Ascenda
         </p>

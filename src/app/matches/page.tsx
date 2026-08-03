@@ -10,7 +10,6 @@ import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { SectionNav } from '@/components/layout/section-nav';
 import { EXPLORE_SECTION_ITEMS } from '@/components/layout/navigation';
 import { loadMatchesForProfile } from '@/lib/matching/service';
-import { TrackProgramButton } from '@/components/programs/track-program-button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { AlertTriangle, Compass, Library, UserCircle } from 'lucide-react';
 import { ACTION_TEXT, MATCHES_TEXT } from '@/lib/constants/text';
@@ -119,7 +118,6 @@ export default async function MatchesPage() {
     { label: 'Eligible matches', value: `${enriched.length}`, detail: 'Ranked for you' },
     { label: 'Top fit', value: enriched[0] ? `${enriched[0].score}%` : '—', detail: 'Highest score' }
   ];
-  const topMatch = enriched[0];
 
   return (
     <DashboardShell role={identity.role}>
@@ -134,20 +132,12 @@ export default async function MatchesPage() {
         breadcrumbs={<Breadcrumbs />}
         actions={
           <>
-            {topMatch ? (
-              <TrackProgramButton
-                programId={topMatch.program.id}
-                programName={topMatch.program.name}
-                universityName={topMatch.university.name}
-                location={topMatch.university.country}
-                fitScore={topMatch.score}
-                labelVariant="planner"
-              />
-            ) : (
-              <Button asChild size="sm">
-                <Link href="/applications">{ACTION_TEXT.addToPlanner}</Link>
-              </Button>
-            )}
+            {/* Page-level actions only. Shortlisting is per-program, so it
+             * belongs on the match cards — a hero button silently bound to
+             * enriched[0] read as "add *what*?". */}
+            <Button asChild size="sm">
+              <Link href="/university-search/shortlist">{ACTION_TEXT.viewShortlist}</Link>
+            </Button>
             <Button asChild size="sm" variant="outline">
               <Link href="/dashboard">{ACTION_TEXT.returnToDashboard}</Link>
             </Button>

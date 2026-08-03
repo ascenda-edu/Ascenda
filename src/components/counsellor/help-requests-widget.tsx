@@ -77,7 +77,7 @@ export function HelpRequestsWidget() {
           </div>
           <Link
             href="/counsellor/inbox"
-            className="flex shrink-0 items-center gap-1 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition hover:-translate-y-0.5 hover:bg-muted/60"
+            className="flex shrink-0 items-center gap-1 rounded-full border border-primary bg-transparent px-3 py-1.5 text-xs font-semibold text-primary-ink transition hover:-translate-y-0.5 hover:bg-primary/8"
           >
             View inbox
             <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />

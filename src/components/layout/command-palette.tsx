@@ -74,7 +74,7 @@ export function CommandPaletteTrigger() {
     <button
       type="button"
       onClick={dispatchOpen}
-      className="hidden h-9 items-center gap-2 rounded-full border border-border bg-card/80 px-3 text-xs font-medium text-muted-foreground shadow-e-1 transition hover:bg-muted/60 hover:text-foreground sm:inline-flex"
+      className="hidden h-9 items-center gap-2 rounded-full border border-primary/25 bg-primary/8 px-3 text-xs font-medium text-muted-foreground shadow-e-1 transition hover:bg-primary/15 hover:text-foreground sm:inline-flex"
       aria-label="Open command palette"
     >
       <Search className="h-3.5 w-3.5" aria-hidden />
@@ -113,7 +113,7 @@ export function CommandPaletteIconTrigger() {
     <button
       type="button"
       onClick={dispatchOpen}
-      className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card/80 text-muted-foreground shadow-e-1 transition hover:bg-muted/60 hover:text-foreground sm:hidden"
+      className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/25 bg-primary/8 text-muted-foreground shadow-e-1 transition hover:bg-primary/15 hover:text-foreground sm:hidden"
       aria-label="Open command palette"
     >
       <Search className="h-4 w-4" aria-hidden />

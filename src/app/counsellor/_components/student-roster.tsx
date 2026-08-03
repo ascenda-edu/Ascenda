@@ -340,7 +340,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                 setFieldFilter('');
                 setSortKey('name');
               }}
-              className="mt-4 flex items-center gap-2 mx-auto rounded-full border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted/60"
+              className="mt-4 flex items-center gap-2 mx-auto rounded-full border border-primary bg-transparent px-4 py-2 text-sm font-medium text-primary-ink hover:bg-primary/8"
             >
               <FilterX className="h-4 w-4" />
               Reset all filters

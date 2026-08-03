@@ -22,6 +22,10 @@ const PLATFORM_COLORS: Record<string, string> = {
   OUAC: 'bg-series-5/20 text-foreground',
 };
 
+// An unrecognised platform is still a platform, so it gets a tint from the same
+// family rather than the grey `bg-muted/50` that made it look like missing data.
+const PLATFORM_FALLBACK = 'bg-primary/10 text-primary-ink';
+
 const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
 
 /**
@@ -171,7 +175,7 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
                               {apps.map((app) => (
                                 <div key={`${app.university}-${app.program}`} className="flex items-center gap-1.5 text-label">
                                   <span className="truncate text-muted-foreground">{app.university}</span>
-                                  <span className={cn('shrink-0 rounded-full px-1.5 py-0 text-label font-semibold', PLATFORM_COLORS[app.platform] ?? 'bg-muted/50 text-muted-foreground')}>{app.platform}</span>
+                                  <span className={cn('shrink-0 rounded-full px-1.5 py-0 text-label font-semibold', PLATFORM_COLORS[app.platform] ?? PLATFORM_FALLBACK)}>{app.platform}</span>
                                 </div>
                               ))}
                             </div>
@@ -224,7 +228,7 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
                     <TableCell className="text-muted-foreground">{app.university}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{app.program}</TableCell>
                     <TableCell className="text-center">
-                      <span className={cn('rounded-full px-2.5 py-0.5 text-label font-semibold', PLATFORM_COLORS[app.platform] ?? 'bg-muted/50 text-muted-foreground')}>{app.platform}</span>
+                      <span className={cn('rounded-full px-2.5 py-0.5 text-label font-semibold', PLATFORM_COLORS[app.platform] ?? PLATFORM_FALLBACK)}>{app.platform}</span>
                     </TableCell>
                     <TableCell className="text-center">
                       <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold', cfg.bg, cfg.text)}>{cfg.label}</span>

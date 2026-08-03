@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/toast';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useShortlist } from '@/components/university-search/shortlist-store';
 import { DECK_FIT, DECK_RARITY } from '@/lib/counsellor/deck-theme';
+import { classifyProgress, COMPLETION_VISUAL } from '@/lib/theme/categories';
 import type { StudentQuestDeck } from '@/lib/counsellor/decks';
 import { cn } from '@/lib/utils';
 
@@ -121,6 +122,17 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
         <div className="space-y-8">
           {decks.map((deck) => {
             const cleared = deck.quests.filter((q) => started.has(q.programId)).length;
+            // "3/5 cleared" is a progress readout, so it takes the completion band
+            // (danger → warning → info → success as the deck fills) instead of a flat
+            // grey pill. A fully cleared deck now reads green, which is the whole
+            // point of showing the count on a game-themed surface.
+            //
+            // `classifyProgress` and not `classifyCompletion`, because 0 cleared is
+            // the state EVERY deck starts in — the counsellor has only just assigned
+            // it. The completion bands paint that rose, so a brand-new deck greeted
+            // the student in red for not having played it yet. Unstarted is inert
+            // here; the ramp begins at the first cleared quest.
+            const progress = COMPLETION_VISUAL[classifyProgress(cleared, deck.quests.length)];
             return (
               <section key={deck.deckId} className="space-y-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -131,7 +143,7 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
                       {deck.message && <p className="mt-0.5 max-w-2xl text-sm italic text-muted-foreground">“{deck.message}”</p>}
                     </div>
                   </div>
-                  <span className="shrink-0 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-semibold text-muted-foreground">
+                  <span className={cn('shrink-0 rounded-full border px-3 py-1 text-xs font-semibold', progress.bg, progress.text, progress.border)}>
                     {cleared}/{deck.quests.length} cleared
                   </span>
                 </div>

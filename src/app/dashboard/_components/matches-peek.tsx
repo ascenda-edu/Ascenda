@@ -58,7 +58,6 @@ export async function MatchesPeek({ profileId }: { profileId: string }) {
                   match.program.language && match.program.language !== 'English' ? match.program.language : null
                 ].filter((value): value is string => Boolean(value))}
                 variant="compact"
-                trackingLabelVariant="planner"
               />
             ))}
           </div>

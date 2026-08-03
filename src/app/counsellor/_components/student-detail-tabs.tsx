@@ -230,7 +230,7 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
             {student.lifestyle.interests.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {student.lifestyle.interests.map((i) => (
-                  <span key={i} className="rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-xs text-muted-foreground">
+                  <span key={i} className="rounded-full border border-primary/15 bg-primary/8 px-2.5 py-0.5 text-xs text-foreground">
                     {i}
                   </span>
                 ))}
@@ -279,7 +279,7 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
             <p className="font-semibold text-foreground">Subjects</p>
             <div className="flex flex-wrap gap-1.5">
               {student.academic.subjects.map((s) => (
-                <span key={s} className="rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs font-medium text-foreground">
+                <span key={s} className="rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-xs font-medium text-foreground">
                   {s}
                 </span>
               ))}

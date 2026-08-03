@@ -1,23 +1,18 @@
 'use client';
 
-import { useMemo } from 'react';
 import { Bookmark, BookmarkCheck } from 'lucide-react';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { useShortlist } from '@/components/university-search/shortlist-store';
 import { cn } from '@/lib/utils';
 import { ACTION_TEXT } from '@/lib/constants/text';
 
-export type TrackLabelVariant = 'shortlist' | 'planner';
-
-const LABELS: Record<TrackLabelVariant, { idle: string; active: string }> = {
-  shortlist: {
-    idle: ACTION_TEXT.shortlist,
-    active: ACTION_TEXT.shortlisted
-  },
-  planner: {
-    idle: ACTION_TEXT.saveToPlanner,
-    active: ACTION_TEXT.savedToPlanner
-  }
+// One control, one label. There used to be a second 'planner' variant whose
+// strings also said "shortlist" — same action, two names, and the labels are
+// mostly read as aria-label on the icon-only form where the distinction was
+// invisible anyway.
+const LABELS = {
+  idle: ACTION_TEXT.shortlist,
+  active: ACTION_TEXT.shortlisted
 };
 
 type TrackProgramButtonProps = {
@@ -26,7 +21,6 @@ type TrackProgramButtonProps = {
   universityName: string;
   location?: string;
   fitScore?: number | null;
-  labelVariant?: TrackLabelVariant;
   size?: ButtonProps['size'];
   variant?: ButtonProps['variant'];
   className?: string;
@@ -41,14 +35,12 @@ export const TrackProgramButton = ({
   universityName,
   location,
   fitScore,
-  labelVariant = 'shortlist',
   size = 'sm',
   variant,
   className,
   iconOnly = false
 }: TrackProgramButtonProps) => {
   const { items, addItem, removeItem } = useShortlist();
-  const labels = useMemo(() => LABELS[labelVariant], [labelVariant]);
   const isTracked = items.some((item) => item.id === programId);
 
   const handleClick = () => {
@@ -71,7 +63,7 @@ export const TrackProgramButton = ({
   const resolvedVariant = variant ?? (isTracked ? 'secondary' : 'outline');
 
   if (iconOnly) {
-    const label = isTracked ? labels.active : labels.idle;
+    const label = isTracked ? LABELS.active : LABELS.idle;
     return (
       <Button
         type="button"
@@ -105,7 +97,7 @@ export const TrackProgramButton = ({
       onClick={handleClick}
       aria-pressed={isTracked}
     >
-      {isTracked ? labels.active : labels.idle}
+      {isTracked ? LABELS.active : LABELS.idle}
     </Button>
   );
 };

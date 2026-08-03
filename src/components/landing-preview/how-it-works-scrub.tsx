@@ -185,14 +185,16 @@ const tailOpacityAt = (v: number, index: number) => 1 - seg(legAt(v, index), 0, 
 /** -1 once the converge starts: the grid dims nothing, so neither does the finale. */
 const litAt = (v: number) => (v >= CONVERGE_START ? -1 : stepAt(v));
 
-/** The chip idiom the deleted chapters used — pill, hairline border, emerald tick. */
+/** The chip idiom the deleted chapters used — pill, hairline border, emerald tick.
+ *  Tinted to match `.surface-chip`, the app's real neutral pill: this is a mock of
+ *  the product's own chrome, so it has to move when that treatment moves. */
 function StepChips({ chips, className }: { chips: string[]; className?: string }) {
     return (
         <div className={cn('flex flex-wrap gap-2', className)}>
             {chips.map((chip) => (
                 <span
                     key={chip}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground dark:border-white/10"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-3 py-1.5 text-xs font-medium text-foreground"
                 >
                     <span aria-hidden className="text-[0.6875rem] font-bold text-emerald-600 dark:text-emerald-400">
                         ✓

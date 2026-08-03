@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useShortlist } from './shortlist-store';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { useToast } from '@/components/ui/toast';
+import { ACTION_TEXT } from '@/lib/constants/text';
 
 type UniversityData = {
   program: { title?: string | null; level?: string | null; duration?: string | number | null; size?: string | null };
@@ -225,7 +226,7 @@ export const UniversityInformation = ({
                       className="bg-primary text-primary-foreground shadow-e-2 hover:bg-primary/90"
                     >
                       <BookmarkPlus size={16} className="mr-2" />
-                      Add to Shortlist
+                      {ACTION_TEXT.shortlist}
                     </Button>
                   </div>
                 </div>

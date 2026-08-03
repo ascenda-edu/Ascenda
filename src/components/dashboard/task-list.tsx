@@ -7,7 +7,12 @@ import { ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { childFade, stagger, DURATION, EASE } from '@/lib/motion';
-import { inferTaskType, TASK_VISUAL } from '@/lib/theme/categories';
+import {
+  classifyProgress,
+  COMPLETION_VISUAL,
+  inferTaskType,
+  TASK_VISUAL
+} from '@/lib/theme/categories';
 import { parseLocalDate } from '@/lib/utils/dates';
 
 interface TaskItem {
@@ -56,6 +61,17 @@ export const TaskList = ({ title, tasks, onToggle }: TaskListProps) => {
   const completed = tasks.filter((task) => task.status === 'done').length;
   const total = tasks.length;
   const progress = total ? Math.round((completed / total) * 100) : 0;
+  // "62% ready" is a banded reading, not a label, so it takes the completion tone
+  // rather than a flat grey fill. Only `bg`/`text`/`border` are pulled off the
+  // visual — not `.chip`, whose `text-xs` would out-specify `.eyebrow`'s 11px step
+  // and change the type size along with the colour.
+  //
+  // `classifyProgress`, NOT `classifyCompletion`: this chip renders above the
+  // "Quiet for now ✨" empty state, and the completion bands put 0% in rose — so
+  // a student with no tasks at all was told in red that they were 0% ready for
+  // work nobody had assigned them. Passing the raw counts lets the band tell
+  // "nothing to do" apart from "nothing done", which a percentage cannot.
+  const readiness = COMPLETION_VISUAL[classifyProgress(completed, total)];
 
   return (
     <div className="space-y-4 text-foreground">
@@ -65,7 +81,7 @@ export const TaskList = ({ title, tasks, onToggle }: TaskListProps) => {
           <p className="text-sm text-muted-foreground">Stay on track with your application milestones.</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="eyebrow rounded-full bg-muted/60 px-3 py-1">
+          <div className={cn('eyebrow rounded-full border px-3 py-1', readiness.bg, readiness.text, readiness.border)}>
             {progress}% ready
           </div>
           <Button asChild size="sm" variant="ghost" className="rounded-full px-3 text-xs uppercase tracking-[0.3em] text-muted-foreground">

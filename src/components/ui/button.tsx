@@ -20,8 +20,21 @@ const buttonVariants = cva(
         // the base class left outline/ghost/soft with NO hover state at all across 48
         // call sites (including the navbar sign-out) — a surface tint is the right
         // affordance for a flat control.
+        // The secondary CTA, and the reason "the buttons look grey with hard
+        // borders": this was `border-input bg-background`. `--input` is
+        // deliberately a mid-grey (60% lightness light / 42% dark) because a FORM
+        // FIELD's boundary must clear 3:1 against its own fill — but a button is
+        // identified by its label, so it was paying that cost in grey for nothing,
+        // and `bg-background` punched a grey hole in whatever card it sat on.
+        //
+        // Brand indigo instead, at full strength rather than an alpha: the border
+        // is still the only thing identifying this control, so it has to hold 3:1
+        // in BOTH themes, and it doesn't — `border-primary/70` measures 3.63:1 on a
+        // light card but only 2.38:1 on a dark one. Full `border-primary` is
+        // 6.99:1 / 3.57:1. `bg-transparent` (not `bg-card`) so the button doesn't
+        // punch a hole in a tinted panel; the tint arrives on hover instead.
         outline:
-          "border border-input bg-background text-foreground hover:bg-muted/60 hover:border-primary/40",
+          "border border-primary bg-transparent text-primary-ink hover:bg-primary/8",
         secondary:
           `bg-secondary text-secondary-foreground shadow-e-2 shadow-secondary/15 ${lift}`,
         ghost: "text-foreground hover:bg-muted/60",

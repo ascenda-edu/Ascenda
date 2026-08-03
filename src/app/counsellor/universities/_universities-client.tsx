@@ -964,7 +964,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                 type="button"
                 onClick={closeDelete}
                 disabled={isDeletingDeck}
-                className="rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+                className="rounded-full border border-primary bg-transparent px-4 py-2 text-sm font-medium text-primary-ink transition hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
               >
                 Cancel
               </button>

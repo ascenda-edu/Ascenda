@@ -31,11 +31,17 @@ export const DECK_RARITY: Record<
     color: 'text-info',
     badge: 'border-info/40 bg-info-subtle text-info',
   },
+  // The bottom of an ordinal ramp should be the QUIETEST, not the only one built
+  // differently. The other three are `border-{tone}/40 bg-{tone}-subtle
+  // text-{tone}`; this was `border-border bg-muted/50`, so "Common" alone came out
+  // as grey-with-a-hard-edge rather than as a low rung on the same ladder. It now
+  // takes the app's neutral pill tint — still hueless, so still visibly the least
+  // rare, but constructed like its siblings.
   common: {
     label: 'Common',
     stars: 1,
     color: 'text-muted-foreground',
-    badge: 'border-border bg-muted/50 text-muted-foreground',
+    badge: 'border-primary/20 bg-primary/8 text-foreground',
   },
 };
 

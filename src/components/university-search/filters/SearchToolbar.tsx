@@ -143,7 +143,7 @@ export function SearchToolbar({
           <button
             type="button"
             onClick={onOpenMobileFilters}
-            className="relative inline-flex h-11 min-h-[44px] items-center gap-2 rounded-full border border-border bg-background px-4 text-sm font-medium text-foreground transition-[box-shadow,border-color,background-color] duration-200 cursor-pointer hover:shadow-e-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:hidden dark:border-white/10"
+            className="relative inline-flex h-11 min-h-[44px] items-center gap-2 rounded-full border border-primary bg-transparent px-4 text-sm font-medium text-primary-ink transition-[box-shadow,border-color,background-color] duration-200 cursor-pointer hover:bg-primary/8 hover:shadow-e-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:hidden"
           >
             <SlidersHorizontal className="h-4 w-4 text-muted-foreground" aria-hidden />
             <span>Filters</span>

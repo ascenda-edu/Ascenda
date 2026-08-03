@@ -180,12 +180,27 @@ const config: Config = {
       // Elevation ladder. Before this there was no system: `shadow-sm` at rest and
       // `shadow-md` on hover everywhere, plus ~15 files with literal rgba shadows.
       // Named by role so the intent survives; e-1 is a resting card, e-4 a modal.
+      // The colour is now a token (--shadow) with a per-theme alpha multiplier
+      // (--shadow-boost), because these were hard-coded rgba(15, 23, 42, …) — a
+      // slate shadow, which on a near-black dark surface is no shadow at all.
+      // That is half of why dark mode had no depth; the other half was a border
+      // at 1.27:1. Dark sets --shadow to near-black and --shadow-boost to 4.5 —
+      // not higher, because at 7 the outer layer of e-4 computes to alpha 1.12,
+      // which CSS clamps to 1, and e-3/e-4 stop being distinguishable. The
+      // reasoning lives with the value, in globals.css.
+      //
+      // Deliberately still `hsl(var(--shadow) / <alpha>)` per layer rather than
+      // one var for the whole shadow: Tailwind builds `--tw-shadow-colored` by
+      // substituting the colour out of this value, and it cannot substitute into
+      // a var it can't parse. `shadow-primary/20` composed on `shadow-e-2`
+      // (ui/button.tsx, chat/chatbot-widget.tsx, toolbox/chances-calculator.tsx)
+      // would silently lose its tint.
       boxShadow: {
-        "e-1": "0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04)",
-        "e-2": "0 2px 4px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.06)",
-        "e-3": "0 4px 8px rgba(15, 23, 42, 0.06), 0 12px 28px rgba(15, 23, 42, 0.10)",
-        "e-4": "0 8px 16px rgba(15, 23, 42, 0.08), 0 24px 60px rgba(15, 23, 42, 0.16)",
-        nav: "0 30px 80px rgba(15, 23, 42, 0.08)",
+        "e-1": "0 1px 2px hsl(var(--shadow) / calc(0.06 * var(--shadow-boost))), 0 1px 3px hsl(var(--shadow) / calc(0.04 * var(--shadow-boost)))",
+        "e-2": "0 2px 4px hsl(var(--shadow) / calc(0.06 * var(--shadow-boost))), 0 4px 12px hsl(var(--shadow) / calc(0.06 * var(--shadow-boost)))",
+        "e-3": "0 4px 8px hsl(var(--shadow) / calc(0.06 * var(--shadow-boost))), 0 12px 28px hsl(var(--shadow) / calc(0.10 * var(--shadow-boost)))",
+        "e-4": "0 8px 16px hsl(var(--shadow) / calc(0.08 * var(--shadow-boost))), 0 24px 60px hsl(var(--shadow) / calc(0.16 * var(--shadow-boost)))",
+        nav: "0 30px 80px hsl(var(--shadow) / calc(0.08 * var(--shadow-boost)))",
       },
       // One radius ladder, all bound to --radius. Previously only lg/md/sm were
       // token-linked, so --radius governed ~8% of the app's radii while xl/2xl/3xl

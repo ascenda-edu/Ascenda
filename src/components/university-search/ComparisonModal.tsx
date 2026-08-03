@@ -359,7 +359,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                                     {uni.highlights.slice(0, 4).map((h) => (
                                                         <span
                                                             key={h}
-                                                            className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-2.5 py-0.5 text-label font-medium text-foreground/80"
+                                                            className="inline-flex items-center rounded-full border border-primary/15 bg-primary/8 px-2.5 py-0.5 text-label font-medium text-foreground"
                                                         >
                                                             {h}
                                                         </span>
@@ -398,7 +398,11 @@ function ProgramHeaderCard({ uni, onRemove }: { uni: ProgramSearchResult; onRemo
     return (
         <article className="group relative flex flex-col overflow-hidden rounded-4xl border border-border bg-card/80 p-5 shadow-e-1 backdrop-blur-xl hover-lift dark:bg-muted/20 dark:border-white/10 dark:shadow-none">
             <span
-                className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(79,70,229,0.14),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.1),transparent_32%)] opacity-80"
+                /* Was rgba(79,70,229,…) + rgba(16,185,129,…) — indigo-600 and
+                   emerald-500 palette literals, so this wash was the one surface in
+                   the app that could not follow the tokens. Same two hues, via
+                   --primary and --success-fill. */
+                className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.14),transparent_36%),radial-gradient(circle_at_bottom_right,hsl(var(--success-fill)/0.1),transparent_32%)] opacity-80"
                 aria-hidden
             />
             <span

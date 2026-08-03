@@ -67,7 +67,7 @@ export function TeamSection() {
                         transition={{ duration: DURATION.base, ease: EASE }}
                     >
                         <div className="relative">
-                        <RoleBadge icon={Users} label="Counsellors" className="border-violet-500/30 text-violet-700 dark:text-violet-300" />
+                        <RoleBadge icon={Users} label="Counsellors" className="border-feature/30 text-feature" />
                         <AppFrame route="/counsellor">
                             <div className="flex items-center gap-4 sm:gap-5">
                                 <div className="shrink-0 text-center">
@@ -146,7 +146,7 @@ export function TeamSection() {
                             {/* Same pill language as RoleBadge: the node is a third role on
                                 this grid, so it gets named like one — an AI agent, not a
                                 nameless mascot between two screenshots. */}
-                            <span className="inline-flex items-center gap-1 rounded-full border border-violet-500/30 bg-card px-2.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-[0.08em] text-violet-700 shadow-sm dark:text-violet-300">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-feature/30 bg-card px-2.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-[0.08em] text-feature shadow-sm">
                                 <Sparkles className="h-3 w-3" aria-hidden />
                                 AI agent
                             </span>
@@ -172,7 +172,7 @@ export function TeamSection() {
                         transition={{ duration: DURATION.base, delay: 0.1, ease: EASE }}
                     >
                         <div className="relative">
-                        <RoleBadge icon={Heart} label="Parents" className="border-sky-500/30 text-sky-700 dark:text-sky-300" />
+                        <RoleBadge icon={Heart} label="Parents" className="border-info/30 text-info" />
                         <AppFrame route="/parent">
                             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                                 <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-muted-foreground">
@@ -183,9 +183,13 @@ export function TeamSection() {
                                         <span
                                             key={c}
                                             className={
+                                                // Selected vs not. `text-primary-ink`, not `text-primary` —
+                                                // --primary is tuned to carry white button text and measures
+                                                // 3.58:1 as text on a dark card. The unselected state keeps a
+                                                // clear delta by dropping the FILL, not by turning grey.
                                                 i === 0
-                                                    ? 'rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[0.6875rem] font-bold text-primary'
-                                                    : 'rounded-full border border-border bg-card px-2.5 py-0.5 text-[0.6875rem] font-semibold text-muted-foreground dark:border-white/10'
+                                                    ? 'rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[0.6875rem] font-bold text-primary-ink'
+                                                    : 'rounded-full border border-primary/15 bg-transparent px-2.5 py-0.5 text-[0.6875rem] font-semibold text-muted-foreground'
                                             }
                                         >
                                             {c}

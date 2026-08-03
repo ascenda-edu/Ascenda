@@ -253,7 +253,7 @@ export function ThreadPane({
               <div className="flex justify-end">
                 <button
                   onClick={onResend}
-                  className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-label font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  className="inline-flex items-center gap-1 rounded-full border border-primary/25 px-2.5 py-1 text-label font-medium text-muted-foreground transition-colors hover:bg-primary/8 hover:text-foreground"
                 >
                   <RotateCcw className="h-3 w-3" />
                   No reply recorded — resend

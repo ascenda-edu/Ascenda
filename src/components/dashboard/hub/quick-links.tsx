@@ -92,7 +92,7 @@ export function QuickLinks() {
                 <div className="flex items-center gap-2">
                   <p className="truncate text-sm font-semibold text-foreground">{link.label}</p>
                   {typeof link.count === 'number' ? (
-                    <span className="rounded-full bg-muted px-1.5 py-px text-label font-bold tabular-nums text-muted-foreground">
+                    <span className="rounded-full bg-primary/10 px-1.5 py-px text-label font-bold tabular-nums text-primary-ink">
                       {link.count}
                     </span>
                   ) : null}

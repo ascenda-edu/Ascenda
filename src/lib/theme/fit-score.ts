@@ -30,7 +30,10 @@ export const getFitScoreVisuals = (score?: number | null) => {
   if (normalized === null) {
     return {
       value: null,
-      badgeClass: 'text-muted-foreground ring-border bg-muted',
+      // No score is genuinely no status, so the text stays muted — but the surface
+      // takes the app's neutral pill tint rather than `bg-muted` + a `ring-border`
+      // hairline, which read as a broken badge sitting beside three tinted ones.
+      badgeClass: 'text-muted-foreground ring-primary/15 bg-primary/8',
       textClass: 'text-muted-foreground',
       tone: 'unknown' as FitScoreTone
     };

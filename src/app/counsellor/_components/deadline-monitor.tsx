@@ -49,11 +49,17 @@ function getUrgency(days: number): UrgencyGroup {
 
 // Colours come from DEADLINE_VISUAL (the urgency tone system of record); the icons
 // stay local because this monitor's set differs from the shared one.
-const URGENCY_CONFIG: Record<UrgencyGroup, { label: string; icon: typeof AlertTriangle; headerColor: string; dotColor: string }> = {
-  overdue: { label: 'Overdue', icon: AlertTriangle, headerColor: DEADLINE_VISUAL.overdue.text, dotColor: DEADLINE_VISUAL.overdue.bar },
-  'this-week': { label: 'This Week', icon: Clock, headerColor: DEADLINE_VISUAL['this-week'].text, dotColor: DEADLINE_VISUAL['this-week'].bar },
-  'this-month': { label: 'This Month', icon: CalendarDays, headerColor: DEADLINE_VISUAL['this-month'].text, dotColor: DEADLINE_VISUAL['this-month'].bar },
-  future: { label: 'Upcoming', icon: CalendarDays, headerColor: DEADLINE_VISUAL.unknown.text, dotColor: 'bg-muted-foreground' }
+//
+// `future` reads DEADLINE_VISUAL.later, NOT .unknown. Those are different states:
+// `unknown` means "we have no date" (neutral is right), `later` means "more than a
+// month out" (success — it's genuinely not a worry yet). Pointing `future` at
+// `unknown` was a mis-mapping, and it left the whole Upcoming group — header, dot
+// and count — rendering grey, which is why it looked unstyled next to the other three.
+const URGENCY_CONFIG: Record<UrgencyGroup, { label: string; icon: typeof AlertTriangle; headerColor: string; dotColor: string; countChip: string }> = {
+  overdue: { label: 'Overdue', icon: AlertTriangle, headerColor: DEADLINE_VISUAL.overdue.text, dotColor: DEADLINE_VISUAL.overdue.bar, countChip: 'bg-danger-subtle text-danger' },
+  'this-week': { label: 'This Week', icon: Clock, headerColor: DEADLINE_VISUAL['this-week'].text, dotColor: DEADLINE_VISUAL['this-week'].bar, countChip: 'bg-warning-subtle text-warning' },
+  'this-month': { label: 'This Month', icon: CalendarDays, headerColor: DEADLINE_VISUAL['this-month'].text, dotColor: DEADLINE_VISUAL['this-month'].bar, countChip: 'bg-info-subtle text-info' },
+  future: { label: 'Upcoming', icon: CalendarDays, headerColor: DEADLINE_VISUAL.later.text, dotColor: DEADLINE_VISUAL.later.bar, countChip: 'bg-success-subtle text-success' }
 };
 
 function formatDate(iso: string) {
@@ -65,7 +71,11 @@ function urgencyBadge(days: number) {
   if (days === 0) return { text: 'Due today', cls: 'text-danger bg-danger-subtle border-danger/25' };
   if (days <= 3) return { text: `${days}d left`, cls: 'text-danger bg-danger-subtle border-danger/25' };
   if (days <= 7) return { text: `${days}d left`, cls: 'text-warning bg-warning-subtle border-warning/25' };
-  return { text: `${days}d`, cls: 'text-muted-foreground bg-muted/40 border-border' };
+  // Beyond a week still has an urgency BAND — grey said "no information" about a
+  // pill whose whole job is to say how much runway is left. These two match
+  // DEADLINE_VISUAL's `this-month` (info) and `later` (success).
+  if (days <= 30) return { text: `${days}d`, cls: 'text-info bg-info-subtle border-info/25' };
+  return { text: `${days}d`, cls: 'text-success bg-success-subtle border-success/25' };
 }
 
 export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
@@ -156,7 +166,7 @@ export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
                   <span className={cn('h-2.5 w-2.5 rounded-full', cfg.dotColor)} />
                   <Icon className={cn('h-4 w-4', cfg.headerColor)} />
                   <span className={cn('font-semibold', cfg.headerColor)}>{cfg.label}</span>
-                  <span className="rounded-full bg-muted/60 px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+                  <span className={cn('rounded-full px-2 py-0.5 text-xs font-semibold', cfg.countChip)}>
                     {items.length}
                   </span>
                 </div>

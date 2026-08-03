@@ -33,7 +33,12 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        neutral: 'border-border bg-muted/60 text-foreground',
+        // A faint brand wash, NOT grey. `border-border bg-muted/60` put a dead
+        // grey pill with a hard edge next to five tinted ones — and in dark mode
+        // --border is 18% lightness, so the edge read as black. Kept identical to
+        // `TONE.neutral.chip` in lib/theme/categories.ts and to `.surface-chip`
+        // in globals.css: those three are the same pill and must move together.
+        neutral: 'border-primary/15 bg-primary/8 text-foreground',
         success: 'border-success/25 bg-success-subtle text-success',
         warning: 'border-warning/25 bg-warning-subtle text-warning',
         danger: 'border-danger/25 bg-danger-subtle text-danger',
@@ -42,7 +47,9 @@ const badgeVariants = cva(
         // primary-ink, not primary: --primary is tuned to carry white button
         // text and only measures 3.58:1 as text on a dark card.
         primary: 'border-primary/25 bg-primary/10 text-primary-ink',
-        outline: 'border-border bg-transparent text-foreground',
+        // Same tinted edge as `neutral`, but no fill — for a pill that has to sit
+        // on an already-tinted surface without adding a second wash.
+        outline: 'border-primary/20 bg-transparent text-foreground',
         /**
          * Geometry only — no border/fill/text colour of its own.
          *

@@ -130,11 +130,13 @@ export const useThemeMode = () => {
   return context;
 };
 
-// Matches the resolved `--background` token (globals.css): light 220 16% 96%,
-// dark 224 32% 6%.
+// Matches the resolved `--background` token (globals.css): light 232 28% 96.5%,
+// dark 232 20% 9.5%. These are the mobile browser-chrome colour, so if they drift
+// from --background the address bar stops matching the page. Keep in step with the
+// duplicate pair in app/layout.tsx `viewport.themeColor`.
 const THEME_COLOR: Record<ThemeMode, string> = {
-  light: '#f3f4f6',
-  dark: '#0a0d14'
+  light: '#f4f4f9',
+  dark: '#13151d'
 };
 
 const applyDocumentTheme = (mode: ThemeMode) => {

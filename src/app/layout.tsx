@@ -24,9 +24,12 @@ const inter = Inter({
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // The resolved `--background` token (globals.css): light 232 28% 96.5%, dark
+  // 232 20% 9.5%. Keep in step with THEME_COLOR in components/theme/theme-provider.tsx,
+  // which overwrites this meta tag on the client once a preference is resolved.
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f3f4f6' },
-    { media: '(prefers-color-scheme: dark)', color: '#0a0d14' }
+    { media: '(prefers-color-scheme: light)', color: '#f4f4f9' },
+    { media: '(prefers-color-scheme: dark)', color: '#13151d' }
   ]
 };
 

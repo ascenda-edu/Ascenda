@@ -15,8 +15,11 @@ import { flagEmoji } from '@/lib/utils/flag';
 import type { ChatMode } from '@/lib/chat/prompts';
 import type { UniversityHit } from '@/lib/chat/widgets';
 
+// Borderless on purpose — these sit several-to-a-row inside a chat card, where the
+// neutral pill's edge would add more noise than structure. The faint brand wash is
+// the same one `.surface-chip` carries, so it still reads as part of the set.
 const StatChip = ({ children }: { children: React.ReactNode }) => (
-  <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-label font-medium text-muted-foreground">
+  <span className="inline-flex items-center rounded-full bg-primary/8 px-2 py-0.5 text-label font-medium text-foreground">
     {children}
   </span>
 );

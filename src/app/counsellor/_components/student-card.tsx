@@ -157,7 +157,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
             ? student.academic.ibPoints ? `IB · ${student.academic.ibPoints} pts` : 'IB'
             : student.academic.aLevelGrades ? `A-Level · ${student.academic.aLevelGrades}` : 'A-Level'}
         </span>
-        <span className="rounded-full border border-border/60 bg-muted/40 px-3 py-0.5 text-xs text-muted-foreground">
+        <span className="rounded-full border border-primary/15 bg-primary/8 px-3 py-0.5 text-xs text-foreground">
           {student.academic.clusters[0]?.replace(/_/g, ' ')}
         </span>
       </div>

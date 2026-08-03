@@ -250,7 +250,6 @@ export const MatchList = ({ matches }: MatchListProps) => {
                               match.program.language && match.program.language !== 'English' ? match.program.language : null
                             ].filter((h): h is string => h != null)}
                             variant={viewMode === 'list' ? 'compact' : 'default'}
-                            trackingLabelVariant="planner"
                           />
                         </motion.div>
                       ))}
