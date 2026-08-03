@@ -76,6 +76,14 @@ updates:
       # __tests__/env.test.ts deliberately rather than arriving as a bot PR.
       - dependency-name: zod
         update-types: ['version-update:semver-major']
+      # @types/node majors track NODE majors. .nvmrc says 22 and CI reads it via
+      # setup-node's node-version-file, so the types must stay on the 22 line.
+      # Dependabot proposed 20.11.0 -> 26.1.2 (PR #56, closed), skipping 22, 24 and
+      # 25. That direction is the dangerous one: types describing APIs the runtime
+      # does not have make a green `tsc` stop meaning "this will run". Bump this
+      # deliberately, in the same commit as .nvmrc.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
 
   # The workflow pins every action to a commit SHA (see .github/workflows/ci.yml).
   # A SHA pin does not float, so without this the actions would silently rot at
