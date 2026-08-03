@@ -29,6 +29,18 @@ export const LAYOUT_SHIFT_EVENT = 'ascenda:layout-shift';
  */
 const useBeforePaint = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
+/**
+ * How still the scroll has to be before an inbound trip counts as landed and the
+ * arming condition is re-measured. A Lenis glide emits scroll events for its whole
+ * ~1.2s, so anything in flight comfortably keeps resetting this.
+ */
+const SCROLL_QUIET_MS = 150;
+/**
+ * The earliest an arming decision is made. Scroll restoration can land after mount,
+ * and it must be measured rather than grown underneath.
+ */
+const ARM_MIN_DELAY_MS = 300;
+
 export interface PinnedStageCtx {
     /** Latched + sprung 0→1 across the pin travel. Never runs backwards. */
     p: MotionValue<number>;
@@ -138,32 +150,67 @@ export function PinnedStage({
             armedRef.current = true;
             return;
         }
-        // A fragment in the URL means the page is on its way somewhere specific, and
-        // globals.css sets `scroll-behavior: smooth`, so that trip is ANIMATED and
-        // has not started yet at mount: the guard below would still measure the
-        // section as far below the fold, arm, and grow the document by two screens
-        // underneath a scroll whose target was computed before the growth. Every
-        // deep link past this section then lands ~2 screens short. Deep-linked
-        // sessions keep the settled tree.
-        if (window.location.hash) {
-            armedRef.current = true;
-            return;
-        }
-        // Same reasoning for scroll restoration, which can also land after mount:
-        // decide a beat later, once any inbound scroll has settled, and measure then.
-        // Arming is invisible either way — the growth is all below the fold — so the
-        // only cost of waiting is that a visitor who reaches the section within
-        // ~300ms of hydration keeps the grid.
-        const timer = setTimeout(() => {
-            if (armedRef.current) return;
-            armedRef.current = true;
-            // Rule 1: still below the fold. Anything else — a restored position
-            // inside or past the section, a fast scroller — keeps the settled tree.
+        // Rule 1 needs a standing start. Arming swaps the presentation AND grows the
+        // section to `pinVh`, and both are unobservable only while the section is
+        // below the fold — so the measurement has to happen when the page is at rest,
+        // not while something is still carrying the visitor somewhere. Two things can
+        // be in flight at mount: a fragment's trip (globals.css sets
+        // `scroll-behavior: smooth`, so it is ANIMATED and has not started yet at
+        // mount) and scroll restoration. Growing the document under either lands it
+        // short of a target computed before the growth.
+        //
+        // So the condition is WATCHED rather than sampled once. Every time the scroll
+        // comes to rest, re-measure; arm the first time the section is safely below
+        // the fold. An in-flight trip simply never satisfies "at rest", which is the
+        // property the old blanket `location.hash` bail was standing in for — at the
+        // cost of refusing the stage for the whole session, so a stale
+        // `#how-it-works` left in the address bar by the nav killed it on every
+        // reload, permanently, with no way back but hand-editing the URL. Now a
+        // deep-linked or restored visitor just has to reach somewhere the swap cannot
+        // be seen, which scrolling back above the section does.
+        let quiet: ReturnType<typeof setTimeout> | null = null;
+
+        const evaluate = () => {
+            quiet = null;
+            // Never re-arm a stage that has already played: the settle is what makes
+            // the second pass an ordinary short section, and re-growing it would
+            // rewind exactly the travel the visitor just finished.
+            if (armedRef.current || settledRef.current) return;
+            // Rule 1: still below the fold. A position inside or past the section
+            // keeps the settled tree — for now, not for the session.
             if (node.getBoundingClientRect().top < window.innerHeight * 0.9) return;
+            armedRef.current = true;
+            // A visitor who was already past this section drove `raw` to 1 on the way
+            // in — while unpinned it is a short static block, and scrolling clear of
+            // it reads as full progress. That leaves the latch at its maximum and the
+            // stage marked complete, so arming without clearing both mounts the pin on
+            // its FINAL frame and lets the very next scroll event settle a pass that
+            // never played. This pass has not played: start it from zero.
+            latched.set(0);
+            completedRef.current = false;
+            window.removeEventListener('scroll', onScroll);
             setPinned(true);
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [ready, pinQuery]);
+        };
+
+        const schedule = (delay: number) => {
+            if (quiet) clearTimeout(quiet);
+            quiet = setTimeout(evaluate, delay);
+        };
+
+        const onScroll = () => schedule(SCROLL_QUIET_MS);
+
+        window.addEventListener('scroll', onScroll, { passive: true });
+        // The first look still waits out the beat that scroll restoration can land
+        // in, so a restore arriving after mount is measured rather than grown under.
+        schedule(ARM_MIN_DELAY_MS);
+
+        return () => {
+            if (quiet) clearTimeout(quiet);
+            window.removeEventListener('scroll', onScroll);
+        };
+        // `latched` is a stable MotionValue — listed for exhaustiveness, not because
+        // this effect should ever re-run for it.
+    }, [ready, pinQuery, latched]);
 
     // `useMotionReady` tracks the OS preference for the session's whole life, so it
     // can go false while a pin is live. Arming is one-shot, but it has to be
