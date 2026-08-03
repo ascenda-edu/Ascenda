@@ -43,7 +43,23 @@ export interface RankedCourseMatch {
   program_id?: string;
   university_id?: string;
   course_tier: 1 | 2 | 3 | 4 | 5;
-  tier_fit: 'Safety' | 'Target' | 'Reach' | 'Harder-than-reach';
+  /**
+   * Admission-difficulty band from the IB-points gap. **Not a `MatchTier`.**
+   *
+   * Was `tier_fit`, and was mapped straight onto Reach/Match/Safe in
+   * service.ts, which made it a second, disagreeing implementation of the rule
+   * that `lib/matching/match-tier.ts` owns — it thresholds a points GAP, that
+   * one thresholds a 0-100 score. Renamed so the two stop looking alike. Its
+   * two remaining jobs are both about *which* courses are returned, never about
+   * what label they carry: `'Harder-than-reach'` and the excluded case gate
+   * eligibility, and service.ts caps the result set per band so a student gets a
+   * spread of difficulties rather than 300 easy admits.
+   *
+   * The VALUES are deliberately unchanged: they are persisted verbatim in
+   * `simulation_results.algorithm_result` and rendered by /admin/simulation, so
+   * renaming them would silently invalidate every stored simulation row.
+   */
+  admission_band: 'Safety' | 'Target' | 'Reach' | 'Harder-than-reach';
   chance_percent: number;
   chance_category: 'Very likely' | 'Likely' | 'Possible' | 'Stretch' | 'Unlikely';
   reasons: string[];
@@ -248,16 +264,22 @@ const admissionProbability = (effGap: number): number => {
   return Math.round(Math.min(95, Math.max(8, prob)));
 };
 
-// ── Classifier ─────────────────────────────────────────────────────────────
+// ── Admission-difficulty classifier ────────────────────────────────────────
+//
+// Thresholds the IB-points GAP between the student and the course's effective
+// minimum. This is NOT the Reach/Match/Safe rule — that one thresholds a 0-100
+// score and lives in `./match-tier`. Nothing here may produce a `MatchTier`;
+// its output decides which courses are eligible and how the result set is
+// balanced (see `RankedCourseMatch.admission_band`).
 
-type Category = 'safety' | 'match' | 'reach' | 'excluded';
+type AdmissionCategory = 'safety' | 'match' | 'reach' | 'excluded';
 
 const classify = (
   studentIb: number,
   minIb: number | null,
   courseScore: number | null,
   selectivityScore: number | null
-): { category: Category; admitPct: number } => {
+): { category: AdmissionCategory; admitPct: number } => {
   const sc = courseScore ?? 40;
 
   let effectiveMin: number;
@@ -337,9 +359,11 @@ const filterCourses = (courses: EnrichedCourseRecord[], filters?: PreferencesFil
   });
 };
 
-// ── Map category → tier_fit for type compatibility ─────────────────────────
+// ── Map category → admission_band for type compatibility ───────────────────
 
-const categoryToTierFit = (category: Category): RankedCourseMatch['tier_fit'] => {
+const categoryToAdmissionBand = (
+  category: AdmissionCategory
+): RankedCourseMatch['admission_band'] => {
   if (category === 'safety') return 'Safety';
   if (category === 'match') return 'Target';
   if (category === 'reach') return 'Reach';
@@ -357,7 +381,7 @@ const clampChance = (value: number) => Math.max(5, Math.min(95, Math.round(value
 export const classifyCourseChance = (
   studentIb: number,
   course: EnrichedCourseRecord
-): { category: Category; admitPct: number; chancePercent: number } => {
+): { category: AdmissionCategory; admitPct: number; chancePercent: number } => {
   const meta = (course as any).metadata ?? {};
   const courseScore =
     course.total_course_score ??
@@ -520,7 +544,7 @@ export const rankCourseMatches = (
     if (category === 'excluded') continue;
     if (category === 'safety' && (courseScore ?? 0) < minFloor) continue;
 
-    const tierFit = categoryToTierFit(category);
+    const admissionBand = categoryToAdmissionBand(category);
 
     const reasons: string[] = [];
     if (minIb !== null && studentIb < minIb) {
@@ -534,7 +558,7 @@ export const rankCourseMatches = (
       program_id: (course as any).program_id,
       university_id: (course as any).university_id,
       course_tier: courseTier,
-      tier_fit: tierFit,
+      admission_band: admissionBand,
       chance_percent: chancePercent,
       chance_category:
         admitPct >= 80 ? 'Very likely'

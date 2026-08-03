@@ -198,7 +198,15 @@ describe('student scoring', () => {
 
     const result = scoreStudentProfile(lucas);
     report('Lucas breakdown', result.breakdown);
-    expect(result.total_score).toBe(39);
+    // 39 -> 44 when the A-level signature table was completed (F-01).
+    //
+    // Lucas's grades are C, D, D -> signature "CDD", which was one of the 30
+    // signatures with no table entry, so it hit the catch-all `return 8`. C,D,D
+    // strictly dominates D,D,D, yet scored 8 against DDD's 10 — this fixture was
+    // sitting on one of the 34 inversions and asserting it as correct.
+    // academic_performance is now 13, so the total rises by 5. The band is
+    // unchanged, so what this test was really checking still holds.
+    expect(result.total_score).toBe(44);
     expect(result.student_band).toBe('Weak');
     expect(result.readiness_flags).toContain('english_test_missing');
   });

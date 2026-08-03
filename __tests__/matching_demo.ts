@@ -248,7 +248,7 @@ function runDemo() {
 
         matches.slice(0, 10).forEach((match, i) => {
             report(`${i + 1}. ${match.university} - ${match.course}`);
-            report(`   Tier: ${match.course_tier} | Fit: ${match.tier_fit}`);
+            report(`   Course tier: ${match.course_tier} | Admission band: ${match.admission_band}`);
             report(`   Chance: ${match.chance_percent}% (${match.chance_category})`);
             if (match.excluded) report(`   EXCLUDED`);
             if (match.reasons.length) report(`   Reasons: ${match.reasons.join(', ')}`);
