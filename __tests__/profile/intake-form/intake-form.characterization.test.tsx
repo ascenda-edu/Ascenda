@@ -2402,7 +2402,13 @@ describe('submission', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Some answers could not be saved.');
-    expect(screen.getByRole('button', { name: 'Submit & see matches' })).toBeEnabled();
+    // `findBy`, not `getBy`. The save runs inside `startTransition`, so the submit
+    // button reads 'Saving…' for as long as `isPending` is true — and the error
+    // alert can paint before the transition has finished settling. Asserting the
+    // label synchronously off the back of the alert is therefore a race that a fast
+    // machine wins and a loaded CI runner loses: it went red on the TZ=UTC leg
+    // alone, having passed locally and on the other leg of the same matrix.
+    expect(await screen.findByRole('button', { name: 'Submit & see matches' })).toBeEnabled();
     expect(screen.queryByRole('link', { name: /Get me to my matches/ })).not.toBeInTheDocument();
   });
 
