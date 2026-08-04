@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Bot, RotateCcw, Play, ChevronUp } from 'lucide-react';
-import type { Role } from '@/lib/auth/identity';
+import type { CoachPanelScope } from '@/lib/onboarding/coach-scope';
 import { resolveTourForPath, TOURS } from '@/lib/onboarding/tours';
 import { resetOnboardingForTesting } from '@/lib/onboarding/actions';
 import { cn } from '@/lib/utils';
@@ -22,13 +22,18 @@ import { resetCoachSession } from './ascendi-coach';
  * replay control existed at all, so a tour declined once was gone, and there was
  * no way to demo the flow on the live site without a local dev server.
  *
- * The decision is NOT made here. `resolveCoachPanelScope` below runs in
- * `ascendi-coach-mount.tsx`, a server component that already holds the verified
- * `profiles.role` — so a student's HTML never contains this markup at all, rather
- * than containing it behind a client-side `role !== 'admin'` check that anyone
- * can flip in a devtools console. A client component cannot import
- * `@/lib/auth/identity` (it throws in a browser bundle by design), which is why
- * only the `Role` *type* is imported here — erased at compile, no runtime edge.
+ * The decision is NOT made here, and it deliberately does not LIVE here either.
+ * `resolveCoachPanelScope` sits in `@/lib/onboarding/coach-scope` — a plain module
+ * with no `'use client'` — and runs in `ascendi-coach-mount.tsx`, a server
+ * component that already holds the verified `profiles.role`. So a student's HTML
+ * never contains this markup at all, rather than containing it behind a
+ * client-side `role !== 'admin'` check that anyone can flip in a devtools console.
+ *
+ * That split is load-bearing, not tidiness. The resolver started out as an export
+ * of THIS file, and a server component calling it got a throwing
+ * `registerClientReference` stub instead of the function — taking down all ten
+ * coach-mounting routes. See the header of `coach-scope.ts`: it explains why
+ * typecheck, Jest and `next build` all pass on that bug.
  *
  * Server-side gating keeps the MARKUP away from students; it does not keep the
  * CHUNK away. `ascendi-coach-mount.tsx` imports this module unconditionally, so it
@@ -61,23 +66,12 @@ import { resetCoachSession } from './ascendi-coach';
  * only needed to re-test the *automatic* offer, which is a development concern.
  */
 
-export type CoachPanelScope =
-  /** Local dev: everyone, and the reset button is live. */
-  | 'development'
-  /** Production admin: run and preview only. */
-  | 'admin';
-
 /**
- * Whether this user gets the panel, and in which mode. `null` means no panel.
- *
- * Called from a server component so the answer is settled before render. Kept pure
- * — it is the unit under test in `__tests__/onboarding/coach-panel.test.tsx`, which
- * pins the case that matters: a production student gets `null`.
+ * Ties `aria-expanded` to the thing it expands. A constant and not a `useId`,
+ * because exactly one panel exists per page — the mount renders one — and a stable
+ * id is what lets the a11y assertion in `coach-panel.test.tsx` name it.
  */
-export const resolveCoachPanelScope = (role: Role): CoachPanelScope | null => {
-  if (process.env.NODE_ENV !== 'production') return 'development';
-  return role === 'admin' ? 'admin' : null;
-};
+const PANEL_ID = 'coach-panel-disclosure';
 
 export function CoachPanel({ scope }: { scope: CoachPanelScope }) {
   const pathname = usePathname();
@@ -108,9 +102,37 @@ export function CoachPanel({ scope }: { scope: CoachPanelScope }) {
     // Bottom-LEFT, so it never overlaps the launcher this feature is about — the
     // one piece of UI a coach bug most needs to be visible. Above the mobile nav on
     // small screens, mirroring the launcher's own offset.
-    <div className="fixed bottom-[calc(env(safe-area-inset-bottom,8px)+72px)] left-4 z-docked md:bottom-6">
+    //
+    // `flex-col-reverse` so the TRIGGER comes first in the DOM and the panel it
+    // reveals comes after it, while still painting above it. Source order was the
+    // other way round while this was a localhost-only chip, which put the three
+    // revealed buttons BEFORE their own trigger in the tab sequence: opening the
+    // panel with the keyboard then tabbed straight past its contents, reachable
+    // only by shift-tabbing backwards. Fine to leave for developers, not for the
+    // live site.
+    <div className="fixed bottom-[calc(env(safe-area-inset-bottom,8px)+72px)] left-4 z-docked flex flex-col-reverse md:bottom-6">
+      {/* First in the DOM, painted last by `flex-col-reverse`. Default
+          `align-items: stretch` is deliberate: the container is shrink-to-fit
+          around the panel's `w-56`, so the chip already spanned that width when
+          open, and stretch is what preserves it. */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          'flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-e-2 hover:text-foreground',
+          allowReset ? 'border-dashed border-warning/50' : 'border-feature/40'
+        )}
+        aria-expanded={open}
+        aria-controls={PANEL_ID}
+      >
+        <Bot className="h-3.5 w-3.5" aria-hidden />
+        Coach
+        <ChevronUp className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} aria-hidden />
+      </button>
+
       {open ? (
         <div
+          id={PANEL_ID}
           className={cn(
             'mb-2 w-56 rounded-2xl border bg-card p-3 shadow-e-3',
             allowReset ? 'border-dashed border-warning/50' : 'border-feature/40'
@@ -179,20 +201,6 @@ export function CoachPanel({ scope }: { scope: CoachPanelScope }) {
           </p>
         </div>
       ) : null}
-
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className={cn(
-          'flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-e-2 hover:text-foreground',
-          allowReset ? 'border-dashed border-warning/50' : 'border-feature/40'
-        )}
-        aria-expanded={open}
-      >
-        <Bot className="h-3.5 w-3.5" aria-hidden />
-        Coach
-        <ChevronUp className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} aria-hidden />
-      </button>
     </div>
   );
 }

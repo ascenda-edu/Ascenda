@@ -1,7 +1,8 @@
 import { getIdentity } from '@/lib/auth/identity';
 import { getOnboardingState } from '@/lib/onboarding/read';
+import { resolveCoachPanelScope } from '@/lib/onboarding/coach-scope';
 import { AscendiCoach } from './ascendi-coach';
-import { CoachPanel, resolveCoachPanelScope } from './coach-panel';
+import { CoachPanel } from './coach-panel';
 
 /**
  * One line to give a page the Ascendi coach: `<AscendiCoachMount />`.
@@ -45,6 +46,12 @@ export async function AscendiCoachMount() {
   // `profiles.role` — so a student's HTML never contains the panel at all, instead
   // of shipping it behind a client-side role check a console can flip. `null` for
   // a production student is the case `coach-panel.test.tsx` pins.
+  //
+  // The resolver is imported from `@/lib/onboarding/coach-scope`, NOT from
+  // `./coach-panel`. That file is `'use client'`, and calling a named export of a
+  // client module from a server component gets you a throwing
+  // `registerClientReference` stub, not the function — which is exactly how the
+  // first cut of this shipped a crash on all ten coach-mounting routes.
   const panelScope = resolveCoachPanelScope(identity.role);
 
   return (

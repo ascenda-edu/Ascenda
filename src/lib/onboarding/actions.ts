@@ -103,12 +103,19 @@ export const markTourComplete = async (tour: TourId) => {
  * over" button.
  *
  * THE PRODUCTION GUARD IS THIS FUNCTION, NOT THE HIDDEN BUTTON.
- * `coach-devtools.tsx` renders only in development, and that is a cosmetic
- * detail: every export of a `'use server'` module is a POST endpoint that exists
- * in the production bundle whether or not anything renders a button for it. So
- * the refusal lives here, at the top, before authentication — a destructive
- * action that only a hidden control can reach is still a reachable destructive
- * action.
+ * `coach-panel.tsx` renders the button only when its scope is `development`, and
+ * that is a cosmetic detail: every export of a `'use server'` module is a POST
+ * endpoint that exists in the production bundle whether or not anything renders a
+ * button for it. So the refusal lives here, at the top, before authentication — a
+ * destructive action that only a hidden control can reach is still a reachable
+ * destructive action.
+ *
+ * Note the panel itself DOES render in production now, for admins. This guard was
+ * deliberately not relaxed to match: replaying a tour never needed it, because
+ * `coach.start()` is ephemeral client state that ignores breadcrumbs. Clearing
+ * breadcrumbs only matters for re-testing the automatic offer, which is a
+ * development concern. Hence the button is absent for an admin rather than present
+ * and failing.
  *
  * The blast radius even without the guard would be one user's own onboarding
  * flags (`ensureUser` takes the id from the verified session, never a parameter,
