@@ -105,6 +105,69 @@ const placeCard = (rect: Rect, cardHeight: number) => {
 };
 
 /**
+ * How far apart two anchors' tops can be and still count as the same row.
+ *
+ * Cards in a grid row rarely share an exact `top` — different content heights,
+ * different paddings, a `delay` on one AnimatedSection that leaves it a few pixels
+ * into its entry transform when measured. 24px is comfortably more than that drift
+ * and comfortably less than the app's smallest row gap (`space-y-6`, 24px, plus the
+ * cards' own padding).
+ */
+const ROW_TOLERANCE = 24;
+
+/**
+ * Put the steps in the order the page actually reads: top to bottom, and in the
+ * AUTHORED order within a row.
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * A tour is a list in a registry file; the page is a layout. Nothing kept the two in
+ * step, and they drifted immediately: the dashboard tour pointed at the matches card
+ * (row three) before the counsellor card (row two), so it scrolled the user down the
+ * page and then back up again. The matches and counsellor tours each had the same
+ * inversion. It reads as the tour having lost its place, and no test could catch it
+ * because both orders are perfectly valid data.
+ *
+ * Sorting by measured position rather than by DOM order is deliberate: DOM order is
+ * not visual order the moment a grid uses explicit placement, `order`, or a
+ * `col-start`, all of which this app does. What the user experiences is the scroll,
+ * so the scroll is what gets sorted.
+ *
+ * WHY ONLY ROWS, AND NOT LEFT-TO-RIGHT WITHIN THEM
+ * -----------------------------------------------
+ * The complaint being fixed is vertical: the viewport jumping down and then back up.
+ * Two cards side by side involve no scrolling at all, so ordering within a row costs
+ * the user nothing and is worth spending on narrative instead — "here is the idea,
+ * here is the detail beside it" is often better than strict left-to-right. So rows are
+ * sorted and the author's order inside each is preserved, which `Array.prototype.sort`
+ * gives for free by being stable (guaranteed since ES2019).
+ *
+ * Row assignment is done by walking a top-sorted copy and starting a new row whenever
+ * the gap exceeds the tolerance — NOT by a comparator with a tolerance in it. A
+ * "close enough" comparator is not transitive (a≈b and b≈c does not give a≈c), and a
+ * non-transitive comparator makes `sort` produce implementation-defined nonsense.
+ */
+const orderByRow = <T extends { rect: Rect }>(entries: T[]): T[] => {
+  if (entries.length < 2) return entries;
+
+  const row = new Map<T, number>();
+  let index = 0;
+  let rowTop: number | null = null;
+
+  for (const entry of [...entries].sort((a, b) => a.rect.top - b.rect.top)) {
+    if (rowTop === null) {
+      rowTop = entry.rect.top;
+    } else if (entry.rect.top - rowTop > ROW_TOLERANCE) {
+      index += 1;
+      rowTop = entry.rect.top;
+    }
+    row.set(entry, index);
+  }
+
+  return [...entries].sort((a, b) => (row.get(a) ?? 0) - (row.get(b) ?? 0));
+};
+
+/**
  * Should this keypress drive the tour, or belong to whatever the user is typing
  * in?
  *
@@ -165,19 +228,27 @@ export function ProductTour({ steps, onDismiss, onComplete, signOff }: ProductTo
   useEffect(() => setMounted(true), []);
 
   /**
-   * Only steps whose anchor exists right now.
+   * The steps whose anchor exists right now, in the order the page reads.
    *
-   * Resolved once, when the tour opens, rather than on every render. Re-filtering
-   * live would renumber the steps underneath the user — "3 of 5" becoming "3 of 4"
-   * mid-read — because plenty of anchors legitimately come and go while the tour
-   * is open (a card that finishes loading, a panel the user collapses).
+   * Resolved once, when the tour opens, rather than on every render — for both the
+   * filtering and the ordering. Re-filtering live would renumber the steps underneath
+   * the user ("3 of 5" becoming "3 of 4" mid-read), because plenty of anchors
+   * legitimately come and go while a tour is open (a card that finishes loading, a
+   * panel the user collapses). Re-ordering live would be worse still: a card that grows
+   * as its content arrives could move the user's current step behind them.
    */
   const [visibleSteps, setVisibleSteps] = useState<TourStep[]>([]);
 
   useEffect(() => {
     if (!mounted) return;
-    const present = steps.filter((step) => readRect(step.anchor) !== null);
-    setVisibleSteps(present);
+
+    const present = steps
+      .map((step) => ({ step, rect: readRect(step.anchor) }))
+      .filter((entry): entry is { step: TourStep; rect: Rect } => entry.rect !== null);
+
+    // Sorted top-to-bottom so the tour never scrolls down and then back up. The
+    // registry's order is a fallback, not the authority — see `orderByRow`.
+    setVisibleSteps(orderByRow(present).map((entry) => entry.step));
     setIndex(0);
     // A tour whose every anchor is missing has nothing to show. Report it as
     // dismissed rather than flashing an empty overlay — that also stops the coach

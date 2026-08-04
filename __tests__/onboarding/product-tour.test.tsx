@@ -33,14 +33,24 @@ const STEPS: TourStep[] = [
   { anchor: 'beta', title: 'The second thing', body: 'What beta is for.' }
 ];
 
-const RECT = { top: 100, left: 100, width: 200, height: 50, bottom: 150, right: 300, x: 100, y: 100 };
-
 let originalRect: typeof Element.prototype.getBoundingClientRect;
 
 beforeAll(() => {
   originalRect = Element.prototype.getBoundingClientRect;
-  Element.prototype.getBoundingClientRect = function () {
-    return { ...RECT, toJSON: () => RECT } as DOMRect;
+  /**
+   * Position comes from a `data-test-top` / `data-test-left` pair when the element
+   * carries one, and defaults to a single shared rect otherwise.
+   *
+   * The default matters: it puts every anchor in the same row, so the step-ordering
+   * logic is a no-op for the tests that are not about ordering. Those tests then
+   * exercise the authored order, which is what they mean to assert.
+   */
+  Element.prototype.getBoundingClientRect = function (this: Element) {
+    const node = this as HTMLElement;
+    const top = Number(node.dataset?.testTop ?? 100);
+    const left = Number(node.dataset?.testLeft ?? 100);
+    const rect = { top, left, width: 200, height: 50, bottom: top + 50, right: left + 200, x: left, y: top };
+    return { ...rect, toJSON: () => rect } as DOMRect;
   };
   // `scrollIntoView` is not implemented in jsdom at all, and the tour calls it.
   Element.prototype.scrollIntoView = jest.fn();
@@ -50,11 +60,17 @@ afterAll(() => {
   Element.prototype.getBoundingClientRect = originalRect;
 });
 
-/** Put the anchors the tour expects into the document. */
-const mountAnchors = (anchors: string[]) => {
-  for (const anchor of anchors) {
+/** Put the anchors the tour expects into the document, optionally positioned. */
+const mountAnchors = (anchors: Array<string | { anchor: string; top: number; left?: number }>) => {
+  for (const entry of anchors) {
     const node = document.createElement('div');
-    node.setAttribute('data-tour', anchor);
+    if (typeof entry === 'string') {
+      node.setAttribute('data-tour', entry);
+    } else {
+      node.setAttribute('data-tour', entry.anchor);
+      node.dataset.testTop = String(entry.top);
+      if (entry.left !== undefined) node.dataset.testLeft = String(entry.left);
+    }
     document.body.appendChild(node);
   }
 };
@@ -109,6 +125,114 @@ describe('walking through the steps', () => {
     // A rect, not null. `null` is the caller's "do not fly" signal, so handing it one
     // here would silently disable the finale.
     expect(onComplete.mock.calls[0][0]).not.toBeNull();
+  });
+});
+
+describe('step order follows the page, not the registry', () => {
+  /**
+   * The regression this fixes, in the words it was reported in: the tour "will show a
+   * feature at the top, then scroll down, then back up".
+   *
+   * It happened because a tour is an array in a registry file and the page is a
+   * layout, and nothing tied the two together. Three tours had drifted — the dashboard
+   * pointed at the matches card (row three) before the counsellor card (row two).
+   * Both orders are valid data, so no amount of registry validation could have caught
+   * it; only the measured positions know.
+   */
+  const authored: TourStep[] = [
+    { anchor: 'lower', title: 'Further down the page', body: 'Body.' },
+    { anchor: 'upper', title: 'Near the top', body: 'Body.' }
+  ];
+
+  it('visits the higher element first even when the registry lists it second', () => {
+    mountAnchors([
+      { anchor: 'lower', top: 900 },
+      { anchor: 'upper', top: 120 }
+    ]);
+
+    render(<ProductTour steps={authored} onDismiss={jest.fn()} onComplete={jest.fn()} signOff={null} />);
+
+    expect(screen.getByText('Near the top')).toBeInTheDocument();
+  });
+
+  it('then works downwards', () => {
+    mountAnchors([
+      { anchor: 'lower', top: 900 },
+      { anchor: 'upper', top: 120 }
+    ]);
+
+    render(<ProductTour steps={authored} onDismiss={jest.fn()} onComplete={jest.fn()} signOff={null} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+    expect(screen.getByText('Further down the page')).toBeInTheDocument();
+  });
+
+  it('keeps the authored order for two cards in the SAME row', () => {
+    /**
+     * Deliberately not sorted left-to-right. Side-by-side cards involve no scrolling,
+     * so ordering within a row costs the user nothing — which leaves it free to serve
+     * the narrative instead. Here the registry names the right-hand card first and that
+     * is respected.
+     */
+    mountAnchors([
+      { anchor: 'lower', top: 200, left: 800 },
+      { anchor: 'upper', top: 200, left: 40 }
+    ]);
+
+    render(<ProductTour steps={authored} onDismiss={jest.fn()} onComplete={jest.fn()} signOff={null} />);
+
+    expect(screen.getByText('Further down the page')).toBeInTheDocument();
+  });
+
+  it('treats a few pixels of drift as the same row', () => {
+    // Cards in a grid row rarely share an exact top — different heights, paddings, and
+    // AnimatedSection `delay` props leave one mid-transform when measured. Without the
+    // tolerance, that noise would reorder a row on every run.
+    mountAnchors([
+      { anchor: 'lower', top: 204, left: 800 },
+      { anchor: 'upper', top: 200, left: 40 }
+    ]);
+
+    render(<ProductTour steps={authored} onDismiss={jest.fn()} onComplete={jest.fn()} signOff={null} />);
+
+    expect(screen.getByText('Further down the page')).toBeInTheDocument();
+  });
+
+  it('separates rows once the gap is real', () => {
+    mountAnchors([
+      { anchor: 'lower', top: 260, left: 800 },
+      { anchor: 'upper', top: 200, left: 40 }
+    ]);
+
+    render(<ProductTour steps={authored} onDismiss={jest.fn()} onComplete={jest.fn()} signOff={null} />);
+
+    expect(screen.getByText('Near the top')).toBeInTheDocument();
+  });
+
+  it('never scrolls backwards across a whole tour', () => {
+    // The invariant itself, stated once over a deliberately shuffled registry: each
+    // step's anchor is at or below the previous one's. Every ordering case above is a
+    // specific instance of this.
+    const shuffled: TourStep[] = [
+      { anchor: 'c', title: 'Third', body: 'Body.' },
+      { anchor: 'a', title: 'First', body: 'Body.' },
+      { anchor: 'd', title: 'Fourth', body: 'Body.' },
+      { anchor: 'b', title: 'Second', body: 'Body.' }
+    ];
+    mountAnchors([
+      { anchor: 'a', top: 100 },
+      { anchor: 'b', top: 400 },
+      { anchor: 'c', top: 700 },
+      { anchor: 'd', top: 1000 }
+    ]);
+
+    render(<ProductTour steps={shuffled} onDismiss={jest.fn()} onComplete={jest.fn()} signOff={null} />);
+
+    for (const expected of ['First', 'Second', 'Third']) {
+      expect(screen.getByText(expected)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    }
+    expect(screen.getByText('Fourth')).toBeInTheDocument();
   });
 });
 

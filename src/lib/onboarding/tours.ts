@@ -26,6 +26,23 @@
  *
  * Every `anchor` must match a `data-tour="…"` attribute that some component on
  * that route actually renders.
+ *
+ * ORDER: WRITE IT TOP-TO-BOTTOM, BUT IT IS NOT WHAT DECIDES THE ORDER
+ * ------------------------------------------------------------------
+ * `product-tour.tsx` re-sorts the steps by their measured position when the tour
+ * opens, so a tour always walks DOWN the page and never scrolls back up. Array order
+ * here is only honoured between anchors that share a row.
+ *
+ * That is not an invitation to leave these arrays unsorted. Three of them had drifted
+ * out of page order — the dashboard tour pointed at the matches card in row three
+ * before the counsellor card in row two — and the symptom was the viewport jumping
+ * down and then back up, which reads as the tour having lost its place. The runtime
+ * sort is the guarantee; keeping these arrays in visual order is what makes the file
+ * honest about what the user will see, and it is the fallback if a rect is ever
+ * unavailable.
+ *
+ * Where two steps genuinely sit side by side, the order below IS respected — no
+ * scrolling is involved, so it is free to serve the narrative instead.
  */
 
 /**
@@ -129,14 +146,14 @@ export const TOURS: Record<TourId, Tour> = {
         body: 'Every section you fill in changes how I score programmes against you. The last two steps are optional, but they do move things.'
       },
       {
-        anchor: 'matches-peek',
-        title: 'Your ranked matches',
-        body: 'I score the whole catalogue against you and group the results by how realistic they are. Open one and I will show you exactly why it ranked there.'
-      },
-      {
         anchor: 'counsellor-card',
         title: 'Help that arrives with context',
         body: 'Ask from any page and your counsellor sees where you were and what you were looking at. You never have to re-explain yourself.'
+      },
+      {
+        anchor: 'matches-peek',
+        title: 'Your ranked matches',
+        body: 'I score the whole catalogue against you and group the results by how realistic they are. Open one and I will show you exactly why it ranked there.'
       }
     ]
   },
@@ -168,14 +185,14 @@ export const TOURS: Record<TourId, Tour> = {
     label: 'your matches',
     steps: [
       {
-        anchor: 'match-list',
-        title: 'Ranked, not filtered',
-        body: 'I scored every programme in the catalogue against your grades, subjects and budget, then sorted what came back.'
-      },
-      {
         anchor: 'match-tiers',
         title: 'Reach, target, safe',
         body: 'A healthy list has some of each. If everything here is a reach, that usually means your profile is missing something rather than that your options are.'
+      },
+      {
+        anchor: 'match-list',
+        title: 'Ranked, not filtered',
+        body: 'I scored every programme in the catalogue against your grades, subjects and budget, then sorted what came back.'
       }
     ]
   },
@@ -255,14 +272,14 @@ export const TOURS: Record<TourId, Tour> = {
     label: 'your counsellor dashboard',
     steps: [
       {
-        anchor: 'counsellor-widgets',
-        title: 'Your cohort, by what needs you',
-        body: 'Stalled applications, missed deadlines and unanswered questions first. You can reorder and hide these panels.'
-      },
-      {
         anchor: 'counsellor-help-requests',
         title: 'Questions with context',
         body: 'Each request arrives attached to the student, the programme and the stage they are stuck on.'
+      },
+      {
+        anchor: 'counsellor-widgets',
+        title: 'Your cohort, by what needs you',
+        body: 'Stalled applications, missed deadlines and unanswered questions first. You can reorder and hide these panels.'
       }
     ]
   },
