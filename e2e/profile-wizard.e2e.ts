@@ -147,6 +147,62 @@ const GRADUATION_YEAR = String(new Date().getFullYear() + 1);
 // ── Interaction helpers ──────────────────────────────────────────────────────
 
 /**
+ * Close the milestone celebration if it is showing.
+ *
+ * This is not defensive padding — without it the spec cannot click anything. The
+ * celebration is a real `aria-modal` dialog with a `fixed inset-0 z-modal`
+ * backdrop, and Playwright reports it as "intercepts pointer events" against
+ * every button underneath.
+ *
+ * The timing is the part worth writing down. It fires from an effect gated on
+ * `essentialsComplete`, once per page load, and "the essentials are complete" is
+ * evaluated against the state HYDRATED FROM THE SERVER — not against what this
+ * run has typed. So for the E2E account, which finishes the wizard on every run,
+ * it opens IMMEDIATELY ON EVERY LOAD, including all seven navigations of the
+ * round-trip pass. Only on a genuinely fresh account does it appear where you
+ * would expect it, part-way through screen five.
+ *
+ * `isVisible()` is a snapshot rather than an auto-waiting assertion on purpose —
+ * the question is "is it in the way right now", and waiting 15s for a dialog that
+ * legitimately is not coming would turn every Next into a timeout.
+ *
+ * "Keep going" is the dismissal that stays put. The other action is "Continue",
+ * which jumps to the first booster screen — correct for a student, but it would
+ * silently move this spec off the screen it was working on.
+ */
+const dismissCelebrationIfOpen = async (page: Page) => {
+  const dialog = page.getByRole('dialog');
+  if (await dialog.isVisible()) {
+    await dialog.getByRole('button', { name: 'Keep going' }).click();
+    await expect(dialog).toBeHidden();
+  }
+};
+
+/**
+ * Click, surviving the celebration landing mid-action.
+ *
+ * A snapshot check before the click is not sufficient on its own: the celebration
+ * is rendered through `next/dynamic` (`wizard-overlays-lazy.tsx`), so its chunk
+ * can arrive AFTER the check and steal the click that follows. The retry is the
+ * part that actually closes that window; the pre-check is what stops the common
+ * case from costing a timeout first.
+ *
+ * Deliberately not a global `page.addLocatorHandler` for the dialog: that would
+ * dismiss the celebration invisibly anywhere it appeared, including in the one
+ * place a future test might want to assert it.
+ */
+const guardedClick = async (target: Locator) => {
+  const page = target.page();
+  await dismissCelebrationIfOpen(page);
+  try {
+    await target.click({ timeout: 15_000 });
+  } catch {
+    await dismissCelebrationIfOpen(page);
+    await target.click();
+  }
+};
+
+/**
  * Radix `<Select>`: open by aria-label, choose by visible option text.
  *
  * The close assertion is on THIS TRIGGER's `aria-expanded`, not on
@@ -166,14 +222,14 @@ const GRADUATION_YEAR = String(new Date().getFullYear() + 1);
  */
 const chooseFromSelect = async (page: Page, label: string, option: string) => {
   const trigger = page.getByRole('combobox', { name: label, exact: true });
-  await trigger.click();
+  await guardedClick(trigger);
   await page.getByRole('option', { name: option, exact: true }).click();
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 };
 
 /** Hand-rolled country/subject combobox: type, then click the filtered option. */
 const chooseFromCombobox = async (page: Page, input: Locator, value: string) => {
-  await input.click();
+  await guardedClick(input);
   await input.fill(value);
   await page.getByRole('option', { name: value, exact: true }).first().click();
   await expect(input).toHaveValue(value);
@@ -205,7 +261,7 @@ const choiceIn = (page: Page, fieldKey: string, value: string) =>
  */
 const selectChoice = async (card: Locator) => {
   if ((await card.getAttribute('aria-checked')) !== 'true') {
-    await card.click();
+    await guardedClick(card);
   }
   await expect(card).toHaveAttribute('aria-checked', 'true');
 };
@@ -231,7 +287,7 @@ const selectChoice = async (card: Locator) => {
  */
 const selectChip = async (chip: Locator) => {
   if ((await chip.getAttribute('aria-pressed')) !== 'true') {
-    await chip.click();
+    await guardedClick(chip);
   }
   await expect(chip).toHaveAttribute('aria-pressed', 'true');
 };
@@ -241,9 +297,11 @@ const gotoScreen = async (page: Page, screen: string) => {
   // The screen heading and the screen body are separate AnimatePresence blocks;
   // waiting on a nav button rather than the heading avoids the one-frame gap.
   await expect(page.getByRole('button', { name: /^(Next|Submit & see matches)$/ })).toBeVisible();
+  await dismissCelebrationIfOpen(page);
 };
 
-const clickNext = (page: Page) => page.getByRole('button', { name: 'Next', exact: true }).click();
+const clickNext = (page: Page) =>
+  guardedClick(page.getByRole('button', { name: 'Next', exact: true }));
 
 // ── The spec ─────────────────────────────────────────────────────────────────
 
@@ -312,7 +370,7 @@ test.describe('profile wizard — eight-screen happy path round trip', () => {
     await expect(page.getByRole('heading', { name: HEADING.activities })).toBeVisible();
 
     // ── 6. Activities & ambitions (booster) ────────────────────────────────
-    await page.getByRole('button', { name: 'Add activity' }).click();
+    await guardedClick(page.getByRole('button', { name: 'Add activity' }));
     await selectChip(chipIn(page, PROFILE.activity.category));
     await selectChip(chipIn(page, PROFILE.activity.level));
     await selectChip(chipIn(page, PROFILE.activity.duration));
@@ -332,7 +390,7 @@ test.describe('profile wizard — eight-screen happy path round trip', () => {
     await expect(page.getByRole('heading', { name: HEADING.review })).toBeVisible();
 
     // ── 8. Review & submit ─────────────────────────────────────────────────
-    await page.getByRole('button', { name: 'Submit & see matches' }).click();
+    await guardedClick(page.getByRole('button', { name: 'Submit & see matches' }));
     await expect(page.getByText('Profile saved — your matches are ready')).toBeVisible({ timeout: 60_000 });
 
     // ── Round trip ─────────────────────────────────────────────────────────
