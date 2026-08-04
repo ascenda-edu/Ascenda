@@ -1,7 +1,7 @@
 'use client';
 
 import { type FormEvent, type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Check, ChevronDown, ChevronRight, ChevronLeft,
   Trash2, PlusCircle, Info, X
@@ -12,6 +12,7 @@ import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { PROFILE_STEPS, FIRST_BOOSTER_STEP_INDEX, ESSENTIAL_STEP_KEYS } from '@/lib/profile/steps';
 import { IntakeRail, type RailStep } from '../wizard/_components/intake-rail';
 import { cn } from '@/lib/utils';
+import { EASE, DURATION, TRAVEL } from '@/lib/motion';
 import type {
   AdmissionsTestType, EnglishStatus, EnglishTestType,
   IntendedCluster, ProgrammeType, StudentProfilePayload
@@ -836,6 +837,21 @@ export const StudentIntakeForm = ({
    * guards: only one timer is ever outstanding and unmount clears it, and the
    * search is scoped to this form's own content subtree, which must still be
    * connected for the callback to do anything at all.
+   *
+   * ── The 600ms call sites are gone (2026-08-04) ──────────────────────────────
+   * `handleFinalSubmit` used to pass 600 instead of 50, because a submit bounce
+   * CHANGES STEP FIRST and `AnimatePresence mode="wait"` would not mount the
+   * target step until the outgoing one had finished its 0.25s exit. That coupling
+   * no longer exists: the step body is a keyed `motion.div` with no exit, so the
+   * new step's DOM is committed in the same tick as the state update and the
+   * default deferral is enough.
+   *
+   * Measured, not assumed — `intake-form.characterization.test.tsx`'s
+   * `focusFirstError` describe covers both bounce paths (step 1 and a bounce that
+   * skips to step 3) and passes at 50ms across repeated runs. Those two tests
+   * exist precisely so this delay cannot be changed blind. jsdom is not a
+   * browser, though: if a submit bounce is ever seen reporting an error without
+   * focusing the field, this constant is the first thing to raise.
    */
   const focusFirstError = useCallback((errs: Record<string, string>, delay = 50) => {
     const keys = Object.keys(errs);
@@ -921,7 +937,7 @@ export const StudentIntakeForm = ({
       else if (Object.keys(s2).length > 0) setCurrentStep(2);
       else setCurrentStep(3);
       // Wait for the step transition to finish before scrolling to the error.
-      focusFirstError(allErrors, 600);
+      focusFirstError(allErrors);
       return;
     }
     const payload = buildPayload();
@@ -940,7 +956,7 @@ export const StudentIntakeForm = ({
       // the first offending field rather than leaving them on the review page.
       const firstKey = Object.keys(payloadErrors)[0];
       setCurrentStep(stepForFieldKey(firstKey));
-      focusFirstError(payloadErrors, 600);
+      focusFirstError(payloadErrors);
       return;
     }
 
@@ -990,7 +1006,41 @@ export const StudentIntakeForm = ({
     handleFinalSubmit();
   }, [handleFinalSubmit]);
 
+  /**
+   * Which way the step body should travel.
+   *
+   * DERIVED from the previously rendered step rather than set in `goNext`/
+   * `goBack`, because those are not the only things that move the step: the
+   * wizard mirrors its position into `?step=` with `push: true`, so the browser
+   * Back button walks it too — and a popstate never touches a handler. Comparing
+   * against the last render covers every route in, including a deep link.
+   *
+   * Reading a ref during render is safe here because it is only updated in the
+   * effect BELOW this render's read: on the render where `currentStep` changes,
+   * `prevStepRef` still holds the step being left, which is exactly the
+   * comparison wanted.
+   */
+  const prevStepRef = useRef(currentStep);
+  const stepDirection = currentStep >= prevStepRef.current ? 1 : -1;
+
   useEffect(() => {
+    prevStepRef.current = currentStep;
+  }, [currentStep]);
+
+  /**
+   * Bring the step into view when it changes — but NOT on first paint.
+   *
+   * This effect also ran on mount, so opening a deep link like
+   * `?step=academic_details` scroll-jumped the page after paint, for no reason:
+   * the student had not navigated anywhere, and the wizard was already the top of
+   * the document. Same `isFirstPaint` shape as `page-transition.tsx`.
+   */
+  const hasScrolledOnceRef = useRef(false);
+  useEffect(() => {
+    if (!hasScrolledOnceRef.current) {
+      hasScrolledOnceRef.current = true;
+      return;
+    }
     contentTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [currentStep]);
 
@@ -1148,36 +1198,50 @@ export const StudentIntakeForm = ({
             </div>
           ) : null}
 
-          {/* Per-step heading */}
-          <div className="mb-6">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`heading-${currentStep}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2 }}
-              >
-                <h2 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">
-                  {STEP_META[currentStep]?.title}
-                </h2>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {STEP_META[currentStep]?.subtitle}
-                </p>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {/* Step content */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentStep}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="space-y-6"
-            >
+          {/* ── The step ──
+            * ONE keyed motion.div, heading and body together, and NO
+            * AnimatePresence. Three deliberate changes from what this was:
+            *
+            * 1. `mode="wait"` is gone. `product-tour.tsx:485` documents why it is
+            *    wrong twice over: the incoming step is not mounted until the
+            *    outgoing one has finished exiting, so every Next costs the exit
+            *    duration before any new text appears — and if the exit never
+            *    completes, the new step never mounts at all. Changing the `key`
+            *    unmounts the old copy immediately and plays the new one's enter,
+            *    which is the same visual result with no dependency on an exit.
+            *    (Plain `sync` is not the alternative: with static positioning it
+            *    would stack both copies and double the height mid-transition.)
+            *
+            * 2. Heading and body were two SEPARATE AnimatePresence blocks, which
+            *    is why the suite's `hydrateThenGoTo` had to await a title AND a
+            *    body string — the heading could land a frame before the fields.
+            *    One block, one arrival.
+            *
+            * 3. Travel is HORIZONTAL and direction-aware. Vertical travel fought
+            *    the `scrollIntoView` that fires on every step change and read as
+            *    the page jumping; sliding along the axis you are paging through
+            *    reads as pagination, which is what this is. Back slides the other
+            *    way, so the gesture is reversible.
+            *
+            * Durations and easing come from `@/lib/motion` rather than the raw
+            * 0.2/0.25/'easeOut' that were here — this wizard imported
+            * framer-motion but none of the app's motion vocabulary. */}
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, x: stepDirection * TRAVEL.app }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: DURATION.fast, ease: EASE }}
+            className="space-y-6"
+          >
+            <div className="mb-6">
+              <h2 className="font-heading text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+                {STEP_META[currentStep]?.title}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {STEP_META[currentStep]?.subtitle}
+              </p>
+            </div>
+            <div className="space-y-6">
 
               {/* ═══ STEP 1 — Personal info ═══════════════════════════════════ */}
               {currentStep === 1 ? (
@@ -2142,15 +2206,16 @@ export const StudentIntakeForm = ({
                   </SectionCard>
 
                   {/* The status line and the post-save CTA both live outside this
-                    * section now — see below the AnimatePresence. */}
+                    * section now — see below the keyed step body. */}
                 </section>
               ) : null}
 
-            </motion.div>
-          </AnimatePresence>
+            </div>
+          </motion.div>
 
           {/* ── Status line ──
-            * OUTSIDE the AnimatePresence, so it renders on every step. It used to
+            * OUTSIDE the keyed step body, so it renders on every step and is not
+            * unmounted by a step change. It used to
             * live inside the Review step's JSX, which made one of its four
             * messages unreachable: `restoreSavedProfile` sets "Restored last
             * saved progress." and then sends the user to step 1, where the block
