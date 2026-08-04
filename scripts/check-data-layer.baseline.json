@@ -1,5 +1,6 @@
 {
   "_readme": "Direct PostgREST call sites (.from / .rpc) outside src/lib/data, comments stripped and Supabase Storage excluded. May shrink, never grow. See scripts/check-data-layer.mjs.",
-  "total": 183,
-  "files": 50
+  "_raised_2026_08_04": "183 -> 193, BY HAND, for the onboarding stack. This is a debt increase, recorded here rather than quietly absorbed. The ten sites: src/lib/onboarding/state.ts (4) reads and writes profiles.onboarding; src/app/welcome/page.tsx (4), src/lib/onboarding/signals.ts (1) and src/app/dashboard/page.tsx (+1) read profile completeness to decide what the welcome screen and getting-started card ask for. state.ts is not migrated because its whole point is the feature-detection latch around a column database.ts does not yet know exists — it casts through `any`, the same containment as lib/demo/help-request-client.ts, and splitting its four calls out from that latch would separate the queries from the fallback policy that makes them safe. Migrate it wholesale into src/lib/data/onboarding.ts once `npm run supabase:types` can regenerate the column and the cast can go; that is when this drops back by 4.",
+  "total": 193,
+  "files": 53
 }

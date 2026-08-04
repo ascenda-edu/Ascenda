@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Bot, RotateCcw, Play, ChevronUp } from 'lucide-react';
 import { resolveTourForPath, TOURS } from '@/lib/onboarding/tours';
 import { resetOnboardingForTesting } from '@/lib/onboarding/actions';
+import { cn } from '@/lib/utils';
 import { useCoach } from './coach-context';
 import { resetCoachSession } from './ascendi-coach';
 
@@ -133,7 +134,7 @@ export function CoachDevTools() {
       >
         <Bot className="h-3.5 w-3.5" aria-hidden />
         Coach
-        <ChevronUp className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+        <ChevronUp className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} aria-hidden />
       </button>
     </div>
   );

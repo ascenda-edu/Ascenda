@@ -65,7 +65,7 @@ export interface ChecklistSignals {
   hasAskedForHelp: boolean;
 }
 
-export interface ChecklistItem {
+interface ChecklistItem {
   id: string;
   title: string;
   /** Why it is worth doing — one line, concrete, no marketing. */
@@ -81,7 +81,7 @@ export interface ChecklistItem {
   optional: boolean;
 }
 
-export const buildChecklist = (signals: ChecklistSignals): ChecklistItem[] =>
+const buildChecklist = (signals: ChecklistSignals): ChecklistItem[] =>
   ([
   {
     id: 'profile-essentials',

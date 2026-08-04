@@ -87,11 +87,12 @@ export const PROFILE_STEPS = [
 export type StepKey = (typeof PROFILE_STEPS)[number]['key'];
 
 /**
- * `essential` — matching cannot run without it, so it gates entry.
- * `booster`   — improves ranking only; offered, never enforced.
+ * The tiers are `essential` (matching cannot run without it, so it gates entry) and
+ * `booster` (improves ranking only; offered, never enforced). Deliberately NOT
+ * exported as a named type: nothing consumes the tier directly — callers use
+ * `ESSENTIAL_STEP_KEYS` / `BOOSTER_STEP_KEYS` / `isBoosterStep` below, which is the
+ * seam that keeps the gate derived from this table instead of restating it.
  */
-export type StepTier = (typeof PROFILE_STEPS)[number]['tier'];
-
 export type StepCompletionMap = Record<StepKey, boolean>;
 
 export const STEP_ORDER: StepKey[] = PROFILE_STEPS.map((step) => step.key);

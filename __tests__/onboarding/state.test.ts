@@ -12,6 +12,14 @@
  * 2. WHAT COUNTS AS "SETTLED". `shouldOfferTour` is the single gate on whether
  *    Ascendi speaks unprompted. Three independent reasons to stay quiet, and each is
  *    a different kind of no — collapsing them is how one gets accidentally dropped.
+ *
+ * 3. THE FEATURE-DETECTION LATCH. `profiles.onboarding` does not exist until the
+ *    migration is applied, and the module reacts by disabling itself for the whole
+ *    process after the first failure. That is module-level mutable state reached
+ *    through an error path, which is the combination that rots unnoticed: if the
+ *    latch stops closing, every render issues a doomed query; if it closes on the
+ *    WRONG error, one transient blip makes the app treat everyone as new until the
+ *    process restarts.
  */
 
 import {
@@ -19,7 +27,9 @@ import {
   hasSeen,
   hasSeenTour,
   shouldOfferTour,
+  readOnboardingState,
   EMPTY_ONBOARDING,
+  __resetOnboardingAvailability,
   type OnboardingState
 } from '@/lib/onboarding/state';
 
@@ -166,5 +176,100 @@ describe('hasSeen', () => {
 
   it('reads a stamped key as done', () => {
     expect(hasSeen({ ascendi_intro_seen_at: WHEN }, 'ascendi_intro_seen_at')).toBe(true);
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 3. The feature-detection latch.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+describe('the missing-column latch', () => {
+  /**
+   * A client double that reports the same result for every read. Only the shape
+   * `readOnboardingState` actually touches is implemented — `.from().select().eq()
+   * .maybeSingle()` — because a fuller fake would be asserting on the double.
+   *
+   * `select` and `eq` RECORD rather than discard: which column was filtered is half
+   * the meaning of the query (a read that forgets `.eq('id', …)` returns some other
+   * user's row and every assertion below still passes). See
+   * __tests__/meta/recording-doubles.test.ts, which enforces this repo-wide.
+   */
+  const clientReturning = (result: { data?: unknown; error?: unknown }) => {
+    const selects: string[] = [];
+    const filters: Array<[string, unknown]> = [];
+    const maybeSingle = jest.fn(async () => ({ data: result.data ?? null, error: result.error ?? null }));
+    const builder = {
+      select: (columns: string) => {
+        selects.push(columns);
+        return builder;
+      },
+      eq: (column: string, value: unknown) => {
+        filters.push([column, value]);
+        return builder;
+      },
+      maybeSingle
+    };
+    const from = jest.fn(() => builder);
+    return { client: { from } as never, from, maybeSingle, selects, filters };
+  };
+
+  const MISSING_COLUMN = { code: '42703', message: 'column profiles.onboarding does not exist' };
+
+  beforeEach(() => {
+    __resetOnboardingAvailability();
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    __resetOnboardingAvailability();
+    jest.restoreAllMocks();
+  });
+
+  it('returns an empty state rather than throwing when the column is absent', async () => {
+    const { client } = clientReturning({ error: MISSING_COLUMN });
+
+    // Never null, never a throw: a failed read has to be indistinguishable from a
+    // new user, or the dashboard renders an error over a working page.
+    await expect(readOnboardingState(client, 'user-1')).resolves.toEqual(EMPTY_ONBOARDING);
+  });
+
+  it('stops querying entirely after the first missing-column failure', async () => {
+    const { client, from } = clientReturning({ error: MISSING_COLUMN });
+
+    await readOnboardingState(client, 'user-1');
+    await readOnboardingState(client, 'user-1');
+    await readOnboardingState(client, 'user-2');
+
+    // One attempt, then the latch: every later call short-circuits instead of
+    // issuing a request that cannot succeed. This is the property that keeps a
+    // missing migration from costing a query on every render for every user.
+    expect(from).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT latch on an ordinary query error', async () => {
+    // The distinction that matters. A transient failure must stay transient — if it
+    // closed the latch, one blip would make the process treat every user as new
+    // (re-showing the welcome screen and every tour) until it restarted.
+    const { client, from } = clientReturning({ error: { code: '57014', message: 'statement timeout' } });
+
+    await readOnboardingState(client, 'user-1');
+    await readOnboardingState(client, 'user-1');
+
+    expect(from).toHaveBeenCalledTimes(2);
+  });
+
+  it('parses a successful read through the same parser as everything else', async () => {
+    const { client, selects, filters } = clientReturning({
+      data: { onboarding: { welcomed_at: WHEN, bogus_key: 'x' } }
+    });
+
+    // Unknown keys dropped on the way in, so the remote row cannot introduce a
+    // field the rest of the app has no branch for.
+    await expect(readOnboardingState(client, 'user-1')).resolves.toEqual({ welcomed_at: WHEN });
+
+    // Scoped to the ONE profile asked for. Without this the test above would pass
+    // just as happily against a read that returned whoever came back first.
+    expect(selects).toEqual(['onboarding']);
+    expect(filters).toEqual([['id', 'user-1']]);
   });
 });
