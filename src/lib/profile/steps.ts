@@ -17,12 +17,18 @@
  * row. Those come from steps 1-3. Skip any of them and the app has literally
  * nothing to show, so gating on them buys the user something.
  *
- * The other two do not clear that bar. `activities_ambitions` and
- * `lifestyle_preferences` both resolve to `Boolean(lifestyle)` in
- * `buildStepCompletion` — every field in them is optional, and completion means
- * only that the row exists. They refine ranking; they do not enable it. Holding
- * the whole app hostage to a step whose own completion rule is "a row exists"
- * was the bug.
+ * The other two do not clear that bar. Every field in `activities_ambitions` and
+ * `lifestyle_preferences` is optional, and `runMatching` reads none of them — they
+ * refine ranking, they do not enable it. Holding the whole app hostage to a step
+ * that no query depends on was the bug.
+ *
+ * Both steps USED to resolve to `Boolean(lifestyle)` in `buildStepCompletion` —
+ * "the row exists, so the step is done" — which held only while they were
+ * mandatory. Tiering them broke it, because "skip for now" writes the row empty.
+ * They now check CONTENT instead; see the long comment on those two keys in
+ * `./completion.ts`. Do not reason about the tiers from the old rule: it is the
+ * reason the dashboard once showed a student who had skipped both steps as 100%
+ * complete.
  *
  * So: ESSENTIAL steps gate, BOOSTER steps are offered and can be deferred.
  *

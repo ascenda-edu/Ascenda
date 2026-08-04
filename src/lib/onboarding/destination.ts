@@ -38,7 +38,11 @@
  * its own, because `/matches` is student-only anyway.
  *
  * `resolveWelcomeDestination` below is still the only place the forwarding
- * decision is made, and it imports the same list rather than restating it.
+ * decision is made. It no longer needs to consult the gated list at all, which is
+ * the point: under the old denylist it had to, because forwarding to a path that
+ * was still gated was the loop. Now every path it can return is ungated unless
+ * someone explicitly adds it above, so the termination argument is structural
+ * instead of a cross-check the two had to keep agreeing on.
  *
  * Kept dependency-free on purpose — `middleware.ts` runs on the edge runtime.
  */

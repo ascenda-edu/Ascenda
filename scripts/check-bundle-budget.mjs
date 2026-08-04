@@ -124,6 +124,7 @@ const ROUTE_BUDGETS = {
   '/admin/simulation': 175, //   157
   '/toolbox/requirements': 175, //   157
   '/toolbox': 175, //   156
+  '/welcome': 170, //   155  first screen after signup: framer-motion + the blob banner
   '/toolbox/essay-workshop': 125, //   109
   '/_not-found': 120, //   101  server-only page: the shared bundle and nothing else
   '/shortlist': 120, //   101
