@@ -3,7 +3,7 @@ import { hasE2ECredentials, E2E_SKIP_REASON } from './credentials';
 
 /**
  * THE gate `docs/audit/13-remaining-work.md` blocks the StudentIntakeForm
- * decomposition on: sign in → fill all six steps → save → reload → confirm every
+ * decomposition on: sign in → fill every screen → save → reload → confirm every
  * field round-trips.
  *
  * Why this shape and not a pile of small specs: F-A (the Radix bubble-input bug
@@ -13,25 +13,79 @@ import { hasE2ECredentials, E2E_SKIP_REASON } from './credentials';
  * catch that class — jsdom cannot, because the bug lives in how Radix's hidden
  * native `<select>` behaves inside a `<form>` during hydration.
  *
- * The verification pass deliberately navigates to each step by `?step=` rather
+ * The verification pass deliberately navigates to each screen by `?step=` rather
  * than clicking Next, because that is the path a RETURNING student takes
- * (`profile/wizard/page.tsx` computes `initialStep` from completion state) and
- * it is the exact path F-A broke.
+ * (`profile/wizard/page.tsx` resolves `?step=` against `WIZARD_SCREENS` and
+ * otherwise lands on the first incomplete screen) and it is the exact path F-A
+ * broke.
  *
  * ── STATUS ────────────────────────────────────────────────────────────────
- * As committed this has NEVER BEEN EXECUTED against a live account: the
- * authoring environment had no E2E credentials (see playwright.config.ts). The
- * skip below is honest, not decorative. First human run should expect to fix
- * selector drift, and may legitimately surface fields that do not survive the
- * server round trip — that finding is the point of the gate.
+ * Still NEVER EXECUTED against a live account: the authoring environment has no
+ * E2E credentials (see playwright.config.ts). The skip below is honest, not
+ * decorative.
+ *
+ * ── REWRITTEN 2026-08-04 FOR THE EIGHT-SCREEN WIZARD ──────────────────────
+ * The redesign did not just move selectors, it changed the SHAPE of the flow, so
+ * a find-and-replace would have produced a spec that passed for the wrong
+ * reasons. What actually changed, and what this spec now asserts:
+ *
+ *  1. SIX STEPS BECAME EIGHT SCREENS, AND THE ORDER INVERTED. `academic_input`
+ *     is no longer a `?step=` value at all — it split into `subject_area` and
+ *     `school`. Personal info moved from FIRST to FIFTH: the wizard now opens on
+ *     "what do you want to study?" and defers the paperwork. `WIZARD_SCREENS` in
+ *     `src/lib/profile/wizard-screens.ts` is the single source of truth for both
+ *     the keys and the order; SCREEN below mirrors it.
+ *
+ *  2. THE TWO HERO QUESTIONS ARE RADIOGROUPS, NOT CHIPS. `ChoiceGroup` with
+ *     `required` renders `role="radio"` + `aria-checked`. The old `chipIn`
+ *     helper looked them up with `getByRole('button')` and asserted
+ *     `aria-pressed`, and an ARIA radio matches NEITHER — so those lookups did
+ *     not merely drift, they could never resolve. Selection is now addressed by
+ *     `data-choice` (the option's stored value) inside the group's `data-field`,
+ *     which is stable against label and note copy changes in a way a name regex
+ *     is not.
+ *
+ *  3. EMOJI ARE GONE FROM EVERY CHOICE LABEL. `'🌆 Major city'` is now
+ *     `'Major city'`. The emoji were replaced by Lucide icons carrying
+ *     `aria-hidden`, so they no longer appear in any accessible name.
+ *
+ *  4. THE SUCCESS COPY MOVED AND CHANGED. `'Profile saved! Your matches are
+ *     ready.'` is now `'Profile saved — your matches are ready'` (em dash, no
+ *     terminal period) inside the post-save panel's own `role="status"`.
+ *
+ * Two things deliberately did NOT change, and are asserted as-is: a `Chip`'s
+ * accessible name is still its label AND its description concatenated (so
+ * `'Practical Project-based, hands-on'` and `'Medium 5–15k'` remain correct), and
+ * the lifestyle groups are still clearable `aria-pressed` toggles rather than
+ * radios — see the boundary argued in `choice-card.tsx`'s header.
  */
 
-const STEP = {
-  personal: 'personal_information',
-  studies: 'academic_input',
+/** `?step=` values, in screen order. Mirrors `WIZARD_SCREENS`. */
+const SCREEN = {
+  subjectArea: 'subject_area',
+  school: 'school',
   grades: 'academic_details',
+  tests: 'tests',
+  personal: 'personal_information',
   activities: 'activities_ambitions',
-  lifestyle: 'lifestyle_preferences'
+  lifestyle: 'lifestyle_preferences',
+  review: 'review'
+} as const;
+
+/**
+ * Each screen's `<h2>`, which is its `question` — NOT its `railLabel`. The old
+ * spec waited on step titles ("Your studies", "Review & confirm") that the
+ * redesign does not render anywhere.
+ */
+const HEADING = {
+  subjectArea: 'What do you want to study?',
+  school: 'Where are you studying?',
+  grades: 'Your subjects and predicted grades',
+  tests: 'English and admissions tests',
+  personal: 'Now the boring bit',
+  activities: 'What do you do outside class?',
+  lifestyle: 'What should university feel like?',
+  review: 'Does this all look right?'
 } as const;
 
 /** Distinct, greppable values so a mis-mapped column is obvious in a diff. */
@@ -47,7 +101,6 @@ const PROFILE = {
   schoolCountry: 'Thailand',
   schoolCity: 'Bangkok',
   schoolType: 'International school',
-  cluster: 'Engineering',
   careerAspiration: 'Structural engineer',
   subjects: [
     { name: 'Mathematics', grade: '7' },
@@ -73,9 +126,19 @@ const PROFILE = {
   ambition: 'I want to build bridges that outlast me.',
   // The chip's accessible name is its label AND its description, concatenated.
   teachingStyle: 'Practical Project-based, hands-on',
-  locationType: '🌆 Major city',
+  locationType: 'Major city',
   campusSize: 'Medium 5–15k',
   extracurricular: 'Student societies'
+} as const;
+
+/**
+ * Stored VALUES, not labels, for the two radiogroups — `data-choice` carries
+ * `option.value`. `'engineering'` is a `CLUSTER_OPTIONS` value; `'IB'` is a
+ * `programme_type`.
+ */
+const CHOICE = {
+  cluster: 'engineering',
+  programme: 'IB'
 } as const;
 
 /** The graduation-year `<Select>` offers currentYear-2 … currentYear+5. */
@@ -120,24 +183,51 @@ const chipIn = (scope: Locator | Page, name: string) =>
   scope.getByRole('button', { name, exact: true }).first();
 
 /**
+ * A `ChoiceGroup` card, addressed by the group's `data-field` and the option's
+ * `data-choice`.
+ *
+ * Not `getByRole('radio', { name })`: a card's accessible name is its label plus
+ * its `note` ("IB Diploma Six subjects, three at Higher Level, scored out of 45"),
+ * so an exact-name lookup fails and a partial one silently re-pins the test to
+ * marketing copy. `data-choice` is the stored value — the thing actually being
+ * asserted about.
+ */
+const choiceIn = (page: Page, fieldKey: string, value: string) =>
+  page.locator(`[data-field="${fieldKey}"] [data-choice="${value}"]`);
+
+/**
+ * Pick a radio card, rather than toggling it.
+ *
+ * ARIA radios have no unchecked state reachable by re-activating them, so unlike
+ * `selectChip` this needs no already-selected guard for correctness — but it keeps
+ * one anyway, because clicking an already-checked radio is a wasted event that can
+ * still close a soft keyboard on the mobile projects.
+ */
+const selectChoice = async (card: Locator) => {
+  if ((await card.getAttribute('aria-checked')) !== 'true') {
+    await card.click();
+  }
+  await expect(card).toHaveAttribute('aria-checked', 'true');
+};
+
+/**
  * Select a chip, rather than toggling it.
  *
- * Chips are TOGGLES — `Chip` in StudentIntakeForm.tsx renders
- * `aria-pressed={selected}` and its onClick flips the value. So a bare `.click()`
- * is NOT idempotent: on a fresh account it selects, and on an account that
- * already holds this profile it DESELECTS.
+ * Chips are TOGGLES — `Chip` in `chip.tsx` renders `aria-pressed={selected}` and
+ * its onClick flips the value. So a bare `.click()` is NOT idempotent: on a fresh
+ * account it selects, and on an account that already holds this profile it
+ * DESELECTS.
  *
  * That is precisely why this spec passed the first time it ever ran in CI and
  * failed every run after. Each run completes the wizard and SAVES, so the next
- * run loads step 2 with `intended_clusters` already set, the bare click turned it
- * back off, and step 2's own validation refused to advance
- * ("Select at least one subject area") — leaving the spec waiting 15s for a
- * "Grades & tests" heading that could never appear. The app was right; the spec
- * was assuming an empty form.
+ * run reloads with the value already set, the bare click turned it back off, and
+ * the screen's own validation refused to advance — leaving the spec waiting 15s
+ * for a heading that could never appear. The app was right; the spec was assuming
+ * an empty form.
  *
- * Asserting the end state also means a chip that is disabled (the primary
- * cluster group disables the others once one is chosen) fails here, naming the
- * chip, instead of surfacing as a timeout two steps later.
+ * Asserting the end state also means a chip that is disabled (a group at its cap
+ * disables the rest) fails here, naming the chip, instead of surfacing as a
+ * timeout two screens later.
  */
 const selectChip = async (chip: Locator) => {
   if ((await chip.getAttribute('aria-pressed')) !== 'true') {
@@ -146,51 +236,44 @@ const selectChip = async (chip: Locator) => {
   await expect(chip).toHaveAttribute('aria-pressed', 'true');
 };
 
-const gotoStep = async (page: Page, step: string) => {
-  await page.goto(`/profile/wizard?step=${step}`);
-  // The step heading and the step body are separate AnimatePresence blocks;
-  // waiting on a field rather than the heading avoids the one-frame gap.
+const gotoScreen = async (page: Page, screen: string) => {
+  await page.goto(`/profile/wizard?step=${screen}`);
+  // The screen heading and the screen body are separate AnimatePresence blocks;
+  // waiting on a nav button rather than the heading avoids the one-frame gap.
   await expect(page.getByRole('button', { name: /^(Next|Submit & see matches)$/ })).toBeVisible();
 };
 
+const clickNext = (page: Page) => page.getByRole('button', { name: 'Next', exact: true }).click();
+
 // ── The spec ─────────────────────────────────────────────────────────────────
 
-test.describe('profile wizard — six-step happy path round trip', () => {
+test.describe('profile wizard — eight-screen happy path round trip', () => {
   test.skip(!hasE2ECredentials(), E2E_SKIP_REASON);
 
   test('every field survives save + reload', async ({ page }) => {
-    // ── 1. Personal ────────────────────────────────────────────────────────
-    await gotoStep(page, STEP.personal);
+    // ── 1. Subject area ────────────────────────────────────────────────────
+    await gotoScreen(page, SCREEN.subjectArea);
+    await expect(page.getByRole('heading', { name: HEADING.subjectArea })).toBeVisible();
 
-    await page.getByLabel('First name').fill(PROFILE.firstName);
-    await page.getByLabel('Last name').fill(PROFILE.lastName);
-    await page.getByLabel('Email').fill(PROFILE.email);
-    await chooseFromCombobox(page, page.getByPlaceholder('Search nationality…'), PROFILE.nationality);
-    await chooseFromCombobox(page, page.getByLabel('Country of residence'), PROFILE.residentCountry);
-    await page.getByLabel(/^City/).fill(PROFILE.city);
-    await page.getByLabel(/^Age/).fill(PROFILE.age);
+    await selectChoice(choiceIn(page, 'academic_input.intended_clusters', CHOICE.cluster));
+    await page.getByLabel(/^Career aspiration/).fill(PROFILE.careerAspiration);
 
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Your studies' })).toBeVisible();
+    await clickNext(page);
+    await expect(page.getByRole('heading', { name: HEADING.school })).toBeVisible();
 
-    // ── 2. Studies ─────────────────────────────────────────────────────────
-    await selectChip(chipIn(page.locator('[data-field="academic_input.programme_type"]'), 'IB Diploma'));
+    // ── 2. School ──────────────────────────────────────────────────────────
+    // Qualification first: it decides how many subject rows screen 3 seeds.
+    await selectChoice(choiceIn(page, 'academic_input.programme_type', CHOICE.programme));
     await page.getByLabel('School name').fill(PROFILE.schoolName);
     await chooseFromCombobox(page, page.getByLabel('School country'), PROFILE.schoolCountry);
     await page.getByLabel(/^School city/).fill(PROFILE.schoolCity);
     await chooseFromSelect(page, 'School type', PROFILE.schoolType);
     await chooseFromSelect(page, 'Graduation year', GRADUATION_YEAR);
-    await selectChip(
-      page
-        .locator('[data-field="academic_input.intended_clusters"]')
-        .getByRole('button', { name: new RegExp(PROFILE.cluster) })
-    );
-    await page.getByLabel(/^Career aspiration/).fill(PROFILE.careerAspiration);
 
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Grades & tests' })).toBeVisible();
+    await clickNext(page);
+    await expect(page.getByRole('heading', { name: HEADING.grades })).toBeVisible();
 
-    // ── 3. Grades & tests ──────────────────────────────────────────────────
+    // ── 3. Subjects & predicted grades ─────────────────────────────────────
     // Picking IB seeds exactly six rows: three HL then three SL.
     const subjectInputs = page.getByPlaceholder('Subject name');
     await expect(subjectInputs).toHaveCount(6);
@@ -204,15 +287,31 @@ test.describe('profile wizard — six-step happy path round trip', () => {
     await chooseFromSelect(page, 'TOK grade', PROFILE.tokGrade);
     await chooseFromSelect(page, 'EE grade', PROFILE.eeGrade);
 
+    await clickNext(page);
+    await expect(page.getByRole('heading', { name: HEADING.tests })).toBeVisible();
+
+    // ── 4. English & admissions tests ──────────────────────────────────────
     await selectChip(chipIn(page.locator('[data-field="academic_input.english_required"]'), 'Yes'));
     await chooseFromSelect(page, 'Test type', PROFILE.englishTest);
     await selectChip(chipIn(page.locator('[data-field="academic_input.english_status"]'), PROFILE.englishStatus));
     await page.getByLabel(/^Overall score/).fill(PROFILE.englishScore);
 
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Activities & ambitions' })).toBeVisible();
+    await clickNext(page);
+    await expect(page.getByRole('heading', { name: HEADING.personal })).toBeVisible();
 
-    // ── 4. Activities ──────────────────────────────────────────────────────
+    // ── 5. About you ───────────────────────────────────────────────────────
+    await page.getByLabel('First name').fill(PROFILE.firstName);
+    await page.getByLabel('Last name').fill(PROFILE.lastName);
+    await page.getByLabel('Email').fill(PROFILE.email);
+    await chooseFromCombobox(page, page.getByPlaceholder('Search nationality…'), PROFILE.nationality);
+    await chooseFromCombobox(page, page.getByLabel('Country of residence'), PROFILE.residentCountry);
+    await page.getByLabel(/^City/).fill(PROFILE.city);
+    await page.getByLabel(/^Age/).fill(PROFILE.age);
+
+    await clickNext(page);
+    await expect(page.getByRole('heading', { name: HEADING.activities })).toBeVisible();
+
+    // ── 6. Activities & ambitions (booster) ────────────────────────────────
     await page.getByRole('button', { name: 'Add activity' }).click();
     await selectChip(chipIn(page, PROFILE.activity.category));
     await selectChip(chipIn(page, PROFILE.activity.level));
@@ -220,21 +319,21 @@ test.describe('profile wizard — six-step happy path round trip', () => {
     await page.getByPlaceholder(/hackathon|Best delegate|award/i).first().fill(PROFILE.activity.highlight);
     await page.getByPlaceholder(/biomedical sciences/).fill(PROFILE.ambition);
 
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Life at university' })).toBeVisible();
+    await clickNext(page);
+    await expect(page.getByRole('heading', { name: HEADING.lifestyle })).toBeVisible();
 
-    // ── 5. Lifestyle ───────────────────────────────────────────────────────
+    // ── 7. Life at university (booster) ───────────────────────────────────
     await selectChip(chipIn(page, PROFILE.teachingStyle));
     await selectChip(chipIn(page, PROFILE.locationType));
     await selectChip(chipIn(page, PROFILE.campusSize));
     await selectChip(chipIn(page, PROFILE.extracurricular));
 
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Review & confirm' })).toBeVisible();
+    await clickNext(page);
+    await expect(page.getByRole('heading', { name: HEADING.review })).toBeVisible();
 
-    // ── 6. Review & submit ─────────────────────────────────────────────────
+    // ── 8. Review & submit ─────────────────────────────────────────────────
     await page.getByRole('button', { name: 'Submit & see matches' }).click();
-    await expect(page.getByText('Profile saved! Your matches are ready.')).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByText('Profile saved — your matches are ready')).toBeVisible({ timeout: 60_000 });
 
     // ── Round trip ─────────────────────────────────────────────────────────
     // Drop the localStorage draft FIRST. Without this the reload could be
@@ -243,19 +342,14 @@ test.describe('profile wizard — six-step happy path round trip', () => {
     // makes the guarantee explicit rather than incidental.)
     await page.evaluate(() => window.localStorage.removeItem('ascenda-intake-draft'));
 
-    await gotoStep(page, STEP.personal);
-    await expect(page.getByLabel('First name')).toHaveValue(PROFILE.firstName);
-    await expect(page.getByLabel('Last name')).toHaveValue(PROFILE.lastName);
-    await expect(page.getByLabel('Email')).toHaveValue(PROFILE.email);
-    await expect(page.getByPlaceholder('Search nationality…').first()).toHaveValue(PROFILE.nationality);
-    await expect(page.getByLabel('Country of residence')).toHaveValue(PROFILE.residentCountry);
-    await expect(page.getByLabel(/^City/)).toHaveValue(PROFILE.city);
-    await expect(page.getByLabel(/^Age/)).toHaveValue(PROFILE.age);
+    await gotoScreen(page, SCREEN.subjectArea);
+    await expect(choiceIn(page, 'academic_input.intended_clusters', CHOICE.cluster))
+      .toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByLabel(/^Career aspiration/)).toHaveValue(PROFILE.careerAspiration);
 
-    await gotoStep(page, STEP.studies);
-    await expect(
-      chipIn(page.locator('[data-field="academic_input.programme_type"]'), 'IB Diploma')
-    ).toHaveAttribute('aria-pressed', 'true');
+    await gotoScreen(page, SCREEN.school);
+    await expect(choiceIn(page, 'academic_input.programme_type', CHOICE.programme))
+      .toHaveAttribute('aria-checked', 'true');
     await expect(page.getByLabel('School name')).toHaveValue(PROFILE.schoolName);
     await expect(page.getByLabel('School country')).toHaveValue(PROFILE.schoolCountry);
     await expect(page.getByLabel(/^School city/)).toHaveValue(PROFILE.schoolCity);
@@ -263,14 +357,8 @@ test.describe('profile wizard — six-step happy path round trip', () => {
     // the hydration effect ran. They used to come back blank.
     await expect(page.getByRole('combobox', { name: 'School type' })).toHaveText(PROFILE.schoolType);
     await expect(page.getByRole('combobox', { name: 'Graduation year' })).toHaveText(GRADUATION_YEAR);
-    await expect(
-      page
-        .locator('[data-field="academic_input.intended_clusters"]')
-        .getByRole('button', { name: new RegExp(PROFILE.cluster) })
-    ).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByLabel(/^Career aspiration/)).toHaveValue(PROFILE.careerAspiration);
 
-    await gotoStep(page, STEP.grades);
+    await gotoScreen(page, SCREEN.grades);
     for (const [i, subject] of PROFILE.subjects.entries()) {
       await expect(page.getByPlaceholder('Subject name').nth(i)).toHaveValue(subject.name);
       await expect(page.getByPlaceholder('1–7').nth(i)).toHaveValue(subject.grade);
@@ -283,19 +371,30 @@ test.describe('profile wizard — six-step happy path round trip', () => {
     await expect(
       chipIn(page.locator('[data-field="academic_input.ib_math_pathway"]'), PROFILE.mathsPathway)
     ).toHaveAttribute('aria-pressed', 'true');
+
+    await gotoScreen(page, SCREEN.tests);
     await expect(page.getByRole('combobox', { name: 'Test type' })).toHaveText(PROFILE.englishTest);
     await expect(
       chipIn(page.locator('[data-field="academic_input.english_status"]'), PROFILE.englishStatus)
     ).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByLabel(/^Overall score/)).toHaveValue(PROFILE.englishScore);
 
-    await gotoStep(page, STEP.activities);
+    await gotoScreen(page, SCREEN.personal);
+    await expect(page.getByLabel('First name')).toHaveValue(PROFILE.firstName);
+    await expect(page.getByLabel('Last name')).toHaveValue(PROFILE.lastName);
+    await expect(page.getByLabel('Email')).toHaveValue(PROFILE.email);
+    await expect(page.getByPlaceholder('Search nationality…').first()).toHaveValue(PROFILE.nationality);
+    await expect(page.getByLabel('Country of residence')).toHaveValue(PROFILE.residentCountry);
+    await expect(page.getByLabel(/^City/)).toHaveValue(PROFILE.city);
+    await expect(page.getByLabel(/^Age/)).toHaveValue(PROFILE.age);
+
+    await gotoScreen(page, SCREEN.activities);
     await expect(chipIn(page, PROFILE.activity.category)).toHaveAttribute('aria-pressed', 'true');
     await expect(chipIn(page, PROFILE.activity.level)).toHaveAttribute('aria-pressed', 'true');
     await expect(chipIn(page, PROFILE.activity.duration)).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByPlaceholder(/biomedical sciences/)).toHaveValue(PROFILE.ambition);
 
-    await gotoStep(page, STEP.lifestyle);
+    await gotoScreen(page, SCREEN.lifestyle);
     await expect(chipIn(page, PROFILE.teachingStyle)).toHaveAttribute('aria-pressed', 'true');
     await expect(chipIn(page, PROFILE.locationType)).toHaveAttribute('aria-pressed', 'true');
     await expect(chipIn(page, PROFILE.campusSize)).toHaveAttribute('aria-pressed', 'true');
