@@ -110,7 +110,7 @@ export function UnlocksLedger({ entries }: { entries: readonly UnlockEntry[] }) 
                 'mt-0.5 flex h-[1.0625rem] w-[1.0625rem] shrink-0 items-center justify-center rounded-full border-[1.5px] transition-colors',
                 entry.unlocked
                   ? 'border-success-fill bg-success-fill text-card'
-                  : 'border-border'
+                  : 'border-primary/25'
               )}
             >
               {entry.unlocked ? <Check className="h-2.5 w-2.5" /> : null}

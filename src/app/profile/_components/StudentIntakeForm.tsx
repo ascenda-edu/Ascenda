@@ -149,9 +149,18 @@ function FieldError({ msg, id }: { msg?: string; id?: string }) {
   return <p id={id} role="alert" className="mt-1 text-xs font-medium text-danger">{msg}</p>;
 }
 
+/**
+ * The inset grouping box inside a step — "Where you study", "Your subjects", etc.
+ *
+ * `bg-primary/3` rather than `bg-muted/20`: this is the largest painted area on most
+ * screens, so a grey wash here set the tone for the whole form regardless of how the
+ * controls inside it were coloured. 3% of the brand hue reads as the same "quietly
+ * inset" without the grey cast. Both are on the declared opacity scale
+ * (tailwind.config.ts) — an off-scale step here would emit nothing at all.
+ */
 function SectionCard({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn('rounded-2xl border border-border/60 bg-muted/20 p-5 space-y-5', className)}>
+    <div className={cn('rounded-2xl border border-primary/15 bg-primary/3 p-5 space-y-5', className)}>
       {children}
     </div>
   );
@@ -1479,7 +1488,10 @@ export const StudentIntakeForm = ({
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <form className="relative font-sans" onSubmit={handleSubmit} onBlur={handleFieldBlur}>
+    /* `flex flex-1 flex-col` so the page's full-height frame propagates down to the
+       row below — without it `flex-1` on the row has nothing to measure against and
+       the rail's dividing rule stops wherever the content happens to end. */
+    <form className="relative flex flex-1 flex-col font-sans" onSubmit={handleSubmit} onBlur={handleFieldBlur}>
       {/* Step navigation below `lg`, where the rail does not fit. Without it a
         * phone user has no way to jump steps and no sense of progress — only Back
         * and Next.
@@ -1501,15 +1513,24 @@ export const StudentIntakeForm = ({
         currentTitle={screenAt(currentStep).railLabel}
       />
 
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-1 flex-col gap-6 lg:flex-row">
 
         {/* ── The step map ──
           * Presentational and prop-driven (see `intake-rail.tsx`). Rendered here
           * on lg+; the same component is what the mobile "Steps" sheet shows, so
           * there is one rail implementation in two containers rather than two
-          * lists that drift. */}
-        <div className="hidden lg:block lg:w-64">
+          * lists that drift.
+          *
+          * `bare` — the rail is FRAME CHROME now, not a card. It used to be a
+          * `surface-card` sitting inside the page's own column, which stacked three
+          * different radii on three siblings (2xl hero, 3xl rail, 4xl body) and read
+          * as a card inside a card. A dividing rule against the washed background
+          * says "map" without competing with the work beside it. The column is left
+          * stretched (no `self-start`) so that rule runs the full height of the
+          * frame, and so the sticky rail inside it has room to travel. */}
+        <div className="hidden lg:flex lg:w-72 lg:shrink-0 lg:flex-col lg:border-r lg:border-border/60 lg:pr-6">
           <IntakeRail
+            bare
             sticky
             steps={railSteps}
             essentialPct={essentialPct}
@@ -1518,7 +1539,7 @@ export const StudentIntakeForm = ({
               <button
                 type="button"
                 onClick={restoreSavedProfile}
-                className="w-full rounded-xl px-3 py-3.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="w-full rounded-xl px-3 py-3.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-primary/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 Restore last save
               </button>
@@ -1527,9 +1548,16 @@ export const StudentIntakeForm = ({
         </div>
 
         {/* ── The work, and what it buys ──
-          * Its own surface, separate from the rail's. `min-w-0` is load-bearing
-          * in a flex row: without it the grids inside refuse to shrink and the
-          * whole page gains a horizontal scrollbar. */}
+          * A column below `xl` (work card, then the unlocks ledger under it) and a
+          * row at `xl` (work card | ledger). Nesting the two here rather than making
+          * them siblings of the rail is what lets a SINGLE ledger instance change
+          * position across breakpoints — see the note on the `<aside>` below.
+          *
+          * `min-w-0` is load-bearing in a flex row: without it the grids inside
+          * refuse to shrink and the whole page gains a horizontal scrollbar.
+          * `xl:items-start` keeps both children at content height once they sit
+          * side by side. */}
+        <div className="flex min-w-0 flex-1 flex-col gap-5 xl:flex-row xl:items-start">
         <div
           ref={contentTopRef}
           /* `overflow-visible` overrides `.surface-card`'s `overflow: hidden`
@@ -1541,7 +1569,13 @@ export const StudentIntakeForm = ({
            * children are cards and fields, none of which reach the corners. The
            * same `overflow: hidden` is why the sticky step meter had to move out of
            * this card, 40 lines above. */
-          className="surface-card min-w-0 flex-1 scroll-mt-28 overflow-visible rounded-4xl lg:scroll-mt-0"
+          /* Content height, not stretched: the row above is `flex-1` so the rail's
+             dividing rule reaches the floor, but letting the work card stretch too
+             would just add empty card below the Next button. Its own wrapper handles
+             that via `xl:items-start`; here `self-start` would fight the column
+             direction below `xl` and shrink the card horizontally, so it is not used.
+             `scroll-mt-20` matches the sticky 56px bar plus breathing room. */
+          className="surface-card min-w-0 flex-1 scroll-mt-20 overflow-visible rounded-3xl lg:scroll-mt-0"
         >
 
           {/* Restored-draft notice. `info` tone rather than a primary tint: this
@@ -1778,7 +1812,7 @@ export const StudentIntakeForm = ({
                       ) : null}
                     </div>
                     <label className="space-y-1.5">
-                      <span className="text-sm font-medium text-muted-foreground">City <span className="text-xs">(optional)</span></span>
+                      <span className="text-sm font-medium">City <span className="text-xs text-muted-foreground">(optional)</span></span>
                       <input
                         type="text" autoComplete="address-level2" className="form-input"
                         value={personalInfo.current_location_city}
@@ -1787,7 +1821,7 @@ export const StudentIntakeForm = ({
                       />
                     </label>
                     <label className="space-y-1.5">
-                      <span className="text-sm font-medium text-muted-foreground">Age <span className="text-xs">(optional)</span></span>
+                      <span className="text-sm font-medium">Age <span className="text-xs text-muted-foreground">(optional)</span></span>
                       <input
                         type="number" min={10} max={60} className="form-input"
                         value={personalInfo.age}
@@ -1799,7 +1833,7 @@ export const StudentIntakeForm = ({
 
                   {/* Gender */}
                   <div className="space-y-2">
-                    <span className="text-sm font-medium text-muted-foreground">Gender <span className="text-xs">(optional)</span></span>
+                    <span className="text-sm font-medium">Gender <span className="text-xs text-muted-foreground">(optional)</span></span>
                     <div className="flex flex-wrap gap-2">
                       {[
                         { value: 'female', label: 'Female' },
@@ -1865,7 +1899,7 @@ export const StudentIntakeForm = ({
                   ) : null}
 
                   <label className="block space-y-1.5">
-                    <span className="text-sm font-medium text-muted-foreground">Career aspiration <span className="text-xs">(optional)</span></span>
+                    <span className="text-sm font-medium">Career aspiration <span className="text-xs text-muted-foreground">(optional)</span></span>
                     <input
                       type="text" className="form-input"
                       placeholder="Investment banker, software engineer, doctor…"
@@ -1927,7 +1961,7 @@ export const StudentIntakeForm = ({
                       />
                     </div>
                     <label className="space-y-1.5">
-                      <span className="text-sm font-medium text-muted-foreground">School city <span className="text-xs">(optional)</span></span>
+                      <span className="text-sm font-medium">School city <span className="text-xs text-muted-foreground">(optional)</span></span>
                       <input
                         type="text" className="form-input"
                         value={academicInput.school_city}
@@ -1935,7 +1969,7 @@ export const StudentIntakeForm = ({
                       />
                     </label>
                     <label className="space-y-1.5">
-                      <span className="text-sm font-medium text-muted-foreground">School type <span className="text-xs">(optional)</span></span>
+                      <span className="text-sm font-medium">School type <span className="text-xs text-muted-foreground">(optional)</span></span>
                       {/* `|| ''`, NOT `|| undefined` — see the note at the top of this
                         * file. An earlier version of this comment had it backwards and
                         * also claimed Radix treats '' as an illegal item value; both are
@@ -1979,7 +2013,7 @@ export const StudentIntakeForm = ({
                       <FieldError msg={errors['academic_input.graduation_year']} id={fieldErrorId('academic_input.graduation_year')} />
                     </div>
                     <label className="space-y-1.5">
-                      <span className="text-sm font-medium text-muted-foreground">Preferred start date <span className="text-xs">(optional)</span></span>
+                      <span className="text-sm font-medium">Preferred start date <span className="text-xs text-muted-foreground">(optional)</span></span>
                       <input
                         type="date" className="form-input"
                         value={academicInput.desired_start_date}
@@ -2190,7 +2224,7 @@ export const StudentIntakeForm = ({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div data-field="academic_input.ib_core_points">
                           <label className="space-y-1.5 block">
-                            <span className="text-sm font-medium text-muted-foreground">Core points <span className="text-xs">(optional)</span></span>
+                            <span className="text-sm font-medium">Core points <span className="text-xs text-muted-foreground">(optional)</span></span>
                             <input type="number" min={0} max={3}
                               className={cn('form-input', errors['academic_input.ib_core_points'] && 'border-destructive')}
                               {...a11yError('academic_input.ib_core_points')}
@@ -2201,7 +2235,7 @@ export const StudentIntakeForm = ({
                           <FieldError msg={errors['academic_input.ib_core_points']} id={fieldErrorId('academic_input.ib_core_points')} />
                         </div>
                         <label className="space-y-1.5">
-                          <span className="text-sm font-medium text-muted-foreground">TOK grade <span className="text-xs">(optional)</span></span>
+                          <span className="text-sm font-medium">TOK grade <span className="text-xs text-muted-foreground">(optional)</span></span>
                           <Select value={academicInput.ib_tok_grade || ''}
                             onValueChange={(v) => updateAcademicInput('ib_tok_grade', v === CLEAR ? '' : v)}>
                             <SelectTrigger aria-label="TOK grade">
@@ -2214,7 +2248,7 @@ export const StudentIntakeForm = ({
                           </Select>
                         </label>
                         <label className="space-y-1.5">
-                          <span className="text-sm font-medium text-muted-foreground">EE grade <span className="text-xs">(optional)</span></span>
+                          <span className="text-sm font-medium">EE grade <span className="text-xs text-muted-foreground">(optional)</span></span>
                           <Select value={academicInput.ib_ee_grade || ''}
                             onValueChange={(v) => updateAcademicInput('ib_ee_grade', v === CLEAR ? '' : v)}>
                             <SelectTrigger aria-label="EE grade">
@@ -2227,19 +2261,19 @@ export const StudentIntakeForm = ({
                           </Select>
                         </label>
                         <label className="space-y-1.5">
-                          <span className="text-sm font-medium text-muted-foreground">EE subject <span className="text-xs">(optional)</span></span>
+                          <span className="text-sm font-medium">EE subject <span className="text-xs text-muted-foreground">(optional)</span></span>
                           <input type="text" className="form-input" value={academicInput.ee_subject}
                             onChange={(e) => updateAcademicInput('ee_subject', e.target.value)} />
                         </label>
                         <label className="space-y-1.5">
-                          <span className="text-sm font-medium text-muted-foreground">EE title <span className="text-xs">(optional)</span></span>
+                          <span className="text-sm font-medium">EE title <span className="text-xs text-muted-foreground">(optional)</span></span>
                           <input type="text" className="form-input" value={academicInput.ee_title}
                             onChange={(e) => updateAcademicInput('ee_title', e.target.value)} />
                         </label>
                       </div>
                       <div data-field="academic_input.ee_summary">
                         <label className="space-y-1.5 block">
-                          <span className="text-sm font-medium text-muted-foreground">EE summary <span className="text-xs">(optional, max 350 chars)</span></span>
+                          <span className="text-sm font-medium">EE summary <span className="text-xs text-muted-foreground">(optional, max 350 chars)</span></span>
                           <textarea rows={3} maxLength={350}
                             className={cn('form-input', 'form-input--textarea', errors['academic_input.ee_summary'] && 'border-destructive')}
                             {...a11yError('academic_input.ee_summary')}
@@ -2264,14 +2298,14 @@ export const StudentIntakeForm = ({
                       />
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <label className="space-y-1.5">
-                          <span className="text-sm font-medium text-muted-foreground">Subject area <span className="text-xs">(optional)</span></span>
+                          <span className="text-sm font-medium">Subject area <span className="text-xs text-muted-foreground">(optional)</span></span>
                           <input type="text" className="form-input"
                             value={activities.epq_subject}
                             onChange={(e) => setActivities((prev) => ({ ...prev, epq_subject: e.target.value }))}
                             placeholder="e.g. Biology, Economics, History" />
                         </label>
                         <label className="space-y-1.5">
-                          <span className="text-sm font-medium text-muted-foreground">Project title <span className="text-xs">(optional)</span></span>
+                          <span className="text-sm font-medium">Project title <span className="text-xs text-muted-foreground">(optional)</span></span>
                           <input type="text" className="form-input"
                             value={activities.epq_title}
                             onChange={(e) => setActivities((prev) => ({ ...prev, epq_title: e.target.value }))}
@@ -2336,7 +2370,7 @@ export const StudentIntakeForm = ({
                         </div>
                         {showEnglishScore ? (
                           <label className="space-y-1.5">
-                            <span className="text-sm font-medium text-muted-foreground">Overall score <span className="text-xs">(optional)</span></span>
+                            <span className="text-sm font-medium">Overall score <span className="text-xs text-muted-foreground">(optional)</span></span>
                             <input type="number" className="form-input" value={englishScoreOverall}
                               onChange={(e) => setEnglishScoreOverall(e.target.value)} placeholder="e.g. 7.0" />
                           </label>
@@ -2421,7 +2455,7 @@ export const StudentIntakeForm = ({
                         * pressed Submit again, and got the same silent bounce. */}
                       <div data-field="lifestyle_preference.sat_score">
                         <label className="space-y-1.5 block">
-                          <span className="text-sm font-medium text-muted-foreground">SAT score <span className="text-xs">(400–1600, optional)</span></span>
+                          <span className="text-sm font-medium">SAT score <span className="text-xs text-muted-foreground">(400–1600, optional)</span></span>
                           <input
                             type="number" min={400} max={1600} inputMode="numeric"
                             className={cn('form-input', errors['lifestyle_preference.sat_score'] && 'border-danger ring-1 ring-danger/30')}
@@ -2434,7 +2468,7 @@ export const StudentIntakeForm = ({
                       </div>
                       <div data-field="lifestyle_preference.act_score">
                         <label className="space-y-1.5 block">
-                          <span className="text-sm font-medium text-muted-foreground">ACT score <span className="text-xs">(1–36, optional)</span></span>
+                          <span className="text-sm font-medium">ACT score <span className="text-xs text-muted-foreground">(1–36, optional)</span></span>
                           <input
                             type="number" min={1} max={36} inputMode="numeric"
                             className={cn('form-input', errors['lifestyle_preference.act_score'] && 'border-danger ring-1 ring-danger/30')}
@@ -2589,7 +2623,7 @@ export const StudentIntakeForm = ({
                     {activities.work_experience ? (
                       <div data-field="lifestyle_preference.work_experience_summary">
                         <label className="space-y-1.5 block">
-                          <span className="text-sm font-medium text-muted-foreground">Brief description <span className="text-xs">(optional)</span></span>
+                          <span className="text-sm font-medium">Brief description <span className="text-xs text-muted-foreground">(optional)</span></span>
                           <textarea
                             rows={2}
                             className={cn('form-input', 'resize-none', errors['lifestyle_preference.work_experience_summary'] && 'border-danger ring-1 ring-danger/30')}
@@ -2759,7 +2793,12 @@ export const StudentIntakeForm = ({
                 'mt-6 rounded-xl px-4 py-3 text-sm font-medium',
                 statusIsError
                   ? 'border border-destructive/30 bg-destructive/10 text-danger'
-                  : 'bg-muted text-muted-foreground'
+                  // The `info` tone, matching the restored-draft notice above: this is
+                  // the app telling the student something. It was `bg-muted
+                  // text-muted-foreground`, which paired the muted text token with the
+                  // muted surface token — the weakest pairing available, on a line
+                  // whose whole job is to be read.
+                  : 'border border-info/25 bg-info-subtle text-info'
               )}
             >
               {statusMessage}
@@ -2867,20 +2906,34 @@ export const StudentIntakeForm = ({
             )}
           </div>
 
-          {/* ── What the answers so far actually buy ──
-            * The honest replacement for the live preview reverted in `be04bab`. It
-            * makes no claim about the catalogue and never grades the student: every
-            * row is a capability that a particular answer enables, derived from form
-            * state with no fetch and no scoring engine. The last two rows depend on
-            * the OPTIONAL screens, which is what makes those visibly worth doing.
-            *
-            * Hidden on Review, where the summary below already accounts for
-            * everything and a second inventory is noise. */}
-          {currentStep !== TOTAL_STEPS ? (
-            <div className="mt-5">
+        </div>
+
+        {/* ── What the answers so far actually buy ──
+          * The honest replacement for the live preview reverted in `be04bab`. It
+          * makes no claim about the catalogue and never grades the student: every
+          * row is a capability that a particular answer enables, derived from form
+          * state with no fetch and no scoring engine. The last two rows depend on
+          * the OPTIONAL screens, which is what makes those visibly worth doing.
+          *
+          * Hidden on Review, where the summary below already accounts for everything
+          * and a second inventory is noise.
+          *
+          * ONE instance, repositioned by the wrapper's flex direction rather than
+          * duplicated per breakpoint: below `xl` the wrapper is a column so this sits
+          * under the work card as it always did, and at `xl` the wrapper becomes a row
+          * so this is the third column — which is what a wide monitor gets instead of
+          * dead margin. It was briefly rendered twice (`xl:hidden` here plus a
+          * `hidden xl:block` copy) and that is wrong for exactly the reason
+          * `intake-rail.tsx` documents on its `layoutId`: a Tailwind breakpoint
+          * toggles `display`, it does NOT unmount. Both copies stayed in the tree, so
+          * the heading and all six rows were announced twice to a screen reader. */}
+        {currentStep !== TOTAL_STEPS ? (
+          <aside className="xl:w-80 xl:shrink-0">
+            <div className="xl:sticky xl:top-20">
               <UnlocksLedger entries={unlocks} />
             </div>
-          ) : null}
+          </aside>
+        ) : null}
         </div>
       </div>
 

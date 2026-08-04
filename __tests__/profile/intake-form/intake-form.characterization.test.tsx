@@ -777,12 +777,28 @@ describe('step navigation', () => {
   it('reaching 100% flips the copy from a promise to a confirmation', () => {
     renderForm({ initialPayload: clone(IB_PAYLOAD), initialStep: SCREEN.subject });
     expect(screen.getByText('Matches unlocked')).toBeInTheDocument();
-    expect(screen.queryByText('Matches unlock at 100%')).not.toBeInTheDocument();
+    expect(screen.queryByText(/left before your matches unlock/)).not.toBeInTheDocument();
   });
 
-  it('an empty form states the threshold rather than showing a bare number', () => {
+  // CHANGED 2026-08-04. This asserted 'Matches unlock at 100%', a static line that
+  // restated the percentage in the ring beside it. The rail now names the number of
+  // essential screens still outstanding — the copy that used to live in the page's
+  // PageHero, which was deleted along with the rest of the wizard's chrome stack.
+  // Five, not three: `subject_area` and `school` both map to `academic_input`, so the
+  // count is over SCREENS and the wording is "steps" to match.
+  it('an empty form names how much is left, not just how far along you are', () => {
     renderForm();
-    expect(screen.getByText('Matches unlock at 100%')).toBeInTheDocument();
+    expect(screen.getByText('5 steps left before your matches unlock')).toBeInTheDocument();
+  });
+
+  it('the remaining-steps count falls as essentials land, and singularises at one', () => {
+    // Pins the plural branch and the derivation together: with only the About-you
+    // screen outstanding the line must read "1 step", not "1 steps".
+    const payload = clone(IB_PAYLOAD);
+    payload.personal_information.first_name = '';
+    payload.personal_information.last_name = '';
+    renderForm({ initialPayload: payload, initialStep: SCREEN.subject });
+    expect(screen.getByText('1 step left before your matches unlock')).toBeInTheDocument();
   });
 
   it('counts the boosters separately, so skipping them is not a deficit', () => {

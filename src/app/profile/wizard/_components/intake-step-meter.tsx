@@ -54,7 +54,10 @@ export function IntakeStepMeter({
     <>
       <div
         className={cn(
-          'sticky top-0 z-sticky mb-5 rounded-2xl border border-border bg-card/95 px-4 py-3 shadow-e-1 backdrop-blur lg:hidden'
+          // `top-14`, not `top-0`: the page's own utility bar is `sticky top-0` and
+          // 56px tall, so pinning at 0 would park this underneath it. `z-sticky` sits
+          // below the bar's `z-nav`, so this slides beneath rather than over it.
+          'sticky top-14 z-sticky mb-5 rounded-2xl border border-border bg-card/95 px-4 py-3 shadow-e-1 backdrop-blur lg:hidden'
         )}
       >
         <div className="flex items-center gap-3">
@@ -76,7 +79,7 @@ export function IntakeStepMeter({
             onClick={() => setSheetOpen(true)}
             aria-haspopup="dialog"
             aria-expanded={sheetOpen}
-            className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-4 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-primary/25 bg-primary/8 px-4 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <List className="h-3.5 w-3.5" aria-hidden />
             Steps
@@ -111,12 +114,16 @@ export function IntakeStepMeter({
                 key={step.key}
                 aria-hidden
                 className={cn(
+                  // One hue in three lightness steps — the same logic as
+                  // `--series-1..5`. The outstanding segments were `bg-muted`, so on
+                  // screen 2 of 8 the bar read three-quarters grey and the progress it
+                  // was drawing looked like absence rather than a track.
                   'h-1 flex-1 rounded-full transition-colors duration-150',
                   step.current
                     ? 'bg-primary'
                     : step.done
                       ? 'bg-primary/45'
-                      : 'bg-muted'
+                      : 'bg-primary/15'
                 )}
               />
             );
