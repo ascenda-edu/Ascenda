@@ -21,16 +21,17 @@
  *   required fields. Both additions move errors in one direction only — blur adds
  *   a single key, change removes keys — so the batch behaviour is untouched.
  *
- *   Errors belonging to OTHER steps survive. `handleFinalSubmit` routes a payload
- *   rejection back to its own step, and the live-clear pass runs
- *   `validateStep(currentStep, …)`, which knows nothing about those keys. It is
- *   gated on `stepForFieldKey` for exactly that reason; without the gate a
- *   cross-step error would be deleted and the student bounced to a step showing
- *   no reason why.
+ *   A payload rejection survives the live-clear pass. `handleFinalSubmit` routes a
+ *   schema rejection to the offending field's own step, and the pass must not
+ *   delete it on the way. The first version of that guard got this exactly
+ *   backwards and an independent audit mutation-proved it — see the
+ *   "a payload rejection survives" describe below, which is the test this header
+ *   used to claim existed and did not.
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { StudentProfilePayload } from '@/lib/profile/intake-types';
 
 // ── Seams (same set, same reasons, as the characterization suite) ─────────────
 
@@ -91,6 +92,49 @@ Element.prototype.scrollIntoView = Element.prototype.scrollIntoView ?? (() => un
 };
 
 import { StudentIntakeForm } from '@/app/profile/_components/StudentIntakeForm';
+
+/**
+ * All three ESSENTIAL steps satisfied, so `handleFinalSubmit` gets past
+ * `validateStep1/2/3` and actually reaches `validatePayload` — which is the only
+ * way to exercise a schema rejection.
+ */
+const COMPLETE_IB: StudentProfilePayload = {
+  personal_information: {
+    first_name: 'Amara', last_name: 'Okonkwo', email: 'amara@school.example',
+    phone: null, nationality: 'Nigeria', age: 17, gender: null,
+    resident_country: 'Thailand', current_location_city: null, time_zone: 'Asia/Bangkok'
+  },
+  academic_input: {
+    programme_type: 'IB', school_name: 'Bangkok International School',
+    school_country: 'Thailand', school_city: null, school_type: null,
+    language_of_instruction: null, graduation_year: 2027, desired_start_date: null,
+    intended_clusters: ['economics_quant'], secondary_clusters: [], career_aspiration: null,
+    subject_list: [
+      { subject_name: 'Mathematics', level: 'HL', grade_value: 7 },
+      { subject_name: 'Economics', level: 'HL', grade_value: 6 },
+      { subject_name: 'Physics', level: 'HL', grade_value: 6 },
+      { subject_name: 'English Literature', level: 'SL', grade_value: 6 },
+      { subject_name: 'History', level: 'SL', grade_value: 5 },
+      { subject_name: 'Modern Languages', level: 'SL', grade_value: 5 }
+    ],
+    ib_total_points: 35, ib_core_points: null, ib_tok_grade: null, ib_ee_grade: null,
+    // Required by validateStep3 for IB — without it the submit bounces to step 3
+    // and never reaches validatePayload, which is the whole point of the fixture.
+    ib_math_pathway: 'AA_HL', ee_subject: null, ee_title: null, ee_summary: null,
+    a_level_predicted_grades: null, english_required: false, english_test_type: 'WAIVER',
+    english_status: 'met', english_score_overall: null, admissions_tests: []
+  },
+  lifestyle_preference: {
+    teaching_style: null, desired_location_type: null, campus_size: null,
+    extracurricular_interests: [], other_extracurriculars: null, leadership_roles: [],
+    commitment_level: null, key_activities: [], sat_score: null, act_score: null,
+    intl_experience: [], work_experience: false, work_experience_summary: null,
+    ambition_statement: null, epq_subject: null, epq_title: null
+  },
+  activities_list: []
+};
+
+const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 const setup = () => userEvent.setup();
 const renderForm = (props: Parameters<typeof StudentIntakeForm>[0] = {}) =>
@@ -202,6 +246,82 @@ describe('errors clear the moment they are fixed', () => {
     await user.type(labelled('Last name'), 'S');
     expect(screen.queryByText(NO_FIRST_NAME)).not.toBeInTheDocument();
   });
+});
+
+describe('a payload rejection survives the live-clear pass', () => {
+  /**
+   * THE TEST THIS FILE'S HEADER CLAIMED TO HAVE, AND DID NOT.
+   *
+   * An independent audit mutation-proved the gap: the first version of the
+   * live-clear pass gated on `stepForFieldKey(key) !== currentStep`, which is
+   * exactly backwards for the only case that occurs. `handleFinalSubmit` bounces to
+   * the offending key's own step, so the key's step BECOMES `currentStep`; and
+   * `validatePayload` only runs after `validateStep1/2/3` are clean, so the step
+   * validator can never re-emit the key. Both clauses false → deleted.
+   *
+   * The lived bug: paste a 250-character first name (the input has no
+   * `maxLength`), submit from Review, land on step 1 with NOTHING shown, submit
+   * again, forever — audit finding A2 reintroduced by its own guard. 196 tests
+   * passed throughout.
+   */
+  const LONG_NAME = 'A'.repeat(250); // the zod schema caps first_name at 200
+
+  it('shows a schema rejection on the step it bounces to', async () => {
+    const user = setup();
+    const payload = clone(COMPLETE_IB);
+    payload.personal_information.first_name = LONG_NAME;
+    renderForm({ initialPayload: payload, initialStep: 6 });
+
+    await user.click(screen.getByRole('button', { name: /Submit & see matches/ }));
+
+    // Bounced to step 1 …
+    await waitFor(
+      () => expect(screen.getByRole('heading', { name: 'Who are you?' })).toBeInTheDocument(),
+      { timeout: 4000 }
+    );
+    // … and the reason is actually on screen. This is the assertion that fails
+    // when the live-clear pass is allowed to touch payload errors.
+    await waitFor(() => expect(screen.getAllByRole('alert').length).toBeGreaterThan(0));
+    expect(saveStudentIntake).not.toHaveBeenCalled();
+  }, 20000);
+
+  it('and the rejection persists — it is not wiped a tick later', async () => {
+    // The failure mode was a DELETE on the navigation, so the error could appear
+    // and vanish. Wait past the effect flush and assert it is still there.
+    const user = setup();
+    const payload = clone(COMPLETE_IB);
+    payload.personal_information.first_name = LONG_NAME;
+    renderForm({ initialPayload: payload, initialStep: 6 });
+
+    await user.click(screen.getByRole('button', { name: /Submit & see matches/ }));
+    await waitFor(
+      () => expect(screen.getByRole('heading', { name: 'Who are you?' })).toBeInTheDocument(),
+      { timeout: 4000 }
+    );
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(screen.getAllByRole('alert').length).toBeGreaterThan(0);
+  }, 20000);
+
+  it('fixing the offending field DOES clear it, once a step validator owns it', async () => {
+    // The other half: provenance must not make payload errors permanent. Pressing
+    // Next re-runs the step validator, which takes ownership of its own keys.
+    const user = setup();
+    const payload = clone(COMPLETE_IB);
+    payload.personal_information.first_name = LONG_NAME;
+    renderForm({ initialPayload: payload, initialStep: 6 });
+    await user.click(screen.getByRole('button', { name: /Submit & see matches/ }));
+    await waitFor(
+      () => expect(screen.getByRole('heading', { name: 'Who are you?' })).toBeInTheDocument(),
+      { timeout: 4000 }
+    );
+
+    await user.clear(labelled('First name'));
+    await user.type(labelled('First name'), 'Alex');
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    // Step 1 now validates, so it advances rather than bouncing again.
+    expect(await screen.findByRole('heading', { name: 'Your studies' })).toBeInTheDocument();
+  }, 25000);
 });
 
 describe('Next still reports everything at once', () => {

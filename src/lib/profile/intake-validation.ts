@@ -156,7 +156,15 @@ export const stepForFieldKey = (key: string): number => {
     key.startsWith('academic_input.admissions_tests') ||
     key.startsWith('academic_input.english') ||
     key.startsWith('academic_input.ib_') ||
-    key.startsWith('academic_input.predicted')
+    // `ee_subject` / `ee_title` / `ee_summary`: emitted by validateStep3 and
+    // rendered on step 3, but they used to fall through to the general
+    // `academic_input.` prefix below and map to 2. Consequences, all real: the
+    // live-clear pass never fired for them (2 !== 3), so a trimmed 351-character
+    // EE summary kept showing "Under 350 characters."; blur validation skipped
+    // them entirely; and a payload rejection would have bounced to step 2, where
+    // the field does not exist.
+    key.startsWith('academic_input.ee_') ||
+    key.startsWith('academic_input.epq_')
   ) {
     return 3;
   }

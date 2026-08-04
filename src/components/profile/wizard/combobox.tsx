@@ -183,7 +183,7 @@ export function Combobox({
         </ul>
       ) : null}
 
-      {error ? <p id={errorId} role="alert" className="mt-1 text-xs font-medium text-destructive">{error}</p> : null}
+      {error ? <p id={errorId} role="alert" className="mt-1 text-xs font-medium text-danger">{error}</p> : null}
     </div>
   );
 }

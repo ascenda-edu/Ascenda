@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -142,6 +143,16 @@ export function IntakeRail({
   className,
   footer
 }: IntakeRailProps) {
+  /**
+   * `layoutId` must be unique per live instance. The desktop rail stays MOUNTED on
+   * mobile (`hidden lg:block` is display:none, not unmount), so opening the Steps
+   * sheet puts two rails in the tree — and a shared `layoutId` makes Framer treat
+   * them as one element and project between their boxes, one of which measures
+   * 0×0. The pill then animates from nothing or fails to paint. Same
+   * two-copies-of-one-rail hazard as the `data-tour` collision this file already
+   * guards with `tourAnchor`; that one was caught and this one was not.
+   */
+  const instanceId = useId();
   const complete = essentialPct >= 100;
   const boosters = steps.filter((step) => step.tier === 'booster');
   const firstBoosterKey = boosters[0]?.key;
@@ -243,7 +254,7 @@ export function IntakeRail({
                     * read as one system. */}
                   {step.current ? (
                     <motion.span
-                      layoutId="intake-rail-active"
+                      layoutId={`intake-rail-active-${instanceId}`}
                       transition={{ type: 'spring', stiffness: 400, damping: 32 }}
                       className="absolute inset-0 rounded-xl bg-primary/8"
                       aria-hidden

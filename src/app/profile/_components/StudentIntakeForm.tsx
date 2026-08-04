@@ -12,6 +12,8 @@ import { PROFILE_STEPS, FIRST_BOOSTER_STEP_INDEX, ESSENTIAL_STEP_KEYS, type Step
 import { Chip } from '@/components/profile/wizard/chip';
 import { Combobox } from '@/components/profile/wizard/combobox';
 import { ReviewSection } from '@/components/profile/wizard/review-section';
+import { IntakePreviewStrip } from '@/components/profile/wizard/intake-preview-strip';
+import { useIntakePreview } from '@/lib/profile/use-intake-preview';
 import { IntakeRail, type RailStep } from '../wizard/_components/intake-rail';
 import { IntakeStepMeter } from '../wizard/_components/intake-step-meter';
 import { cn } from '@/lib/utils';
@@ -654,6 +656,7 @@ export const StudentIntakeForm = ({
 
   const goNext = () => {
     const nextErrors = validateCurrentStep();
+    liveClearableRef.current = new Set(Object.keys(nextErrors));
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) { focusFirstError(nextErrors); return; }
     setCurrentStep((prev) => Math.min(TOTAL_STEPS, prev + 1));
@@ -665,6 +668,7 @@ export const StudentIntakeForm = ({
     if (target === currentStep) return;
     if (target < currentStep) { setCurrentStep(target); return; }
     const nextErrors = validateCurrentStep();
+    liveClearableRef.current = new Set(Object.keys(nextErrors));
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) { focusFirstError(nextErrors); return; }
     setCurrentStep(Math.min(TOTAL_STEPS, Math.max(1, target)));
@@ -693,6 +697,7 @@ export const StudentIntakeForm = ({
   const handleFinalSubmit = useCallback(() => {
     const s1 = validateStep1(formState); const s2 = validateStep2(formState); const s3 = validateStep3(formState);
     const allErrors = { ...s1, ...s2, ...s3 };
+    liveClearableRef.current = new Set(Object.keys(allErrors));
     setErrors(allErrors);
     if (Object.keys(allErrors).length > 0) {
       if (Object.keys(s1).length > 0) setCurrentStep(1);
@@ -713,6 +718,12 @@ export const StudentIntakeForm = ({
     // which is what `focusFirstError` scrolls to.
     const payloadErrors = validatePayload(payload);
     if (Object.keys(payloadErrors).length > 0) {
+      // NOT clearable. These come from the zod schema, and no step validator can
+      // re-emit them — so if the live-clear pass were allowed to touch them it
+      // would delete them on the very navigation that is meant to show them. See
+      // the note on `liveClearableRef`. Clearing the set (rather than leaving a
+      // stale one) also stops a previous step's clearable keys applying here.
+      liveClearableRef.current = new Set();
       setErrors(payloadErrors);
       // These fields live on step 4; send the student to the step that holds
       // the first offending field rather than leaving them on the review page.
@@ -731,7 +742,9 @@ export const StudentIntakeForm = ({
           setStatusIsError(true);
           return;
         }
-        setStatusMessage('Profile saved! Your matches are ready.');
+        // No status message here: `setSubmitted(true)` below swaps the whole
+        // status line for the success panel, which carries the wording and its own
+        // `role="status"`. Setting one would render nowhere.
         setStatusIsError(false);
         setSubmitted(true);
         submittedRef.current = true;
@@ -855,18 +868,49 @@ export const StudentIntakeForm = ({
    * them and the student would be bounced to a step showing no reason why.
    */
 
+  /**
+   * PROVENANCE, and it is load-bearing. Only errors produced by a STEP VALIDATOR
+   * may be live-cleared. Errors produced by `validatePayload` may not.
+   *
+   * The first version of this gated on `stepForFieldKey(key) !== currentStep`, and
+   * that was exactly backwards for the only case that occurs. `handleFinalSubmit`
+   * bounces to `setCurrentStep(stepForFieldKey(firstKey))`, so a payload error's
+   * step BECOMES the current step; and `validatePayload` only runs once
+   * `validateStep1/2/3` have all returned clean, so `validateStep(currentStep, …)`
+   * can never re-emit the key. Both clauses false → the error was deleted on the
+   * very navigation meant to reveal it.
+   *
+   * The user-visible bug: paste a 250-character name (the input has no
+   * `maxLength`), press Submit on Review, get teleported to step 1 with NO error
+   * shown, press Submit again, forever. That is audit finding A2 —  the thing
+   * `validatePayload` was written to prevent — reintroduced by its own guard.
+   *
+   * A set of clearable keys removes the guesswork: a step validator marks its keys
+   * clearable, `validatePayload` explicitly does not, and the effect below will
+   * only ever remove a key it finds in the set.
+   */
+  const liveClearableRef = useRef<Set<string>>(new Set());
+
   /** Surface one field's error on blur, if it has content to be wrong about. */
   const handleFieldBlur = useCallback((event: React.FocusEvent<HTMLFormElement>) => {
     const target = event.target as HTMLElement | null;
-    const owner = target?.closest?.('[data-field]');
+    // Only real text controls. A `closest()` from a Select trigger or a row's
+    // delete button resolves to the enclosing GROUP wrapper
+    // (`academic_input.subject_list`), which would surface "IB requires exactly 6
+    // subjects." the moment you touched row 1 — a rule-1 violation. Until now the
+    // only thing preventing that was `HTMLButtonElement.value` being `''` and
+    // tripping the empty-value return below, which is an accident, not a rule.
+    if (!target || !(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
+
+    const owner = target.closest('[data-field]');
     const key = owner?.getAttribute('data-field');
     if (!key || stepForFieldKey(key) !== currentStepRef.current) return;
 
     // Rule 2: an empty field has not been answered wrongly, only not yet.
-    const value = (target as HTMLInputElement | HTMLTextAreaElement | null)?.value;
-    if (typeof value === 'string' && value.trim() === '') return;
+    if (target.value.trim() === '') return;
 
     const stepErrors = validateStep(currentStepRef.current, formState);
+    liveClearableRef.current.add(key);
     setErrors((prev) => {
       const message = stepErrors[key];
       if (message === prev[key]) return prev;
@@ -890,13 +934,26 @@ export const StudentIntakeForm = ({
       let changed = false;
       const next: Record<string, string> = {};
       for (const key of shown) {
-        // Only this step's keys are ours to clear; see the gate note above.
-        if (stepForFieldKey(key) !== currentStep || stepErrors[key]) next[key] = prev[key];
+        // Keep unless this error is BOTH ours to clear and now satisfied.
+        if (!liveClearableRef.current.has(key) || stepErrors[key]) next[key] = prev[key];
         else changed = true;
       }
       return changed ? next : prev;
     });
   }, [formState, currentStep]);
+
+  /**
+   * Live feedback: how many programmes sit in the fields chosen, and what the
+   * scoring engine makes of the grades entered so far. Driven by `formState` — the
+   * hook fingerprints the few fields the preview depends on, so typing a school
+   * name or a phone number costs nothing.
+   *
+   * Disabled once submitted: the success panel is the answer at that point, and a
+   * count changing underneath it would be noise.
+   */
+  const { preview, loading: previewLoading } = useIntakePreview(buildPayload, formState, {
+    enabled: !submitted
+  });
 
   const stepCompletion = useMemo<Record<number, boolean>>(() => ({
     1: Object.keys(validateStep1(formState)).length === 0,
@@ -1119,7 +1176,19 @@ export const StudentIntakeForm = ({
           * Its own surface, separate from the rail's. `min-w-0` is load-bearing
           * in a flex row: without it the grids inside refuse to shrink and the
           * whole page gains a horizontal scrollbar. */}
-        <div ref={contentTopRef} className="surface-card min-w-0 flex-1 scroll-mt-28 rounded-4xl lg:scroll-mt-0">
+        <div
+          ref={contentTopRef}
+          /* `overflow-visible` overrides `.surface-card`'s `overflow: hidden`
+           * (globals.css:509, there to clip content to the radius). This card
+           * contains popovers that are NOT portalled — every `Combobox` listbox is
+           * an `absolute` child up to 256px tall, and so is every "Why we ask"
+           * panel — so with the clip in place any one opened near the bottom edge
+           * lost its lower options entirely. Nothing in here needs clipping: the
+           * children are cards and fields, none of which reach the corners. The
+           * same `overflow: hidden` is why the sticky step meter had to move out of
+           * this card, 40 lines above. */
+          className="surface-card min-w-0 flex-1 scroll-mt-28 overflow-visible rounded-4xl lg:scroll-mt-0"
+        >
 
           {/* Restored-draft notice. `info` tone rather than a primary tint: this
             * is the app telling the student something, not asking for an action. */}
@@ -2173,12 +2242,15 @@ export const StudentIntakeForm = ({
           {/* ── Status line ──
             * OUTSIDE the keyed step body, so it renders on every step and is not
             * unmounted by a step change. It used to
-            * live inside the Review step's JSX, which made one of its four
-            * messages unreachable: `restoreSavedProfile` sets "Restored last
-            * saved progress." and then sends the user to step 1, where the block
-            * did not exist. The other three ("Saving…", the save error, "Profile
-            * saved!") are only ever set from the Review step, so they still land
-            * exactly where they did — directly above the submit button. */}
+            * live inside the Review step's JSX, which made one of its messages
+            * unreachable: `restoreSavedProfile` sets "Restored last saved
+            * progress." and then sends the user to step 1, where the block did not
+            * exist. That is still the reason it sits out here.
+            *
+            * It now renders only while NOT submitted. The success case moved to the
+            * panel below, which carries both the wording and its own
+            * `role="status"`; leaving a status line as well said the same thing
+            * twice. "Saving…" and the save error are unaffected. */}
           {statusMessage && !submitted ? (
             <div
               role={statusIsError ? 'alert' : 'status'}
@@ -2241,6 +2313,16 @@ export const StudentIntakeForm = ({
                 ) : null}
               </div>
             </motion.div>
+          ) : null}
+
+          {/* ── Live preview ──
+            * Below the fields and above the nav, so it sits exactly where the eye
+            * goes after answering something and before moving on. Renders nothing
+            * until there is a field to count in, so its appearing is itself the
+            * first piece of feedback. Not shown on Review, where the summary and
+            * the submit button are the subject. */}
+          {currentStep < TOTAL_STEPS ? (
+            <IntakePreviewStrip preview={preview} loading={previewLoading} className="mt-6" />
           ) : null}
 
           {/* ── Navigation buttons ── */}

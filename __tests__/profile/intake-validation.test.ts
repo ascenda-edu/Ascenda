@@ -21,7 +21,8 @@
 import { buildInitialFormState, toPayload, type IntakeFormState } from '@/lib/profile/intake-logic';
 import {
   validateStep, validateStep1, validateStep2, validateStep3, validateStep4, validateStep5,
-  validatePayload
+  validatePayload,
+  stepForFieldKey
 } from '@/lib/profile/intake-validation';
 
 const stateWith = (patch: Partial<IntakeFormState>): IntakeFormState => ({
@@ -279,6 +280,23 @@ describe('validateStep3 — grades & tests', () => {
 
       state.academicInput = { ...state.academicInput, ee_summary: 'x'.repeat(350) };
       expect(validateStep3(state)['academic_input.ee_summary']).toBeUndefined();
+    });
+
+    it('routes the EE and EPQ keys to step 3, where their fields actually are', () => {
+      // Regression: these fell through to the general `academic_input.` prefix and
+      // mapped to step 2. `validateStep3` is what emits them and the fields render
+      // on step 3, so the wizard's blur and live-clear passes both skipped them and
+      // a payload rejection would have bounced to a step without the field.
+      expect(stepForFieldKey('academic_input.ee_summary')).toBe(3);
+      expect(stepForFieldKey('academic_input.ee_subject')).toBe(3);
+      expect(stepForFieldKey('academic_input.ee_title')).toBe(3);
+      expect(stepForFieldKey('academic_input.epq_subject')).toBe(3);
+      // Unchanged neighbours, so the added prefixes cannot have over-reached.
+      expect(stepForFieldKey('academic_input.school_name')).toBe(2);
+      expect(stepForFieldKey('academic_input.a_level_predicted_grades')).toBe(2);
+      expect(stepForFieldKey('academic_input.subject_list.0.grade_value')).toBe(3);
+      expect(stepForFieldKey('personal_information.email')).toBe(1);
+      expect(stepForFieldKey('lifestyle_preference.sat_score')).toBe(4);
     });
   });
 

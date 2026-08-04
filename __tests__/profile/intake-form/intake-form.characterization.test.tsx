@@ -397,11 +397,18 @@ const chips = (name: string) => screen.getAllByRole('button', { name });
 /**
  * Rail lookups are SCOPED to the rail's own list.
  *
- * The Review step's per-section Edit buttons are named "Edit <section title>" —
- * deliberately, so a screen-reader user knows which section an Edit belongs to —
- * and the mobile step meter renders alongside the desktop rail because jsdom
- * applies no CSS. So `getByRole('button', { name: /Personal info/ })` is genuinely
- * ambiguous. `<ol aria-label="Setup steps">` is the rail, and this scopes to it.
+ * The Review step's per-section Edit buttons carry an sr-only section name, so
+ * their accessible names are "Edit Personal info", "Edit Grades & tests", … —
+ * deliberately, so a screen-reader user knows which section an Edit belongs to.
+ * On step 6 that makes `getByRole('button', { name: /Personal info/ })` match TWO
+ * elements: the rail's step button and the Review section's Edit.
+ *
+ * That is the whole reason. An earlier version of this comment also blamed the
+ * mobile step meter rendering alongside the rail in jsdom, and that was wrong —
+ * the meter's track is `aria-hidden` spans and contributes no buttons at all, and
+ * the sheet's second rail is unmounted while the Dialog is closed. `rail()` uses
+ * `getByRole` rather than `getAllByRole` precisely so that if a second rail ever
+ * DID mount, every scoped lookup would throw rather than silently pick one.
  */
 const rail = () => screen.getByRole('list', { name: 'Setup steps' });
 const railButton = (name: RegExp | string) => within(rail()).getByRole('button', { name });
@@ -642,6 +649,27 @@ describe('step navigation', () => {
     expect(screen.getByRole('img', { name: 'Essentials 100% complete' })).toBeInTheDocument();
   });
 
+  it.each([
+    // The INTERMEDIATE values, which are what actually pin the arithmetic. With
+    // only 0% and 100% asserted, an audit mutation-proved that replacing the whole
+    // division with `essentialsDone === ESSENTIAL_STEP_KEYS.length ? 100 : 0`
+    // passed all 196 tests. One essential of three is 33%, two is 67%.
+    ['first_name', '33%'],
+    ['school_name', '67%']
+  ])('a partially complete profile reads a real fraction (%s missing → %s)', (blank, pct) => {
+    const payload = clone(IB_PAYLOAD);
+    if (blank === 'first_name') {
+      // Break steps 2 and 3 as well, leaving exactly one essential satisfied.
+      payload.academic_input.school_name = '';
+      payload.academic_input.subject_list = [];
+    } else {
+      // Break only step 3, leaving exactly two essentials satisfied.
+      payload.academic_input.subject_list = [];
+    }
+    renderForm({ initialPayload: payload, initialStep: 1 });
+    expect(screen.getByRole('img', { name: `Essentials ${pct} complete` })).toBeInTheDocument();
+  });
+
   it('reaching 100% flips the copy from a promise to a confirmation', () => {
     renderForm({ initialPayload: clone(IB_PAYLOAD), initialStep: 1 });
     expect(screen.getByText('Matches unlocked')).toBeInTheDocument();
@@ -715,6 +743,10 @@ describe('step navigation', () => {
     renderForm({ initialPayload: clone(IB_PAYLOAD), initialStep: 6 });
     expect(railButton(/Personal info/)).toHaveAccessibleName('Personal info (complete)');
     expect(railButton(/Your studies/)).toHaveAccessibleName('Your studies (complete)');
+    // Restored: the pre-redesign test asserted all three essentials and this one
+    // had quietly dropped to two. It was not hiding a failure, but coverage given
+    // up for no reason is still coverage given up.
+    expect(railButton(/Grades & tests/)).toHaveAccessibleName('Grades & tests (complete)');
   });
 
   it('an incomplete step announces only its title — no ordinal', () => {
@@ -746,8 +778,8 @@ describe('step navigation', () => {
 
   it('presents the rail as an ordered list, so position is conveyed structurally', () => {
     renderForm({ initialStep: 1 });
-    const rail = screen.getByRole('list');
-    expect(within(rail).getAllByRole('listitem')).toHaveLength(6);
+    const railList = rail();
+    expect(within(railList).getAllByRole('listitem')).toHaveLength(6);
   });
 
   it('every rail step carries the padding that meets the 44px tap floor', () => {
@@ -756,8 +788,8 @@ describe('step navigation', () => {
     // asserting the class is the closest jsdom gets to asserting the tap target.
     // The real check is the manual/Playwright pass on a 375px viewport.
     renderForm({ initialStep: 1 });
-    const rail = screen.getByRole('list');
-    for (const item of within(rail).getAllByRole('button')) {
+    const railList = rail();
+    for (const item of within(railList).getAllByRole('button')) {
       expect(item.className).toContain('py-3');
     }
   });
@@ -1114,8 +1146,8 @@ describe('focusFirstError', () => {
 
   it('a pending focus hop dies with the component (F-B)', async () => {
     // Submitting a blank form from Review bounces to step 1 and schedules the
-    // hop with the LONG (600ms) delay, which is a wide enough window to unmount
-    // inside deterministically. The timer used to survive that unmount and then
+    // hop on a deferred timer, which is a wide enough window to unmount inside
+    // deterministically. The timer used to survive that unmount and then
     // `.focus()` the first `[data-field]` it could find anywhere in the live
     // document — i.e. whatever tree had replaced this one.
     const user = setup();
@@ -1132,21 +1164,22 @@ describe('focusFirstError', () => {
   }, 15000);
 
   /**
-   * THE LONG (600ms) DELAY — the half of `focusFirstError` nothing asserted.
+   * THE SUBMIT-BOUNCE PATH — the half of `focusFirstError` nothing asserted.
    *
-   * `goNext` uses the 50ms default because the step body is already mounted.
-   * `handleFinalSubmit` uses 600ms because a submit bounce CHANGES STEP FIRST,
-   * and with `AnimatePresence mode="wait"` the outgoing step has to finish
-   * exiting before the target node exists at all. So the two delays are coupled
-   * to the exit duration (`transition={{ duration: 0.25 }}`), and nothing here
-   * proved the long one actually lands.
+   * A submit bounce CHANGES STEP FIRST and then focuses, so the target node has to
+   * exist by the time the deferred hop runs. `handleFinalSubmit` used to pass 600ms
+   * for that, because `AnimatePresence mode="wait"` would not mount the incoming
+   * step until the outgoing one finished its 0.25s exit. Both are gone: the step
+   * body is a keyed `motion.div` with no exit, so both call sites use the 50ms
+   * default.
    *
-   * That matters for any change to the step transition: shorten the exit and
-   * 600ms is merely wasteful, but make the enter conditional on an exit that
-   * never completes and the field is never focused — the student is told a
-   * field is wrong and never shown which one. These two tests are what tell you.
+   * These two tests are what make that constant safe to change. If the field is
+   * ever reported as wrong without being focused, the delay is the first suspect —
+   * and note the caveat: a step change is also a URL write through
+   * `useSearchParamState` → `router.push`, and these suites replace the router with
+   * an in-memory store. jsdom cannot show how long a real soft navigation takes.
    */
-  it('lands on the offending field after a submit bounce (the 600ms path)', async () => {
+  it('lands on the offending field after a submit bounce', async () => {
     const user = setup();
     const payload = clone(IB_PAYLOAD);
     payload.personal_information.email = 'not-an-email';
@@ -2202,13 +2235,27 @@ describe('submission', () => {
     // Changed 2026-08-04: the summary used to read "Subjects: 5". A count cannot
     // help anyone catch the mistake a review screen exists to catch, so it now
     // names them — and a row with no subject name is still excluded.
+    //
+    // The first version of this test was VACUOUS, and an audit mutation-proved it:
+    // it blanked subject_list[5] — `Modern Languages`, the LAST row — then asserted
+    // that "Modern Languages" was absent, i.e. asserted that a string the test
+    // itself had deleted was missing. With `toHaveTextContent` being a SUBSTRING
+    // match and the regex anchored only at the start, removing the exclusion
+    // filter from the component entirely still passed.
+    //
+    // Two fixes: blank a MIDDLE row, so the omission has to be detected in the
+    // middle of the list rather than at the end where a trailing empty is
+    // invisible; and assert the <dd> with a fully anchored regex, so an extra
+    // entry anywhere cannot hide in a substring.
     const payload = clone(IB_PAYLOAD);
-    payload.academic_input.subject_list[5].subject_name = '';
+    payload.academic_input.subject_list[2].subject_name = ''; // Physics, 3rd of 6
     renderForm({ initialPayload: payload, initialStep: 6 });
 
-    const value = screen.getByText(/^Mathematics, Economics/);
-    expect(value).toHaveTextContent('Mathematics, Economics, Physics, English Literature, History');
-    expect(value).not.toHaveTextContent('Modern Languages');
+    const value = screen.getByText(
+      /^Mathematics, Economics, English Literature, History, Modern Languages$/
+    );
+    expect(value).toBeInTheDocument();
+    expect(value.tagName).toBe('DD');
   });
 });
 
