@@ -1,17 +1,15 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { StudentIntakeForm } from '../_components/StudentIntakeForm';
-import { PROFILE_STEPS, type StepCompletionMap } from '@/lib/profile/steps';
+import { type StepCompletionMap } from '@/lib/profile/steps';
 import { WIZARD_SCREENS, indexForScreenKey } from '@/lib/profile/wizard-screens';
-import { buildStepCompletion, isProfileComplete, type ProfileRecordGroup } from '@/lib/profile/completion';
-import { AnimatedBlobBanner } from '@/components/animated-blob-banner';
+import { buildStepCompletion, type ProfileRecordGroup } from '@/lib/profile/completion';
 import { Button } from '@/components/ui/button';
-import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { buildStudentProfilePayload } from '@/lib/scoring/student_score_loader';
-import { PageHero } from '@/components/layout/page-hero';
-import { Download } from 'lucide-react';
+import { ArrowLeft, Download } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Profile setup'
@@ -53,7 +51,6 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
     lifestyle: lifestyle ?? null
   };
   const stepCompletion: StepCompletionMap = buildStepCompletion(recordGroup);
-  const hasCompletedProfile = isProfileComplete(recordGroup);
 
   /**
    * Where to open, in SCREEN terms.
@@ -79,80 +76,92 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
       ? indexForScreenKey(firstUnfinishedScreen.key)
       : 1;
 
-  // Which screen the student is about to work on. Fed to PageHero's `highlight`
-  // rather than a stats row: the rail below already counts screens, so naming
-  // the one in front of them is the part the hero can add.
+  /**
+   * Which screen the student is about to work on — the one piece of orienting
+   * information the top bar adds that the rail does not already carry.
+   *
+   * This is all that survives of the old `PageHero`. The three-audience title and
+   * description that used to sit here (first-timer / returning / finished) are gone
+   * along with it: the returning-student payload — how many sections stand between
+   * them and their matches — now lives in the rail, derived from live form state
+   * rather than a server snapshot that went stale the moment they answered anything,
+   * and `/welcome` already frames the flow for a first-timer. What the hero cost was
+   * roughly 250px of the scarcest space on a form, above the fold.
+   */
   const currentStepDetail =
     requestedScreen?.railLabel ?? firstUnfinishedScreen?.railLabel ?? 'Review details';
 
-  /**
-   * Whether this is a RETURNING student with real saved work.
-   *
-   * Drives the hero copy. Greeting somebody who is most of the way through with
-   * "Let's set you up" is the wrong sentence — they have already been set up, and what
-   * they need to know is what is left. `initialPayload` alone is not enough evidence:
-   * an all-null row exists for anyone who ever pressed "Skip for now", so this asks
-   * whether any SECTION is actually complete.
-   */
-  const completedSections = PROFILE_STEPS.filter((step) => stepCompletion[step.key]).length;
-  const isReturning = completedSections > 0;
-  const essentialsLeft = PROFILE_STEPS.filter(
-    (step) => step.tier === 'essential' && !stepCompletion[step.key]
-  ).length;
-
   return (
-    <div className="relative min-h-screen overflow-x-clip bg-background text-foreground">
-      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-16 pt-12 sm:px-6 lg:px-10">
-        {/* Utility row. The theme toggle lives HERE, not in the form body — it is
-          * page chrome, and inside the form it occupied the slot where the step
-          * heading belongs. */}
-        <div className="relative z-overlay flex flex-wrap items-center justify-end gap-2 pointer-events-auto">
-          <Button asChild size="sm" variant="ghost" className="gap-2">
-            <a href="/api/profile/export" download>
-              <Download className="h-4 w-4" aria-hidden />
-              Download CSV
-            </a>
-          </Button>
-          <ThemeToggle compact />
+    /**
+     * A full-height FRAME, not a document column.
+     *
+     * `min-h-screen`, deliberately not `min-h-dvh` — Tailwind is pinned at 3.3.5 and
+     * `dvh` units landed in 3.4, so `min-h-dvh` would typecheck, lint and build
+     * cleanly while emitting no CSS at all.
+     *
+     * This route renders no `DashboardShell` and that stays true: middleware routes
+     * new students straight here, and a sidebar full of exits is the wrong thing to
+     * offer somebody mid-intake. But skipping the shell had also meant skipping the
+     * shell's GEOMETRY — this was the only student page that stopped growing at
+     * `max-w-5xl` (~1024px) while every other one runs to `max-w-[120rem]`, which is
+     * why it alone left a wide monitor half empty. The two inner rows below now use
+     * the same `shell-gutter mx-auto max-w-[120rem]` pair as `shell.tsx`, so the
+     * wizard's edges line up with the rest of the app and grow at the same rate.
+     */
+    <div className="relative flex min-h-screen flex-col overflow-x-clip bg-background text-foreground">
+      {/* One soft brand wash, top-left — the same declaration as `(auth)/layout.tsx`
+        * and `role-select`, the app's two other chrome-free pages. It replaces an
+        * `AnimatedBlobBanner`: two 120px-blur animated blobs read as muddy
+        * decoration behind a full-bleed frame, and dropping it takes an animated
+        * component off this route's first-paint path. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.12),transparent_55%)]"
+      />
+
+      {/* ── The only chrome ──
+        * This replaces four stacked layers: a utility row, a breadcrumb trail, a
+        * PageHero and its highlight pill. `sticky` because on a form this long the
+        * way out should not require scrolling back to the top — and because the
+        * rail's `lg:top-20` and the mobile meter's `top-14` are both measured from
+        * a bar that stays put. */}
+      <header className="sticky top-0 z-nav shrink-0 border-b border-border/60 bg-card/80 backdrop-blur-sm">
+        <div className="shell-gutter mx-auto flex h-14 w-full max-w-[120rem] items-center gap-3">
+          {/* The breadcrumb's actual job, said plainly. Saving is per-step and
+            * already flushed on blur, so leaving is safe and the label can promise
+            * it without hedging. */}
+          <Link
+            href="/profile"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            Exit setup
+          </Link>
+
+          <span aria-hidden className="h-4 w-px shrink-0 bg-primary/20" />
+
+          <p className="flex min-w-0 items-center gap-2">
+            <span className="eyebrow hidden shrink-0 sm:inline">Setup</span>
+            <span className="truncate text-sm font-semibold text-foreground">{currentStepDetail}</span>
+          </p>
+
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            <Button asChild size="sm" variant="ghost" className="gap-2">
+              <a href="/api/profile/export" download>
+                <Download className="h-4 w-4" aria-hidden />
+                <span className="hidden sm:inline">Download CSV</span>
+                <span className="sr-only sm:hidden">Download CSV</span>
+              </a>
+            </Button>
+            <ThemeToggle compact />
+          </div>
         </div>
+      </header>
 
-        <PageHero
-          tone="student"
-          eyebrow="Setup"
-          /* The hand-rolled Dashboard / Back-to-profile link row is gone: PageHero
-           * has had a `breadcrumbs` slot all along, and it puts the escape route
-           * where it sits on every other page in the app. */
-          breadcrumbs={<Breadcrumbs items={[{ label: 'Profile', href: '/profile' }, { label: 'Setup' }]} />}
-          title={
-            hasCompletedProfile ? 'Your profile' : isReturning ? 'Welcome back' : "Let's set you up"
-          }
-          /**
-           * THREE audiences, three openings. A first-timer needs to know what the next
-           * few minutes buy them. A returning student part-way through needs to know
-           * what is LEFT — "everything you saved is already filled in" answers a
-           * question they were not asking, while the number of sections between them
-           * and their matches is the thing they came back for. Someone finished needs
-           * to know nothing is outstanding.
-           */
-          description={
-            hasCompletedProfile
-              ? 'Everything is in. Edit any section and we will re-run your matches.'
-              : isReturning
-                ? essentialsLeft > 0
-                  ? `Everything you saved is still here. ${essentialsLeft} ${essentialsLeft === 1 ? 'section' : 'sections'} left before your matches unlock.`
-                  : 'Your essentials are done and your matches are live — what is left only sharpens the ranking.'
-                : "A few quick questions and we'll personalise your matches, deadlines, and counsellor updates. Nothing here is permanent."
-          }
-          highlight={hasCompletedProfile ? 'All done' : currentStepDetail}
-          /* `stats` deliberately dropped. "Completed 2/5 · Current step 3 ·
-           * Status In progress" restated the rail sitting 24px below it, and cost
-           * ~90px of the scarcest space on a form: above the fold. */
-        />
-
-        {/* The form owns its own surfaces now — the rail is one card and the step
-          * body is another, which reads as map + work. A single wrapper card
-          * around both made the rail look like part of the form, and since the
-          * rail became a `surface-card` it would have nested one card in another. */}
+      {/* `flex-1` so the form's two-column row can stretch to the floor — that is
+        * what lets the rail's dividing rule run the full height of the frame
+        * instead of ending with a short card. */}
+      <div className="shell-gutter relative z-raised mx-auto flex w-full max-w-[120rem] flex-1 flex-col pb-16 pt-6">
         <StudentIntakeForm
           initialStep={initialStep}
           initialPayload={initialPayload}
@@ -161,7 +170,6 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
           accountEmail={user.email ?? ''}
         />
       </div>
-      <AnimatedBlobBanner className="opacity-60 -z-raised" variant="cool" />
     </div>
   );
 }

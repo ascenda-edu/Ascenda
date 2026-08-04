@@ -168,9 +168,14 @@ export function ChoiceGroup({
               'transition-[transform,border-color,box-shadow,background-color] duration-150',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
               size === 'lg' ? 'min-h-[8.75rem] p-4 sm:p-5' : 'min-h-[6.5rem] p-4',
+              // Selection is carried by the TILE going solid (below) plus a ring —
+              // deliberately not by filling the whole card the way `Chip` now does.
+              // These cards hold a `note` of real running text, and a full primary
+              // fill would put two type sizes on a saturated ground for the sake of
+              // a state that the tile already states unmistakably.
               isSelected
-                ? 'border-primary/70 bg-primary/8 text-primary-ink shadow-e-2'
-                : 'border-border bg-card text-foreground hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-e-2',
+                ? 'border-primary bg-primary/10 text-primary-ink shadow-e-2 ring-1 ring-primary/25'
+                : 'border-primary/15 bg-card text-foreground hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-e-2',
               option.disabled &&
                 'cursor-not-allowed border-border/60 bg-muted/40 text-muted-foreground hover:translate-y-0 hover:border-border/60 hover:shadow-none'
             )}
@@ -187,15 +192,24 @@ export function ChoiceGroup({
             {/* The tile and the glyph change together, because the icon inherits
               * `currentColor`. That is what makes selection read as one object
               * changing state rather than a border appearing — and it is the thing
-              * an emoji could not do. */}
+              * an emoji could not do.
+              *
+              * This tile is what carries selection on these cards, so its two states
+              * are a full step apart: a brand tint at rest, the solid fill when
+              * chosen. At rest it used to be `bg-muted text-muted-foreground`, which
+              * made the subject-area screen — the first screen a new student sees, and
+              * the most identity-forming question in the product — a twelve-cell grid
+              * of flat grey squares. The tint is the `TONE[*].swatch` recipe from
+              * lib/theme/categories.ts, i.e. the shape this pattern already has
+              * everywhere else in the app. */}
             <span
               aria-hidden
               className={cn(
                 'flex shrink-0 items-center justify-center rounded-xl transition-colors duration-150',
                 size === 'lg' ? 'h-10 w-10' : 'h-9 w-9',
                 isSelected
-                  ? 'bg-primary/15 text-primary-ink'
-                  : 'bg-muted text-muted-foreground group-hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-primary/8 text-primary-ink ring-1 ring-primary/15'
               )}
             >
               <Icon className={size === 'lg' ? 'h-5 w-5' : 'h-[1.15rem] w-[1.15rem]'} />

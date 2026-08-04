@@ -105,7 +105,11 @@ export function CompletionRing({
         : { role: 'img', 'aria-label': `Essentials ${percent}% complete` })}
     >
       <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90">
-        <circle cx="40" cy="40" r={RADIUS} fill="none" strokeWidth="7" className="stroke-muted/60" />
+        {/* The unfilled track. `stroke-primary/15` rather than `stroke-muted/60`: at
+          * this stroke width the muted token read as a grey washer around an indigo
+          * arc, which is the single most prominent grey in the rail. A brand tint
+          * makes the track and the fill read as one instrument. */}
+        <circle cx="40" cy="40" r={RADIUS} fill="none" strokeWidth="7" className="stroke-primary/15" />
         <motion.circle
           cx="40"
           cy="40"
@@ -160,9 +164,26 @@ export function IntakeRail({
   const complete = essentialPct >= 100;
   const boosters = steps.filter((step) => step.tier === 'booster');
   const firstBoosterKey = boosters[0]?.key;
+  /**
+   * How many essential screens are still outstanding.
+   *
+   * This is the one genuinely motivating sentence in the flow, and it used to live in
+   * the page's `PageHero` — which cost ~250px above the fold to say something the rail
+   * was already the natural home for. Derived from `steps`, which this component
+   * already receives, so it needs no new prop AND it updates live as the student
+   * fills things in; the hero's version was computed on the server and went stale the
+   * moment they answered anything.
+   */
+  const essentialsLeft = steps.filter((step) => step.tier === 'essential' && !step.done).length;
 
   return (
-    <aside className={cn('w-full shrink-0', sticky && 'lg:sticky lg:top-24 lg:h-fit', className)}>
+    /**
+     * `lg:top-20` (80px), not `top-24`. The old 96px was calibrated for the app
+     * navbar's `pt-28` — but this route deliberately renders no shell, so the rail was
+     * pinning 96px below the top of the viewport for no reason. 80px clears the
+     * wizard's own 56px utility bar with 24px of breathing room.
+     */
+    <aside className={cn('w-full shrink-0', sticky && 'lg:sticky lg:top-20 lg:h-fit', className)}>
       <div className={bare ? '' : 'surface-card rounded-3xl !p-5'}>
         {/* ── Ring + the one line of copy that carries the tier model ── */}
         <div className="flex items-center gap-4">
@@ -176,7 +197,16 @@ export function IntakeRail({
                   <Check className="h-3.5 w-3.5" aria-hidden />
                 </span>
               ) : (
-                'Matches unlock at 100%'
+                // Naming the remaining COUNT rather than the threshold. "Matches
+                // unlock at 100%" restated the number in the ring beside it; this
+                // answers the question the student actually has, which is how much
+                // further they have to go.
+                //
+                // "steps", not "sections" — this counts SCREENS, and two of them share
+                // the `academic_input` section, so an empty form has five essential
+                // screens across three sections. "Steps" is also the vocabulary the
+                // list below already uses (`aria-label="Setup steps"`).
+                `${essentialsLeft} ${essentialsLeft === 1 ? 'step' : 'steps'} left before your matches unlock`
               )}
             </p>
             {boosters.length > 0 ? (
@@ -187,7 +217,7 @@ export function IntakeRail({
                     aria-hidden
                     className={cn(
                       'h-1.5 w-1.5 rounded-full',
-                      booster.done ? 'bg-primary' : 'bg-muted-foreground/40'
+                      booster.done ? 'bg-primary' : 'bg-primary/20'
                     )}
                   />
                 ))}
@@ -212,7 +242,7 @@ export function IntakeRail({
             * `left-[1.4375rem]`, which tripped the arbitrary-geometry ratchet. */}
           <span
             aria-hidden
-            className="absolute bottom-5 left-6 top-5 w-px -translate-x-1/2 bg-border"
+            className="absolute bottom-5 left-6 top-5 w-px -translate-x-1/2 bg-primary/20"
           />
           {steps.map((step) => {
             const isBoundary = step.key === firstBoosterKey;
@@ -225,7 +255,7 @@ export function IntakeRail({
                 {isBoundary ? (
                   <div className="flex items-center gap-2 py-2 pl-1">
                     <span className="eyebrow shrink-0">Optional extras</span>
-                    <span aria-hidden className="h-px flex-1 bg-border" />
+                    <span aria-hidden className="h-px flex-1 bg-primary/20" />
                   </div>
                 ) : null}
                 <button
@@ -257,7 +287,11 @@ export function IntakeRail({
                     <motion.span
                       layoutId={`intake-rail-active-${instanceId}`}
                       transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                      className="absolute inset-0 rounded-xl bg-primary/8"
+                      // `/15` + a ring, up from a bare `/8`. At 8% the travelling
+                      // pill was doing all this work — the layoutId spring, the
+                      // sliding — behind a fill you could not actually see, which is
+                      // also the wash an unselected chip now carries.
+                      className="absolute inset-0 rounded-xl bg-primary/15 ring-1 ring-inset ring-primary/25"
                       aria-hidden
                     />
                   ) : null}
@@ -272,7 +306,7 @@ export function IntakeRail({
                         ? 'border-primary'
                         : step.done
                           ? 'border-success bg-success-subtle'
-                          : 'border-border group-hover:border-primary/40'
+                          : 'border-primary/25 group-hover:border-primary/40'
                     )}
                   >
                     {step.done && !step.current ? (

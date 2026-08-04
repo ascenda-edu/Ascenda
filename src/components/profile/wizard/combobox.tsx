@@ -188,7 +188,7 @@ export function Combobox({
                   tabIndex={-1}
                   className={cn(
                     'w-full px-4 py-3 text-left text-sm transition-colors',
-                    index === highlight ? 'bg-muted/60' : 'hover:bg-muted/60'
+                    index === highlight ? 'bg-primary/15' : 'hover:bg-primary/8'
                   )}
                   onMouseDown={() => select(option)}
                   onMouseEnter={() => setHighlight(index)}
