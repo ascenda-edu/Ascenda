@@ -6,10 +6,11 @@ import { PROFILE_STEPS, type StepCompletionMap } from '@/lib/profile/steps';
 import { buildStepCompletion, isProfileComplete, type ProfileRecordGroup } from '@/lib/profile/completion';
 import { AnimatedBlobBanner } from '@/components/animated-blob-banner';
 import { Button } from '@/components/ui/button';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
+import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { buildStudentProfilePayload } from '@/lib/scoring/student_score_loader';
 import { PageHero } from '@/components/layout/page-hero';
-import Link from 'next/link';
-import { Download, Home, User } from 'lucide-react';
+import { Download } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Profile setup'
@@ -59,55 +60,56 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
   const requestedStep = PROFILE_STEPS.find((step) => step.key === stepParam);
   const initialStep = requestedStep ? PROFILE_STEPS.indexOf(requestedStep) + 1 : nextStep ? PROFILE_STEPS.indexOf(nextStep) + 1 : 1;
 
-  const completedCount = Object.values(stepCompletion).filter(Boolean).length;
+  // Which section the student is about to work on. Fed to PageHero's `highlight`
+  // rather than a stats row: the rail below already counts sections, so naming
+  // the one in front of them is the part the hero can add.
   const currentStepDetail = requestedStep?.title ?? nextStep?.title ?? 'Review details';
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
-      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-16 pt-20 sm:px-6 lg:px-10">
-        <div className="flex flex-wrap items-center justify-between gap-4 relative z-overlay pointer-events-auto">
-          <div className="flex items-center gap-2">
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-200 cursor-pointer"
-            >
-              <Home className="w-4 h-4" />
-              Dashboard
-            </Link>
-            <div className="w-px h-4 bg-border/50" />
-            <Link
-              href="/profile"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-200 cursor-pointer"
-            >
-              <User className="w-4 h-4" />
-              Back to profile
-            </Link>
-          </div>
-          <Button asChild size="sm" variant="secondary" className="gap-2 rounded-xl shadow-e-1">
+    <div className="relative min-h-screen overflow-x-clip bg-background text-foreground">
+      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-16 pt-12 sm:px-6 lg:px-10">
+        {/* Utility row. The theme toggle lives HERE, not in the form body — it is
+          * page chrome, and inside the form it occupied the slot where the step
+          * heading belongs. */}
+        <div className="relative z-overlay flex flex-wrap items-center justify-end gap-2 pointer-events-auto">
+          <Button asChild size="sm" variant="ghost" className="gap-2">
             <a href="/api/profile/export" download>
-              <Download className="w-4 h-4" />
+              <Download className="h-4 w-4" aria-hidden />
               Download CSV
             </a>
           </Button>
+          <ThemeToggle compact />
         </div>
+
         <PageHero
           tone="student"
           eyebrow="Setup"
-          title="Let's set you up"
-          description="A few quick questions and we'll personalize your matches, deadlines, and counsellor updates. You can always come back and edit."
-          highlight={hasCompletedProfile ? 'All done' : 'Step ' + initialStep + ' of ' + PROFILE_STEPS.length}
-          stats={[
-            { label: 'Completed', value: completedCount + '/' + PROFILE_STEPS.length, detail: 'Sections finished' },
-            { label: 'Current step', value: String(initialStep), detail: currentStepDetail },
-            { label: 'Status', value: hasCompletedProfile ? 'Ready' : 'In progress', detail: hasCompletedProfile ? 'Update anytime' : 'More detail improves matches' }
-          ]}
+          /* The hand-rolled Dashboard / Back-to-profile link row is gone: PageHero
+           * has had a `breadcrumbs` slot all along, and it puts the escape route
+           * where it sits on every other page in the app. */
+          breadcrumbs={<Breadcrumbs items={[{ label: 'Profile', href: '/profile' }, { label: 'Setup' }]} />}
+          title={hasCompletedProfile ? 'Your profile' : "Let's set you up"}
+          /* Two audiences, two openings. A first-timer needs to know what they
+           * get for the next four minutes; a returning student needs to know
+           * their work is still there. */
+          description={
+            initialPayload
+              ? 'Pick up where you left off — everything you saved is already filled in, and you can edit any section.'
+              : "A few quick questions and we'll personalise your matches, deadlines, and counsellor updates. Nothing here is permanent."
+          }
+          highlight={hasCompletedProfile ? 'All done' : currentStepDetail}
+          /* `stats` deliberately dropped. "Completed 2/5 · Current step 3 ·
+           * Status In progress" restated the rail sitting 24px below it, and cost
+           * ~90px of the scarcest space on a form: above the fold. */
         />
 
-        <div className="surface-card rounded-4xl p-6">
-          <StudentIntakeForm initialStep={initialStep} initialPayload={initialPayload} />
-        </div>
+        {/* The form owns its own surfaces now — the rail is one card and the step
+          * body is another, which reads as map + work. A single wrapper card
+          * around both made the rail look like part of the form, and since the
+          * rail became a `surface-card` it would have nested one card in another. */}
+        <StudentIntakeForm initialStep={initialStep} initialPayload={initialPayload} />
       </div>
-      <AnimatedBlobBanner className="opacity-60 -z-10" variant="cool" />
+      <AnimatedBlobBanner className="opacity-60 -z-raised" variant="cool" />
     </div>
   );
 }

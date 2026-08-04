@@ -46,6 +46,18 @@ interface IntakeRailProps {
   onStepSelect: (key: StepKey | 'review') => void;
   /** Rendered inside the sheet on mobile, where `sticky` would fight the scroll container. */
   sticky?: boolean;
+  /**
+   * Whether this instance carries the `data-tour` anchor. The mobile sheet
+   * renders a SECOND copy of this rail, and `product-tour.tsx` resolves an
+   * anchor with `querySelector` — two matches means the spotlight can land on
+   * the hidden one. Only the desktop instance opts in.
+   */
+  tourAnchor?: boolean;
+  /**
+   * Drop this component's own card chrome. Set inside the mobile sheet, which is
+   * already a `bg-card` surface — a card nested in a card reads as a mistake.
+   */
+  bare?: boolean;
   className?: string;
   /** Slot for "Restore last save" — the caller owns that behaviour. */
   footer?: React.ReactNode;
@@ -65,16 +77,32 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * transform, so the app-wide `<MotionConfig reducedMotion="user">` does not
  * cover it — without this the ring sweeps for users who asked it not to.
  */
-function CompletionRing({ percent }: { percent: number }) {
+export function CompletionRing({
+  percent,
+  size = 'lg',
+  decorative = false
+}: {
+  percent: number;
+  /** `sm` is the 40px variant the mobile step meter uses; the SVG scales, the label steps down. */
+  size?: 'sm' | 'lg';
+  /**
+   * Drop the `role="img"` and its label. Set by the mobile step meter, which
+   * already exposes its own `role="progressbar"` — two labelled elements in one
+   * 56px-tall bar means a screen reader reads the same progress twice. The
+   * labelled ring is still reachable there via the Steps sheet.
+   */
+  decorative?: boolean;
+}) {
   const reduced = useReducedMotion();
   const complete = percent >= 100;
   const dashTarget = CIRCUMFERENCE * (1 - Math.min(Math.max(percent, 0), 100) / 100);
 
   return (
     <div
-      className="relative h-16 w-16 shrink-0"
-      role="img"
-      aria-label={`Essentials ${percent}% complete`}
+      className={cn('relative shrink-0', size === 'lg' ? 'h-16 w-16' : 'h-10 w-10')}
+      {...(decorative
+        ? { 'aria-hidden': true as const }
+        : { role: 'img', 'aria-label': `Essentials ${percent}% complete` })}
     >
       <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90">
         <circle cx="40" cy="40" r={RADIUS} fill="none" strokeWidth="7" className="stroke-muted/60" />
@@ -92,7 +120,12 @@ function CompletionRing({ percent }: { percent: number }) {
           transition={reduced ? { duration: 0 } : { duration: 0.7, ease: EASE }}
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold tabular-nums text-foreground">
+      <span
+        className={cn(
+          'absolute inset-0 flex items-center justify-center font-semibold tabular-nums text-foreground',
+          size === 'lg' ? 'text-sm' : 'text-label'
+        )}
+      >
         {percent}%
       </span>
     </div>
@@ -104,6 +137,8 @@ export function IntakeRail({
   essentialPct,
   onStepSelect,
   sticky = false,
+  tourAnchor = false,
+  bare = false,
   className,
   footer
 }: IntakeRailProps) {
@@ -113,10 +148,10 @@ export function IntakeRail({
 
   return (
     <aside
-      data-tour="wizard-progress"
+      {...(tourAnchor ? { 'data-tour': 'wizard-progress' } : {})}
       className={cn('w-full shrink-0', sticky && 'lg:sticky lg:top-24 lg:h-fit', className)}
     >
-      <div className="surface-card rounded-3xl !p-5">
+      <div className={bare ? '' : 'surface-card rounded-3xl !p-5'}>
         {/* ── Ring + the one line of copy that carries the tier model ── */}
         <div className="flex items-center gap-4">
           <CompletionRing percent={essentialPct} />
@@ -156,7 +191,7 @@ export function IntakeRail({
           * `relative` so the connector can be absolutely positioned behind the
           * dots, and the whole list is one <ol> because it is an ordered
           * sequence — a screen reader should say "3 of 6", which a div cannot. */}
-        <ol className="relative mt-5 space-y-0.5">
+        <ol aria-label="Setup steps" className="relative mt-5 space-y-0.5">
           {/* The trail behind the dots. `left-6` is the dot's axis, not a magic
             * number: the button's px-3 (12px) plus half of the 24px dot lands at
             * exactly 24px = 1.5rem, and `-translate-x-1/2` centres the 1px line

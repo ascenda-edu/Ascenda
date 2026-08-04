@@ -8,9 +8,9 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { PROFILE_STEPS, FIRST_BOOSTER_STEP_INDEX, ESSENTIAL_STEP_KEYS } from '@/lib/profile/steps';
 import { IntakeRail, type RailStep } from '../wizard/_components/intake-rail';
+import { IntakeStepMeter } from '../wizard/_components/intake-step-meter';
 import { cn } from '@/lib/utils';
 import { EASE, DURATION, TRAVEL } from '@/lib/motion';
 import type {
@@ -1138,6 +1138,27 @@ export const StudentIntakeForm = ({
 
   return (
     <form className="relative font-sans" onSubmit={handleSubmit}>
+      {/* Step navigation below `lg`, where the rail does not fit. Without it a
+        * phone user has no way to jump steps and no sense of progress — only Back
+        * and Next.
+        *
+        * It sits OUTSIDE the two-column row, as a direct child of the <form>,
+        * and that placement is load-bearing rather than tidiness: `.surface-card`
+        * applies `overflow: hidden` (globals.css:509, to clip content to its
+        * radius), and an ancestor with a non-visible overflow becomes the scroll
+        * container a descendant `position: sticky` resolves against. Inside the
+        * step-body card the bar therefore scrolled away with the content — it
+        * looked sticky in the markup and measured `top: -496` after a 900px
+        * scroll. Here its nearest scroll container is the document, which is what
+        * it needs to pin against. */}
+      <IntakeStepMeter
+        steps={railSteps}
+        essentialPct={essentialPct}
+        onStepSelect={goToStepKey}
+        currentIndex={currentStep}
+        currentTitle={STEP_META[currentStep]?.title ?? ''}
+      />
+
       <div className="flex flex-col lg:flex-row gap-6">
 
         {/* ── The step map ──
@@ -1148,6 +1169,7 @@ export const StudentIntakeForm = ({
         <div className="hidden lg:block lg:w-64">
           <IntakeRail
             sticky
+            tourAnchor
             steps={railSteps}
             essentialPct={essentialPct}
             onStepSelect={goToStepKey}
@@ -1163,26 +1185,31 @@ export const StudentIntakeForm = ({
           />
         </div>
 
-        {/* ── Main content ── */}
-        <div ref={contentTopRef} className="flex-1 min-w-0">
+        {/* ── The work ──
+          * Its own surface, separate from the rail's. `min-w-0` is load-bearing
+          * in a flex row: without it the grids inside refuse to shrink and the
+          * whole page gains a horizontal scrollbar. */}
+        <div ref={contentTopRef} className="surface-card min-w-0 flex-1 rounded-4xl">
 
-          {/* Theme toggle */}
-          <div className="mb-4 flex justify-end">
-            <ThemeToggle compact />
-          </div>
-
-          {/* Restored-draft notice */}
+          {/* Restored-draft notice. `info` tone rather than a primary tint: this
+            * is the app telling the student something, not asking for an action. */}
           {draftNotice ? (
-            <div
+            <motion.div
               role="status"
-              className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: DURATION.fast, ease: EASE }}
+              className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-info/25 bg-info-subtle px-4 py-3 text-sm"
             >
-              <span className="font-medium text-foreground">Restored your in-progress draft.</span>
-              <div className="flex items-center gap-1 shrink-0">
+              <span className="flex items-center gap-2 font-medium text-foreground">
+                <Info className="h-4 w-4 shrink-0 text-info" aria-hidden />
+                Restored your in-progress draft.
+              </span>
+              <div className="flex shrink-0 items-center gap-1">
                 <button
                   type="button"
                   onClick={discardDraft}
-                  className="px-2 py-1 rounded-lg text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors"
+                  className="rounded-lg px-2 py-1 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   Discard draft
                 </button>
@@ -1190,12 +1217,12 @@ export const StudentIntakeForm = ({
                   type="button"
                   onClick={() => setDraftNotice(false)}
                   aria-label="Dismiss notice"
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                  className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="h-3.5 w-3.5" aria-hidden />
                 </button>
               </div>
-            </div>
+            </motion.div>
           ) : null}
 
           {/* ── The step ──
