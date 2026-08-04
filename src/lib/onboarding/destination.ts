@@ -45,13 +45,45 @@
  * - `/counsellor`  — a portal whose users have no student profile by definition.
  * - `/parent`      — likewise.
  * - `/role-select` — the post-login fork; gating it would strand every login.
+ *
+ * ── The browse surfaces, and why they are exempt ─────────────────────────────
+ * - `/university-search` — the catalogue.
+ * - `/course`            — a single programme's detail page.
+ *
+ * Tiering the wizard took the wall from five screens down to three. It did not
+ * remove it: a brand-new student still could not see a single university until
+ * they had entered personal details, school details AND six subject grades. That
+ * is the exact complaint the tiering was meant to answer ("before they had seen a
+ * single university"), and three screens of it is still all of it.
+ *
+ * These two are exempt because they are the surfaces that DON'T need a profile.
+ * Both degrade rather than break: `use-search-results.ts` returns `{}` from
+ * `loadMatchScores` when there is no session or the query fails, and leaves
+ * unscored ids scoreless rather than failing the page — so a profile-less visitor
+ * gets the catalogue with no fit scores, which is the honest rendering.
+ *
+ * `/matches`, `/dashboard`, `/applications` and the rest stay gated ON PURPOSE.
+ * Those are the surfaces `runMatching` feeds, and it returns zero matches without
+ * the essentials (see ./steps.ts) — so letting an incomplete student in shows them
+ * an empty page and teaches them the product is broken. Being exempt here means
+ * "works without a profile", not "nice to have early". Do not add a route to this
+ * list to make a redirect stop happening; check first that the page is genuinely
+ * useful with an empty profile, or you are trading a gate for a dead end.
+ *
+ * NOTE: these are PREFIXES, so `/university-search/shortlist` and
+ * `/university-search/quests` come along. Both are fine — the shortlist is
+ * localStorage-backed with feature detection, and an unassigned quest deck renders
+ * its empty state. Shortlisting while browsing is deliberate: the entries survive
+ * into the account once setup is done.
  */
 export const ONBOARDING_EXEMPT_PREFIXES = [
   '/profile',
   '/welcome',
   '/counsellor',
   '/parent',
-  '/role-select'
+  '/role-select',
+  '/university-search',
+  '/course'
 ] as const;
 
 export const isOnboardingExempt = (pathname: string): boolean =>
@@ -65,6 +97,16 @@ export const WIZARD = '/profile/wizard';
 
 /** A student's default landing page once the gate passes. */
 export const STUDENT_HOME = '/dashboard';
+
+/**
+ * Where "browse first" goes — the escape hatch from the setup wall.
+ *
+ * Declared HERE, beside the exemption list, precisely because it must be exempt.
+ * A literal in the welcome screen would let someone change one without the other
+ * and send a student straight back into the gate. `destination.test.ts` asserts
+ * this path satisfies `isOnboardingExempt`.
+ */
+export const BROWSE_FIRST = '/university-search/search';
 
 /**
  * The origin `?from=` is resolved against to prove it is a path and not a

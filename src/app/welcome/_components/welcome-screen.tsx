@@ -11,6 +11,7 @@ import {
   Loader2,
   Sparkles,
   Target,
+  Telescope,
   Users,
   CalendarClock,
   ShieldCheck
@@ -19,6 +20,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedBlobBanner } from '@/components/animated-blob-banner';
 import { markOnboardingStep } from '@/lib/onboarding/actions';
+import { BROWSE_FIRST } from '@/lib/onboarding/destination';
 import { cn } from '@/lib/utils';
 
 interface ValueProp {
@@ -101,7 +103,15 @@ export function WelcomeScreen({
   const isStudent = variant === 'student';
   const values = isStudent ? STUDENT_VALUE : COUNSELLOR_VALUE;
 
-  const handleContinue = () => {
+  /**
+   * One navigation path for both buttons, differing only in destination.
+   *
+   * Both stamp `welcomed_at` — including "browse first". A student who has read
+   * this screen has seen it, whichever button they pressed, and leaving the
+   * breadcrumb unstamped would re-show it on their next gated navigation, which
+   * reads as the app not having registered the choice they just made.
+   */
+  const goTo = (target: string) => {
     if (navigating) return;
     setNavigating(true);
 
@@ -115,9 +125,14 @@ export function WelcomeScreen({
       // and the worst case is seeing this screen once more. Blocking the user at
       // the front door over a breadcrumb write would be far worse.
       await markOnboardingStep('welcomed_at');
-      router.push(returnTo);
+      router.push(target);
     });
   };
+
+  const handleContinue = () => goTo(returnTo);
+  // BROWSE_FIRST, never a literal — it has to stay in step with the exemption
+  // list that lets it through. See lib/onboarding/destination.ts.
+  const handleBrowseFirst = () => goTo(BROWSE_FIRST);
 
   const busy = isPending || navigating;
   const greeting = firstName ? `Welcome, ${firstName}` : 'Welcome to Ascenda';
@@ -216,9 +231,29 @@ export function WelcomeScreen({
               </>
             )}
           </Button>
+          {/* The escape hatch. Students only — a counsellor has no setup wall to
+              get around, and the catalogue is not their surface.
+
+              Deliberately a real second action and not a footnote: the whole point
+              is that someone unwilling to hand over six subject grades sight-unseen
+              can go and look at the product first. Ranking still needs the profile,
+              so this is phrased as what it is — the catalogue without the scoring —
+              rather than implying setup is optional. */}
+          {isStudent ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBrowseFirst}
+              disabled={busy}
+              className="gap-2 text-muted-foreground"
+            >
+              <Telescope className="h-4 w-4" aria-hidden />
+              Browse universities first
+            </Button>
+          ) : null}
           <p className="text-xs text-muted-foreground">
             {isStudent
-              ? 'You need the first three steps before we can rank anything for you.'
+              ? 'Ranking needs the first three steps. Browsing does not — you can look around before you fill anything in.'
               : 'You can revisit this from the help menu at any time.'}
           </p>
         </motion.div>

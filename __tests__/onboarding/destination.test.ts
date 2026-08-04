@@ -20,6 +20,7 @@
 
 import {
   ONBOARDING_EXEMPT_PREFIXES,
+  BROWSE_FIRST,
   isOnboardingExempt,
   resolveWelcomeDestination,
   COUNSELLOR_HOME,
@@ -76,6 +77,55 @@ describe('the loop invariant', () => {
     expect(isOnboardingExempt('/parent/deadlines')).toBe(true);
     // ...but a path that merely CONTAINS an exempt segment is not exempt.
     expect(isOnboardingExempt('/dashboard/profile')).toBe(false);
+  });
+
+  it('lets "browse first" through the gate it is an escape from', () => {
+    // BROWSE_FIRST is the welcome screen's secondary action. If it were not
+    // exempt, clicking it would hit the gate, bounce to /welcome, and — once
+    // `welcomed_at` is stamped — forward straight back: the same loop the rest of
+    // this file exists to prevent, reached by the one button offered as a way out.
+    expect(isOnboardingExempt(BROWSE_FIRST)).toBe(true);
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 1b. The browse escape hatch — what an unfinished profile may and may not see.
+ *
+ * Tiering took the wall from five screens to three; it did not remove it. These
+ * two surfaces are exempt because they WORK without a profile, and the rest stay
+ * gated because they do not. That distinction is the whole rule, and it is the
+ * one a future edit is most likely to blur — "just exempt it so the redirect
+ * stops" trades a gate for an empty page.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+describe('the browse-first exemptions', () => {
+  it('opens the catalogue and programme detail to an unfinished profile', () => {
+    expect(isOnboardingExempt('/university-search/search')).toBe(true);
+    expect(isOnboardingExempt('/course/abc-123')).toBe(true);
+  });
+
+  it('keeps every matching-fed surface gated', () => {
+    // `runMatching` returns nothing without the essentials, so these would render
+    // an empty page and teach a new student the product is broken. Exempting any
+    // of them is a regression even though it makes a redirect disappear.
+    for (const gated of ['/dashboard', '/matches', '/applications', '/scholarships', '/toolbox']) {
+      expect(isOnboardingExempt(gated)).toBe(false);
+    }
+  });
+
+  it('carries the shortlist and quests along, which is intended', () => {
+    // Prefix matching, and deliberately not narrowed: the shortlist is
+    // localStorage-backed so it works signed-out-shaped, and its entries survive
+    // into the account once setup is done.
+    expect(isOnboardingExempt('/university-search/shortlist')).toBe(true);
+    expect(isOnboardingExempt('/university-search/quests')).toBe(true);
+  });
+
+  it('does not exempt /shortlist, which is a different route from the search one', () => {
+    // `/shortlist` is its own top-level page, NOT under `/university-search`. It is
+    // listed in PROTECTED_PREFIXES separately, and nothing here should be read as
+    // covering it.
+    expect(isOnboardingExempt('/shortlist')).toBe(false);
   });
 });
 

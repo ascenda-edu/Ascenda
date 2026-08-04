@@ -461,7 +461,10 @@ describe('the onboarding redirect', () => {
     expect(location(response)).toBeNull();
   });
 
-  it.each(['/dashboard', '/matches', '/applications', '/university-search', '/shortlist', '/scholarships'])(
+  // These are the surfaces `runMatching` feeds. They stay gated because without
+  // the essentials they render an empty page, which teaches a new student the
+  // product is broken — see lib/onboarding/destination.ts.
+  it.each(['/dashboard', '/matches', '/applications', '/shortlist', '/scholarships'])(
     '%s is gated on it',
     async (path) => {
       const response = await middleware(request(path, SESSION_COOKIE));
@@ -482,12 +485,33 @@ describe('the onboarding redirect', () => {
     }
   );
 
+  // The browse escape hatch. `/university-search` moved OUT of the gated list
+  // above when the wall proved to be the thing the tiering was meant to fix: three
+  // screens before you may see a university is still all of it. These two work
+  // without a profile (fit scores just come back empty), so they are exempt and
+  // the welcome screen offers "Browse universities first" as a way in.
+  it.each(['/university-search', '/university-search/search', '/course/abc-123'])(
+    '%s is exempt — it works without a profile, so the wall does not apply',
+    async (path) => {
+      const response = await middleware(request(path, SESSION_COOKIE));
+
+      expect(passedThrough(response)).toBe(true);
+      // Exempt means the four completion queries never run at all, so browsing
+      // costs nothing on the hot path.
+      expect(dbCalls).toEqual([]);
+    }
+  );
+
   it('carries the query string in `from`, not just the pathname', async () => {
     // A student deep-linked into a tab was returned to the bare route, silently
     // dropping the thing they had actually clicked.
-    const response = await middleware(request('/course/123?tab=fees', SESSION_COOKIE));
+    //
+    // Uses a GATED route deliberately. This used to assert on `/course/123?tab=fees`,
+    // which stopped exercising anything the moment `/course` became exempt — the
+    // redirect it was checking no longer happens for that path.
+    const response = await middleware(request('/applications?tab=offers', SESSION_COOKIE));
 
-    expect(location(response)).toBe(welcomeFrom('/course/123?tab=fees'));
+    expect(location(response)).toBe(welcomeFrom('/applications?tab=offers'));
   });
 
   it('does not let the incoming query leak into /welcome as its own params', async () => {
