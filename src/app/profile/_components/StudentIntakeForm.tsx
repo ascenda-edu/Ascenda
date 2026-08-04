@@ -3,14 +3,15 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { motion } from 'framer-motion';
 import {
-  ChevronRight, ChevronLeft,
+  Check, ChevronRight, ChevronLeft,
   Trash2, PlusCircle, Info, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PROFILE_STEPS, FIRST_BOOSTER_STEP_INDEX, ESSENTIAL_STEP_KEYS } from '@/lib/profile/steps';
+import { PROFILE_STEPS, FIRST_BOOSTER_STEP_INDEX, ESSENTIAL_STEP_KEYS, type StepKey } from '@/lib/profile/steps';
 import { Chip } from '@/components/profile/wizard/chip';
 import { Combobox } from '@/components/profile/wizard/combobox';
+import { ReviewSection } from '@/components/profile/wizard/review-section';
 import { IntakeRail, type RailStep } from '../wizard/_components/intake-rail';
 import { IntakeStepMeter } from '../wizard/_components/intake-step-meter';
 import { cn } from '@/lib/utils';
@@ -909,6 +910,101 @@ export const StudentIntakeForm = ({
   }), [formState, activities, lifestylePreference]);
 
   /**
+   * The Review step's model: one entry per `PROFILE_STEPS` step, in step order.
+   *
+   * Rows with a null value are dropped by `ReviewSection`, so a section shows what
+   * the student HAS answered rather than a column of em-dashes. Titles come from
+   * `PROFILE_STEPS` so the summary cannot drift from the rail.
+   */
+  const reviewSections = useMemo(() => {
+    const label = (key: StepKey) => PROFILE_STEPS.find((step) => step.key === key)?.title ?? '';
+    const list = (values: string[]) => (values.length > 0 ? values.join(', ') : null);
+
+    return [
+      {
+        step: 1,
+        title: label('personal_information'),
+        done: stepCompletion[1],
+        rows: [
+          { label: 'Name', value: [personalInfo.first_name, personalInfo.last_name].filter(Boolean).join(' ') || null },
+          { label: 'Email', value: personalInfo.email || null },
+          { label: 'Nationality', value: list(formattedNationalities) },
+          { label: 'Residence', value: personalInfo.resident_country || null }
+        ]
+      },
+      {
+        step: 2,
+        title: label('academic_input'),
+        done: stepCompletion[2],
+        rows: [
+          { label: 'Programme', value: programmeType === 'IB' ? 'IB Diploma' : programmeType === 'A_LEVEL' ? 'A-levels' : null },
+          { label: 'School', value: academicInput.school_name || null },
+          { label: 'Focus', value: list(academicInput.intended_clusters.map((c) => clusterLabelMap.get(c) ?? c)) },
+          { label: 'Graduation', value: academicInput.graduation_year || null }
+        ]
+      },
+      {
+        step: 3,
+        title: label('academic_details'),
+        done: stepCompletion[3],
+        rows: [
+          // Names, not just a count. "Subjects: 6" cannot help anyone catch the
+          // mistake this screen exists to catch.
+          { label: 'Subjects', value: list(subjects.filter((s) => s.subject_name.trim()).map((s) => s.subject_name.trim())) },
+          // `ibSubjectSum`, not `academicInput.ib_total_points`: the total is DERIVED
+          // from the subject grades, and nothing in the UI writes ib_total_points —
+          // it only ever holds the value hydrated from the last save. Reading it here
+          // made the review screen quote a stale total that contradicted the grades
+          // just entered.
+          {
+            label: 'Predicted points',
+            value: programmeType === 'IB' && ibSubjectSum
+              ? `${ibSubjectSum}/42${academicInput.ib_core_points ? ` + ${academicInput.ib_core_points} core` : ''}`
+              : null
+          },
+          {
+            label: 'English',
+            value: englishRequired
+              ? ({ yes: 'Required', no: 'Not required', not_sure: 'Not sure' }[englishRequired] ?? null)
+              : null
+          },
+          { label: 'Admissions tests', value: list(admissionsTests.filter((t) => t.test_type && t.test_type !== 'NONE').map((t) => t.test_type)) }
+        ]
+      },
+      {
+        step: 4,
+        title: label('activities_ambitions'),
+        done: stepCompletion[4],
+        optional: true,
+        emptyPrompt: 'Nothing added yet — two or three activities sharpen how you rank against other applicants.',
+        emptyCta: 'Add activities',
+        rows: [
+          { label: 'Commitment', value: COMMITMENT_OPTIONS.find((o) => o.value === activities.commitment_level)?.label ?? null },
+          { label: 'Activities', value: list(activities.key_activities) },
+          { label: 'Leadership', value: list(activities.leadership_roles) },
+          { label: 'Interests', value: list(lifestylePreference.extracurricular_interests) }
+        ]
+      },
+      {
+        step: 5,
+        title: label('lifestyle_preferences'),
+        done: stepCompletion[5],
+        optional: true,
+        emptyPrompt: 'Nothing added yet — these tune where and how you would rather study.',
+        emptyCta: 'Set your preferences',
+        rows: [
+          { label: 'Teaching style', value: lifestylePreference.teaching_style || null },
+          { label: 'Location', value: list(lifestylePreference.desired_location_type) },
+          { label: 'Campus size', value: lifestylePreference.campus_size || null }
+        ]
+      }
+    ];
+  }, [
+    stepCompletion, personalInfo, formattedNationalities, programmeType, academicInput,
+    subjects, ibSubjectSum, englishRequired, admissionsTests, activities, lifestylePreference
+  ]);
+
+  /**
    * The rail's model. Derived from `PROFILE_STEPS` so the tier boundary, the step
    * count and the order all come from one place — nothing here knows that
    * "essential" means three or that Review is sixth.
@@ -958,6 +1054,9 @@ export const StudentIntakeForm = ({
     currentStep >= FIRST_BOOSTER_STEP_INDEX &&
     currentStep < TOTAL_STEPS &&
     essentialsDone === ESSENTIAL_STEP_KEYS.length;
+
+  /** Whether the success panel should offer a route back to the extras. */
+  const boostersOutstanding = railSteps.some((step) => step.tier === 'booster' && !step.done);
 
   /** aria-invalid / aria-describedby props for an errored input. */
   const a11yError = (key: string) =>
@@ -1020,7 +1119,7 @@ export const StudentIntakeForm = ({
           * Its own surface, separate from the rail's. `min-w-0` is load-bearing
           * in a flex row: without it the grids inside refuse to shrink and the
           * whole page gains a horizontal scrollbar. */}
-        <div ref={contentTopRef} className="surface-card min-w-0 flex-1 rounded-4xl">
+        <div ref={contentTopRef} className="surface-card min-w-0 flex-1 scroll-mt-28 rounded-4xl lg:scroll-mt-0">
 
           {/* Restored-draft notice. `info` tone rather than a primary tint: this
             * is the app telling the student something, not asking for an action. */}
@@ -2044,71 +2143,24 @@ export const StudentIntakeForm = ({
 
               {/* ═══ STEP 6 — Review ══════════════════════════════════════════ */}
               {currentStep === TOTAL_STEPS ? (
-                <section className="space-y-4">
-                  {/* Personal */}
-                  <SectionCard>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold">Personal information</p>
-                      <button type="button" onClick={() => setCurrentStep(1)}
-                        className="text-xs text-primary-ink hover:text-primary-ink/80 transition-colors font-medium">Edit</button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-                      <div><span className="text-muted-foreground">Name</span><br />{[personalInfo.first_name, personalInfo.last_name].filter(Boolean).join(' ') || '—'}</div>
-                      <div><span className="text-muted-foreground">Email</span><br />{personalInfo.email || '—'}</div>
-                      <div><span className="text-muted-foreground">Nationality</span><br />{formattedNationalities.join(', ') || '—'}</div>
-                      <div><span className="text-muted-foreground">Residence</span><br />{personalInfo.resident_country || '—'}</div>
-                    </div>
-                  </SectionCard>
-
-                  {/* Academic */}
-                  <SectionCard>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold">Studies</p>
-                      <button type="button" onClick={() => setCurrentStep(2)}
-                        className="text-xs text-primary-ink hover:text-primary-ink/80 transition-colors font-medium">Edit</button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-                      <div><span className="text-muted-foreground">Programme</span><br />{programmeType || '—'}</div>
-                      <div><span className="text-muted-foreground">School</span><br />{academicInput.school_name || '—'}</div>
-                      <div><span className="text-muted-foreground">Focus</span><br />{academicInput.intended_clusters.map((c) => clusterLabelMap.get(c)).join(', ') || '—'}</div>
-                      <div><span className="text-muted-foreground">Graduation</span><br />{academicInput.graduation_year || '—'}</div>
-                    </div>
-                  </SectionCard>
-
-                  {/* Grades */}
-                  <SectionCard>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold">Grades & tests</p>
-                      <button type="button" onClick={() => setCurrentStep(3)}
-                        className="text-xs text-primary-ink hover:text-primary-ink/80 transition-colors font-medium">Edit</button>
-                    </div>
-                    <div className="text-sm space-y-1">
-                      <p><span className="text-muted-foreground">Subjects:</span> {subjects.filter((s) => s.subject_name.trim()).length}</p>
-                      {/* `ibSubjectSum`, not `academicInput.ib_total_points`: the total is
-                        * DERIVED from the subject grades (buildPayload submits ibSubjectSum),
-                        * and nothing in the UI writes ib_total_points — it only ever holds the
-                        * value hydrated from the last save. Reading it here made the review
-                        * screen quote a stale total that contradicted the grades just entered. */}
-                      {programmeType === 'IB' && ibSubjectSum ?
-                        <p><span className="text-muted-foreground">IB points:</span> {ibSubjectSum}/42
-                          {academicInput.ib_core_points ? ` + ${academicInput.ib_core_points} core` : null}</p> : null}
-                      <p><span className="text-muted-foreground">English:</span> {englishRequired ? { yes: 'Required', no: 'Not required', not_sure: 'Not sure' }[englishRequired] ?? '—' : '—'}</p>
-                    </div>
-                  </SectionCard>
-
-                  {/* Activities */}
-                  <SectionCard>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold">Activities</p>
-                      <button type="button" onClick={() => setCurrentStep(4)}
-                        className="text-xs text-primary-ink hover:text-primary-ink/80 transition-colors font-medium">Edit</button>
-                    </div>
-                    <div className="text-sm space-y-1">
-                      {activities.commitment_level ? <p><span className="text-muted-foreground">Commitment:</span> {COMMITMENT_OPTIONS.find((o) => o.value === activities.commitment_level)?.label}</p> : null}
-                      {activities.key_activities.length > 0 ? <p><span className="text-muted-foreground">Activities:</span> {activities.key_activities.join(', ')}</p> : null}
-                      {activities.leadership_roles.length > 0 ? <p><span className="text-muted-foreground">Leadership:</span> {activities.leadership_roles.join(', ')}</p> : null}
-                    </div>
-                  </SectionCard>
+                <section className="space-y-3">
+                  {/* One card per step, in step order, ALL FIVE. The old summary
+                    * showed four and silently omitted everything from "Life at
+                    * university", so the one screen whose job is catching a mistake
+                    * could not be used to check that step at all. */}
+                  {reviewSections.map((section) => (
+                    <ReviewSection
+                      key={section.title}
+                      title={section.title}
+                      rows={section.rows}
+                      done={section.done}
+                      optional={section.optional}
+                      emptyPrompt={section.emptyPrompt}
+                      emptyCta={section.emptyCta}
+                      editLabel={section.title}
+                      onEdit={() => setCurrentStep(section.step)}
+                    />
+                  ))}
 
                   {/* The status line and the post-save CTA both live outside this
                     * section now — see below the keyed step body. */}
@@ -2127,34 +2179,68 @@ export const StudentIntakeForm = ({
             * did not exist. The other three ("Saving…", the save error, "Profile
             * saved!") are only ever set from the Review step, so they still land
             * exactly where they did — directly above the submit button. */}
-          {statusMessage ? (
+          {statusMessage && !submitted ? (
             <div
               role={statusIsError ? 'alert' : 'status'}
               className={cn(
                 'mt-6 rounded-xl px-4 py-3 text-sm font-medium',
-                submitted
-                  ? 'bg-success-subtle text-success'
-                  : statusIsError
-                    ? 'bg-destructive/10 text-destructive border border-destructive/30'
-                    : 'bg-muted text-muted-foreground'
+                statusIsError
+                  ? 'border border-destructive/30 bg-destructive/10 text-destructive'
+                  : 'bg-muted text-muted-foreground'
               )}
             >
               {statusMessage}
             </div>
           ) : null}
 
-          {/* Post-save CTA. Moved out with the status line so the two stay in
-            * their original order (message, then link). `submitted` is only ever
-            * set from the Review step. */}
+          {/* ── The save moment ──
+            * A panel, not a link appended under a status line. Finishing this form
+            * is the point of the whole surface and it used to be acknowledged by
+            * one sentence and a button.
+            *
+            * It also carries the ONE route that did not exist before: a student who
+            * took "Skip for now" had no way back to the extras from here — the
+            * wizard congratulated them and offered a single exit. Now the secondary
+            * action appears exactly when a booster is still empty.
+            *
+            * Kept below the status line so the pair stays in its original order
+            * (message, then action), and `submitted` is still only ever set from a
+            * successful save. */}
           {submitted ? (
-            <div className="mt-4 flex justify-center">
-              <a
-                href="/matches"
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-e-1 hover:bg-primary/90 transition-colors"
-              >
-                Get me to my matches →
-              </a>
-            </div>
+            <motion.div
+              role="status"
+              initial={{ opacity: 0, y: 8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: DURATION.base, ease: EASE_POP }}
+              className="mt-4 rounded-2xl border border-success/25 bg-success-subtle p-5 text-center"
+            >
+              <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-success-fill">
+                <Check className="h-5 w-5 text-success-foreground" aria-hidden />
+              </span>
+              <p className="mt-3 font-heading text-base font-semibold text-foreground">
+                Profile saved — your matches are ready
+              </p>
+              <p className="mt-1 text-body-sm text-muted-foreground">
+                {boostersOutstanding
+                  ? 'You can add the optional extras whenever you like; they sharpen the ranking.'
+                  : 'Everything is in, and your ranking is running on your full profile.'}
+              </p>
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                <Button asChild size="sm">
+                  <a href="/matches">Get me to my matches</a>
+                </Button>
+                {boostersOutstanding ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCurrentStep(FIRST_BOOSTER_STEP_INDEX)}
+                  >
+                    Add the optional extras
+                  </Button>
+                ) : null}
+              </div>
+            </motion.div>
           ) : null}
 
           {/* ── Navigation buttons ── */}

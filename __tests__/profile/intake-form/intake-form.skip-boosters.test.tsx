@@ -31,7 +31,7 @@
  *      delay or block the save the student actually asked for.
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { StudentProfilePayload } from '@/lib/profile/intake-types';
 import { FIRST_BOOSTER_STEP_INDEX, PROFILE_STEPS } from '@/lib/profile/steps';
@@ -205,10 +205,18 @@ const STEP_TITLE: Record<number, string> = {
 const STEP_BODY: Record<number, string> = {
   1: 'Add more than one if applicable.', 2: 'Which qualification are you taking?',
   3: 'Subjects & predicted grades', 4: 'Leadership roles',
-  5: 'Teaching style preference', 6: 'Personal information'
+  5: 'Teaching style preference'
 };
 
 const skipButton = () => screen.queryByRole('button', { name: 'Skip for now' });
+
+/**
+ * Scoped to the rail's own list: the Review step's per-section Edit buttons are
+ * named "Edit <section title>", and the mobile step meter renders alongside the
+ * desktop rail in jsdom, so an unscoped title lookup is ambiguous.
+ */
+const rail = () => screen.getByRole('list', { name: 'Setup steps' });
+const railButton = (name: RegExp | string) => within(rail()).getByRole('button', { name });
 
 /**
  * Hydrate on step 1, then walk to `step` via the sidebar — the same route
@@ -223,9 +231,12 @@ const hydrateThenGoTo = async (
   step: 2 | 3 | 4 | 5 | 6
 ) => {
   const view = renderForm({ initialPayload: payload, initialStep: 1 });
-  await user.click(screen.getByRole('button', { name: SIDEBAR[step] }));
+  await user.click(railButton(SIDEBAR[step]));
   await screen.findByRole('heading', { name: STEP_TITLE[step] });
-  await screen.findByText(STEP_BODY[step]);
+  // Step 6 has no fixture-independent body string — the summary omits empty rows —
+  // so wait for its per-section Edit buttons instead.
+  if (step === 6) await screen.findAllByRole('button', { name: /^Edit/ });
+  else await screen.findByText(STEP_BODY[step]);
   // Returned so a test that renders the form TWICE can unmount the first tree.
   // Two live copies make every `getByRole` ambiguous.
   return view;
@@ -372,7 +383,7 @@ describe('Skip for now — what it does', () => {
     await user.click(skipButton()!);
 
     await waitFor(() => expect(saveStudentIntake).toHaveBeenCalledTimes(1));
-    expect(await screen.findByText('Profile saved! Your matches are ready.')).toBeInTheDocument();
+    expect(await screen.findByText('Profile saved — your matches are ready')).toBeInTheDocument();
   });
 
   it('reports success on the booster step itself, without a detour through Review', async () => {
@@ -380,10 +391,36 @@ describe('Skip for now — what it does', () => {
     await hydrateThenGoTo(user, clone(SKIPPABLE), 4);
     await user.click(skipButton()!);
 
-    expect(await screen.findByText('Profile saved! Your matches are ready.')).toBeInTheDocument();
+    expect(await screen.findByText('Profile saved — your matches are ready')).toBeInTheDocument();
     // Still on step 4 — the skip is an exit, not a jump to Review.
     expect(screen.getByRole('heading', { name: 'Activities & ambitions' })).toBeInTheDocument();
   });
+
+  it('the success panel offers a route BACK to the extras it just skipped', async () => {
+    // Before this existed, a student who skipped was congratulated and given one
+    // exit — there was no way back to the boosters from the save confirmation, so
+    // "for now" was effectively "never" unless they went looking.
+    const user = setup();
+    await hydrateThenGoTo(user, clone(SKIPPABLE), 4);
+    await user.click(skipButton()!);
+    await screen.findByText('Profile saved — your matches are ready');
+
+    const back = screen.getByRole('button', { name: 'Add the optional extras' });
+    await user.click(back);
+    expect(await screen.findByRole('heading', { name: 'Activities & ambitions' })).toBeInTheDocument();
+  }, 20000);
+
+  it('a COMPLETE profile gets no "add the extras" prompt', async () => {
+    const user = setup();
+    const payload = clone(SKIPPABLE);
+    payload.lifestyle_preference.key_activities = ['Debate / Model UN'];
+    payload.lifestyle_preference.teaching_style = 'academic';
+    await hydrateThenGoTo(user, payload, 6);
+    await user.click(screen.getByRole('button', { name: 'Submit & see matches' }));
+
+    await screen.findByText('Profile saved — your matches are ready');
+    expect(screen.queryByRole('button', { name: 'Add the optional extras' })).not.toBeInTheDocument();
+  }, 20000);
 
   it('a failed save surfaces an alert and does not claim the profile was saved', async () => {
     const user = setup();
@@ -392,6 +429,6 @@ describe('Skip for now — what it does', () => {
     await user.click(skipButton()!);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Some answers could not be saved.');
-    expect(screen.queryByText('Profile saved! Your matches are ready.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Profile saved — your matches are ready')).not.toBeInTheDocument();
   });
 });

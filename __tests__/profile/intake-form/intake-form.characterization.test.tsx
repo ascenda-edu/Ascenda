@@ -394,6 +394,18 @@ const labelled = (label: string) =>
 const chip = (name: string) => screen.getByRole('button', { name });
 const chips = (name: string) => screen.getAllByRole('button', { name });
 
+/**
+ * Rail lookups are SCOPED to the rail's own list.
+ *
+ * The Review step's per-section Edit buttons are named "Edit <section title>" —
+ * deliberately, so a screen-reader user knows which section an Edit belongs to —
+ * and the mobile step meter renders alongside the desktop rail because jsdom
+ * applies no CSS. So `getByRole('button', { name: /Personal info/ })` is genuinely
+ * ambiguous. `<ol aria-label="Setup steps">` is the rail, and this scopes to it.
+ */
+const rail = () => screen.getByRole('list', { name: 'Setup steps' });
+const railButton = (name: RegExp | string) => within(rail()).getByRole('button', { name });
+
 const nationalityBox = () =>
   document.querySelector('[data-field="personal_information.nationality"]') as HTMLElement;
 const subjectBox = () =>
@@ -451,7 +463,7 @@ const STEP_TITLE: Record<number, string> = {
 const STEP_BODY: Record<number, string> = {
   1: 'Add more than one if applicable.', 2: 'Which qualification are you taking?',
   3: 'Subjects & predicted grades', 4: 'Leadership roles',
-  5: 'Teaching style preference', 6: 'Personal information'
+  5: 'Teaching style preference'
 };
 
 /**
@@ -469,9 +481,12 @@ const hydrateThenGoTo = async (
   step: 2 | 3 | 4 | 5 | 6
 ) => {
   renderForm({ initialPayload: payload, initialStep: 1 });
-  await user.click(screen.getByRole('button', { name: SIDEBAR[step] }));
+  await user.click(railButton(SIDEBAR[step]));
   await screen.findByRole('heading', { name: STEP_TITLE[step] });
-  await screen.findByText(STEP_BODY[step]);
+  // Step 6 has no fixture-independent body string — the summary omits empty rows —
+  // so wait for its per-section Edit buttons instead.
+  if (step === 6) await screen.findAllByRole('button', { name: /^Edit/ });
+  else await screen.findByText(STEP_BODY[step]);
 };
 
 beforeEach(() => {
@@ -571,7 +586,7 @@ describe('step navigation', () => {
   it('sidebar: jumping BACKWARDS skips validation', async () => {
     const user = setup();
     renderForm({ initialStep: 3 });
-    await user.click(screen.getByRole('button', { name: /Personal info/ }));
+    await user.click(railButton(/Personal info/));
 
     expect(await screen.findByRole('heading', { name: 'Who are you?' })).toBeInTheDocument();
     expect(screen.queryByText('First name is required.')).not.toBeInTheDocument();
@@ -580,7 +595,7 @@ describe('step navigation', () => {
   it('sidebar: jumping FORWARDS runs the current step\'s validation and is refused', async () => {
     const user = setup();
     renderForm();
-    await user.click(screen.getByRole('button', { name: /Lifestyle/ }));
+    await user.click(railButton(/Lifestyle/));
 
     expect(await screen.findByText('First name is required.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Who are you?' })).toBeInTheDocument();
@@ -589,7 +604,7 @@ describe('step navigation', () => {
   it('sidebar: clicking the step you are already on is a no-op', async () => {
     const user = setup();
     renderForm();
-    await user.click(screen.getByRole('button', { name: /Personal info/ }));
+    await user.click(railButton(/Personal info/));
 
     expect(screen.getByRole('heading', { name: 'Who are you?' })).toBeInTheDocument();
     expect(screen.queryByText('First name is required.')).not.toBeInTheDocument();
@@ -669,7 +684,7 @@ describe('step navigation', () => {
     payload.lifestyle_preference.extracurricular_interests = ['Volunteering'];
     renderForm({ initialPayload: payload, initialStep: 1 });
 
-    expect(screen.getByRole('button', { name: /Activities/ })).toHaveAccessibleName(/\(complete\)/);
+    expect(railButton(/Activities/)).toHaveAccessibleName(/\(complete\)/);
   });
 
   it('shows Submit instead of Next only on the Review step', () => {
@@ -698,14 +713,14 @@ describe('step navigation', () => {
    */
   it('a complete step announces itself as complete', () => {
     renderForm({ initialPayload: clone(IB_PAYLOAD), initialStep: 6 });
-    expect(screen.getByRole('button', { name: /Personal info/ })).toHaveAccessibleName('Personal info (complete)');
-    expect(screen.getByRole('button', { name: /Your studies/ })).toHaveAccessibleName('Your studies (complete)');
+    expect(railButton(/Personal info/)).toHaveAccessibleName('Personal info (complete)');
+    expect(railButton(/Your studies/)).toHaveAccessibleName('Your studies (complete)');
   });
 
   it('an incomplete step announces only its title — no ordinal', () => {
     renderForm({ initialStep: 6 });
-    expect(screen.getByRole('button', { name: /Personal info/ })).toHaveAccessibleName('Personal info');
-    expect(screen.getByRole('button', { name: /Your studies/ })).toHaveAccessibleName('Your studies');
+    expect(railButton(/Personal info/)).toHaveAccessibleName('Personal info');
+    expect(railButton(/Your studies/)).toHaveAccessibleName('Your studies');
   });
 
   it('marks booster steps optional and essential steps not', () => {
@@ -713,20 +728,20 @@ describe('step navigation', () => {
     // "(optional)" is in the accessible name, not just the visual divider: a
     // screen-reader user choosing whether to keep going needs the same "you can
     // stop here" signal a sighted user gets from the grouping.
-    expect(screen.getByRole('button', { name: /Activities/ })).toHaveAccessibleName(/\(optional\)$/);
-    expect(screen.getByRole('button', { name: /Lifestyle/ })).toHaveAccessibleName(/\(optional\)$/);
+    expect(railButton(/Activities/)).toHaveAccessibleName(/\(optional\)$/);
+    expect(railButton(/Lifestyle/)).toHaveAccessibleName(/\(optional\)$/);
     // The three that gate entry must NOT be labelled optional — that is the
     // whole distinction the tiering rests on.
-    expect(screen.getByRole('button', { name: /Personal info/ })).not.toHaveAccessibleName(/optional/);
-    expect(screen.getByRole('button', { name: /Your studies/ })).not.toHaveAccessibleName(/optional/);
-    expect(screen.getByRole('button', { name: /Grades & tests/ })).not.toHaveAccessibleName(/optional/);
+    expect(railButton(/Personal info/)).not.toHaveAccessibleName(/optional/);
+    expect(railButton(/Your studies/)).not.toHaveAccessibleName(/optional/);
+    expect(railButton(/Grades & tests/)).not.toHaveAccessibleName(/optional/);
   });
 
   it('marks the step you are on with aria-current, not with a numeral', () => {
     renderForm({ initialPayload: clone(IB_PAYLOAD), initialStep: 1 });
-    const personal = screen.getByRole('button', { name: /Personal info/ });
+    const personal = railButton(/Personal info/);
     expect(personal).toHaveAttribute('aria-current', 'step');
-    expect(screen.getByRole('button', { name: /Your studies/ })).not.toHaveAttribute('aria-current');
+    expect(railButton(/Your studies/)).not.toHaveAttribute('aria-current');
   });
 
   it('presents the rail as an ordered list, so position is conveyed structurally', () => {
@@ -750,7 +765,7 @@ describe('step navigation', () => {
   it('Review\'s "Edit" links jump straight to their step without validating', async () => {
     const user = setup();
     renderForm({ initialStep: 6 });
-    const editButtons = screen.getAllByRole('button', { name: 'Edit' });
+    const editButtons = screen.getAllByRole('button', { name: /^Edit/ });
     await user.click(editButtons[0]);
     expect(await screen.findByRole('heading', { name: 'Who are you?' })).toBeInTheDocument();
   });
@@ -1243,7 +1258,7 @@ describe('the CLEAR sentinel un-sets an optional Select', () => {
     await hydrateThenGoTo(user, clone(IB_PAYLOAD), 2);
     await chooseFromSelect(user, 'School type', 'Not specified');
 
-    await user.click(screen.getByRole('button', { name: /Review/ }));
+    await user.click(railButton(/Review/));
     await user.click(await screen.findByRole('button', { name: 'Submit & see matches' }));
 
     await waitFor(() => expect(saveStudentIntake).toHaveBeenCalledTimes(1));
@@ -1942,7 +1957,7 @@ describe('localStorage draft', () => {
 
     expect(await screen.findByText('Restored your in-progress draft.')).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Your studies' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /Personal info/ }));
+    await user.click(railButton(/Personal info/));
     expect(await screen.findByRole('heading', { name: 'Who are you?' })).toBeInTheDocument();
     await waitFor(() => expect(labelled('First name')).toHaveValue('Alex'));
   }, 20000);
@@ -2079,13 +2094,13 @@ describe('localStorage draft', () => {
     const user = setup();
     renderForm({ initialPayload: clone(IB_PAYLOAD), initialStep: 6 });
     // Make an edit so a draft exists at all.
-    await user.click(screen.getAllByRole('button', { name: 'Edit' })[0]);
+    await user.click(screen.getAllByRole('button', { name: /^Edit/ })[0]);
     await screen.findByRole('heading', { name: 'Who are you?' });
     await screen.findByText('Add more than one if applicable.');
     await user.type(labelled('First name'), '!');
     await waitFor(() => expect(readDraft()).not.toBeNull(), { timeout: 3000 });
 
-    await user.click(screen.getByRole('button', { name: /Review/ }));
+    await user.click(railButton(/Review/));
     await user.click(await screen.findByRole('button', { name: 'Submit & see matches' }));
 
     await waitFor(() => expect(readDraft()).toBeNull(), { timeout: 3000 });
@@ -2104,7 +2119,7 @@ describe('submission', () => {
     await user.clear(labelled('First name'));
     await user.type(labelled('First name'), 'Zoe');
 
-    await user.click(screen.getByRole('button', { name: /Review/ }));
+    await user.click(railButton(/Review/));
     await user.click(await screen.findByRole('button', { name: 'Submit & see matches' }));
 
     await waitFor(() => expect(saveStudentIntake).toHaveBeenCalledTimes(1));
@@ -2117,7 +2132,7 @@ describe('submission', () => {
     renderForm({ initialPayload: clone(IB_PAYLOAD), initialStep: 6 });
     await user.click(submitButton());
 
-    expect(await screen.findByText('Profile saved! Your matches are ready.')).toBeInTheDocument();
+    expect(await screen.findByText('Profile saved — your matches are ready')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Get me to my matches/ })).toHaveAttribute('href', '/matches');
     expect(screen.getByRole('button', { name: 'Profile saved ✓' })).toBeDisabled();
   });
@@ -2183,12 +2198,17 @@ describe('submission', () => {
     expect(screen.queryByText(/45\/42/)).not.toBeInTheDocument();
   });
 
-  it('the Review summary counts only filled subject rows', () => {
+  it('the Review summary lists the filled subjects and omits a blank row', () => {
+    // Changed 2026-08-04: the summary used to read "Subjects: 5". A count cannot
+    // help anyone catch the mistake a review screen exists to catch, so it now
+    // names them — and a row with no subject name is still excluded.
     const payload = clone(IB_PAYLOAD);
     payload.academic_input.subject_list[5].subject_name = '';
     renderForm({ initialPayload: payload, initialStep: 6 });
-    const subjects = screen.getByText('Subjects:').parentElement;
-    expect(subjects).toHaveTextContent('Subjects: 5');
+
+    const value = screen.getByText(/^Mathematics, Economics/);
+    expect(value).toHaveTextContent('Mathematics, Economics, Physics, English Literature, History');
+    expect(value).not.toHaveTextContent('Modern Languages');
   });
 });
 
