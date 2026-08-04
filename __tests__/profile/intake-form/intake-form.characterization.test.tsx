@@ -1012,6 +1012,49 @@ describe('focusFirstError', () => {
     // Previously: focus was stolen to the second tree's First name input.
     expect(document.activeElement).toBe(email);
   }, 15000);
+
+  /**
+   * THE LONG (600ms) DELAY — the half of `focusFirstError` nothing asserted.
+   *
+   * `goNext` uses the 50ms default because the step body is already mounted.
+   * `handleFinalSubmit` uses 600ms because a submit bounce CHANGES STEP FIRST,
+   * and with `AnimatePresence mode="wait"` the outgoing step has to finish
+   * exiting before the target node exists at all. So the two delays are coupled
+   * to the exit duration (`transition={{ duration: 0.25 }}`), and nothing here
+   * proved the long one actually lands.
+   *
+   * That matters for any change to the step transition: shorten the exit and
+   * 600ms is merely wasteful, but make the enter conditional on an exit that
+   * never completes and the field is never focused — the student is told a
+   * field is wrong and never shown which one. These two tests are what tell you.
+   */
+  it('lands on the offending field after a submit bounce (the 600ms path)', async () => {
+    const user = setup();
+    const payload = clone(IB_PAYLOAD);
+    payload.personal_information.email = 'not-an-email';
+    renderForm({ initialPayload: payload, initialStep: 6 });
+    await user.click(submitButton());
+
+    // Bounces 6 → 1, then focuses. Generous timeout: this is the slow path.
+    await waitFor(
+      () => expect(document.activeElement).toBe(labelled('Email')),
+      { timeout: 4000 }
+    );
+  }, 15000);
+
+  it('lands on a step-3 field when the bounce skips past steps 1 and 2', async () => {
+    // `handleFinalSubmit` picks the EARLIEST failing step, so this also pins
+    // that a step-3-only failure does not stop at step 1.
+    const user = setup();
+    const payload = clone(IB_PAYLOAD);
+    payload.academic_input.subject_list[2].subject_name = '';
+    renderForm({ initialPayload: payload, initialStep: 6 });
+    await user.click(submitButton());
+
+    await screen.findByRole('heading', { name: 'Grades & tests' });
+    const inputs = await screen.findAllByPlaceholderText('Subject name');
+    await waitFor(() => expect(document.activeElement).toBe(inputs[2]), { timeout: 4000 });
+  }, 15000);
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -1061,6 +1104,64 @@ describe('field errors are described, not named (F-D)', () => {
     expect(labelled('School name')).toHaveAccessibleName('School name');
     expect(labelled('School country')).toHaveAccessibleName('School country');
   });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 2c. THE `CLEAR` SENTINEL — un-setting an optional Select
+// ═════════════════════════════════════════════════════════════════════════════
+
+/**
+ * `CLEAR = '__clear'` exists because these fields are OPTIONAL and their native
+ * predecessors had a selectable `<option value="">` — so a value could be set
+ * and then TAKEN BACK. A placeholder is not a substitute: it shows only while
+ * the field is empty and can never be re-chosen.
+ *
+ * Only the sentinel's PRESENCE in the option list was asserted before (in the
+ * step-2 and step-3 option-count tests). Nothing clicked it, so nothing proved
+ * the un-set actually works end to end — and the obvious "cleanup" of replacing
+ * it with `<SelectItem value="">` produces an item that mounts fine and does
+ * NOTHING when clicked, silently, because `src/components/ui/select.tsx`
+ * swallows `onValueChange('')` app-wide. That failure is invisible without
+ * these tests.
+ */
+describe('the CLEAR sentinel un-sets an optional Select', () => {
+  it('School type: a hydrated value can be taken back to the placeholder', async () => {
+    const user = setup();
+    await hydrateThenGoTo(user, clone(IB_PAYLOAD), 2);
+    const trigger = screen.getByRole('combobox', { name: 'School type' });
+    expect(trigger).toHaveTextContent('International school');
+
+    await chooseFromSelect(user, 'School type', 'Not specified');
+    expect(trigger).toHaveTextContent('Select…');
+  });
+
+  it('School type: the cleared field reaches the payload as null, not "__clear"', async () => {
+    const user = setup();
+    await hydrateThenGoTo(user, clone(IB_PAYLOAD), 2);
+    await chooseFromSelect(user, 'School type', 'Not specified');
+
+    await user.click(screen.getByRole('button', { name: /Review/ }));
+    await user.click(await screen.findByRole('button', { name: 'Submit & see matches' }));
+
+    await waitFor(() => expect(saveStudentIntake).toHaveBeenCalledTimes(1));
+    const sent = saveStudentIntake.mock.calls[0][0] as StudentProfilePayload;
+    expect(sent.academic_input.school_type).toBeNull();
+  }, 20000);
+
+  it('Graduation year: clearing a REQUIRED field surfaces its validation error', async () => {
+    // Graduation year offers the sentinel too, but it is required — so clearing
+    // it must be permitted by the Select and then caught by the validator,
+    // rather than being silently impossible.
+    const user = setup();
+    await hydrateThenGoTo(user, clone(IB_PAYLOAD), 2);
+    expect(screen.getByRole('combobox', { name: 'Graduation year' })).toHaveTextContent('2027');
+
+    await chooseFromSelect(user, 'Graduation year', 'Not specified');
+    expect(screen.getByRole('combobox', { name: 'Graduation year' })).toHaveTextContent('Select…');
+
+    await user.click(nextButton());
+    expect(await screen.findByText('Graduation year is required.')).toBeInTheDocument();
+  }, 20000);
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -2021,9 +2122,16 @@ describe('submission', () => {
  * fields as missing that the student already filled.
  *
  * FIXED. `src/components/ui/select.tsx` now swallows `onValueChange('')` at the
- * wrapper, for every Select in the app. That is safe by construction: Radix
- * itself forbids an empty-string `SelectItem` value, so `''` is unreachable
- * through user interaction and every such event is this artefact.
+ * wrapper, for every Select in the app. It is NOT "safe by construction" — an
+ * earlier version of this paragraph claimed Radix forbids an empty-string
+ * `SelectItem` value, and that claim is false for the installed
+ * `@radix-ui/react-select@2.3.7` (a reviewer disproved it; see that file's
+ * header). The real justification is narrower: every Select in the app uses a
+ * SENTINEL for its empty option, never `value=""`, so no legitimate clear
+ * routes through `onValueChange` and every `''` is this artefact. That was
+ * verified across call sites, not derived from a library guarantee — so adding
+ * a `<SelectItem value="">` anywhere silently breaks that option, and this
+ * paragraph stops being true.
  *
  * These tests were written to pin the BUG. They now assert the REPAIR, so a
  * regression re-breaks the build rather than silently restoring data loss.

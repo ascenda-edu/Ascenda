@@ -1382,8 +1382,13 @@ export const StudentIntakeForm = ({
                     </label>
                     <label className="space-y-1.5">
                       <span className="text-sm font-medium text-muted-foreground">School type <span className="text-xs">(optional)</span></span>
-                      {/* `|| undefined` so an empty value shows the placeholder —
-                        * Radix treats '' as a real (and illegal) item value. */}
+                      {/* `|| ''`, NOT `|| undefined` — see the note at the top of this
+                        * file. An earlier version of this comment had it backwards and
+                        * also claimed Radix treats '' as an illegal item value; both are
+                        * wrong. `undefined` flips the Select to uncontrolled, and '' on
+                        * the ROOT is fine and shows the placeholder. See
+                        * src/components/ui/select.tsx for why value="" on an ITEM is the
+                        * thing that does not work. */}
                       <Select value={academicInput.school_type || ''}
                         onValueChange={(v) => updateAcademicInput('school_type', v === CLEAR ? '' : v)}>
                         <SelectTrigger aria-label="School type" className={selectTriggerCls}>
