@@ -84,7 +84,7 @@ export function ReviewSection({
         <button
           type="button"
           onClick={onEdit}
-          className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-primary-ink transition-colors hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="-my-2 shrink-0 rounded-lg px-3 py-3.5 text-xs font-semibold text-primary-ink transition-colors hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           Edit
           {/* The visible word is "Edit" on all six; the accessible name says which. */}
@@ -101,7 +101,7 @@ export function ReviewSection({
             <button
               type="button"
               onClick={onEdit}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/8 px-3 py-1.5 text-xs font-semibold text-primary-ink transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/8 px-4 py-3.5 text-xs font-semibold text-primary-ink transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <Plus className="h-3 w-3" aria-hidden />
               {emptyCta ?? `Add ${title.toLowerCase()}`}

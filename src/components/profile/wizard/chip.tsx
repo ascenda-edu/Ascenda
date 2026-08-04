@@ -49,7 +49,11 @@ export function Chip({
         selected
           ? 'border-primary bg-primary/8 text-primary-ink shadow-e-1'
           : 'border-border bg-background text-foreground hover:border-primary/40 hover:bg-muted/50',
-        disabled && !selected && 'cursor-not-allowed opacity-40 hover:border-border hover:bg-background'
+        // NOT `opacity-40`. Composited on a card that measured 2.50:1 (label) and
+        // 1.81:1 (description) — unreadable, and for the groups that do have a real
+        // cap the faded chip is the ONLY signal the cap was hit. Muted tokens keep
+        // it legible while still reading as unavailable.
+        disabled && !selected && 'cursor-not-allowed border-border/60 bg-muted/40 text-muted-foreground hover:border-border/60 hover:bg-muted/40'
       )}
     >
       <span className="flex w-full items-center justify-between gap-2">

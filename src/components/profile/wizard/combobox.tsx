@@ -131,7 +131,8 @@ export function Combobox({
           autoComplete="off"
           role="combobox"
           aria-expanded={open}
-          aria-controls={listboxId}
+          // Only while the <ul> exists — a permanent value is a dangling IDREF.
+          aria-controls={open ? listboxId : undefined}
           aria-autocomplete="list"
           aria-activedescendant={open && highlight >= 0 ? optionId(highlight) : undefined}
           aria-invalid={error ? true : undefined}
@@ -141,6 +142,23 @@ export function Combobox({
           placeholder={placeholder}
           onChange={(event) => { setQuery(event.target.value); onChange(event.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
+          /**
+           * Close on blur. Only a document `mousedown` listener closed this before,
+           * so TABBING out left the listbox open — overlaying the fields below,
+           * with `aria-expanded="true"` on a control that no longer had focus. Step
+           * 3 has up to six of these, so a keyboard user left a trail of six open
+           * popovers behind them.
+           *
+           * `relatedTarget` is checked because focus moving to an option INSIDE the
+           * list must not close it; the options are `tabIndex={-1}` buttons, and a
+           * mouse press focuses them before `select()` runs.
+           */
+          onBlur={(event) => {
+            const next = event.relatedTarget as Node | null;
+            if (next && ref.current?.contains(next)) return;
+            setOpen(false);
+            setHighlight(-1);
+          }}
           onKeyDown={onKeyDown}
         />
         <ChevronDown
@@ -159,17 +177,17 @@ export function Combobox({
           {filtered.length === 0 ? (
             // A real option-less row rather than an absent list: `aria-expanded`
             // stays honest and the user is told why nothing is happening.
-            <li role="option" aria-selected={false} aria-disabled className="px-4 py-2.5 text-sm text-muted-foreground">
+            <li role="option" aria-selected={false} aria-disabled className="px-4 py-3 text-sm text-muted-foreground">
               {emptyLabel}
             </li>
           ) : (
             filtered.map((option, index) => (
-              <li key={option} id={optionId(index)} role="option" aria-selected={index === highlight} data-index={index}>
+              <li key={option} id={optionId(index)} role="option" aria-selected={option === value} data-index={index}>
                 <button
                   type="button"
                   tabIndex={-1}
                   className={cn(
-                    'w-full px-4 py-2.5 text-left text-sm transition-colors',
+                    'w-full px-4 py-3 text-left text-sm transition-colors',
                     index === highlight ? 'bg-muted/60' : 'hover:bg-muted/60'
                   )}
                   onMouseDown={() => select(option)}

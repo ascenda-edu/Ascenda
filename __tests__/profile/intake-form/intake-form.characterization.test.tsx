@@ -925,16 +925,29 @@ describe('validateStep2', () => {
   });
 
   it('primary cluster is single-select: picking a second replaces the first', async () => {
+    // CHANGED 2026-08-04, and the old test's own comment showed why it needed to.
+    // It was titled "picking a second replaces the first" and then documented the
+    // opposite — "replacing means deselecting first" — because every unchosen chip
+    // was `disabled` at the cap of one. `toggleCluster` has always REPLACED for this
+    // group, so the disabling was decoration that dropped nine chips out of the tab
+    // order with no announcement, crushed them to an unreadable 2.5:1, and forced a
+    // two-click round trip to change your mind. The title is now true.
     const user = setup();
     renderForm({ initialStep: 2 });
+
     await user.click(chips('Law')[0]);
     expect(chips('Law')[0]).toHaveAttribute('aria-pressed', 'true');
-    // Every other primary chip is disabled once one is chosen, so replacing means
-    // deselecting first — clicking the pressed chip clears it.
-    expect(chips('Humanities')[0]).toBeDisabled();
-    await user.click(chips('Law')[0]);
-    expect(chips('Law')[0]).toHaveAttribute('aria-pressed', 'false');
+    // The alternatives stay reachable — that is the whole point.
     expect(chips('Humanities')[0]).toBeEnabled();
+
+    // One click swaps, no deselect step.
+    await user.click(chips('Humanities')[0]);
+    expect(chips('Humanities')[0]).toHaveAttribute('aria-pressed', 'true');
+    expect(chips('Law')[0]).toHaveAttribute('aria-pressed', 'false');
+
+    // And clicking the pressed one still clears it.
+    await user.click(chips('Humanities')[0]);
+    expect(chips('Humanities')[0]).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('secondary clusters cap at two', async () => {

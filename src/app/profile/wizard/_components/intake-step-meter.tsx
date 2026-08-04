@@ -64,6 +64,10 @@ export function IntakeStepMeter({
             <p className="eyebrow">
               Step {currentIndex} of {steps.length}
             </p>
+            {/* The ring beside this is `decorative`, so without this line the
+              * essentials percentage — the number that actually gates matching —
+              * would be available to a screen reader only by opening the sheet. */}
+            <span className="sr-only">Essentials {essentialPct}% complete.</span>
             <p className="truncate text-body-sm font-semibold text-foreground">{currentTitle}</p>
           </div>
 
@@ -71,6 +75,7 @@ export function IntakeStepMeter({
             type="button"
             onClick={() => setSheetOpen(true)}
             aria-haspopup="dialog"
+            aria-expanded={sheetOpen}
             className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-4 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <List className="h-3.5 w-3.5" aria-hidden />
@@ -100,8 +105,7 @@ export function IntakeStepMeter({
           aria-valuetext={`Step ${currentIndex} of ${steps.length}: ${currentTitle}`}
           className="mt-2.5 flex items-center gap-1"
         >
-          {steps.map((step, index) => {
-            const traversed = index < currentIndex - 1;
+          {steps.map((step) => {
             return (
               <span
                 key={step.key}
@@ -110,7 +114,7 @@ export function IntakeStepMeter({
                   'h-1 flex-1 rounded-full transition-colors duration-150',
                   step.current
                     ? 'bg-primary'
-                    : step.done || traversed
+                    : step.done
                       ? 'bg-primary/45'
                       : 'bg-muted'
                 )}

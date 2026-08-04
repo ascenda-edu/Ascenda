@@ -118,7 +118,13 @@ const fieldErrorId = (key: string) => `intake-error-${key.replace(/[^a-zA-Z0-9_-
 
 function FieldError({ msg, id }: { msg?: string; id?: string }) {
   if (!msg) return null;
-  return <p id={id} role="alert" className="mt-1 text-xs text-destructive font-medium">{msg}</p>;
+  // `text-danger`, NOT `text-destructive`. `--destructive` is documented in
+  // globals.css as an ACTION colour tuned to carry white `--destructive-foreground`
+  // — as copy it measures 4.80:1 light and 2.47:1 DARK, an AA failure on every
+  // validation message in the wizard. `--danger` is the status text token: 5.86:1
+  // and 7.57:1. Same class of mistake as `text-primary` vs `text-primary-ink`, and
+  // `check-design-tokens.mjs` does not lint for it.
+  return <p id={id} role="alert" className="mt-1 text-xs font-medium text-danger">{msg}</p>;
 }
 
 function SectionCard({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -170,7 +176,7 @@ function SectionTitle({ label, hint, why }: { label: string; hint?: string; why?
           aria-expanded={open}
           aria-haspopup="true"
           onClick={() => setOpen((v) => !v)}
-          className="flex items-center gap-1 text-label text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-0.5"
+          className="-my-2 flex shrink-0 items-center gap-1 rounded-lg px-2 py-3.5 text-label text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <Info className="w-3.5 h-3.5" />
           Why we ask
@@ -178,7 +184,7 @@ function SectionTitle({ label, hint, why }: { label: string; hint?: string; why?
         </button>
       ) : null}
       {open && why ? (
-        <div className="absolute right-0 mt-6 w-56 text-xs bg-popover border border-border rounded-xl p-3 shadow-e-3 z-raised text-muted-foreground leading-relaxed">
+        <div className="absolute right-0 z-overlay mt-6 w-56 rounded-xl border border-border bg-popover p-3 text-xs leading-relaxed text-muted-foreground shadow-e-3">
           {why}
         </div>
       ) : null}
@@ -811,12 +817,45 @@ export const StudentIntakeForm = ({
    * the document. Same `isFirstPaint` shape as `page-transition.tsx`.
    */
   const hasScrolledOnceRef = useRef(false);
+  const stepHeadingRef = useRef<HTMLHeadingElement | null>(null);
   useEffect(() => {
     if (!hasScrolledOnceRef.current) {
       hasScrolledOnceRef.current = true;
       return;
     }
-    contentTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    /**
+     * `behavior: 'smooth'` is NOT covered by the reduced-motion CSS. Per CSSOM-View
+     * the JS option overrides the `scroll-behavior` property, so
+     * `globals.css`'s `scroll-behavior: auto !important` inside the
+     * `prefers-reduced-motion` block never reaches this call, and `MotionConfig`
+     * has no bearing on it either. Six smooth-scrolled transitions for a user who
+     * asked for none. Read the preference directly.
+     */
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    contentTopRef.current?.scrollIntoView({
+      behavior: reduced ? 'auto' : 'smooth',
+      block: 'start'
+    });
+
+    /**
+     * Move focus to the new step's heading.
+     *
+     * Without this a step change is invisible to two groups at once. A keyboard
+     * user presses Next and focus stays on the button at the BOTTOM of the step
+     * they just arrived at, so Tab leaves the form and reaching field one means
+     * Shift+Tabbing back up through the whole body. A screen-reader user gets
+     * nothing at all: the `<h2>` swaps inside a keyed `motion.div`, which is not a
+     * live region, so pressing Next is silent.
+     *
+     * The heading is `tabIndex={-1}` — programmatically focusable, not tab-stop —
+     * which is the standard route-change pattern. Focusing it both announces the
+     * step and puts the tab sequence at the top of the new step's fields.
+     *
+     * `preventScroll` because the `scrollIntoView` above already owns the scroll
+     * position, and letting focus scroll too fights it.
+     */
+    stepHeadingRef.current?.focus({ preventScroll: true });
   }, [currentStep]);
 
   // ── Step completion (for the rail's dots and the essentials ring) ──────────
@@ -1164,7 +1203,7 @@ export const StudentIntakeForm = ({
               <button
                 type="button"
                 onClick={restoreSavedProfile}
-                className="w-full rounded-xl px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="w-full rounded-xl px-3 py-3.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 Restore last save
               </button>
@@ -1208,7 +1247,7 @@ export const StudentIntakeForm = ({
                 <button
                   type="button"
                   onClick={discardDraft}
-                  className="rounded-lg px-2 py-1 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="-my-2 rounded-lg px-3 py-3 text-xs font-semibold text-danger transition-colors hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   Discard draft
                 </button>
@@ -1216,7 +1255,7 @@ export const StudentIntakeForm = ({
                   type="button"
                   onClick={() => setDraftNotice(false)}
                   aria-label="Dismiss notice"
-                  className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="-my-1 rounded-lg p-3 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   <X className="h-3.5 w-3.5" aria-hidden />
                 </button>
@@ -1260,7 +1299,15 @@ export const StudentIntakeForm = ({
             className="space-y-6"
           >
             <div className="mb-6">
-              <h2 className="text-balance font-heading text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+              {/* `tabIndex={-1}` so the step-change effect can focus it: that is
+                * what announces the new step to a screen reader and puts a keyboard
+                * user at the top of the new fields instead of at the Next button
+                * they just left. Not a tab stop. */}
+              <h2
+                ref={stepHeadingRef}
+                tabIndex={-1}
+                className="text-balance font-heading text-xl font-semibold tracking-tight text-foreground outline-none md:text-2xl"
+              >
                 {STEP_META[currentStep]?.title}
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -1329,7 +1376,7 @@ export const StudentIntakeForm = ({
                         <p className="text-xs text-muted-foreground mt-0.5">Add more than one if applicable.</p>
                       </div>
                       <button type="button" onClick={addNationality}
-                        className="text-xs font-semibold text-primary-ink hover:text-primary-ink/80 transition-colors">
+                        className="-my-2 rounded-lg px-2 py-3 text-xs font-semibold text-primary-ink transition-colors hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                         + Add another
                       </button>
                     </div>
@@ -1349,7 +1396,7 @@ export const StudentIntakeForm = ({
                           {nationalities.length > 1 && (
                             <button type="button" onClick={() => removeNationality(i)}
                               aria-label={`Remove nationality ${i + 1}`}
-                              className="p-2 text-muted-foreground hover:text-destructive transition-colors rounded-lg">
+                              className="rounded-lg p-3.5 text-muted-foreground transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                               <X className="w-4 h-4" />
                             </button>
                           )}
@@ -1531,10 +1578,16 @@ export const StudentIntakeForm = ({
                     />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" data-field="academic_input.intended_clusters">
                       {CLUSTER_OPTIONS.map((opt) => (
+                        // NOT disabled at the cap. `toggleCluster` already REPLACES
+                        // the selection for this single-choice group, so disabling the
+                        // other nine was decoration that (a) dropped them out of the
+                        // tab order with no announcement of why, (b) crushed them to
+                        // opacity-40 — 2.5:1, unreadable — and (c) forced a
+                        // deselect-then-select round trip to change your mind. Picking
+                        // another one just works.
                         <Chip
                           key={opt.value} label={opt.label} emoji={opt.emoji}
                           selected={academicInput.intended_clusters.includes(opt.value)}
-                          disabled={!academicInput.intended_clusters.includes(opt.value) && academicInput.intended_clusters.length >= 1}
                           onClick={() => toggleCluster(opt.value, 'intended_clusters')}
                         />
                       ))}
@@ -1543,7 +1596,12 @@ export const StudentIntakeForm = ({
                   </SectionCard>
 
                   <SectionCard>
-                    <SectionTitle label="Secondary interests" hint="Up to two — used to broaden your match pool." />
+                    <SectionTitle
+                      label="Secondary interests"
+                      hint={academicInput.secondary_clusters.length >= 2
+                        ? 'Two picked — deselect one to swap.'
+                        : 'Up to two — used to broaden your match pool.'}
+                    />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {CLUSTER_OPTIONS.map((opt) => (
                         <Chip
@@ -1584,7 +1642,7 @@ export const StudentIntakeForm = ({
                         type="button"
                         disabled={subjects.length >= getMaxSubjects(programmeType)}
                         onClick={addSubject}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/8 text-primary-ink text-xs font-semibold hover:bg-primary/15 transition-[background-color,opacity] disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="flex items-center gap-1.5 rounded-lg bg-primary/8 px-3 py-3.5 text-xs font-semibold text-primary-ink transition-[background-color,opacity] hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <PlusCircle className="w-3.5 h-3.5" />
                         Add
@@ -1667,7 +1725,7 @@ export const StudentIntakeForm = ({
                           <div className="flex items-end justify-end pb-0.5 md:col-span-1 md:justify-center">
                             <button type="button" onClick={() => removeSubject(i)}
                               aria-label={`Remove subject ${i + 1}`}
-                              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                              className="rounded-lg p-3.5 text-muted-foreground transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                               <Trash2 className="h-4 w-4" aria-hidden />
                             </button>
                           </div>
@@ -2029,7 +2087,7 @@ export const StudentIntakeForm = ({
                               </div>
                             </div>
                             <button type="button"
-                              className="mt-0.5 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
+                              className="mt-0.5 shrink-0 rounded-lg p-3.5 text-muted-foreground transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                               onClick={() => removeActivityRow(row.localId)}
                               aria-label="Remove activity">
                               <Trash2 className="w-4 h-4" aria-hidden />
@@ -2257,7 +2315,7 @@ export const StudentIntakeForm = ({
               className={cn(
                 'mt-6 rounded-xl px-4 py-3 text-sm font-medium',
                 statusIsError
-                  ? 'border border-destructive/30 bg-destructive/10 text-destructive'
+                  ? 'border border-destructive/30 bg-destructive/10 text-danger'
                   : 'bg-muted text-muted-foreground'
               )}
             >
@@ -2325,12 +2383,16 @@ export const StudentIntakeForm = ({
             <IntakePreviewStrip preview={preview} loading={previewLoading} className="mt-6" />
           ) : null}
 
-          {/* ── Navigation buttons ── */}
+          {/* ── Navigation buttons ──
+            * No `size="sm"`. These were `h-9` (36px) — under the 44px tap floor,
+            * on the four most-tapped controls in a six-step mobile form. The
+            * default `h-10` plus the row's `pt-4` gives a comfortable target
+            * without making them look like hero buttons. */}
           <div className="mt-8 flex items-center justify-between gap-3 pt-4 border-t border-border/50">
             <Button
-              type="button" variant="outline" size="sm"
+              type="button" variant="outline"
               onClick={goBack} disabled={currentStep === 1}
-              className="gap-1.5"
+              className="h-11 gap-1.5"
             >
               <ChevronLeft className="w-4 h-4" /> Back
             </Button>
@@ -2350,23 +2412,22 @@ export const StudentIntakeForm = ({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="sm"
                     onClick={handleSkipBoosters}
                     disabled={isSaving || submitted}
-                    className="gap-1.5 text-muted-foreground"
+                    className="h-11 gap-1.5 text-muted-foreground"
                   >
                     Skip for now
                   </Button>
                 ) : null}
-                <Button type="button" size="sm" onClick={goNext} className="gap-1.5">
+                <Button type="button" onClick={goNext} className="h-11 gap-1.5">
                   Next <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
             ) : (
               <Button
-                type="submit" size="sm"
+                type="submit"
                 disabled={isSaving || submitted}
-                className="gap-1.5 px-6"
+                className="h-11 gap-1.5 px-6"
               >
                 {submitted ? 'Profile saved ✓' : isSaving ? 'Saving…' : 'Submit & see matches'}
               </Button>
