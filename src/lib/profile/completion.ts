@@ -126,11 +126,20 @@ export const buildStepCompletion = ({
   activities_ambitions: Boolean(
     (lifestyle?.leadership_roles ?? []).length > 0 ||
       lifestyle?.commitment_level ||
-      (lifestyle?.key_activities ?? []).length > 0 ||
-      (lifestyle?.extracurricular_interests ?? []).length > 0
+      (lifestyle?.key_activities ?? []).length > 0
   ),
+  // `extracurricular_interests` belongs HERE, not to activities_ambitions above.
+  // Both steps write into the one `student_lifestyle_preference` row, so the
+  // column tells you nothing about which step owns it — and the chip group
+  // renders on the lifestyle step (StudentIntakeForm's step 5). While it was
+  // attributed to activities, ticking a single interest chip on step 5 flipped
+  // the rail's "Activities" row to complete and the booster pip to 1/2, for a
+  // step the student had never opened. Measured, not theorised.
   lifestyle_preferences: Boolean(
-    lifestyle?.teaching_style || lifestyle?.desired_location_type || lifestyle?.campus_size
+    lifestyle?.teaching_style ||
+      lifestyle?.desired_location_type ||
+      lifestyle?.campus_size ||
+      (lifestyle?.extracurricular_interests ?? []).length > 0
   )
 });
 

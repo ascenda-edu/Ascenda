@@ -73,8 +73,18 @@ const everythingDone = (): ProfileRecordGroup => ({
   academicInput,
   subjectCount: 6,
   lifestyle: {
-    extracurricular_interests: ['Sports/fitness'], // step 4
-    teaching_style: 'mixed', // step 5 — all three are single-valued enums
+    // Step 4 (activities_ambitions). CHANGED 2026-08-04: this used to rely on
+    // `extracurricular_interests` as its only step-4 evidence, because
+    // `completion.ts` attributed that field here. It does not any more — the chip
+    // group renders on the LIFESTYLE step, and attributing it to activities meant
+    // ticking one interest chip marked a step the student never opened. Step 4 now
+    // needs an actual activities answer, which is what this fixture should always
+    // have supplied.
+    commitment_level: 'deep',
+    key_activities: ['Debate / Model UN'],
+    // Step 5 (lifestyle_preferences) — the three enums plus the interests.
+    extracurricular_interests: ['Sports/fitness'],
+    teaching_style: 'mixed',
     desired_location_type: 'major_city',
     campus_size: 'large'
   }

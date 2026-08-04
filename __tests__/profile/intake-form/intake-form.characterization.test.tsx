@@ -699,20 +699,29 @@ describe('step navigation', () => {
     expect(screen.getByText('2/2 extras')).toBeInTheDocument();
   });
 
-  it('step 4 counts extracurricular_interests, matching completion.ts', () => {
-    // The wizard's sidebar used to omit this field while `completion.ts:126`
-    // counted it, so a student whose only booster answer was an interest chip
-    // saw "Activities" incomplete in the wizard and complete on the dashboard.
-    // Note it lives on the lifestyle_preference slice even though it belongs to
-    // step 4 — steps 4 and 5 share one DB row.
+  it('extracurricular_interests counts toward step 5, where its chips render', () => {
+    // CHANGED 2026-08-04. This test previously asserted the opposite — that ticking
+    // an interest chip completed step 4 — because `completion.ts` attributed the
+    // field to `activities_ambitions`. An independent audit measured the
+    // consequence: ticking one chip on step 5 flipped the rail's "Activities" row to
+    // complete and the booster pip to 1/2, for a step the student had never opened.
+    //
+    // The field lives on the shared `student_lifestyle_preference` row, which is why
+    // the attribution was ambiguous — but the CHIP GROUP renders on step 5, so that
+    // is the step it can evidence. Fixed in both `completion.ts` and the wizard's
+    // own `stepCompletion`, which must agree.
     const payload = clone(IB_PAYLOAD);
     payload.lifestyle_preference.leadership_roles = [];
     payload.lifestyle_preference.commitment_level = null;
     payload.lifestyle_preference.key_activities = [];
+    payload.lifestyle_preference.teaching_style = null;
+    payload.lifestyle_preference.desired_location_type = null;
+    payload.lifestyle_preference.campus_size = null;
     payload.lifestyle_preference.extracurricular_interests = ['Volunteering'];
     renderForm({ initialPayload: payload, initialStep: 1 });
 
-    expect(railButton(/Activities/)).toHaveAccessibleName(/\(complete\)/);
+    expect(railButton(/Lifestyle/)).toHaveAccessibleName(/\(complete\)/);
+    expect(railButton(/Activities/)).not.toHaveAccessibleName(/\(complete\)/);
   });
 
   it('shows Submit instead of Next only on the Review step', () => {

@@ -169,7 +169,20 @@ export const stepForFieldKey = (key: string): number => {
     return 3;
   }
   if (key.startsWith('academic_input.')) return 2;
-  // Everything the payload schema can still reject — SAT/ACT, the free-text
+  // `lifestyle_preference` is split across TWO steps: steps 4 and 5 both persist
+  // into that one row. Sending all of it to 4 meant a rejection on, say,
+  // `other_extracurriculars` bounced the student to Activities — a step that does
+  // not contain the field. These five render on step 5.
+  if (
+    key.startsWith('lifestyle_preference.teaching_style') ||
+    key.startsWith('lifestyle_preference.desired_location_type') ||
+    key.startsWith('lifestyle_preference.campus_size') ||
+    key.startsWith('lifestyle_preference.extracurricular_interests') ||
+    key.startsWith('lifestyle_preference.other_extracurriculars')
+  ) {
+    return 5;
+  }
+  // Everything else the payload schema can still reject — SAT/ACT, the free-text
   // ambition and work-experience answers, the activity rows — is step 4.
   return 4;
 };

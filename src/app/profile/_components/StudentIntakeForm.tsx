@@ -12,8 +12,6 @@ import { PROFILE_STEPS, FIRST_BOOSTER_STEP_INDEX, ESSENTIAL_STEP_KEYS, type Step
 import { Chip } from '@/components/profile/wizard/chip';
 import { Combobox } from '@/components/profile/wizard/combobox';
 import { ReviewSection } from '@/components/profile/wizard/review-section';
-import { IntakePreviewStrip } from '@/components/profile/wizard/intake-preview-strip';
-import { useIntakePreview } from '@/lib/profile/use-intake-preview';
 import { IntakeRail, type RailStep } from '../wizard/_components/intake-rail';
 import { IntakeStepMeter } from '../wizard/_components/intake-step-meter';
 import { cn } from '@/lib/utils';
@@ -646,7 +644,14 @@ export const StudentIntakeForm = ({
       // field while the empty row further down was the thing needing attention.
       const target = matches.find((node) => !matches.some((other) => other !== node && node.contains(other)))
         ?? matches[0];
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Same reduced-motion escape as the step-change scroll below: a JS
+      // `behavior: 'smooth'` OVERRIDES the CSS `scroll-behavior` property, so
+      // globals.css's `scroll-behavior: auto !important` inside the
+      // prefers-reduced-motion block never reaches it. Measured under `reduce`: 14
+      // distinct intermediate scroll positions on a failed Next. The comment 180
+      // lines below explained the mechanism and this call still did it.
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+      target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
       const focusable = target.querySelector<HTMLElement>('input, select, textarea, button');
       (focusable ?? target).focus({ preventScroll: true });
     }, delay);
@@ -854,8 +859,20 @@ export const StudentIntakeForm = ({
      *
      * `preventScroll` because the `scrollIntoView` above already owns the scroll
      * position, and letting focus scroll too fights it.
+     *
+     * GUARDED on focus still being inside this form, for the same reason
+     * `focusFirstError` is scoped to a still-connected subtree (defect F-B). Two
+     * reasons it matters: yanking focus back is hostile if the student has
+     * deliberately moved to something else on the page — the chat launcher, the
+     * theme toggle — and in tests an unguarded steal reaches across a boundary into
+     * whatever tree replaced this one, which showed up as three unrelated step-2
+     * tests failing intermittently while passing in isolation. On a real step
+     * change focus is on the Next button, i.e. inside the form, so the guard never
+     * blocks the case it exists for.
      */
-    stepHeadingRef.current?.focus({ preventScroll: true });
+    const form = contentTopRef.current?.closest('form');
+    const focusIsOurs = form?.contains(document.activeElement) ?? false;
+    if (focusIsOurs) stepHeadingRef.current?.focus({ preventScroll: true });
   }, [currentStep]);
 
   // ── Step completion (for the rail's dots and the essentials ring) ──────────
@@ -981,27 +998,19 @@ export const StudentIntakeForm = ({
     });
   }, [formState, currentStep]);
 
-  /**
-   * Live feedback: how many programmes sit in the fields chosen, and what the
-   * scoring engine makes of the grades entered so far. Driven by `formState` — the
-   * hook fingerprints the few fields the preview depends on, so typing a school
-   * name or a phone number costs nothing.
-   *
-   * Disabled once submitted: the success panel is the answer at that point, and a
-   * count changing underneath it would be noise.
-   */
-  const { preview, loading: previewLoading } = useIntakePreview(buildPayload, formState, {
-    enabled: !submitted
-  });
-
   const stepCompletion = useMemo<Record<number, boolean>>(() => ({
     1: Object.keys(validateStep1(formState)).length === 0,
     2: Object.keys(validateStep2(formState)).length === 0,
     3: Object.keys(validateStep3(formState)).length === 0,
     4: activities.leadership_roles.length > 0 || !!activities.commitment_level
-      || activities.key_activities.length > 0
+      || activities.key_activities.length > 0,
+    // `extracurricular_interests` counts toward step 5, where its chip group
+    // actually renders — see the note in completion.ts. Attributing it to step 4
+    // (because both steps share one DB row) meant ticking one interest chip on
+    // step 5 marked "Activities" complete without the student opening it.
+    5: !!lifestylePreference.teaching_style || lifestylePreference.desired_location_type.length > 0
+      || !!lifestylePreference.campus_size
       || lifestylePreference.extracurricular_interests.length > 0,
-    5: !!lifestylePreference.teaching_style || lifestylePreference.desired_location_type.length > 0 || !!lifestylePreference.campus_size,
     6: false,
   }), [formState, activities, lifestylePreference]);
 
@@ -1376,7 +1385,7 @@ export const StudentIntakeForm = ({
                         <p className="text-xs text-muted-foreground mt-0.5">Add more than one if applicable.</p>
                       </div>
                       <button type="button" onClick={addNationality}
-                        className="-my-2 rounded-lg px-2 py-3 text-xs font-semibold text-primary-ink transition-colors hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                        className="-my-2 rounded-lg px-2 py-3.5 text-xs font-semibold text-primary-ink transition-colors hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                         + Add another
                       </button>
                     </div>
@@ -2005,20 +2014,41 @@ export const StudentIntakeForm = ({
                       why="US universities use SAT/ACT scores in admissions. We use this to flag eligibility and score fit."
                     />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <label className="space-y-1.5">
-                        <span className="text-sm font-medium text-muted-foreground">SAT score <span className="text-xs">(400–1600, optional)</span></span>
-                        <input type="number" min={400} max={1600} className="form-input"
-                          value={activities.sat_score}
-                          onChange={(e) => setActivities((prev) => ({ ...prev, sat_score: e.target.value }))}
-                          placeholder="e.g. 1450" />
-                      </label>
-                      <label className="space-y-1.5">
-                        <span className="text-sm font-medium text-muted-foreground">ACT score <span className="text-xs">(1–36, optional)</span></span>
-                        <input type="number" min={1} max={36} className="form-input"
-                          value={activities.act_score}
-                          onChange={(e) => setActivities((prev) => ({ ...prev, act_score: e.target.value }))}
-                          placeholder="e.g. 32" />
-                      </label>
+                      {/* `data-field` + `FieldError` on both, and they are not
+                        * decoration. The schema caps SAT at 1600 and ACT at 36, and
+                        * `max=` on the input is never enforced because every Next is
+                        * `type="button"` and the submit happens from Review with this
+                        * step unmounted. So `validatePayload` rejects, routes the
+                        * student here — and before this there was no `[data-field]`
+                        * for `focusFirstError` to scroll to and nowhere to render the
+                        * message. They arrived on Activities with no reason given,
+                        * pressed Submit again, and got the same silent bounce. */}
+                      <div data-field="lifestyle_preference.sat_score">
+                        <label className="space-y-1.5 block">
+                          <span className="text-sm font-medium text-muted-foreground">SAT score <span className="text-xs">(400–1600, optional)</span></span>
+                          <input
+                            type="number" min={400} max={1600} inputMode="numeric"
+                            className={cn('form-input', errors['lifestyle_preference.sat_score'] && 'border-danger ring-1 ring-danger/30')}
+                            {...a11yError('lifestyle_preference.sat_score')}
+                            value={activities.sat_score}
+                            onChange={(e) => setActivities((prev) => ({ ...prev, sat_score: e.target.value }))}
+                            placeholder="e.g. 1450" />
+                        </label>
+                        <FieldError msg={errors['lifestyle_preference.sat_score']} id={fieldErrorId('lifestyle_preference.sat_score')} />
+                      </div>
+                      <div data-field="lifestyle_preference.act_score">
+                        <label className="space-y-1.5 block">
+                          <span className="text-sm font-medium text-muted-foreground">ACT score <span className="text-xs">(1–36, optional)</span></span>
+                          <input
+                            type="number" min={1} max={36} inputMode="numeric"
+                            className={cn('form-input', errors['lifestyle_preference.act_score'] && 'border-danger ring-1 ring-danger/30')}
+                            {...a11yError('lifestyle_preference.act_score')}
+                            value={activities.act_score}
+                            onChange={(e) => setActivities((prev) => ({ ...prev, act_score: e.target.value }))}
+                            placeholder="e.g. 32" />
+                        </label>
+                        <FieldError msg={errors['lifestyle_preference.act_score']} id={fieldErrorId('lifestyle_preference.act_score')} />
+                      </div>
                     </div>
                   </SectionCard>
                 </section>
@@ -2142,7 +2172,7 @@ export const StudentIntakeForm = ({
 
                     {activityRows.length < 10 && (
                       <button type="button"
-                        className="mt-1 flex items-center gap-1.5 text-sm font-medium text-primary-ink hover:text-primary-ink/80 transition-colors"
+                        className="mt-1 flex items-center gap-1.5 rounded-lg px-3 py-3 text-sm font-medium text-primary-ink transition-colors hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         onClick={addActivityRow}>
                         <PlusCircle className="w-4 h-4" aria-hidden />
                         Add activity
@@ -2161,13 +2191,19 @@ export const StudentIntakeForm = ({
                       ))}
                     </div>
                     {activities.work_experience ? (
-                      <label className="space-y-1.5 block">
-                        <span className="text-sm font-medium text-muted-foreground">Brief description <span className="text-xs">(optional)</span></span>
-                        <textarea rows={2} className={cn('form-input', 'resize-none')}
-                          value={activities.work_experience_summary}
-                          onChange={(e) => setActivities((prev) => ({ ...prev, work_experience_summary: e.target.value }))}
-                          placeholder="e.g. Summer internship at a law firm, 2 months" />
-                      </label>
+                      <div data-field="lifestyle_preference.work_experience_summary">
+                        <label className="space-y-1.5 block">
+                          <span className="text-sm font-medium text-muted-foreground">Brief description <span className="text-xs">(optional)</span></span>
+                          <textarea
+                            rows={2}
+                            className={cn('form-input', 'resize-none', errors['lifestyle_preference.work_experience_summary'] && 'border-danger ring-1 ring-danger/30')}
+                            {...a11yError('lifestyle_preference.work_experience_summary')}
+                            value={activities.work_experience_summary}
+                            onChange={(e) => setActivities((prev) => ({ ...prev, work_experience_summary: e.target.value }))}
+                            placeholder="e.g. Summer internship at a law firm, 2 months" />
+                        </label>
+                        <FieldError msg={errors['lifestyle_preference.work_experience_summary']} id={fieldErrorId('lifestyle_preference.work_experience_summary')} />
+                      </div>
                     ) : null}
                   </SectionCard>
 
@@ -2178,10 +2214,17 @@ export const StudentIntakeForm = ({
                       hint="Optional — 2–3 sentences on your goals or what drives you."
                       why="Your counsellor uses this to give more targeted guidance and personalise your programme shortlist."
                     />
-                    <textarea rows={3} className={cn('form-input', 'resize-none')}
-                      value={activities.ambition_statement}
-                      onChange={(e) => setActivities((prev) => ({ ...prev, ambition_statement: e.target.value }))}
-                      placeholder="e.g. I want to study biomedical sciences and eventually research treatments for autoimmune diseases. I'm particularly interested in universities with strong research output and lab access for undergraduates." />
+                    <div data-field="lifestyle_preference.ambition_statement">
+                      <textarea
+                        rows={3}
+                        aria-label="Where do you want to go?"
+                        className={cn('form-input', 'resize-none', errors['lifestyle_preference.ambition_statement'] && 'border-danger ring-1 ring-danger/30')}
+                        {...a11yError('lifestyle_preference.ambition_statement')}
+                        value={activities.ambition_statement}
+                        onChange={(e) => setActivities((prev) => ({ ...prev, ambition_statement: e.target.value }))}
+                        placeholder="e.g. I want to study biomedical sciences and eventually research treatments for autoimmune diseases…" />
+                      <FieldError msg={errors['lifestyle_preference.ambition_statement']} id={fieldErrorId('lifestyle_preference.ambition_statement')} />
+                    </div>
                   </SectionCard>
 
                 </section>
@@ -2261,6 +2304,7 @@ export const StudentIntakeForm = ({
                       <span className="text-xs text-muted-foreground">Anything else?</span>
                       <input type="text" className="form-input"
                         value={lifestylePreference.other_extracurriculars}
+                        {...a11yError('lifestyle_preference.other_extracurriculars')}
                         onChange={(e) => updateLifestylePreference('other_extracurriculars', e.target.value)}
                         placeholder="Chess club, anime society…" />
                     </label>
@@ -2371,16 +2415,6 @@ export const StudentIntakeForm = ({
                 ) : null}
               </div>
             </motion.div>
-          ) : null}
-
-          {/* ── Live preview ──
-            * Below the fields and above the nav, so it sits exactly where the eye
-            * goes after answering something and before moving on. Renders nothing
-            * until there is a field to count in, so its appearing is itself the
-            * first piece of feedback. Not shown on Review, where the summary and
-            * the submit button are the subject. */}
-          {currentStep < TOTAL_STEPS ? (
-            <IntakePreviewStrip preview={preview} loading={previewLoading} className="mt-6" />
           ) : null}
 
           {/* ── Navigation buttons ──

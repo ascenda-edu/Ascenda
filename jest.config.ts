@@ -10,6 +10,15 @@ const config: Config = {
   testPathIgnorePatterns: [
     '<rootDir>/.next/',
     '<rootDir>/node_modules/',
+    // Agent git worktrees are created INSIDE the repo, at .claude/worktrees/<id>/,
+    // so each one carries a full second copy of __tests__. Without this, a plain
+    // `npm test` in the main tree collects them too — and since a worktree exists
+    // precisely so an agent can mutate code in isolation, those copies are often
+    // deliberately broken. Observed: `npx jest __tests__/profile/` reporting 684
+    // tests instead of 373, with `Cannot read properties of null (reading
+    // 'useRef')` from the duplicate React module registries. The failures were
+    // entirely an artefact of collecting somebody else's mutation experiment.
+    '<rootDir>/.claude/worktrees/',
     // Fixture/helper modules that live under __tests__/ but contain no tests.
     '<rootDir>/__tests__/helpers/',
     '<rootDir>/__tests__/scoring_validation/phase1_profiles.ts',
