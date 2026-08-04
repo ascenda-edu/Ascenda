@@ -39,7 +39,25 @@ setup('authenticate', async ({ page, context }) => {
   // redirects an unauthenticated request to /login.
   await page.goto('/profile/wizard');
   await expect(page).toHaveURL(/\/profile\/wizard/);
-  await expect(page.getByRole('heading', { name: "Let's set you up" })).toBeVisible();
+
+  /**
+   * The wizard's own nav, NOT the PageHero title.
+   *
+   * This used to assert the heading "Let's set you up", which was an unconditional
+   * string when it was written and is now one of three: the hero says "Your
+   * profile" once the profile is complete, "Welcome back" to anyone with a single
+   * section filled, and the original only to an account that has never started.
+   * The E2E account completes the wizard on every run of `profile-wizard.e2e.ts`,
+   * so from the second run onwards it could never be the first of those — this
+   * setup was one green run away from failing permanently, and the redesign that
+   * added the conditional is what collected on it.
+   *
+   * A Next-or-Submit button is present on every screen, in every profile state,
+   * and unlike the title it is evidence the authenticated FORM rendered rather
+   * than just the page chrome around it. That is what this setup is actually
+   * trying to establish before it banks the cookies.
+   */
+  await expect(page.getByRole('button', { name: /^(Next|Submit & see matches)$/ })).toBeVisible();
 
   await context.storageState({ path: STORAGE_STATE });
 });
