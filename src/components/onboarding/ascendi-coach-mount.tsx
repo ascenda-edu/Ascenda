@@ -1,7 +1,7 @@
 import { getIdentity } from '@/lib/auth/identity';
 import { getOnboardingState } from '@/lib/onboarding/read';
 import { AscendiCoach } from './ascendi-coach';
-import { CoachDevTools } from './coach-devtools';
+import { CoachPanel, resolveCoachPanelScope } from './coach-panel';
 
 /**
  * One line to give a page the Ascendi coach: `<AscendiCoachMount />`.
@@ -40,13 +40,17 @@ export async function AscendiCoachMount() {
   // for its getting-started card) shares the one query. See lib/onboarding/read.ts.
   const state = await getOnboardingState(identity.userId);
 
+  // Everyone in development; in production, admins only. Decided HERE rather than
+  // inside the panel, because this is the component that holds the verified
+  // `profiles.role` — so a student's HTML never contains the panel at all, instead
+  // of shipping it behind a client-side role check a console can flip. `null` for
+  // a production student is the case `coach-panel.test.tsx` pins.
+  const panelScope = resolveCoachPanelScope(identity.role);
+
   return (
     <>
       <AscendiCoach state={state} />
-      {/* Development only, and it enforces that itself rather than trusting this
-          comment — see the component, and the server-side guard on the reset
-          action it calls. */}
-      <CoachDevTools />
+      {panelScope ? <CoachPanel scope={panelScope} /> : null}
     </>
   );
 }
