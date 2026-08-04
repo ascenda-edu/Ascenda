@@ -110,11 +110,18 @@ export function CoachPanel({ scope }: { scope: CoachPanelScope }) {
     // panel with the keyboard then tabbed straight past its contents, reachable
     // only by shift-tabbing backwards. Fine to leave for developers, not for the
     // live site.
-    <div className="fixed bottom-[calc(env(safe-area-inset-bottom,8px)+72px)] left-4 z-docked flex flex-col-reverse md:bottom-6">
-      {/* First in the DOM, painted last by `flex-col-reverse`. Default
-          `align-items: stretch` is deliberate: the container is shrink-to-fit
-          around the panel's `w-56`, so the chip already spanned that width when
-          open, and stretch is what preserves it. */}
+    // `items-start` is not cosmetic — see the note on the trigger below.
+    <div className="fixed bottom-[calc(env(safe-area-inset-bottom,8px)+72px)] left-4 z-docked flex flex-col-reverse items-start md:bottom-6">
+      {/* First in the DOM, painted last by `flex-col-reverse`.
+          `items-start` on the container is what keeps this a chip. A `<button>` is
+          a form control, so `width: auto` resolves to fit-content in a BLOCK
+          parent — which is what this container used to be, and why the chip
+          measured 95px whether or not the panel was open. Turning the container
+          into a flex column makes the button a flex ITEM, and the default
+          `align-items: normal` behaves as `stretch`, which blew it out to the
+          panel's full `w-56` (224px) the moment the panel opened: a full-width
+          bar with "Coach" adrift at the left, reading as a panel footer. Measured,
+          not guessed — 94.66px vs 224px at 1280, 390 and 320. */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -123,7 +130,11 @@ export function CoachPanel({ scope }: { scope: CoachPanelScope }) {
           allowReset ? 'border-dashed border-warning/50' : 'border-feature/40'
         )}
         aria-expanded={open}
-        aria-controls={PANEL_ID}
+        // Only while the target exists. Emitted unconditionally it is an IDREF to
+        // nothing for the whole collapsed lifetime — axe reports that as
+        // incomplete rather than a violation, which is exactly the kind of finding
+        // that never gets looked at.
+        aria-controls={open ? PANEL_ID : undefined}
       >
         <Bot className="h-3.5 w-3.5" aria-hidden />
         Coach

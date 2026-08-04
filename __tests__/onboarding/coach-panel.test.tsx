@@ -52,9 +52,11 @@ jest.mock('@/components/onboarding/ascendi-coach', () => ({
 }));
 
 /**
- * The roles, restated rather than imported — `@/lib/auth/identity` throws on import
- * under jsdom by design (it must never reach a browser bundle), so `ROLES` is not
- * reachable from this environment.
+ * The roles, restated rather than imported. `@/lib/auth/identity` is mocked at the
+ * top of this file for the mount tests, and the mock factory exports only
+ * `getIdentity` — so `ROLES` is not reachable here. (It would not be reachable
+ * unmocked either: that module throws on import under jsdom by design, because it
+ * must never reach a browser bundle.)
  *
  * A `Record<Role, …>` and not an array: an object literal typed this way must name
  * every member of the union, so adding a fourth role to `identity.ts` fails to
@@ -191,6 +193,25 @@ describe('CoachPanel', () => {
     expect(trigger.compareDocumentPosition(panel as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // And the controls live inside the element the trigger names.
     expect(panel).toContainElement(screen.getByRole('button', { name: RUN }));
+  });
+
+  it('keeps the paint order inverted and the chip shrink-wrapped', () => {
+    // jsdom has no layout, so these are class assertions — the honest limit of
+    // this file. They exist because BOTH of these were free to regress silently:
+    //
+    // `flex-col-reverse` is now the only thing making the panel paint ABOVE a
+    // bottom-anchored trigger. DOM order used to be paint order, so a single
+    // mistake could not separate them; now it can, and dropping the class puts the
+    // panel below the viewport edge with every test still green.
+    //
+    // `items-start` is the difference between a 95px chip and a 224px bar. A
+    // `<button>` is fit-content in a block parent but STRETCHES as a flex item, so
+    // making this a flex column silently blew the chip out to the panel's width.
+    // Caught in a browser, not here — hence a guard here.
+    openPanel('admin');
+    const container = screen.getByRole('button', { expanded: true }).parentElement;
+    expect(container).toHaveClass('flex-col-reverse');
+    expect(container).toHaveClass('items-start');
   });
 
   it('renders nothing without a CoachProvider', () => {
