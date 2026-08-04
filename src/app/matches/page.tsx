@@ -13,6 +13,7 @@ import { loadMatchesForProfile } from '@/lib/matching/service';
 import { EmptyState } from '@/components/ui/empty-state';
 import { AlertTriangle, Compass, Library, UserCircle } from 'lucide-react';
 import { ACTION_TEXT, MATCHES_TEXT } from '@/lib/constants/text';
+import { AscendiCoachMount } from '@/components/onboarding/ascendi-coach-mount';
 
 export const metadata: Metadata = {
   title: 'Matches'
@@ -163,6 +164,7 @@ export default async function MatchesPage() {
           }
         />
       )}
+      <AscendiCoachMount />
     </DashboardShell>
   );
 }

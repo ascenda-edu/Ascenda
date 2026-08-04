@@ -582,14 +582,19 @@ function UnifiedSearchInner() {
       <SavedSearchesRow />
 
       <div className="grid items-start gap-6 lg:grid-cols-[280px,1fr]">
-        <div className="hidden lg:block">
+        {/* `search-filters` sits on the wrapper that carries `hidden lg:block`, so on
+            a narrow viewport it has a zero-size box — and `product-tour.tsx` treats a
+            zero box as an absent anchor. That is exactly right here: the filters step
+            drops itself on mobile, where the rail genuinely is not on screen, instead
+            of spotlighting nothing. */}
+        <div data-tour="search-filters" className="hidden lg:block">
           <FilterRail onClearAll={handleClearAll} activeFilterCount={activeFilterCount}>
             {facetSections}
           </FilterRail>
         </div>
 
         <section className="min-w-0 space-y-6">
-          <div className="space-y-3">
+          <div data-tour="search-bar" className="space-y-3">
             <SearchToolbar
               query={searchQuery}
               onQueryChange={setSearchQuery}
@@ -673,7 +678,11 @@ function UnifiedSearchInner() {
               }
             />
           ) : (
-            <motion.div variants={stagger} initial="hidden" animate="show" className={gridClass}>
+            // `search-results` is on the results grid ONLY, not on a wrapper that also
+            // covers the loading skeletons and the two empty states. The step is about
+            // how real results are scored; anchoring it higher would spotlight an empty
+            // state and claim it was a ranked list.
+            <motion.div data-tour="search-results" variants={stagger} initial="hidden" animate="show" className={gridClass}>
               {filteredResults.map((result) => (
                 <motion.div
                   key={result.id}

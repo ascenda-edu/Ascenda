@@ -61,9 +61,21 @@ export function AnimatedSection({
   );
 }
 
-export function AnimatedGrid({ children, className }: { children: ReactNode; className?: string }) {
+export function AnimatedGrid({
+  children,
+  className,
+  // Same named-prop treatment, and the same reason, as `AnimatedSection` above:
+  // a `...rest` spread onto a motion element drops an unrecognised DOM prop in
+  // silence, so the tour anchor has to be declared to exist.
+  'data-tour': dataTour
+}: {
+  children: ReactNode;
+  className?: string;
+  'data-tour'?: string;
+}) {
   return (
     <motion.div
+      data-tour={dataTour}
       className={cn(className)}
       variants={staggerVariant}
       initial="hidden"

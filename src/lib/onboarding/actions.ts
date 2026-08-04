@@ -1,7 +1,14 @@
 'use server';
 
 import { createServerActionSupabaseClient } from '@/lib/supabase/server';
-import { markOnboarding, ONBOARDING_KEYS, type OnboardingKey } from '@/lib/onboarding/state';
+import {
+  clearOnboardingState,
+  markOnboarding,
+  markTour,
+  ONBOARDING_KEYS,
+  type OnboardingKey
+} from '@/lib/onboarding/state';
+import { isTourId, type TourId } from '@/lib/onboarding/tours';
 
 /**
  * Server actions for the onboarding breadcrumbs.
@@ -62,5 +69,63 @@ export const markOnboardingStep = async (key: OnboardingKey) => {
     // just successfully finished, which is strictly worse than the card
     // reappearing on their next visit.
     return { success: false as const, error: 'Could not save your progress.' };
+  }
+};
+
+/**
+ * Record that this user has been walked through one section.
+ *
+ * Validated against `isTourId` for exactly the reason `markOnboardingStep`
+ * validates its key: this is a public POST endpoint and `tour` reaches an
+ * object-key position inside a jsonb column. The allowlist is the route table's
+ * own id list, never a copy — a second literal here would silently reject every
+ * tour added later, and the failure is soft, so nothing would surface it.
+ */
+export const markTourComplete = async (tour: TourId) => {
+  if (!isTourId(tour)) {
+    return { success: false as const, error: 'Unknown tour.' };
+  }
+
+  try {
+    const { supabase, userId } = await ensureUser();
+    await markTour(supabase, userId, tour, new Date().toISOString());
+    return { success: true as const };
+  } catch (error) {
+    console.error('[onboarding] markTourComplete failed', error);
+    // Soft-fail, same reasoning as above: the tour has already closed on screen.
+    // The worst case is Ascendi offering that one section again next visit.
+    return { success: false as const, error: 'Could not save your progress.' };
+  }
+};
+
+/**
+ * Reset every breadcrumb for the calling user — the development chip's "start
+ * over" button.
+ *
+ * THE PRODUCTION GUARD IS THIS FUNCTION, NOT THE HIDDEN BUTTON.
+ * `coach-devtools.tsx` renders only in development, and that is a cosmetic
+ * detail: every export of a `'use server'` module is a POST endpoint that exists
+ * in the production bundle whether or not anything renders a button for it. So
+ * the refusal lives here, at the top, before authentication — a destructive
+ * action that only a hidden control can reach is still a reachable destructive
+ * action.
+ *
+ * The blast radius even without the guard would be one user's own onboarding
+ * flags (`ensureUser` takes the id from the verified session, never a parameter,
+ * so no caller can target anyone else). Guarded anyway: "the damage is small" is
+ * not a reason to ship a live reset endpoint.
+ */
+export const resetOnboardingForTesting = async () => {
+  if (process.env.NODE_ENV === 'production') {
+    return { success: false as const, error: 'Not available.' };
+  }
+
+  try {
+    const { supabase, userId } = await ensureUser();
+    await clearOnboardingState(supabase, userId);
+    return { success: true as const };
+  } catch (error) {
+    console.error('[onboarding] resetOnboardingForTesting failed', error);
+    return { success: false as const, error: 'Could not reset onboarding.' };
   }
 };

@@ -6,6 +6,7 @@ import { ScholarshipExplorer } from '@/components/scholarships/scholarship-explo
 import type { Scholarship } from '@/components/scholarships/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getIdentity } from '@/lib/auth/identity';
+import { AscendiCoachMount } from '@/components/onboarding/ascendi-coach-mount';
 
 export const metadata: Metadata = {
   title: 'Scholarships'
@@ -113,7 +114,10 @@ export default async function ScholarshipsPage() {
           will appear here automatically once the feed is live.
         </div>
       ) : null}
-      <ScholarshipExplorer scholarships={scholarships} />
+      <div data-tour="scholarship-explorer">
+        <ScholarshipExplorer scholarships={scholarships} />
+      </div>
+      <AscendiCoachMount />
     </DashboardShell>
   );
 }

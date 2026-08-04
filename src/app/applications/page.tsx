@@ -12,6 +12,7 @@ import { NextActionsList, type NextActionItem } from '@/components/applications/
 import { ApplicationList, type ApplicationRow } from '@/components/applications/application-list';
 import { daysUntil } from '@/lib/utils/dates';
 import { loadApplicationBoard, loadTierByProgram } from '@/lib/data/applications';
+import { AscendiCoachMount } from '@/components/onboarding/ascendi-coach-mount';
 
 export const metadata: Metadata = {
   title: 'Applications'
@@ -39,6 +40,11 @@ export default async function ApplicationsPage() {
   // unwraps: the failure is logged and thrown to this route's error boundary.
   const appRecords = await loadApplicationBoard(supabase, user.id);
 
+  // NOTE: no `<AscendiCoachMount />` in this branch, deliberately. None of the
+  // applications tour's anchors exist on an empty board, and a tour whose every
+  // anchor is missing closes immediately and records itself as settled — so
+  // offering it here would silently burn the tour for a student who came back later
+  // with a full board. No anchors, no coach.
   if (appRecords.length === 0) {
     return (
       <>
@@ -199,7 +205,7 @@ export default async function ApplicationsPage() {
 
       <div className="space-y-6 sm:space-y-8">
         {/* ── What's next ───────────────────────────────────────── */}
-        <AnimatedSection className="space-y-3" as="section">
+        <AnimatedSection className="space-y-3" as="section" data-tour="application-next-actions">
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="eyebrow">
@@ -215,7 +221,7 @@ export default async function ApplicationsPage() {
         </AnimatedSection>
 
         {/* ── All applications ──────────────────────────────────── */}
-        <AnimatedSection className="space-y-3" as="section" delay={0.06}>
+        <AnimatedSection className="space-y-3" as="section" delay={0.06} data-tour="application-list">
           <div>
             <p className="eyebrow">
               All applications
@@ -227,6 +233,7 @@ export default async function ApplicationsPage() {
           <ApplicationList rows={applicationRows} />
         </AnimatedSection>
       </div>
+      <AscendiCoachMount />
     </>
   );
 }

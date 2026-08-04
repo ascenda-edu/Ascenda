@@ -3,6 +3,7 @@ import { requireIdentity } from '@/lib/auth/identity';
 import { DashboardShell } from '@/components/layout/shell';
 import { PageHero } from '@/components/layout/page-hero';
 import { InboxList } from './_components/inbox-list';
+import { AscendiCoachMount } from '@/components/onboarding/ascendi-coach-mount';
 
 export const metadata: Metadata = {
   title: 'Inbox'
@@ -24,7 +25,10 @@ export default async function InboxPage() {
         title="Inbox"
         description="Every message between you and your counsellor lives here."
       />
-      <InboxList profileId={identity.userId} />
+      <div data-tour="inbox-list">
+        <InboxList profileId={identity.userId} />
+      </div>
+      <AscendiCoachMount />
     </DashboardShell>
   );
 }

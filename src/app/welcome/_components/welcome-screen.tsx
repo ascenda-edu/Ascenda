@@ -130,8 +130,8 @@ export function WelcomeScreen({
   };
 
   const handleContinue = () => goTo(returnTo);
-  // BROWSE_FIRST, never a literal — it has to stay in step with the exemption
-  // list that lets it through. See lib/onboarding/destination.ts.
+  // BROWSE_FIRST, never a literal — it has to stay out of the gated list it is an
+  // escape from. See lib/onboarding/destination.ts.
   const handleBrowseFirst = () => goTo(BROWSE_FIRST);
 
   const busy = isPending || navigating;

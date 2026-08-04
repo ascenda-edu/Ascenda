@@ -28,6 +28,7 @@ import { isChatWidget, mergeWidgets, type ChatWidget } from '@/lib/chat/widgets'
 import { WidgetRenderer } from '@/components/assistant/widgets';
 import type { ChatMode } from '@/lib/chat/prompts';
 import type { ChatMessageInsert } from '@/lib/types/demo-tables';
+import { LAUNCHER_ANCHOR, useCoach } from '@/components/onboarding/coach-context';
 import {
   MessageContent,
   AutoResizeTextarea,
@@ -203,6 +204,51 @@ export function ChatbotWidget() {
   const inputRef = useRef<HTMLTextAreaElement>(null) as React.RefObject<HTMLTextAreaElement>;
   const prevModeRef = useRef(mode);
   const confirmTimerRef = useRef<number | null>(null);
+
+  // ─── Ascendi's arrival from a finished tour ────────────────────────────────
+  // The coach flies its avatar into this launcher when a tour ends; when it
+  // lands, the launcher acknowledges it — one pulse and a single "ask me
+  // anything" nudge. `null` outside a CoachProvider, which the `loading.tsx`
+  // mounts of the shell legitimately are.
+  const coach = useCoach();
+  const [greeting, setGreeting] = useState(false);
+  const [pulse, setPulse] = useState(0);
+  // What `coach.celebrations` read on the last render that acted on it. Compared
+  // rather than reset, so a widget that mounts LATE (this whole module is a
+  // `next/dynamic` chunk) still sees a celebration that was requested before its
+  // listener existed — the exact race a window event would lose.
+  const seenCelebrations = useRef<number | null>(null);
+
+  useEffect(() => {
+    const count = coach?.celebrations ?? 0;
+    if (seenCelebrations.current === null) {
+      // First observation. Adopt the current count WITHOUT firing: on a normal page
+      // load this is 0 and there is nothing to celebrate, and adopting it silently
+      // is what keeps a remount from replaying a pulse for a tour finished minutes
+      // ago.
+      seenCelebrations.current = count;
+      return;
+    }
+    if (count <= seenCelebrations.current) return;
+
+    seenCelebrations.current = count;
+    setPulse((n) => n + 1);
+    setGreeting(true);
+  }, [coach?.celebrations]);
+
+  // The nudge retires itself. A tooltip beside a floating button with no timer is
+  // something the user has to go and close, which is a chore attached to a
+  // flourish.
+  useEffect(() => {
+    if (!greeting) return;
+    const timer = window.setTimeout(() => setGreeting(false), 6000);
+    return () => window.clearTimeout(timer);
+  }, [greeting]);
+
+  // Opening the chat answers the nudge, so it should not linger over the panel.
+  useEffect(() => {
+    if (isOpen) setGreeting(false);
+  }, [isOpen]);
 
   // Switch chat history when mode changes (student <-> counsellor <-> parent)
   useEffect(() => {
@@ -447,23 +493,88 @@ export function ChatbotWidget() {
 
   return (
     <>
-      {/* Floating trigger button */}
-      <AnimatePresence>
-        {!isOpen && (
-          <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            // The button pops in with overshoot so it announces itself; on the way out
-            // it just goes, and on EASE — EASE_POP would drive scale below 0.
-            animate={{ scale: 1, opacity: 1, transition: { duration: DURATION.fast, ease: EASE_POP } }}
-            exit={{ scale: 0, opacity: 0, transition: { duration: DURATION.exit, ease: EASE } }}
-            onClick={() => setIsOpen(true)}
-            className="fixed right-5 bottom-[calc(env(safe-area-inset-bottom,8px)+72px)] z-docked flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-e-3 shadow-primary/25 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-e-4 hover:shadow-primary/30 active:translate-y-0 md:bottom-6 md:right-6 md:z-panel"
-            aria-label="Open Ascendi AI assistant"
-          >
-            <Bot className="h-5 w-5" />
-          </motion.button>
-        )}
-      </AnimatePresence>
+      {/* Launcher dock.
+          ONE fixed anchor holding the button and its arrival nudge, rather than two
+          independently-positioned fixed elements. The offset here is a fluid
+          expression that steps at `md` and depends on `env(safe-area-inset-bottom)`;
+          writing it twice and hand-deriving the nudge's version from it is how the
+          two silently separate the next time the mobile nav changes height. A flex
+          row means the nudge is simply "to the left of, centred on" the button, and
+          stays that way for free.
+
+          `pointer-events-none` on the dock, re-enabled on each child: the dock is
+          wider than the button whenever the nudge is up, and an invisible container
+          that eats clicks on the page behind it is the cost of this convenience if
+          you forget. */}
+      <div className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom,8px)+72px)] right-5 z-docked flex items-center gap-2.5 md:bottom-6 md:right-6 md:z-panel">
+        <AnimatePresence>
+          {greeting && !isOpen ? (
+            <motion.div
+              key="nudge"
+              className="pointer-events-auto max-w-[13rem] rounded-2xl border border-border bg-card px-3 py-2 shadow-e-3"
+              initial={{ opacity: 0, x: 8, scale: 0.96 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 8, scale: 0.98, transition: { duration: DURATION.exit } }}
+              transition={{ duration: DURATION.base, ease: EASE }}
+              // `status`, not `alert`: this is a flourish at the end of something the
+              // user just chose to do, so it should be announced politely when the
+              // reader next pauses rather than interrupting whatever it is saying.
+              role="status"
+            >
+              <p className="text-xs font-medium leading-snug text-foreground">Ask me anything.</p>
+              <p className="mt-0.5 text-[0.7rem] leading-snug text-muted-foreground">
+                Programmes, deadlines, or what to do next.
+              </p>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {!isOpen && (
+            <motion.button
+              // The coach's flight measures this node to land on it, and the
+              // invitation card measures it to sit above it. An attribute rather than
+              // a shared ref because this button unmounts every time the panel opens
+              // — see LAUNCHER_ANCHOR in onboarding/coach-context.tsx.
+              {...{ [LAUNCHER_ANCHOR]: '' }}
+              initial={{ scale: 0, opacity: 0 }}
+              // The button pops in with overshoot so it announces itself; on the way
+              // out it just goes, and on EASE — EASE_POP would drive scale below 0.
+              //
+              // The scale keyframes double as the arrival bounce. A keyframe array
+              // replays whenever its contents change, so incrementing `pulse` is
+              // enough; a boolean toggled on and then off needs two renders and loses
+              // the second when React batches them.
+              animate={{
+                scale: pulse > 0 ? [1, 1.18, 1] : 1,
+                opacity: 1,
+                transition: { duration: DURATION.fast, ease: EASE_POP }
+              }}
+              exit={{ scale: 0, opacity: 0, transition: { duration: DURATION.exit, ease: EASE } }}
+              onClick={() => setIsOpen(true)}
+              className="pointer-events-auto relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-e-3 shadow-primary/25 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-e-4 hover:shadow-primary/30 active:translate-y-0"
+              aria-label="Open Ascendi AI assistant"
+            >
+              <Bot className="h-5 w-5" />
+
+              {/* The ring ping on arrival. `pointer-events-none` and `aria-hidden`:
+                  it sits inside the button, and a decorative overlay that swallows
+                  clicks on the control it decorates is the classic version of this
+                  bug. Keyed on `pulse` so each celebration mounts a fresh one. */}
+              {pulse > 0 ? (
+                <motion.span
+                  key={pulse}
+                  className="pointer-events-none absolute inset-0 rounded-full ring-2 ring-primary/60"
+                  initial={{ opacity: 0.8, scale: 1 }}
+                  animate={{ opacity: 0, scale: 1.9 }}
+                  transition={{ duration: 0.85, ease: 'easeOut' }}
+                  aria-hidden
+                />
+              ) : null}
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Chat panel */}
       <AnimatePresence>

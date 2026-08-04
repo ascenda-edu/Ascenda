@@ -436,9 +436,18 @@ describe('the onboarding redirect', () => {
    *
    * `from` is what makes the flow return people to the page they actually
    * wanted instead of dumping everyone on /dashboard.
+   *
+   * EVERY CASE BELOW DRIVES `/matches`, AND THAT IS THE POINT.
+   * The gate used to run on every protected route, so these cases were written
+   * against `/dashboard`. It is now an allowlist of one — `/matches`, the only page
+   * that cannot compute anything without grades and subjects — so `/dashboard` is
+   * no longer a gated path and asserting redirects on it would test nothing. See
+   * `lib/onboarding/destination.ts` for why the shape changed, and
+   * `__tests__/onboarding/destination.test.ts` for the scope test that pins which
+   * routes stayed open.
    */
   const welcomeFrom = (path: string) => `/welcome?from=${encodeURIComponent(path)}`;
-  const WELCOME = welcomeFrom('/dashboard');
+  const WELCOME = welcomeFrom('/matches');
 
   beforeEach(() => {
     sessionUser = USER;
@@ -446,7 +455,7 @@ describe('the onboarding redirect', () => {
 
   it('sends an incomplete profile to the welcome flow', async () => {
     // Nothing seeded: every completion record is null.
-    const response = await middleware(request('/dashboard', SESSION_COOKIE));
+    const response = await middleware(request('/matches', SESSION_COOKIE));
 
     expect(response.status).toBe(307);
     expect(location(response)).toBe(WELCOME);
@@ -455,35 +464,53 @@ describe('the onboarding redirect', () => {
   it('lets a complete profile through', async () => {
     completeProfile();
 
-    const response = await middleware(request('/dashboard', SESSION_COOKIE));
+    const response = await middleware(request('/matches', SESSION_COOKIE));
 
     expect(passedThrough(response)).toBe(true);
     expect(location(response)).toBeNull();
   });
 
-  // These are the surfaces `runMatching` feeds. They stay gated because without
-  // the essentials they render an empty page, which teaches a new student the
-  // product is broken — see lib/onboarding/destination.ts.
-  it.each(['/dashboard', '/matches', '/applications', '/shortlist', '/scholarships'])(
-    '%s is gated on it',
-    async (path) => {
-      const response = await middleware(request(path, SESSION_COOKIE));
+  // `/matches` is the whole allowlist — it ranks 119k programmes against grades
+  // the student has not entered yet, so it is the one page with nothing to show.
+  // Everything else is reachable; see lib/onboarding/destination.ts.
+  it.each(['/matches', '/matches/tiers'])('%s is gated on it', async (path) => {
+    const response = await middleware(request(path, SESSION_COOKIE));
 
-      // Each carries its OWN `from`, not a hardcoded /dashboard — that is what
-      // returns the student to the page they were actually reaching for.
-      expect(location(response)).toBe(welcomeFrom(path));
-    }
-  );
+    // Each carries its OWN `from`, not a hardcoded /matches — that is what returns
+    // the student to the page they were actually reaching for.
+    expect(location(response)).toBe(welcomeFrom(path));
+  });
 
-  it.each(['/profile', '/profile/wizard', '/counsellor', '/parent', '/role-select'])(
-    '%s is exempt — gating it would be a redirect loop or the wrong portal',
-    async (path) => {
-      const response = await middleware(request(path, SESSION_COOKIE));
+  /**
+   * The routes the gate was taken OFF, and the reason this list is long.
+   *
+   * All of these were unreachable for a student with an incomplete profile: signing
+   * in dropped them into a five-screen intake form before they had seen a single
+   * university, on pages that work perfectly well empty and already have empty
+   * states. `dbCalls` being empty is the load-bearing half of the assertion — it
+   * proves the four completion queries are not merely tolerated on these routes but
+   * never issued, so the cost went away with the redirect.
+   */
+  it.each([
+    '/dashboard',
+    '/university-search',
+    '/shortlist',
+    '/scholarships',
+    '/applications',
+    '/toolbox',
+    '/inbox',
+    '/course/123',
+    '/profile',
+    '/profile/wizard',
+    '/counsellor',
+    '/parent',
+    '/role-select'
+  ])('%s is not gated — it works without a profile', async (path) => {
+    const response = await middleware(request(path, SESSION_COOKIE));
 
-      expect(passedThrough(response)).toBe(true);
-      expect(dbCalls).toEqual([]);
-    }
-  );
+    expect(passedThrough(response)).toBe(true);
+    expect(dbCalls).toEqual([]);
+  });
 
   // The browse escape hatch. `/university-search` moved OUT of the gated list
   // above when the wall proved to be the thing the tiering was meant to fix: three
@@ -506,28 +533,30 @@ describe('the onboarding redirect', () => {
     // A student deep-linked into a tab was returned to the bare route, silently
     // dropping the thing they had actually clicked.
     //
-    // Uses a GATED route deliberately. This used to assert on `/course/123?tab=fees`,
-    // which stopped exercising anything the moment `/course` became exempt — the
-    // redirect it was checking no longer happens for that path.
-    const response = await middleware(request('/applications?tab=offers', SESSION_COOKIE));
+    // Uses a GATED route deliberately. An earlier version of this assertion used
+    // `/course/123?tab=fees`, and stopped exercising anything the moment `/course`
+    // stopped being gated — the redirect it was checking no longer happens there.
+    // `/matches` is the only route that still triggers it, so it is the only route
+    // this can be written against.
+    const response = await middleware(request('/matches?tier=reach', SESSION_COOKIE));
 
-    expect(location(response)).toBe(welcomeFrom('/applications?tab=offers'));
+    expect(location(response)).toBe(welcomeFrom('/matches?tier=reach'));
   });
 
   it('does not let the incoming query leak into /welcome as its own params', async () => {
     // `search` is cleared before `from` is set, so an inbound `?from=` cannot
     // survive into the redirect and pre-empt the real one.
-    const response = await middleware(request('/dashboard?from=/evil', SESSION_COOKIE));
+    const response = await middleware(request('/matches?from=/evil', SESSION_COOKIE));
 
     const url = new URL(location(response)!, ORIGIN);
     expect(url.pathname).toBe('/welcome');
-    expect(url.searchParams.getAll('from')).toEqual(['/dashboard?from=/evil']);
+    expect(url.searchParams.getAll('from')).toEqual(['/matches?from=/evil']);
   });
 
   it('is skipped for one request after the OAuth callback', async () => {
     // The session cookie has just been written and the completion reads can race
     // it. Let the page render; the next request checks normally.
-    const response = await middleware(request('/dashboard?auth_fresh=1', SESSION_COOKIE));
+    const response = await middleware(request('/matches?auth_fresh=1', SESSION_COOKIE));
 
     expect(passedThrough(response)).toBe(true);
     expect(dbCalls).toEqual([]);
@@ -557,7 +586,7 @@ describe('the onboarding redirect', () => {
       completeProfile();
       queryErrors = { [table]: { message: 'timeout', code: '57014' } };
 
-      const response = await middleware(request('/dashboard', SESSION_COOKIE));
+      const response = await middleware(request('/matches', SESSION_COOKIE));
 
       expect(location(response)).toBeNull();
       expect(passedThrough(response)).toBe(true);
@@ -567,7 +596,7 @@ describe('the onboarding redirect', () => {
       completeProfile();
       queryErrors = { student_academic_input: { message: 'timeout', code: '57014' } };
 
-      const response = await middleware(request('/dashboard', SESSION_COOKIE));
+      const response = await middleware(request('/matches', SESSION_COOKIE));
 
       // Neither cookie may be written: `pending` would lock the student out for an
       // hour, and `complete` would assert something this request never verified.
@@ -578,7 +607,7 @@ describe('the onboarding redirect', () => {
 
     it('still bounces a genuinely incomplete profile when every query succeeds', async () => {
       // The guard must not become a blanket "never redirect".
-      const response = await middleware(request('/dashboard', SESSION_COOKIE));
+      const response = await middleware(request('/matches', SESSION_COOKIE));
 
       expect(location(response)).toBe(WELCOME);
     });
@@ -597,7 +626,7 @@ describe('the onboarding redirect', () => {
       (rows.student_academic_input as Record<string, unknown>).english_required = null;
       (rows.student_academic_input as Record<string, unknown>).english_status = 'not_sure';
 
-      const response = await middleware(request('/dashboard', SESSION_COOKIE));
+      const response = await middleware(request('/matches', SESSION_COOKIE));
 
       expect(passedThrough(response)).toBe(true);
     });
@@ -609,7 +638,7 @@ describe('the onboarding redirect', () => {
       (rows.student_academic_input as Record<string, unknown>).english_required = null;
       (rows.student_academic_input as Record<string, unknown>).english_status = null;
 
-      const response = await middleware(request('/dashboard', SESSION_COOKIE));
+      const response = await middleware(request('/matches', SESSION_COOKIE));
 
       expect(location(response)).toBe(WELCOME);
     });
@@ -621,7 +650,7 @@ describe('the onboarding redirect', () => {
       // tautology against the same constant the code interpolates.
       completeProfile();
 
-      await middleware(request('/dashboard', SESSION_COOKIE));
+      await middleware(request('/matches', SESSION_COOKIE));
 
       const academic = dbCalls.find((call) => call.table === 'student_academic_input')!;
       expect(academic.select).toContain('english_status');
@@ -635,7 +664,7 @@ describe('the onboarding redirect', () => {
   it('reads the four completion sources, each scoped to the caller', async () => {
     completeProfile();
 
-    await middleware(request('/dashboard', SESSION_COOKIE));
+    await middleware(request('/matches', SESSION_COOKIE));
 
     expect(dbCalls.map((call) => call.table).sort()).toEqual([
       'student_academic_input',
@@ -651,7 +680,7 @@ describe('the onboarding redirect', () => {
   it('sends the shared column lists, and counts subjects without fetching them', async () => {
     completeProfile();
 
-    await middleware(request('/dashboard', SESSION_COOKIE));
+    await middleware(request('/matches', SESSION_COOKIE));
 
     const byTable = new Map(dbCalls.map((call) => [call.table, call]));
     expect(byTable.get('student_personal_information')!.select).toBe(COMPLETION_COLUMNS.personal);
@@ -663,7 +692,7 @@ describe('the onboarding redirect', () => {
     completeProfile();
     counts = { student_subjects: 0 };
 
-    const response = await middleware(request('/dashboard', SESSION_COOKIE));
+    const response = await middleware(request('/matches', SESSION_COOKIE));
 
     expect(location(response)).toBe(WELCOME);
   });
@@ -673,14 +702,14 @@ describe('the onboarding redirect', () => {
   it('writes both cookies once the profile is complete', async () => {
     completeProfile();
 
-    const response = await middleware(request('/dashboard', SESSION_COOKIE));
+    const response = await middleware(request('/matches', SESSION_COOKIE));
 
     expect(response.cookies.get('onboarding_complete')?.value).toBe(USER.id);
     expect(response.cookies.get('onboarding_status_v2')?.value).toMatch(new RegExp(`^${USER.id}:complete:\\d+$`));
   });
 
   it('writes a pending status cookie when it is not', async () => {
-    const response = await middleware(request('/dashboard', SESSION_COOKIE));
+    const response = await middleware(request('/matches', SESSION_COOKIE));
 
     expect(response.cookies.get('onboarding_status_v2')?.value).toMatch(new RegExp(`^${USER.id}:pending:\\d+$`));
     expect(response.cookies.get('onboarding_complete')).toBeUndefined();
@@ -688,7 +717,7 @@ describe('the onboarding redirect', () => {
 
   it('the complete cookie short-circuits all four queries', async () => {
     const response = await middleware(
-      request('/dashboard', { ...SESSION_COOKIE, onboarding_complete: USER.id })
+      request('/matches', { ...SESSION_COOKIE, onboarding_complete: USER.id })
     );
 
     expect(passedThrough(response)).toBe(true);
@@ -699,7 +728,7 @@ describe('the onboarding redirect', () => {
     // The cookie is keyed by user id precisely so a stale one from a previous
     // session on a shared machine cannot wave the next person through.
     const response = await middleware(
-      request('/dashboard', { ...SESSION_COOKIE, onboarding_complete: 'somebody-else' })
+      request('/matches', { ...SESSION_COOKIE, onboarding_complete: 'somebody-else' })
     );
 
     expect(location(response)).toBe(WELCOME);
@@ -708,7 +737,7 @@ describe('the onboarding redirect', () => {
 
   it('a fresh pending status cookie redirects without querying', async () => {
     const response = await middleware(
-      request('/dashboard', { ...SESSION_COOKIE, onboarding_status_v2: `${USER.id}:pending:${Date.now()}` })
+      request('/matches', { ...SESSION_COOKIE, onboarding_status_v2: `${USER.id}:pending:${Date.now()}` })
     );
 
     expect(location(response)).toBe(WELCOME);
@@ -734,7 +763,7 @@ describe('the onboarding redirect', () => {
     completeProfile();
 
     const response = await middleware(
-      request('/dashboard', {
+      request('/matches', {
         ...SESSION_COOKIE,
         onboarding_status: `${USER.id}:pending:${Date.now()}`
       })
@@ -750,7 +779,7 @@ describe('the onboarding redirect', () => {
     const anHourAndOneMinuteAgo = Date.now() - 61 * 60 * 1000;
 
     const response = await middleware(
-      request('/dashboard', {
+      request('/matches', {
         ...SESSION_COOKIE,
         onboarding_status_v2: `${USER.id}:pending:${anHourAndOneMinuteAgo}`
       })
@@ -762,7 +791,7 @@ describe('the onboarding redirect', () => {
 
   it('a complete status cookie promotes itself to the long-lived cookie', async () => {
     const response = await middleware(
-      request('/dashboard', { ...SESSION_COOKIE, onboarding_status_v2: `${USER.id}:complete:${Date.now()}` })
+      request('/matches', { ...SESSION_COOKIE, onboarding_status_v2: `${USER.id}:complete:${Date.now()}` })
     );
 
     expect(passedThrough(response)).toBe(true);

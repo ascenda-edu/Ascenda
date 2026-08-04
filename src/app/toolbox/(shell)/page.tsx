@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PageHero } from '@/components/layout/page-hero';
 import { AnimatedSection, AnimatedGrid, AnimatedGridItem } from '@/components/layout/animated-section';
+import { AscendiCoachMount } from '@/components/onboarding/ascendi-coach-mount';
 import { ArrowRight } from 'lucide-react';
 import {
   DEMO_BUILDING_BLOCKS,
@@ -153,7 +154,7 @@ export default async function ToolboxPage() {
       </AnimatedSection>
 
       {/* Tool cards grid */}
-      <AnimatedGrid className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+      <AnimatedGrid data-tour="toolbox-tools" className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         {TOOL_CARDS.map((tool) => {
           const visual = TOOL_VISUAL[tool.tool];
           const Icon = visual.icon;
@@ -200,6 +201,7 @@ export default async function ToolboxPage() {
           );
         })}
       </AnimatedGrid>
+      <AscendiCoachMount />
     </>
   );
 }

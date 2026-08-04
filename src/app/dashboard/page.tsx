@@ -28,8 +28,9 @@ import {
 import { GettingStartedCard } from '@/components/dashboard/hub/getting-started-card';
 import { summariseChecklist } from '@/lib/onboarding/checklist';
 import { probeHasShortlist } from '@/lib/onboarding/signals';
-import { DashboardTour } from '@/components/onboarding/dashboard-tour';
-import { readOnboardingState, hasSeen } from '@/lib/onboarding/state';
+import { AscendiCoachMount } from '@/components/onboarding/ascendi-coach-mount';
+import { hasSeen } from '@/lib/onboarding/state';
+import { getOnboardingState } from '@/lib/onboarding/read';
 import { PROFILE_STEPS } from '@/lib/profile/steps';
 import { countUnreadForStudent, listInboxRequests, resolveProfileNames } from '@/lib/demo/help-request-client';
 import { DEMO_COUNSELLOR } from '@/lib/demo/counsellor';
@@ -310,7 +311,9 @@ export default async function DashboardPage() {
   // Placed here, after `helpRequests` resolves, because every signal is DERIVED
   // from state already loaded above — the checklist stores nothing about which
   // items are ticked. See lib/onboarding/checklist.ts for why that matters.
-  const onboardingState = await readOnboardingState(supabase, identity.userId);
+  // `getOnboardingState`, not `readOnboardingState`: memoised per request, so this and
+  // the `<AscendiCoachMount />` below share one query instead of issuing two.
+  const onboardingState = await getOnboardingState(identity.userId);
   const checklistSummary = summariseChecklist({
     essentialsComplete: isProfileEssentialComplete(records),
     profileComplete: isProfileComplete(records),
@@ -592,11 +595,11 @@ export default async function DashboardPage() {
         </AnimatedSection>
       </div>
 
-      {/* First run only. `autoStart` is false once the tour has been finished or
-          dismissed, and the component renders nothing in that case — so this is
-          inert for every visit after the first. It is mounted last so its portal
-          target exists below everything it points at. */}
-      <DashboardTour autoStart={!hasSeen(onboardingState, 'tour_completed_at')} />
+      {/* Ascendi's coach. It does NOT start anything on its own — at most it offers,
+          in a small card beside the chat launcher, and only on a first visit to this
+          section. Mounted last so every `data-tour` anchor above already exists by
+          the time it measures them. */}
+      <AscendiCoachMount />
     </DashboardShell>
   );
 }

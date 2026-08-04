@@ -157,14 +157,16 @@ export function DashboardClient({
         )}
 
         {/* Live help requests — student-originated, demo segue lands here */}
-        <HelpRequestsWidget />
+        <div data-tour="counsellor-help-requests">
+          <HelpRequestsWidget />
+        </div>
       </div>
 
       <WidgetGrid>
         {(visibleWidgets, removeWidget, sizes, toggleSize, dragHandlers) => (
           <div className="space-y-6">
             {/* Responsive 2-col grid; wide widgets span 2 cols */}
-            <div className="grid gap-6 md:grid-cols-2 [&>*]:min-w-0">
+            <div data-tour="counsellor-widgets" className="grid gap-6 md:grid-cols-2 [&>*]:min-w-0">
               <AnimatePresence mode="popLayout">
                 {visibleWidgets.map((id, idx) =>
                   renderWidget(id, idx, removeWidget, sizes, toggleSize, dragHandlers)

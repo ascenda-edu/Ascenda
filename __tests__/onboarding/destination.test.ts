@@ -1,27 +1,29 @@
 /**
- * The redirect-loop invariant.
+ * The redirect-loop invariant, and the scope of the gate.
  *
- * `middleware.ts` sends every gate-failing user to `/welcome?from=…`, and
- * `/welcome` forwards them onward. If it ever forwards to a path the gate still
- * checks while the gate still fails, the two bounce off each other until the
- * browser gives up with ERR_TOO_MANY_REDIRECTS — an inescapable lockout, not a
- * cosmetic bug.
+ * `middleware.ts` sends a gate-failing user to `/welcome?from=…`, and `/welcome`
+ * forwards them onward. If it ever forwards to a path the gate still checks while
+ * the gate still fails, the two bounce off each other until the browser gives up
+ * with ERR_TOO_MANY_REDIRECTS — an inescapable lockout, not a cosmetic bug.
  *
- * That shipped live: the redirect target moved from `/profile/wizard` (exempt
- * from the gate, so it terminated by luck) to `/welcome` (which forwards).
- * Counsellors and admins hit it immediately, because the gate reads STUDENT
- * profile tables and never looks at `profiles.role` — so an account with no
- * student profile can never satisfy it, and `/role-select` offers every account a
- * one-click "Student" card straight to `/dashboard`.
+ * That shipped live: the redirect target moved from `/profile/wizard` (not gated,
+ * so it terminated by luck) to `/welcome` (which forwards). Counsellors and admins
+ * hit it immediately, because the gate reads STUDENT profile tables and never looks
+ * at `profiles.role` — so an account with no student profile can never satisfy it,
+ * and `/role-select` offers every account a one-click "Student" card straight to
+ * `/dashboard`.
  *
- * Section 1 pins the invariant in the abstract; section 2 replays the exact
+ * The gate is now an ALLOWLIST of one route, which is what makes that class of bug
+ * unexpressible: every possible destination is outside a one-entry list by default.
+ * Section 1 pins the invariant, section 1b pins the SCOPE — that the gate has not
+ * quietly crept back over the rest of the app — and section 2 replays the exact
  * journeys that looped.
  */
 
 import {
-  ONBOARDING_EXEMPT_PREFIXES,
+  ONBOARDING_GATED_PREFIXES,
   BROWSE_FIRST,
-  isOnboardingExempt,
+  isOnboardingGated,
   resolveWelcomeDestination,
   COUNSELLOR_HOME,
   WIZARD,
@@ -30,16 +32,16 @@ import {
 } from '@/lib/onboarding/destination';
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * 1. The invariant: a destination is either exempt, or the gate now passes.
+ * 1. The invariant: a destination is either ungated, or the gate now passes.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 describe('the loop invariant', () => {
   const ROLES = ['student', 'counsellor', 'admin', 'parent', null, undefined];
-  // Non-exempt protected paths, i.e. every path middleware WILL re-check.
-  const GATED = ['/dashboard', '/matches', '/applications', '/admin', '/assistant', '/toolbox', '/inbox'];
+  // Paths a user could plausibly have been reaching for when the gate fired.
+  const ORIGINS = ['/dashboard', '/matches', '/applications', '/admin', '/assistant', '/toolbox', '/inbox'];
 
   it.each(ROLES)('never forwards a gate-failing %s to a path the gate re-checks', (role) => {
-    for (const from of GATED) {
+    for (const from of ORIGINS) {
       const destination = resolveWelcomeDestination({
         role,
         essentialsComplete: false,
@@ -47,85 +49,83 @@ describe('the loop invariant', () => {
       });
 
       // The whole invariant, in one assertion: if the gate would fail again, the
-      // destination MUST be exempt from it.
-      expect(isOnboardingExempt(destination)).toBe(true);
+      // destination MUST be outside the gate.
+      expect(isOnboardingGated(destination)).toBe(false);
     }
   });
 
-  it('the destinations it can return are all exempt', () => {
-    // Guards against someone adding a branch that returns a plausible-looking
-    // but gated path (`/dashboard` for a counsellor was exactly that mistake).
-    for (const destination of [COUNSELLOR_HOME, WIZARD]) {
-      expect(isOnboardingExempt(destination)).toBe(true);
+  it('none of the destinations it can return are gated', () => {
+    // Guards against someone adding a branch that returns a plausible-looking but
+    // gated path (`/dashboard` for a counsellor was exactly that mistake), or
+    // extending the allowlist to cover one of these.
+    for (const destination of [COUNSELLOR_HOME, WIZARD, STUDENT_HOME]) {
+      expect(isOnboardingGated(destination)).toBe(false);
     }
-    // STUDENT_HOME is deliberately NOT exempt — it is only ever returned once the
-    // gate passes, so middleware letting it through is the terminating condition.
-    expect(isOnboardingExempt(STUDENT_HOME)).toBe(false);
   });
 
-  it('exempts the wizard and the welcome screen themselves', () => {
-    // `/profile` covers the wizard; `/welcome` stops the gate firing on its own
-    // landing screen. Losing either is an immediate loop.
-    expect(ONBOARDING_EXEMPT_PREFIXES).toContain('/profile');
-    expect(ONBOARDING_EXEMPT_PREFIXES).toContain('/welcome');
-    expect(isOnboardingExempt('/profile/wizard')).toBe(true);
-    expect(isOnboardingExempt('/welcome')).toBe(true);
+  it('leaves the wizard reachable — it is the work the gate is asking for', () => {
+    // Gating `/profile` is an immediate, total lockout: the redirect target becomes
+    // the thing being redirected away from.
+    expect(isOnboardingGated('/profile/wizard')).toBe(false);
+    expect(isOnboardingGated('/welcome')).toBe(false);
   });
 
-  it('matches on prefix, so nested routes inherit the exemption', () => {
-    expect(isOnboardingExempt('/counsellor/students/abc')).toBe(true);
-    expect(isOnboardingExempt('/parent/deadlines')).toBe(true);
-    // ...but a path that merely CONTAINS an exempt segment is not exempt.
-    expect(isOnboardingExempt('/dashboard/profile')).toBe(false);
-  });
-
-  it('lets "browse first" through the gate it is an escape from', () => {
-    // BROWSE_FIRST is the welcome screen's secondary action. If it were not
-    // exempt, clicking it would hit the gate, bounce to /welcome, and — once
-    // `welcomed_at` is stamped — forward straight back: the same loop the rest of
-    // this file exists to prevent, reached by the one button offered as a way out.
-    expect(isOnboardingExempt(BROWSE_FIRST)).toBe(true);
+  it('matches on a segment boundary, so a similarly-named route is not caught', () => {
+    expect(isOnboardingGated('/matches')).toBe(true);
+    expect(isOnboardingGated('/matches/tiers')).toBe(true);
+    // A path that merely STARTS WITH the same characters is a different route.
+    expect(isOnboardingGated('/matches-archive')).toBe(false);
   });
 });
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * 1b. The browse escape hatch — what an unfinished profile may and may not see.
- *
- * Tiering took the wall from five screens to three; it did not remove it. These
- * two surfaces are exempt because they WORK without a profile, and the rest stay
- * gated because they do not. That distinction is the whole rule, and it is the
- * one a future edit is most likely to blur — "just exempt it so the redirect
- * stops" trades a gate for an empty page.
+ * 1b. The scope: the gate covers /matches and nothing else.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-describe('the browse-first exemptions', () => {
-  it('opens the catalogue and programme detail to an unfinished profile', () => {
-    expect(isOnboardingExempt('/university-search/search')).toBe(true);
-    expect(isOnboardingExempt('/course/abc-123')).toBe(true);
+describe('the scope of the gate', () => {
+  it('gates /matches, because it cannot function without grades', () => {
+    expect(ONBOARDING_GATED_PREFIXES).toEqual(['/matches']);
   });
 
-  it('keeps every matching-fed surface gated', () => {
-    // `runMatching` returns nothing without the essentials, so these would render
-    // an empty page and teach a new student the product is broken. Exempting any
-    // of them is a regression even though it makes a redirect disappear.
-    for (const gated of ['/dashboard', '/matches', '/applications', '/scholarships', '/toolbox']) {
-      expect(isOnboardingExempt(gated)).toBe(false);
-    }
+  /**
+   * This is the regression test for the aggression itself, not for a crash.
+   *
+   * Every route below was unreachable for a student with an incomplete profile —
+   * redirected into a five-screen form before they had seen a single university —
+   * and none of them needs profile data to work. If this list starts failing,
+   * someone has widened the gate, and the failure should be argued about rather
+   * than fixed by updating the expectation.
+   */
+  it.each([
+    '/dashboard',
+    '/university-search/search',
+    '/university-search/results',
+    '/course/123',
+    '/shortlist',
+    '/scholarships',
+    '/toolbox',
+    '/applications',
+    '/applications/tasks',
+    '/inbox',
+    '/assistant',
+    '/counsellor',
+    '/parent',
+    '/role-select',
+    '/profile'
+  ])('leaves %s reachable with an incomplete profile', (path) => {
+    expect(isOnboardingGated(path)).toBe(false);
   });
 
-  it('carries the shortlist and quests along, which is intended', () => {
-    // Prefix matching, and deliberately not narrowed: the shortlist is
-    // localStorage-backed so it works signed-out-shaped, and its entries survive
-    // into the account once setup is done.
-    expect(isOnboardingExempt('/university-search/shortlist')).toBe(true);
-    expect(isOnboardingExempt('/university-search/quests')).toBe(true);
-  });
-
-  it('does not exempt /shortlist, which is a different route from the search one', () => {
-    // `/shortlist` is its own top-level page, NOT under `/university-search`. It is
-    // listed in PROTECTED_PREFIXES separately, and nothing here should be read as
-    // covering it.
-    expect(isOnboardingExempt('/shortlist')).toBe(false);
+  it('does not gate the "browse first" action the welcome screen offers', () => {
+    // BROWSE_FIRST is the welcome screen's secondary action. If it were gated,
+    // clicking it would hit the gate, bounce to /welcome, and — once `welcomed_at`
+    // is stamped — forward straight back: the same loop the rest of this file
+    // exists to prevent, reached by the one button offered as a way out.
+    //
+    // Under the allowlist this holds by default rather than by exemption, so the
+    // assertion is a guard against someone widening ONBOARDING_GATED_PREFIXES to
+    // cover `/university-search` without noticing what else points at it.
+    expect(isOnboardingGated(BROWSE_FIRST)).toBe(false);
   });
 });
 

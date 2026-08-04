@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { PageHero } from '@/components/layout/page-hero';
 import { AnimatedSection } from '@/components/layout/animated-section';
+import { AscendiCoachMount } from '@/components/onboarding/ascendi-coach-mount';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { APPLICATION_STATUS_VISUAL } from '@/lib/theme/categories';
@@ -118,7 +119,7 @@ export default async function ParentOverviewPage() {
 
       {/* Row 1 — pipeline, deadlines, counsellor update */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <AnimatedSection>
+        <AnimatedSection data-tour="parent-progress">
           <div className="surface-card h-full">
             <div className="relative z-10">
               <p className="eyebrow">Pipeline</p>
@@ -193,7 +194,7 @@ export default async function ParentOverviewPage() {
           </div>
         </AnimatedSection>
 
-        <AnimatedSection className="md:col-span-2 lg:col-span-1" delay={0.08}>
+        <AnimatedSection className="md:col-span-2 lg:col-span-1" delay={0.08} data-tour="parent-messages">
           <div className="surface-card h-full">
             <div className="relative z-10">
               <p className="eyebrow">Counsellor</p>
@@ -304,6 +305,7 @@ export default async function ParentOverviewPage() {
           </div>
         </AnimatedSection>
       </div>
+      <AscendiCoachMount />
     </div>
   );
 }

@@ -2,109 +2,88 @@
  * Where the onboarding gate sends people, and the one rule that keeps it from
  * looping.
  *
- * THE LOOP THIS FILE EXISTS TO PREVENT
- * ------------------------------------
- * `middleware.ts` redirects any signed-in user whose profile essentials are
- * incomplete to `/welcome?from=<path>`. `/welcome` then forwards them onward.
- * If it forwards them to a path the gate still checks, and the gate still fails,
- * middleware sends them back to `/welcome` — forever. The browser gives up with
- * ERR_TOO_MANY_REDIRECTS and the user cannot reach the app at all.
+ * WHAT THE GATE NOW IS
+ * --------------------
+ * An ALLOWLIST of one route. `middleware.ts` redirects a signed-in user with
+ * incomplete profile essentials to `/welcome?from=<path>` only when they are
+ * reaching for `/matches`.
  *
- * That is not hypothetical. It shipped as a live bug the moment the redirect
- * target moved from `/profile/wizard` to `/welcome`: `/profile` happens to be
- * exempt from the gate, so the old target terminated by luck. `/welcome`
- * forwards, so it did not.
+ * It used to run on every protected route except a handful of exemptions, which
+ * meant a new student could not open the dashboard, search the catalogue, browse
+ * scholarships or look at the toolbox until they had finished a five-screen form —
+ * none of which needs a profile to work, and all of which already have empty
+ * states. That was the single most aggressive thing in the product.
  *
- * Counsellors and admins hit it first and hardest. The gate reads STUDENT
- * profile tables and never looks at `profiles.role`, so an account with no
- * student profile can never satisfy it — one click on "Student" at
- * `/role-select` (which every account is offered) was enough to brick
- * `/dashboard` permanently.
+ * `/matches` is the one page that genuinely cannot function: it ranks 119,000
+ * programmes against grades and subjects, and with neither there is nothing to
+ * rank. Everything else is now reachable immediately, and the ask for a profile
+ * comes from the getting-started card and from Ascendi rather than from a redirect.
  *
- * THE RULE
- * --------
- * Only forward to a path the gate will actually let through. Two ways to be sure:
- *   1. the gate now passes for this user (`essentialsComplete`), or
- *   2. the path is exempt from the gate entirely.
+ * WHY AN ALLOWLIST AND NOT A SHORTER DENYLIST
+ * -------------------------------------------
+ * The old shape was "gate everything, minus exemptions", and its failure mode was
+ * an infinite redirect: forward a user to a path that is still gated, the gate
+ * fails again, and the browser dies with ERR_TOO_MANY_REDIRECTS. That shipped as a
+ * live bug when the redirect target moved from `/profile/wizard` to `/welcome` —
+ * the old target happened to be exempt and terminated by luck; the new one
+ * forwards, so it did not. Counsellors and admins hit it hardest: the gate reads
+ * STUDENT profile tables and never looks at `profiles.role`, so an account with no
+ * student profile could never satisfy it, and one click on "Student" at
+ * `/role-select` was enough to brick `/dashboard` permanently.
  *
- * `resolveWelcomeDestination` below is the only place that decision is made, and
- * `ONBOARDING_EXEMPT_PREFIXES` is imported BY `middleware.ts` rather than copied
- * into it. A second copy of that list is precisely how this bug becomes possible
- * again: someone adds a redirect destination, forgets to exempt it, and nothing
- * fails until a real user is stuck.
+ * An allowlist cannot express that bug. Adding a route to the gate is now an
+ * explicit act, and every possible redirect destination — the wizard, a portal
+ * home, wherever the user was going — is outside the list by default rather than
+ * by remembering to add an exemption. The counsellor/admin lockout disappears on
+ * its own, because `/matches` is student-only anyway.
+ *
+ * `resolveWelcomeDestination` below is still the only place the forwarding
+ * decision is made, and it imports the same list rather than restating it.
  *
  * Kept dependency-free on purpose — `middleware.ts` runs on the edge runtime.
  */
 
 /**
- * Path prefixes `middleware.ts` does NOT run the onboarding completeness check
- * on. Every redirect destination of that check must be in this list.
+ * The only prefixes `middleware.ts` runs the profile-completeness check on.
  *
- * - `/profile`     — the wizard, i.e. the work the gate is asking for.
- * - `/welcome`     — the gate's own landing screen.
- * - `/counsellor`  — a portal whose users have no student profile by definition.
- * - `/parent`      — likewise.
- * - `/role-select` — the post-login fork; gating it would strand every login.
+ * Adding to this list makes a route unreachable for users with an incomplete
+ * profile, so the bar is high: the page must be genuinely non-functional without
+ * profile data, not merely better with it. "Better with it" is what the
+ * getting-started card and Ascendi's prompts are for.
  *
- * ── The browse surfaces, and why they are exempt ─────────────────────────────
- * - `/university-search` — the catalogue.
- * - `/course`            — a single programme's detail page.
- *
- * Tiering the wizard took the wall from five screens down to three. It did not
- * remove it: a brand-new student still could not see a single university until
- * they had entered personal details, school details AND six subject grades. That
- * is the exact complaint the tiering was meant to answer ("before they had seen a
- * single university"), and three screens of it is still all of it.
- *
- * These two are exempt because they are the surfaces that DON'T need a profile.
- * Both degrade rather than break: `use-search-results.ts` returns `{}` from
- * `loadMatchScores` when there is no session or the query fails, and leaves
- * unscored ids scoreless rather than failing the page — so a profile-less visitor
- * gets the catalogue with no fit scores, which is the honest rendering.
- *
- * `/matches`, `/dashboard`, `/applications` and the rest stay gated ON PURPOSE.
- * Those are the surfaces `runMatching` feeds, and it returns zero matches without
- * the essentials (see ./steps.ts) — so letting an incomplete student in shows them
- * an empty page and teaches them the product is broken. Being exempt here means
- * "works without a profile", not "nice to have early". Do not add a route to this
- * list to make a redirect stop happening; check first that the page is genuinely
- * useful with an empty profile, or you are trading a gate for a dead end.
- *
- * NOTE: these are PREFIXES, so `/university-search/shortlist` and
- * `/university-search/quests` come along. Both are fine — the shortlist is
- * localStorage-backed with feature detection, and an unassigned quest deck renders
- * its empty state. Shortlisting while browsing is deliberate: the entries survive
- * into the account once setup is done.
+ * - `/matches` — ranks the catalogue against the student's grades and subjects.
+ *   With neither, the page has nothing to compute and nothing to show.
  */
-export const ONBOARDING_EXEMPT_PREFIXES = [
-  '/profile',
-  '/welcome',
-  '/counsellor',
-  '/parent',
-  '/role-select',
-  '/university-search',
-  '/course'
-] as const;
+export const ONBOARDING_GATED_PREFIXES = ['/matches'] as const;
 
-export const isOnboardingExempt = (pathname: string): boolean =>
-  ONBOARDING_EXEMPT_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+/**
+ * A prefix matches on a path SEGMENT boundary, so `/matches` never accidentally
+ * claims a future `/matches-archive`. The old `startsWith` denylist had the same
+ * latent bug in reverse (a new `/profiler` route would have been silently exempt).
+ */
+export const isOnboardingGated = (pathname: string): boolean =>
+  ONBOARDING_GATED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 
-/** Where a non-student portal user belongs. Exempt, so it always terminates. */
+/** Where a non-student portal user belongs. Never gated, so it always terminates. */
 export const COUNSELLOR_HOME = '/counsellor';
 
-/** The wizard. Exempt, so it always terminates. */
+/** The wizard — the work the gate is asking for. Never gated, so it terminates. */
 export const WIZARD = '/profile/wizard';
 
 /** A student's default landing page once the gate passes. */
 export const STUDENT_HOME = '/dashboard';
 
 /**
- * Where "browse first" goes — the escape hatch from the setup wall.
+ * Where "browse first" goes — the welcome screen's second action.
  *
- * Declared HERE, beside the exemption list, precisely because it must be exempt.
- * A literal in the welcome screen would let someone change one without the other
- * and send a student straight back into the gate. `destination.test.ts` asserts
- * this path satisfies `isOnboardingExempt`.
+ * Under the allowlist this path is ungated by default rather than by exemption,
+ * so the old failure mode (offer a way out of the gate that leads back into it)
+ * can no longer be reached by editing one list and not the other. It is still
+ * declared HERE and imported by the welcome screen rather than written inline,
+ * because the one thing that WOULD resurrect that bug is someone adding
+ * `/university-search` to `ONBOARDING_GATED_PREFIXES` above — and the two being
+ * in the same file is what makes that visible. `destination.test.ts` pins it:
+ * this path must not satisfy `isOnboardingGated`.
  */
 export const BROWSE_FIRST = '/university-search/search';
 

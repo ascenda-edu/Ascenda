@@ -15,6 +15,7 @@ import { PROFILE_SECTION_VISUAL } from '@/lib/theme/categories';
 import { cn } from '@/lib/utils';
 import { summarisePathwayStatus } from '@/lib/profile/pathway-status';
 import { PathwayStatusPill } from '@/components/profile/pathway-status-pill';
+import { AscendiCoachMount } from '@/components/onboarding/ascendi-coach-mount';
 
 export const metadata: Metadata = {
   title: 'Profile'
@@ -172,7 +173,7 @@ export default async function ProfilePage() {
           </>
         }
       />
-      <AnimatedSection>
+      <AnimatedSection data-tour="profile-progress-card">
         <ProfileProgressCard
           completionPercent={completionPercent}
           completedCount={completedCount}
@@ -181,7 +182,7 @@ export default async function ProfilePage() {
           stepCompletion={stepCompletion}
         />
       </AnimatedSection>
-      <AnimatedGrid className="grid gap-8 lg:grid-cols-2">
+      <AnimatedGrid data-tour="profile-sections" className="grid gap-8 lg:grid-cols-2">
         <AnimatedGridItem
           className={cn(
             'surface-card border-l-4',
@@ -423,6 +424,7 @@ export default async function ProfilePage() {
           </div>
         </AnimatedSection>
       )}
+      <AscendiCoachMount />
     </DashboardShell>
   );
 }

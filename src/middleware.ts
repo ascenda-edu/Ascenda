@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import type { Database } from '@/lib/types/database';
 import { COMPLETION_COLUMNS, isProfileEssentialComplete } from '@/lib/profile/completion';
-import { isOnboardingExempt } from '@/lib/onboarding/destination';
+import { isOnboardingGated } from '@/lib/onboarding/destination';
 
 /**
  * The short-lived verdict cache, and the reason it carries a version.
@@ -303,13 +303,17 @@ export async function middleware(req: NextRequest) {
     return redirectResponse;
   }
 
-  // The exemption list lives in `@/lib/onboarding/destination`, NOT inline here.
-  // Every destination this block can redirect to must be exempt from it, or the
-  // redirect target gets re-checked, fails again, and redirects again — an
-  // infinite loop, and the one failure mode this block can produce that a user
-  // cannot escape. `/welcome` forwards onward, so `resolveWelcomeDestination`
-  // needs to consult the same list; a second copy is how the two drift apart.
-  if (user && isProtected && !isOnboardingExempt(pathname)) {
+  // An ALLOWLIST of one route — `/matches` — and the list lives in
+  // `@/lib/onboarding/destination`, not inline here. See that file's header for why
+  // this stopped being "everything except a few exemptions": the old shape locked
+  // new students out of the dashboard, search, scholarships and the toolbox, none
+  // of which need a profile, and it could produce an inescapable redirect loop.
+  //
+  // The invariant is now structural rather than remembered. Every destination this
+  // block can send someone to — the wizard, a portal home, wherever they were
+  // headed — is outside a one-entry allowlist by default, so the target cannot be
+  // re-gated and the loop has nowhere to form.
+  if (user && isOnboardingGated(pathname)) {
     // Skip the onboarding check on the very first request after OAuth callback —
     // the session cookie has just been written and downstream DB reads can race.
     // Let the page render; the next request will hit the onboarding check normally.

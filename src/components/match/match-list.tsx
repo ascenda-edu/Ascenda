@@ -105,7 +105,14 @@ export const MatchList = ({ matches }: MatchListProps) => {
 
   return (
     <div className="space-y-8 pb-24">
-      <div className="surface-toolbar flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      {/* `match-tiers` — the reach/match/safe legend and filter. Anchored here
+          rather than on a tier group below because this bar is always present, and
+          the coach drops any step whose anchor is missing (see
+          lib/onboarding/tours.ts). */}
+      <div
+        data-tour="match-tiers"
+        className="surface-toolbar flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+      >
         <div className="relative z-10 flex flex-col gap-1">
           <p className="eyebrow">
             {MATCHES_TEXT.list.headerEyebrow}
@@ -174,7 +181,10 @@ export const MatchList = ({ matches }: MatchListProps) => {
         </div>
       </div>
 
-      <section className="space-y-6">
+      {/* `match-list` — the ranked results themselves, NOT the wrapper above. The
+          wrapper is the whole page; spotlighting it would dim nothing and point at
+          everything. */}
+      <section data-tour="match-list" className="space-y-6">
         {matches.length === 0 ? (
           <div className="rounded-4xl border border-dashed border-border bg-muted/60 p-10 text-center text-muted-foreground">
             {MATCHES_TEXT.list.noResults}

@@ -7,6 +7,7 @@ import { CommandPalette } from './command-palette';
 import { ChatbotWidgetLazy } from '@/components/chat/chatbot-widget-lazy';
 import { PageTransition } from './page-transition';
 import { RoleProvider } from '@/lib/auth/role-context';
+import { CoachProvider } from '@/components/onboarding/coach-context';
 
 export const DashboardShell = ({
   children,
@@ -47,34 +48,42 @@ export const DashboardShell = ({
 }) => {
   return (
     <RoleProvider role={role}>
-      <SidebarProvider>
-        <div className="relative min-h-screen bg-background pb-24 text-foreground transition-colors md:pb-16">
-          <Navbar />
-          {/* sm:pt-28 (not md:): the navbar is already ~100px tall from `sm` up
-              (60px logo), so clearing it at md only underlapped 640–767px. */}
-          {/* max-w-[120rem]: sidebar+content stretch to ~2160px then center as a
-              unit — past that, unbounded width just degrades PageHero and
-              single-column pages (rem-based so it tracks the fluid root clamp). */}
-          <div className="shell-gutter mx-auto flex w-full max-w-[120rem] gap-4 pt-20 sm:gap-6 sm:pt-28">
-            <Sidebar />
-            <main
-              id="main-content"
-              tabIndex={-1}
-              className="min-w-0 flex-1 space-y-4 py-2 sm:space-y-6 sm:py-5 lg:py-6"
-            >
-              {/* space-y appears on BOTH elements deliberately: here it spaces the nav
-                  from the content below it (two siblings), and on PageTransition it
-                  spaces the page's own top-level blocks. Neither is redundant — a
-                  `space-y-*` rule only ever applies to an element's own children. */}
-              {nav}
-              <PageTransition className="space-y-4 sm:space-y-6">{children}</PageTransition>
-            </main>
+      {/* Client state only — no data fetching, so this is safe in the seven
+          `loading.tsx` mounts of this shell and in the one client page that renders
+          it. It has to live here rather than alongside the coach itself because it
+          is the seam between the coach and `ChatbotWidgetLazy` below, and those are
+          siblings; the coach mounts per-page via `<AscendiCoachMount />`, which is a
+          server component and therefore cannot wrap this subtree. */}
+      <CoachProvider>
+        <SidebarProvider>
+          <div className="relative min-h-screen bg-background pb-24 text-foreground transition-colors md:pb-16">
+            <Navbar />
+            {/* sm:pt-28 (not md:): the navbar is already ~100px tall from `sm` up
+                (60px logo), so clearing it at md only underlapped 640–767px. */}
+            {/* max-w-[120rem]: sidebar+content stretch to ~2160px then center as a
+                unit — past that, unbounded width just degrades PageHero and
+                single-column pages (rem-based so it tracks the fluid root clamp). */}
+            <div className="shell-gutter mx-auto flex w-full max-w-[120rem] gap-4 pt-20 sm:gap-6 sm:pt-28">
+              <Sidebar />
+              <main
+                id="main-content"
+                tabIndex={-1}
+                className="min-w-0 flex-1 space-y-4 py-2 sm:space-y-6 sm:py-5 lg:py-6"
+              >
+                {/* space-y appears on BOTH elements deliberately: here it spaces the nav
+                    from the content below it (two siblings), and on PageTransition it
+                    spaces the page's own top-level blocks. Neither is redundant — a
+                    `space-y-*` rule only ever applies to an element's own children. */}
+                {nav}
+                <PageTransition className="space-y-4 sm:space-y-6">{children}</PageTransition>
+              </main>
+            </div>
+            <MobileNav />
+            <CommandPalette />
+            <ChatbotWidgetLazy />
           </div>
-          <MobileNav />
-          <CommandPalette />
-          <ChatbotWidgetLazy />
-        </div>
-      </SidebarProvider>
+        </SidebarProvider>
+      </CoachProvider>
     </RoleProvider>
   );
 };
