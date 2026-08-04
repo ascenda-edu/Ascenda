@@ -585,17 +585,81 @@ describe('step navigation', () => {
     expect(screen.queryByText('First name is required.')).not.toBeInTheDocument();
   });
 
+  /**
+   * CHANGED 2026-08-04 — the percentage now measures DATA, not POSITION.
+   *
+   * It used to be `(currentStep - 1) / (TOTAL_STEPS - 1)`, so these cases were
+   * step 1 → 0%, step 2 → 20% … Review → 100%, regardless of what the student
+   * had actually filled in. Two consequences that reached real users: a
+   * returning student with a complete profile opened on step 1 and was told 0%,
+   * and an empty form on the Review step was told 100%.
+   *
+   * It now measures completeness of the three ESSENTIAL steps — the threshold
+   * `runMatching` and `middleware.ts` care about. Boosters are counted
+   * separately (as "0/2 extras") so deferring them does not read as a debt.
+   */
   it.each([
     [1, '0%'],
-    [2, '20%'],
-    [3, '40%'],
-    [4, '60%'],
-    [5, '80%'],
-    [6, '100%']
-  ])('progress on step %i reads %s', (step, pct) => {
-    // Divided by TRANSITIONS (TOTAL_STEPS - 1), which is why Review is 100 and not 83.
+    [3, '0%'],
+    [6, '0%']
+  ])('an EMPTY form reads 0%% on step %i, whatever step that is', (step) => {
     renderForm({ initialStep: step });
-    expect(screen.getByText(pct)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Essentials 0% complete' })).toBeInTheDocument();
+  });
+
+  it.each([
+    [1, '100%'],
+    [4, '100%'],
+    [6, '100%']
+  ])('a COMPLETE profile reads 100%% on step %i, including step 1', (step) => {
+    // The case the old bar got backwards: hydrated, complete, standing on step 1.
+    renderForm({ initialPayload: clone(IB_PAYLOAD), initialStep: step });
+    expect(screen.getByRole('img', { name: 'Essentials 100% complete' })).toBeInTheDocument();
+  });
+
+  it('reaching 100% flips the copy from a promise to a confirmation', () => {
+    renderForm({ initialPayload: clone(IB_PAYLOAD), initialStep: 1 });
+    expect(screen.getByText('Matches unlocked')).toBeInTheDocument();
+    expect(screen.queryByText('Matches unlock at 100%')).not.toBeInTheDocument();
+  });
+
+  it('an empty form states the threshold rather than showing a bare number', () => {
+    renderForm();
+    expect(screen.getByText('Matches unlock at 100%')).toBeInTheDocument();
+  });
+
+  it('counts the boosters separately, so skipping them is not a deficit', () => {
+    // An empty form: the essentials ring sits at 0% and the boosters report
+    // 0/2 — two independent readings, which is the point. Under a single
+    // all-five percentage, a student who deliberately deferred the extras was
+    // parked at 60% forever, so "Skip for now" read as abandoning 40% of their
+    // profile. That is the friction the 2026-08-03 re-tiering removed, and
+    // folding the boosters back into the ring would reintroduce it.
+    renderForm();
+    expect(screen.getByRole('img', { name: 'Essentials 0% complete' })).toBeInTheDocument();
+    expect(screen.getByText('0/2 extras')).toBeInTheDocument();
+  });
+
+  it('a profile with both boosters answered reports 2/2 extras', () => {
+    // IB_PAYLOAD answers everything in both booster steps.
+    renderForm({ initialPayload: clone(IB_PAYLOAD), initialStep: 1 });
+    expect(screen.getByText('2/2 extras')).toBeInTheDocument();
+  });
+
+  it('step 4 counts extracurricular_interests, matching completion.ts', () => {
+    // The wizard's sidebar used to omit this field while `completion.ts:126`
+    // counted it, so a student whose only booster answer was an interest chip
+    // saw "Activities" incomplete in the wizard and complete on the dashboard.
+    // Note it lives on the lifestyle_preference slice even though it belongs to
+    // step 4 — steps 4 and 5 share one DB row.
+    const payload = clone(IB_PAYLOAD);
+    payload.lifestyle_preference.leadership_roles = [];
+    payload.lifestyle_preference.commitment_level = null;
+    payload.lifestyle_preference.key_activities = [];
+    payload.lifestyle_preference.extracurricular_interests = ['Volunteering'];
+    renderForm({ initialPayload: payload, initialStep: 1 });
+
+    expect(screen.getByRole('button', { name: /Activities/ })).toHaveAccessibleName(/\(complete\)/);
   });
 
   it('shows Submit instead of Next only on the Review step', () => {
@@ -610,38 +674,67 @@ describe('step navigation', () => {
     expect(screen.getByRole('heading', { name: 'Review & confirm' })).toBeInTheDocument();
   });
 
-  it('sidebar step indicators drop the number once a step validates clean', () => {
+  /**
+   * CHANGED 2026-08-04 — the rail shows a DOT, not an ordinal.
+   *
+   * The numerals went because the completion ring directly above them already
+   * owns the numbers, and two sets competed. Position is still conveyed: the
+   * rail is an <ol>, so assistive tech reports "n of 6" from the structure, and
+   * the current step carries `aria-current="step"`.
+   *
+   * What did NOT change, and must not: completion and tier are still in the
+   * ACCESSIBLE NAME, not only in colour or in the visual "Optional extras"
+   * divider. A student listening to the rail needs both signals at the step.
+   */
+  it('a complete step announces itself as complete', () => {
     renderForm({ initialPayload: clone(IB_PAYLOAD), initialStep: 6 });
-    // Complete steps render a Check (aria-hidden) instead of the ordinal.
-    expect(screen.getByRole('button', { name: /Personal info/ })).toHaveAccessibleName('Personal info');
-    expect(screen.getByRole('button', { name: /Your studies/ })).toHaveAccessibleName('Your studies');
-    expect(screen.getByRole('button', { name: /Grades & tests/ })).toHaveAccessibleName('Grades & tests');
+    expect(screen.getByRole('button', { name: /Personal info/ })).toHaveAccessibleName('Personal info (complete)');
+    expect(screen.getByRole('button', { name: /Your studies/ })).toHaveAccessibleName('Your studies (complete)');
   });
 
-  it('sidebar step indicators keep the number while a step is incomplete', () => {
+  it('an incomplete step announces only its title — no ordinal', () => {
     renderForm({ initialStep: 6 });
-    expect(screen.getByRole('button', { name: /Personal info/ })).toHaveAccessibleName('1 Personal info');
-    expect(screen.getByRole('button', { name: /Your studies/ })).toHaveAccessibleName('2 Your studies');
-    // "Optional" is part of the accessible name for booster steps, not just a
-    // visual badge: a screen-reader user choosing whether to keep going needs
-    // the same "you can stop here" signal a sighted user gets from the label.
-    expect(screen.getByRole('button', { name: /Lifestyle/ })).toHaveAccessibleName('5 Lifestyle Optional');
+    expect(screen.getByRole('button', { name: /Personal info/ })).toHaveAccessibleName('Personal info');
+    expect(screen.getByRole('button', { name: /Your studies/ })).toHaveAccessibleName('Your studies');
   });
 
   it('marks booster steps optional and essential steps not', () => {
     renderForm({ initialStep: 6 });
-    expect(screen.getByRole('button', { name: /Activities/ })).toHaveAccessibleName(/Optional$/);
-    expect(screen.getByRole('button', { name: /Lifestyle/ })).toHaveAccessibleName(/Optional$/);
+    // "(optional)" is in the accessible name, not just the visual divider: a
+    // screen-reader user choosing whether to keep going needs the same "you can
+    // stop here" signal a sighted user gets from the grouping.
+    expect(screen.getByRole('button', { name: /Activities/ })).toHaveAccessibleName(/\(optional\)$/);
+    expect(screen.getByRole('button', { name: /Lifestyle/ })).toHaveAccessibleName(/\(optional\)$/);
     // The three that gate entry must NOT be labelled optional — that is the
     // whole distinction the tiering rests on.
-    expect(screen.getByRole('button', { name: /Personal info/ })).not.toHaveAccessibleName(/Optional/);
-    expect(screen.getByRole('button', { name: /Your studies/ })).not.toHaveAccessibleName(/Optional/);
-    expect(screen.getByRole('button', { name: /Grades & tests/ })).not.toHaveAccessibleName(/Optional/);
+    expect(screen.getByRole('button', { name: /Personal info/ })).not.toHaveAccessibleName(/optional/);
+    expect(screen.getByRole('button', { name: /Your studies/ })).not.toHaveAccessibleName(/optional/);
+    expect(screen.getByRole('button', { name: /Grades & tests/ })).not.toHaveAccessibleName(/optional/);
   });
 
-  it('the CURRENT step keeps its number even when complete', () => {
+  it('marks the step you are on with aria-current, not with a numeral', () => {
     renderForm({ initialPayload: clone(IB_PAYLOAD), initialStep: 1 });
-    expect(screen.getByRole('button', { name: /Personal info/ })).toHaveAccessibleName('1 Personal info');
+    const personal = screen.getByRole('button', { name: /Personal info/ });
+    expect(personal).toHaveAttribute('aria-current', 'step');
+    expect(screen.getByRole('button', { name: /Your studies/ })).not.toHaveAttribute('aria-current');
+  });
+
+  it('presents the rail as an ordered list, so position is conveyed structurally', () => {
+    renderForm({ initialStep: 1 });
+    const rail = screen.getByRole('list');
+    expect(within(rail).getAllByRole('listitem')).toHaveLength(6);
+  });
+
+  it('every rail step carries the padding that meets the 44px tap floor', () => {
+    // A PROXY, and worth being honest about: jsdom does no layout, so it cannot
+    // measure a rendered height. `py-3` + the 20px text-sm line box is 44px, so
+    // asserting the class is the closest jsdom gets to asserting the tap target.
+    // The real check is the manual/Playwright pass on a 375px viewport.
+    renderForm({ initialStep: 1 });
+    const rail = screen.getByRole('list');
+    for (const item of within(rail).getAllByRole('button')) {
+      expect(item.className).toContain('py-3');
+    }
   });
 
   it('Review\'s "Edit" links jump straight to their step without validating', async () => {

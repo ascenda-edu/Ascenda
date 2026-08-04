@@ -9,7 +9,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
-import { PROFILE_STEPS, FIRST_BOOSTER_STEP_INDEX } from '@/lib/profile/steps';
+import { PROFILE_STEPS, FIRST_BOOSTER_STEP_INDEX, ESSENTIAL_STEP_KEYS } from '@/lib/profile/steps';
+import { IntakeRail, type RailStep } from '../wizard/_components/intake-rail';
 import { cn } from '@/lib/utils';
 import type {
   AdmissionsTestType, EnglishStatus, EnglishTestType,
@@ -891,6 +892,16 @@ export const StudentIntakeForm = ({
     setCurrentStep(Math.min(TOTAL_STEPS, Math.max(1, target)));
   };
 
+  /**
+   * The rail speaks in `StepKey`s, not indices, so the boundary converts once
+   * here. `indexForStepKey` already owns the `?step=` mapping — reusing it means
+   * the rail, the URL and the sidebar can never disagree about which step a key
+   * names. A plain function, like `goToStep` itself: both close over
+   * `currentStep`, and memoising one but not the other is how a stale closure
+   * gets in.
+   */
+  const goToStepKey = (key: string) => goToStep(indexForStepKey(key));
+
   const restoreSavedProfile = () => {
     if (!initialPayload) return;
     clearDraft();
@@ -983,35 +994,89 @@ export const StudentIntakeForm = ({
     contentTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [currentStep]);
 
-  // ── Step completion (for sidebar indicators) ──────────────────────────────
+  // ── Step completion (for the rail's dots and the essentials ring) ──────────
 
+  /**
+   * These rules deliberately MIRROR `buildStepCompletion` in
+   * `src/lib/profile/completion.ts` — the difference is only the source: this one
+   * reads live form state, that one reads the saved rows. They must agree, or the
+   * same profile reads "3/5" in the wizard and "5/5" on the dashboard, which is a
+   * bug that has already shipped once.
+   *
+   * Step 4 includes `extracurricular_interests` because `completion.ts` does. The
+   * sidebar used to omit it, so a student whose only booster answer was an
+   * interest chip saw the wizard call step 4 incomplete while the dashboard
+   * counted it — the exact drift the mirror comment warns about.
+   *
+   * Note the slice it comes from: `extracurricular_interests` is attributed to
+   * step 4 by `completion.ts` but lives on the `lifestylePreference` state slice,
+   * because steps 4 and 5 both persist into the single
+   * `student_lifestyle_preference` row. The step→field mapping is a product
+   * decision; the state→table mapping is a schema fact. They do not line up, and
+   * reading it off `activities` (which is where it looks like it belongs) is a
+   * type error rather than a silent wrong answer only because the slices differ.
+   */
   const stepCompletion = useMemo<Record<number, boolean>>(() => ({
     1: Object.keys(validateStep1(formState)).length === 0,
     2: Object.keys(validateStep2(formState)).length === 0,
     3: Object.keys(validateStep3(formState)).length === 0,
-    4: activities.leadership_roles.length > 0 || !!activities.commitment_level || activities.key_activities.length > 0,
+    4: activities.leadership_roles.length > 0 || !!activities.commitment_level
+      || activities.key_activities.length > 0
+      || lifestylePreference.extracurricular_interests.length > 0,
     5: !!lifestylePreference.teaching_style || lifestylePreference.desired_location_type.length > 0 || !!lifestylePreference.campus_size,
     6: false,
   }), [formState, activities, lifestylePreference]);
 
-  // Divided by the number of TRANSITIONS (TOTAL_STEPS - 1), not the number of steps:
-  // over TOTAL_STEPS the bar topped out at 83% on the final Review step.
-  const progressPct = Math.round(((currentStep - 1) / (TOTAL_STEPS - 1)) * 100);
+  /**
+   * The rail's model. Derived from `PROFILE_STEPS` so the tier boundary, the step
+   * count and the order all come from one place — nothing here knows that
+   * "essential" means three or that Review is sixth.
+   */
+  const railSteps = useMemo<RailStep[]>(() => [
+    ...PROFILE_STEPS.map((step, index) => ({
+      key: step.key,
+      title: step.title,
+      tier: step.tier,
+      done: stepCompletion[index + 1] ?? false,
+      current: currentStep === index + 1
+    })),
+    {
+      key: 'review' as const,
+      title: 'Review',
+      tier: 'review' as const,
+      done: false,
+      current: currentStep === TOTAL_STEPS
+    }
+  ], [stepCompletion, currentStep]);
+
+  /**
+   * Completeness of the ESSENTIAL steps — what the ring shows, and the only
+   * threshold that means anything to the student (it is what `runMatching` needs
+   * and what `middleware.ts` gates on). The bar this replaced measured position
+   * in the wizard instead, so it told a fully-hydrated returning student on step
+   * 1 that they were 0% done. See the note in `intake-rail.tsx`.
+   */
+  const essentialsDone = railSteps.filter((step) => step.tier === 'essential' && step.done).length;
+  const essentialPct = ESSENTIAL_STEP_KEYS.length
+    ? Math.round((essentialsDone / ESSENTIAL_STEP_KEYS.length) * 100)
+    : 100;
 
   /**
    * Whether to offer "Skip for now" beside Next.
    *
    * Two conditions, and both matter. The student must be standing ON a booster
    * step — offering an exit from step 2 would be a lie, since submitting there
-   * fails validation and throws them backwards. And steps 1-3 must already
-   * validate, because those are what `runMatching` needs; a skip that produced
-   * an empty matches page is worse than no skip at all.
+   * fails validation and throws them backwards. And the essential steps must
+   * already validate, because those are what `runMatching` needs; a skip that
+   * produced an empty matches page is worse than no skip at all.
+   *
+   * Both conditions are now derived from the tiers rather than naming steps 1-3
+   * and 4 by number, so re-tiering `PROFILE_STEPS` moves this with it.
    */
   const canSkipBoosters =
     currentStep >= FIRST_BOOSTER_STEP_INDEX &&
-    stepCompletion[1] &&
-    stepCompletion[2] &&
-    stepCompletion[3];
+    currentStep < TOTAL_STEPS &&
+    essentialsDone === ESSENTIAL_STEP_KEYS.length;
 
   /** aria-invalid / aria-describedby props for an errored input. */
   const a11yError = (key: string) =>
@@ -1025,104 +1090,28 @@ export const StudentIntakeForm = ({
     <form className="relative font-sans" onSubmit={handleSubmit}>
       <div className="flex flex-col lg:flex-row gap-6">
 
-        {/* ── Sidebar ── */}
-        <aside className="w-full lg:w-64 lg:sticky lg:top-24 h-fit shrink-0">
-          <div className="rounded-2xl border border-border/60 bg-background p-4 space-y-1 shadow-e-1">
-            {/* Progress bar */}
-            <div className="mb-4 px-1">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="eyebrow">Progress</span>
-                <span className="text-label font-bold text-primary-ink">{progressPct}%</span>
-              </div>
-              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                <motion.div
-                  className="h-full rounded-full bg-primary"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progressPct}%` }}
-                  transition={{ duration: 0.4 }}
-                />
-              </div>
-            </div>
-
-            {PROFILE_STEPS.map((step, idx) => {
-              const stepNum = idx + 1;
-              const isCurrent = stepNum === currentStep;
-              const isDone = stepCompletion[stepNum];
-              const isBooster = step.tier === 'booster';
-              return (
-                <button
-                  key={step.key}
-                  type="button"
-                  onClick={() => goToStep(stepNum)}
-                  className={cn(
-                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors duration-150 text-sm',
-                    isCurrent
-                      ? 'bg-primary/8 text-primary-ink font-semibold'
-                      : isDone
-                        ? 'text-success hover:bg-muted/50'
-                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-                  )}
-                >
-                  <span className={cn(
-                    'flex h-6 w-6 items-center justify-center rounded-lg text-label font-bold shrink-0',
-                    isCurrent ? 'bg-primary text-primary-foreground'
-                      : isDone ? 'bg-success-subtle text-success'
-                        : 'bg-muted text-muted-foreground'
-                  )}>
-                    {isDone && !isCurrent ? <Check className="w-3 h-3" /> : stepNum}
-                  </span>
-                  <span className="truncate">{step.title}</span>
-                  {/* Say which steps are optional, in the place the student is
-                      already looking to judge how much is left. Without this the
-                      "Skip for now" button appears with no explanation of what
-                      is being skipped or what it costs. */}
-                  {isBooster ? (
-                    <span className="ml-auto shrink-0 text-label font-medium uppercase tracking-wide text-muted-foreground/70">
-                      Optional
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
-
-            {/* The boundary itself. Three steps in, everything the ranking
-                engine needs exists — the rest only sharpens it. */}
-            <p className="px-3 pt-2 text-xs leading-relaxed text-muted-foreground">
-              Steps 1–{FIRST_BOOSTER_STEP_INDEX - 1} unlock your matches. The last two make the ranking sharper — you
-              can add them whenever.
-            </p>
-
-            {/* Review */}
-            <button
-              type="button"
-              onClick={() => goToStep(TOTAL_STEPS)}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors duration-150 text-sm',
-                currentStep === TOTAL_STEPS
-                  ? 'bg-primary/8 text-primary-ink font-semibold'
-                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-              )}
-            >
-              <span className={cn(
-                'flex h-6 w-6 items-center justify-center rounded-lg text-label font-bold shrink-0',
-                currentStep === TOTAL_STEPS ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-              )}>
-                <Check className="w-3 h-3" />
-              </span>
-              <span className="truncate">Review</span>
-            </button>
-
-            {initialPayload ? (
+        {/* ── The step map ──
+          * Presentational and prop-driven (see `intake-rail.tsx`). Rendered here
+          * on lg+; the same component is what the mobile "Steps" sheet shows, so
+          * there is one rail implementation in two containers rather than two
+          * lists that drift. */}
+        <div className="hidden lg:block lg:w-64">
+          <IntakeRail
+            sticky
+            steps={railSteps}
+            essentialPct={essentialPct}
+            onStepSelect={goToStepKey}
+            footer={initialPayload ? (
               <button
                 type="button"
                 onClick={restoreSavedProfile}
-                className="w-full mt-2 py-2 px-3 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                className="w-full rounded-xl px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 Restore last save
               </button>
             ) : null}
-          </div>
-        </aside>
+          />
+        </div>
 
         {/* ── Main content ── */}
         <div ref={contentTopRef} className="flex-1 min-w-0">
