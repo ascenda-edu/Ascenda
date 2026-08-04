@@ -23,7 +23,22 @@ const LINTED = ['**/*.js', '**/*.jsx', '**/*.mjs', '**/*.cjs', '**/*.ts', '**/*.
 const config = [
   {
     // `next lint` never looked at build output or generated files; neither do we.
-    ignores: ['.next/**', 'out/**', 'build/**', 'coverage/**', 'next-env.d.ts'],
+    // `.claude/worktrees/**` for the same reason `jest.config.ts` ignores it (added
+    // in be04bab): agent worktrees are created INSIDE the repo, so each carries a
+    // full second checkout plus its own `.next/`. Jest collected the duplicate
+    // `__tests__` and reported 684 tests instead of 373; eslint walked the duplicate
+    // build output and reported 576 errors in generated `.next/types/**` files that
+    // the top-level `.next/**` pattern does not match at that depth. Both are
+    // somebody else's build artefacts and neither is ours to lint.
+    ignores: [
+      '.next/**',
+      '**/.next/**',
+      '.claude/worktrees/**',
+      'out/**',
+      'build/**',
+      'coverage/**',
+      'next-env.d.ts',
+    ],
   },
   {
     // An `eslint-disable` that no longer suppresses anything is a lie about the

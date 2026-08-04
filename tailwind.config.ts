@@ -309,11 +309,45 @@ const config: Config = {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(100%)" },
         },
+        // One quiet pass of the success tint behind a row that has just been
+        // unlocked in the wizard's ledger, so the change is VISIBLE and not only
+        // announced. Deliberately a background flash rather than a transform: the
+        // rows sit in a two-column grid and moving one shifts its neighbour.
+        // Applied via `motion-safe:` at the call site, so it is absent entirely
+        // under prefers-reduced-motion.
+        "unlock-flash": {
+          "0%, 100%": { backgroundColor: "transparent" },
+          "22%": { backgroundColor: "hsl(var(--success) / 0.14)" },
+        },
+        // The step body travels along the axis the student is paging through.
+        // Two directions, because a Back that slid the same way as Next would make
+        // the gesture feel one-way. Replaces a Framer `motion.div` per step: it is
+        // an entrance with no exit and no layout animation, which is precisely the
+        // case CSS already covers for free.
+        "step-in-forward": {
+          from: { opacity: "0", transform: "translateX(1rem)" },
+          to: { opacity: "1", transform: "none" },
+        },
+        "step-in-back": {
+          from: { opacity: "0", transform: "translateX(-1rem)" },
+          to: { opacity: "1", transform: "none" },
+        },
+        // Used for the heading/sub-line/card sequence inside a step change.
+        "rise-in": {
+          from: { opacity: "0", transform: "translateY(0.45rem)" },
+          to: { opacity: "1", transform: "none" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         shimmer: "shimmer 3.2s linear infinite",
+        "unlock-flash": "unlock-flash 1.1s cubic-bezier(0.22,1,0.36,1) both",
+        // Durations and the curve match `src/lib/motion.ts` (EASE, DURATION.fast /
+        // DURATION.base) so CSS and Framer motion read as one system.
+        "step-in-forward": "step-in-forward 0.3s cubic-bezier(0.22,1,0.36,1) both",
+        "step-in-back": "step-in-back 0.3s cubic-bezier(0.22,1,0.36,1) both",
+        "rise-in": "rise-in 0.4s cubic-bezier(0.22,1,0.36,1) both",
       },
     },
   },

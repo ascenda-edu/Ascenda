@@ -26,8 +26,16 @@ import type {
 
 // ─── Form state ──────────────────────────────────────────────────────────────
 
-export const buildInitialPersonalInfo = () => ({
-  first_name: '', last_name: '', email: '', age: '', gender: '',
+/**
+ * `accountEmail` seeds the email field from the signed-in account.
+ *
+ * The wizard used to open this field empty, which meant asking a logged-in student
+ * for the address they had just logged in with — a field the app already knew, on the
+ * screen with the most paperwork on it. Optional and defaulted so every existing
+ * caller (and every test fixture) is unaffected.
+ */
+export const buildInitialPersonalInfo = (accountEmail = '') => ({
+  first_name: '', last_name: '', email: accountEmail, age: '', gender: '',
   resident_country: '', current_location_city: '', time_zone: '',
 });
 

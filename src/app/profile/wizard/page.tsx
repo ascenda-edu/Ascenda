@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { StudentIntakeForm } from '../_components/StudentIntakeForm';
 import { PROFILE_STEPS, type StepCompletionMap } from '@/lib/profile/steps';
+import { WIZARD_SCREENS, indexForScreenKey } from '@/lib/profile/wizard-screens';
 import { buildStepCompletion, isProfileComplete, type ProfileRecordGroup } from '@/lib/profile/completion';
 import { AnimatedBlobBanner } from '@/components/animated-blob-banner';
 import { Button } from '@/components/ui/button';
@@ -53,17 +54,51 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
   };
   const stepCompletion: StepCompletionMap = buildStepCompletion(recordGroup);
   const hasCompletedProfile = isProfileComplete(recordGroup);
-  const nextStep = PROFILE_STEPS.find((step) => !stepCompletion[step.key]);
 
+  /**
+   * Where to open, in SCREEN terms.
+   *
+   * An explicit `?step=` wins. Otherwise land on the first screen the student has not
+   * finished — which is now computed per SCREEN rather than per section, because two
+   * screens share a section: a student who has picked a subject area but not entered
+   * their school has finished neither `academic_input` nor the School screen, and
+   * sending them back to Subject area would make them re-answer a question they
+   * already answered.
+   */
   const stepParamRaw = searchParams?.step;
   const stepParam = Array.isArray(stepParamRaw) ? stepParamRaw[0] : stepParamRaw;
-  const requestedStep = PROFILE_STEPS.find((step) => step.key === stepParam);
-  const initialStep = requestedStep ? PROFILE_STEPS.indexOf(requestedStep) + 1 : nextStep ? PROFILE_STEPS.indexOf(nextStep) + 1 : 1;
+  const requestedScreen = WIZARD_SCREENS.find((screen) => screen.key === stepParam);
 
-  // Which section the student is about to work on. Fed to PageHero's `highlight`
-  // rather than a stats row: the rail below already counts sections, so naming
+  const firstUnfinishedScreen = WIZARD_SCREENS.find((screen) => {
+    if (!screen.section) return false;
+    return !stepCompletion[screen.section];
+  });
+  const initialStep = requestedScreen
+    ? indexForScreenKey(requestedScreen.key)
+    : firstUnfinishedScreen
+      ? indexForScreenKey(firstUnfinishedScreen.key)
+      : 1;
+
+  // Which screen the student is about to work on. Fed to PageHero's `highlight`
+  // rather than a stats row: the rail below already counts screens, so naming
   // the one in front of them is the part the hero can add.
-  const currentStepDetail = requestedStep?.title ?? nextStep?.title ?? 'Review details';
+  const currentStepDetail =
+    requestedScreen?.railLabel ?? firstUnfinishedScreen?.railLabel ?? 'Review details';
+
+  /**
+   * Whether this is a RETURNING student with real saved work.
+   *
+   * Drives the hero copy. Greeting somebody who is most of the way through with
+   * "Let's set you up" is the wrong sentence — they have already been set up, and what
+   * they need to know is what is left. `initialPayload` alone is not enough evidence:
+   * an all-null row exists for anyone who ever pressed "Skip for now", so this asks
+   * whether any SECTION is actually complete.
+   */
+  const completedSections = PROFILE_STEPS.filter((step) => stepCompletion[step.key]).length;
+  const isReturning = completedSections > 0;
+  const essentialsLeft = PROFILE_STEPS.filter(
+    (step) => step.tier === 'essential' && !stepCompletion[step.key]
+  ).length;
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-background text-foreground">
@@ -88,14 +123,25 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
            * has had a `breadcrumbs` slot all along, and it puts the escape route
            * where it sits on every other page in the app. */
           breadcrumbs={<Breadcrumbs items={[{ label: 'Profile', href: '/profile' }, { label: 'Setup' }]} />}
-          title={hasCompletedProfile ? 'Your profile' : "Let's set you up"}
-          /* Two audiences, two openings. A first-timer needs to know what they
-           * get for the next four minutes; a returning student needs to know
-           * their work is still there. */
+          title={
+            hasCompletedProfile ? 'Your profile' : isReturning ? 'Welcome back' : "Let's set you up"
+          }
+          /**
+           * THREE audiences, three openings. A first-timer needs to know what the next
+           * few minutes buy them. A returning student part-way through needs to know
+           * what is LEFT — "everything you saved is already filled in" answers a
+           * question they were not asking, while the number of sections between them
+           * and their matches is the thing they came back for. Someone finished needs
+           * to know nothing is outstanding.
+           */
           description={
-            initialPayload
-              ? 'Pick up where you left off — everything you saved is already filled in, and you can edit any section.'
-              : "A few quick questions and we'll personalise your matches, deadlines, and counsellor updates. Nothing here is permanent."
+            hasCompletedProfile
+              ? 'Everything is in. Edit any section and we will re-run your matches.'
+              : isReturning
+                ? essentialsLeft > 0
+                  ? `Everything you saved is still here. ${essentialsLeft} ${essentialsLeft === 1 ? 'section' : 'sections'} left before your matches unlock.`
+                  : 'Your essentials are done and your matches are live — what is left only sharpens the ranking.'
+                : "A few quick questions and we'll personalise your matches, deadlines, and counsellor updates. Nothing here is permanent."
           }
           highlight={hasCompletedProfile ? 'All done' : currentStepDetail}
           /* `stats` deliberately dropped. "Completed 2/5 · Current step 3 ·
@@ -107,7 +153,13 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
           * body is another, which reads as map + work. A single wrapper card
           * around both made the rail look like part of the form, and since the
           * rail became a `surface-card` it would have nested one card in another. */}
-        <StudentIntakeForm initialStep={initialStep} initialPayload={initialPayload} />
+        <StudentIntakeForm
+          initialStep={initialStep}
+          initialPayload={initialPayload}
+          /* The account already knows this. Asking for it again was a free field to
+             delete from the most admin-heavy screen in the flow. */
+          accountEmail={user.email ?? ''}
+        />
       </div>
       <AnimatedBlobBanner className="opacity-60 -z-raised" variant="cool" />
     </div>

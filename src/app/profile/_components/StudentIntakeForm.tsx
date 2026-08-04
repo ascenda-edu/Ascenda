@@ -8,14 +8,33 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PROFILE_STEPS, FIRST_BOOSTER_STEP_INDEX, ESSENTIAL_STEP_KEYS, type StepKey } from '@/lib/profile/steps';
+import {
+  WIZARD_SCREENS, TOTAL_SCREENS, ESSENTIAL_SCREENS,
+  FIRST_BOOSTER_SCREEN_INDEX, screenAt, screenTier, screenKeyForIndex, indexForScreenKey
+} from '@/lib/profile/wizard-screens';
 import { Chip } from '@/components/profile/wizard/chip';
 import { Combobox } from '@/components/profile/wizard/combobox';
 import { ReviewSection } from '@/components/profile/wizard/review-section';
+import { ChoiceGroup, type ChoiceOption } from '@/components/profile/wizard/choice-card';
+import { UnlocksLedger } from '@/components/profile/wizard/unlocks-ledger';
+import {
+  LazyAscendiAside,
+  LazyMilestoneCelebration
+} from '@/components/profile/wizard/wizard-overlays-lazy';
+import {
+  CLUSTER_ICONS, PROGRAMME_ICONS, TEACHING_ICONS, LOCATION_ICONS, CAMPUS_ICONS,
+  iconFor, INFERRED_ICON
+} from '@/components/profile/wizard/wizard-icons';
+import { buildUnlocks } from '@/lib/profile/wizard-unlocks';
+import { suggestionFor, applySuggestion } from '@/lib/profile/wizard-suggestions';
+import {
+  CLUSTER_REACTIONS, PROGRAMME_REACTIONS, ibTotalReaction,
+  SKIP_BOOSTERS_REACTION, SUGGESTION_APPLIED_REACTION
+} from '@/lib/profile/wizard-reactions';
 import { IntakeRail, type RailStep } from '../wizard/_components/intake-rail';
 import { IntakeStepMeter } from '../wizard/_components/intake-step-meter';
 import { cn } from '@/lib/utils';
-import { EASE, EASE_POP, DURATION, TRAVEL } from '@/lib/motion';
+import { EASE, EASE_POP, DURATION } from '@/lib/motion';
 import type {
   AdmissionsTestType, EnglishStatus, EnglishTestType,
   IntendedCluster, ProgrammeType, StudentProfilePayload
@@ -41,20 +60,25 @@ import { useSearchParamState } from '@/lib/hooks/use-search-param-state';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TOTAL_STEPS = PROFILE_STEPS.length + 1; // +1 for Review
+/**
+ * The wizard walks SCREENS, not sections.
+ *
+ * `WIZARD_SCREENS` (src/lib/profile/wizard-screens.ts) owns the order, the copy, the
+ * tier and — crucially — which payload fields each screen is responsible for. It is
+ * eight screens over the same five `PROFILE_STEPS` sections: the subject area leads,
+ * the old 21-control grades screen is split into subjects and tests, and the
+ * paperwork moved from first to fifth.
+ *
+ * Everything below therefore counts SCREENS where it used to count steps. Sections
+ * are untouched and still drive `completion.ts`, the middleware gate and the
+ * dashboard — see the header of `wizard-screens.ts` for why the two are separate.
+ */
+const TOTAL_STEPS = TOTAL_SCREENS;
 
-// Wizard steps are mirrored to the `?step=` query param so they're deep-linkable
-// and the browser Back button walks the wizard. Steps 1..N map to PROFILE_STEPS
-// keys; the final Review step uses a dedicated key.
-const STEP_PARAM_KEYS: string[] = PROFILE_STEPS.map((step) => step.key);
-const REVIEW_STEP_KEY = 'review';
-const stepKeyForIndex = (index: number): string =>
-  index >= TOTAL_STEPS ? REVIEW_STEP_KEY : STEP_PARAM_KEYS[index - 1] ?? STEP_PARAM_KEYS[0];
-const indexForStepKey = (key: string): number => {
-  if (key === REVIEW_STEP_KEY) return TOTAL_STEPS;
-  const i = STEP_PARAM_KEYS.indexOf(key);
-  return i >= 0 ? i + 1 : 1;
-};
+// Screens are mirrored to the `?step=` query param so they're deep-linkable and the
+// browser Back button walks the wizard.
+const stepKeyForIndex = screenKeyForIndex;
+const indexForStepKey = indexForScreenKey;
 
 // ─── Draft persistence ───────────────────────────────────────────────────────
 
@@ -191,14 +215,15 @@ function SectionTitle({ label, hint, why }: { label: string; hint?: string; why?
 }
 
 // ─── Step header copy ─────────────────────────────────────────────────────────
+//
+// Read off `WIZARD_SCREENS` rather than a parallel record keyed by number. The old
+// `STEP_META` was a second source of truth for the same six titles, and a reorder had
+// to be applied to both — exactly the duplication that produced the field-routing
+// bugs one file over.
 
-const STEP_META: Record<number, { title: string; subtitle: string }> = {
-  1: { title: 'Who are you?', subtitle: 'The basics — name, nationality, and where you live.' },
-  2: { title: 'Your studies', subtitle: 'What you\'re taking, where you study, and what you want to pursue.' },
-  3: { title: 'Grades & tests', subtitle: 'The more detail here, the sharper your matches.' },
-  4: { title: 'Activities & ambitions', subtitle: 'Beyond grades — what you do and where you\'re headed.' },
-  5: { title: 'Life at university', subtitle: 'Your preferences for campus life, teaching style, and environment.' },
-  6: { title: 'Review & confirm', subtitle: 'Everything looks right? Hit submit and we\'ll run your matches.' },
+const stepMeta = (step: number) => {
+  const screen = screenAt(step);
+  return { title: screen.question, subtitle: screen.subtitle, eyebrow: screen.eyebrow };
 };
 
 
@@ -206,10 +231,16 @@ const STEP_META: Record<number, { title: string; subtitle: string }> = {
 
 export const StudentIntakeForm = ({
   initialStep = 1,
-  initialPayload = null
+  initialPayload = null,
+  accountEmail = ''
 }: {
   initialStep?: number;
   initialPayload?: StudentProfilePayload | null;
+  /**
+   * The signed-in account's email, used to seed the email field. The wizard used to
+   * ask a logged-in student for the address they logged in with.
+   */
+  accountEmail?: string;
 }) => {
   const contentTopRef = useRef<HTMLDivElement | null>(null);
   /** Pending `focusFirstError` timer — cancelled on re-entry and on unmount. */
@@ -243,6 +274,39 @@ export const StudentIntakeForm = ({
   const skipProgrammeResetRef = useRef(false);
 
   // ── Draft persistence bookkeeping ──
+  // ── Ascendi, the milestone, and the suggestion ──
+  /**
+   * `token` increments on every reaction so the aside restarts its dwell timer even
+   * when the same sentence fires twice; `said` makes each keyed reaction fire once
+   * per session, so re-entering a screen you have already answered is silent.
+   */
+  const [ascendi, setAscendi] = useState<{ message: string | null; token: number }>({ message: null, token: 0 });
+  const saidRef = useRef<Set<string>>(new Set());
+  const speak = useCallback((message: string, once?: string) => {
+    if (once) {
+      if (saidRef.current.has(once)) return;
+      saidRef.current.add(once);
+    }
+    setAscendi((prev) => ({ message, token: prev.token + 1 }));
+  }, []);
+  const hushAscendi = useCallback(() => setAscendi((prev) => ({ message: null, token: prev.token })), []);
+
+  /** The unlock moment fires once per session. */
+  const [celebrated, setCelebrated] = useState(false);
+  const [celebrationOpen, setCelebrationOpen] = useState(false);
+
+  /** Clusters whose subject suggestion the student has waved away. */
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<string[]>([]);
+
+  /**
+   * True while `resident_country` holds a value the app INFERRED from the school
+   * country rather than one the student chose. Drives the "Assumed from your school"
+   * note — a silently pre-filled field nobody chose is worse than an empty one.
+   */
+  const [assumedResidence, setAssumedResidence] = useState(false);
+  /** The same fact as `assumedResidence`, readable at call time — see `updateSchoolCountry`. */
+  const residenceAssumedRef = useRef(false);
+
   const [draftNotice, setDraftNotice] = useState(false);
   const draftSaveInitRef = useRef(false);          // true after the persist effect's first (mount) run
   const skipNextDraftSaveRef = useRef(false);      // set when a programmatic state change shouldn't persist a draft
@@ -251,7 +315,7 @@ export const StudentIntakeForm = ({
   const pendingDraftRef = useRef<string | null>(null); // draft awaiting the debounce timer (flushed on beforeunload)
   const submittedRef = useRef(false);
 
-  const [personalInfo, setPersonalInfo] = useState(buildInitialPersonalInfo);
+  const [personalInfo, setPersonalInfo] = useState(() => buildInitialPersonalInfo(accountEmail));
 
   const [academicInput, setAcademicInput] = useState(buildInitialAcademicInput);
 
@@ -433,7 +497,7 @@ export const StudentIntakeForm = ({
       return;
     }
     setProgrammeType('');
-    setPersonalInfo(buildInitialPersonalInfo());
+    setPersonalInfo(buildInitialPersonalInfo(accountEmail));
     setNationalities(['']);
     setAcademicInput(buildInitialAcademicInput());
     setSubjects(buildDefaultSubjects(''));
@@ -446,7 +510,7 @@ export const StudentIntakeForm = ({
     setActivities(buildInitialActivities());
     setActivityRows([]);
     setCurrentStep(1);
-  }, [clearDraft, initialPayload, applyPayload, initialStep, setCurrentStep]);
+  }, [clearDraft, initialPayload, applyPayload, initialStep, setCurrentStep, accountEmail]);
 
   useEffect(() => {
     if (englishRequired === 'no') {
@@ -507,9 +571,20 @@ export const StudentIntakeForm = ({
     setLifestylePreference((prev) => ({ ...prev, [key]: value }));
 
   const toggleCluster = (value: IntendedCluster, target: 'intended_clusters' | 'secondary_clusters') => {
+    if (target === 'intended_clusters' && CLUSTER_REACTIONS[value]) {
+      speak(CLUSTER_REACTIONS[value], `cluster-${value}`);
+    }
     setAcademicInput((prev) => {
       if (target === 'intended_clusters') {
-        return { ...prev, intended_clusters: prev.intended_clusters.includes(value) ? [] : [value] };
+        /**
+         * Replaces, never clears. This used to be
+         * `includes(value) ? [] : [value]`, i.e. a toggle — and the subject area is
+         * REQUIRED, so re-activating your own choice silently emptied a mandatory
+         * field. That was survivable while it was a chip, but the group is now a
+         * `role="radiogroup"` and ARIA radios have no unchecked state reachable by
+         * re-activating them: arrowing onto your own selection would have cleared it.
+         */
+        return { ...prev, intended_clusters: [value] };
       }
       const cur = new Set(prev.secondary_clusters);
       if (cur.has(value)) { cur.delete(value); return { ...prev, secondary_clusters: Array.from(cur) }; }
@@ -721,9 +796,22 @@ export const StudentIntakeForm = ({
     liveClearableRef.current = new Set(Object.keys(allErrors));
     setErrors(allErrors);
     if (Object.keys(allErrors).length > 0) {
-      if (Object.keys(s1).length > 0) setCurrentStep(1);
-      else if (Object.keys(s2).length > 0) setCurrentStep(2);
-      else setCurrentStep(3);
+      /**
+       * Bounce to the EARLIEST screen that has something wrong on it.
+       *
+       * This used to be `if (s1) setCurrentStep(1) else if (s2) setCurrentStep(2)
+       * else setCurrentStep(3)` — three hardcoded numbers standing for "personal",
+       * "studies" and "grades". The reorder makes every one of them wrong: personal
+       * is the fifth screen now, and the studies and grades sections each span two.
+       * Left as literals, a blank form submitted from Review would have bounced to
+       * the subject area and reported a first-name error for a field four screens
+       * away.
+       *
+       * Derived from the same `stepForFieldKey` the payload path below uses, so there
+       * is one answer to "which screen owns this message" for both.
+       */
+      const earliest = Math.min(...Object.keys(allErrors).map((key) => stepForFieldKey(key)));
+      setCurrentStep(earliest);
       // Wait for the step transition to finish before scrolling to the error.
       focusFirstError(allErrors);
       return;
@@ -799,8 +887,9 @@ export const StudentIntakeForm = ({
     void markOnboardingStep('skipped_boosters_at').catch(() => {
       /* breadcrumb only — see above */
     });
+    speak(SKIP_BOOSTERS_REACTION, 'skip-boosters');
     handleFinalSubmit();
-  }, [handleFinalSubmit]);
+  }, [handleFinalSubmit, speak]);
 
   /**
    * Which way the step body should travel.
@@ -1008,60 +1097,83 @@ export const StudentIntakeForm = ({
     });
   }, [formState, currentStep]);
 
-  const stepCompletion = useMemo<Record<number, boolean>>(() => ({
-    1: Object.keys(validateStep1(formState)).length === 0,
-    2: Object.keys(validateStep2(formState)).length === 0,
-    3: Object.keys(validateStep3(formState)).length === 0,
-    4: activities.leadership_roles.length > 0 || !!activities.commitment_level
-      || activities.key_activities.length > 0,
-    // `extracurricular_interests` counts toward step 5, where its chip group
-    // actually renders — see the note in completion.ts. Attributing it to step 4
-    // (because both steps share one DB row) meant ticking one interest chip on
-    // step 5 marked "Activities" complete without the student opening it.
-    5: !!lifestylePreference.teaching_style || lifestylePreference.desired_location_type.length > 0
-      || !!lifestylePreference.campus_size
-      || lifestylePreference.extracurricular_interests.length > 0,
-    6: false,
-  }), [formState, activities, lifestylePreference]);
+  /**
+   * Per-SCREEN completion, keyed by 1-based screen number.
+   *
+   * The essential screens are "does this screen's own validator pass?", which is why
+   * the split works: `validateStep(1, …)` sees only the subject-area keys and
+   * `validateStep(2, …)` only the school keys, so picking a cluster ticks Subject
+   * area without also ticking School. Both still come from `validateStep2` — see the
+   * note in `intake-validation.ts`.
+   *
+   * The two booster screens check CONTENT, mirroring `buildStepCompletion` in
+   * `completion.ts` exactly. They must agree, or the same profile reads "3/5" in the
+   * wizard and "5/5" on the dashboard — a bug that has already shipped once.
+   * `extracurricular_interests` counts toward the LIFESTYLE screen, where its chip
+   * group renders, not toward Activities: both write into the one
+   * `student_lifestyle_preference` row, so the column cannot tell you which screen
+   * owns it, and attributing it to Activities marked a screen complete that the
+   * student had never opened.
+   */
+  const stepCompletion = useMemo<Record<number, boolean>>(() => {
+    const map: Record<number, boolean> = {};
+    WIZARD_SCREENS.forEach((screen, index) => {
+      const step = index + 1;
+      const tier = screenTier(screen);
+      if (tier === 'review') { map[step] = false; return; }
+      if (tier === 'essential') {
+        map[step] = Object.keys(validateStep(step, formState)).length === 0;
+        return;
+      }
+      map[step] = screen.section === 'activities_ambitions'
+        ? activities.leadership_roles.length > 0 || !!activities.commitment_level
+          || activities.key_activities.length > 0
+        : !!lifestylePreference.teaching_style || lifestylePreference.desired_location_type.length > 0
+          || !!lifestylePreference.campus_size
+          || lifestylePreference.extracurricular_interests.length > 0;
+    });
+    return map;
+  }, [formState, activities, lifestylePreference]);
 
   /**
-   * The Review step's model: one entry per `PROFILE_STEPS` step, in step order.
+   * The Review screen's model: one card per screen the student filled in, in SCREEN
+   * order, so the summary reads in the order they were asked.
    *
-   * Rows with a null value are dropped by `ReviewSection`, so a section shows what
-   * the student HAS answered rather than a column of em-dashes. Titles come from
-   * `PROFILE_STEPS` so the summary cannot drift from the rail.
+   * Rows with a null value are dropped by `ReviewSection`, so a card shows what the
+   * student HAS answered rather than a column of em-dashes. Titles and step numbers
+   * come from `WIZARD_SCREENS`, so the summary, the rail and the Edit links cannot
+   * drift from each other.
    */
   const reviewSections = useMemo(() => {
-    const label = (key: StepKey) => PROFILE_STEPS.find((step) => step.key === key)?.title ?? '';
+    const label = (key: string) => WIZARD_SCREENS.find((s) => s.key === key)?.railLabel ?? '';
+    const at = (key: string) => indexForScreenKey(key);
     const list = (values: string[]) => (values.length > 0 ? values.join(', ') : null);
 
     return [
       {
-        step: 1,
-        title: label('personal_information'),
-        done: stepCompletion[1],
+        step: at('subject_area'),
+        title: label('subject_area'),
+        done: stepCompletion[at('subject_area')],
         rows: [
-          { label: 'Name', value: [personalInfo.first_name, personalInfo.last_name].filter(Boolean).join(' ') || null },
-          { label: 'Email', value: personalInfo.email || null },
-          { label: 'Nationality', value: list(formattedNationalities) },
-          { label: 'Residence', value: personalInfo.resident_country || null }
+          { label: 'Main focus', value: list(academicInput.intended_clusters.map((c) => clusterLabelMap.get(c) ?? c)) },
+          { label: 'Also interested in', value: list(academicInput.secondary_clusters.map((c) => clusterLabelMap.get(c) ?? c)) },
+          { label: 'Career aim', value: academicInput.career_aspiration || null }
         ]
       },
       {
-        step: 2,
-        title: label('academic_input'),
-        done: stepCompletion[2],
+        step: at('school'),
+        title: label('school'),
+        done: stepCompletion[at('school')],
         rows: [
           { label: 'Programme', value: programmeType === 'IB' ? 'IB Diploma' : programmeType === 'A_LEVEL' ? 'A-levels' : null },
-          { label: 'School', value: academicInput.school_name || null },
-          { label: 'Focus', value: list(academicInput.intended_clusters.map((c) => clusterLabelMap.get(c) ?? c)) },
+          { label: 'School', value: [academicInput.school_name, academicInput.school_city, academicInput.school_country].filter(Boolean).join(', ') || null },
           { label: 'Graduation', value: academicInput.graduation_year || null }
         ]
       },
       {
-        step: 3,
+        step: at('academic_details'),
         title: label('academic_details'),
-        done: stepCompletion[3],
+        done: stepCompletion[at('academic_details')],
         rows: [
           // Names, not just a count. "Subjects: 6" cannot help anyone catch the
           // mistake this screen exists to catch.
@@ -1077,19 +1189,40 @@ export const StudentIntakeForm = ({
               ? `${ibSubjectSum}/42${academicInput.ib_core_points ? ` + ${academicInput.ib_core_points} core` : ''}`
               : null
           },
+          { label: 'Maths pathway', value: academicInput.ib_math_pathway || null }
+        ]
+      },
+      {
+        step: at('tests'),
+        title: label('tests'),
+        done: stepCompletion[at('tests')],
+        rows: [
           {
             label: 'English',
             value: englishRequired
               ? ({ yes: 'Required', no: 'Not required', not_sure: 'Not sure' }[englishRequired] ?? null)
               : null
           },
-          { label: 'Admissions tests', value: list(admissionsTests.filter((t) => t.test_type && t.test_type !== 'NONE').map((t) => t.test_type)) }
+          { label: 'Admissions tests', value: list(admissionsTests.filter((t) => t.test_type && t.test_type !== 'NONE').map((t) => t.test_type)) },
+          { label: 'SAT', value: activities.sat_score || null },
+          { label: 'ACT', value: activities.act_score || null }
         ]
       },
       {
-        step: 4,
+        step: at('personal_information'),
+        title: label('personal_information'),
+        done: stepCompletion[at('personal_information')],
+        rows: [
+          { label: 'Name', value: [personalInfo.first_name, personalInfo.last_name].filter(Boolean).join(' ') || null },
+          { label: 'Email', value: personalInfo.email || null },
+          { label: 'Nationality', value: list(formattedNationalities) },
+          { label: 'Residence', value: personalInfo.resident_country || null }
+        ]
+      },
+      {
+        step: at('activities_ambitions'),
         title: label('activities_ambitions'),
-        done: stepCompletion[4],
+        done: stepCompletion[at('activities_ambitions')],
         optional: true,
         emptyPrompt: 'Nothing added yet — two or three activities sharpen how you rank against other applicants.',
         emptyCta: 'Add activities',
@@ -1101,9 +1234,9 @@ export const StudentIntakeForm = ({
         ]
       },
       {
-        step: 5,
+        step: at('lifestyle_preferences'),
         title: label('lifestyle_preferences'),
-        done: stepCompletion[5],
+        done: stepCompletion[at('lifestyle_preferences')],
         optional: true,
         emptyPrompt: 'Nothing added yet — these tune where and how you would rather study.',
         emptyCta: 'Set your preferences',
@@ -1124,22 +1257,17 @@ export const StudentIntakeForm = ({
    * count and the order all come from one place — nothing here knows that
    * "essential" means three or that Review is sixth.
    */
-  const railSteps = useMemo<RailStep[]>(() => [
-    ...PROFILE_STEPS.map((step, index) => ({
-      key: step.key,
-      title: step.title,
-      tier: step.tier,
-      done: stepCompletion[index + 1] ?? false,
-      current: currentStep === index + 1
-    })),
-    {
-      key: 'review' as const,
-      title: 'Review',
-      tier: 'review' as const,
-      done: false,
-      current: currentStep === TOTAL_STEPS
-    }
-  ], [stepCompletion, currentStep]);
+  const railSteps = useMemo<RailStep[]>(
+    () =>
+      WIZARD_SCREENS.map((screen, index) => ({
+        key: screen.key,
+        title: screen.railLabel,
+        tier: screenTier(screen),
+        done: stepCompletion[index + 1] ?? false,
+        current: currentStep === index + 1
+      })),
+    [stepCompletion, currentStep]
+  );
 
   /**
    * Completeness of the ESSENTIAL steps — what the ring shows, and the only
@@ -1149,8 +1277,20 @@ export const StudentIntakeForm = ({
    * 1 that they were 0% done. See the note in `intake-rail.tsx`.
    */
   const essentialsDone = railSteps.filter((step) => step.tier === 'essential' && step.done).length;
-  const essentialPct = ESSENTIAL_STEP_KEYS.length
-    ? Math.round((essentialsDone / ESSENTIAL_STEP_KEYS.length) * 100)
+  /**
+   * Measured over the five essential SCREENS, not the three essential sections.
+   *
+   * The 100% condition is identical either way — all five screens done is exactly all
+   * three sections done — so this changes only the granularity, from 33% jumps to
+   * 20% ones. Worth stating because it now differs from the number `/profile` and
+   * `/dashboard` show, and that is deliberate rather than drift: those measure the
+   * WHOLE profile (five sections including the boosters) and are labelled that way,
+   * while this is labelled "Essentials" and is what `runMatching` and
+   * `middleware.ts` actually gate on. Two different quantities, two different
+   * labels; they agree at the only point where agreement matters.
+   */
+  const essentialPct = ESSENTIAL_SCREENS.length
+    ? Math.round((essentialsDone / ESSENTIAL_SCREENS.length) * 100)
     : 100;
 
   /**
@@ -1166,12 +1306,169 @@ export const StudentIntakeForm = ({
    * and 4 by number, so re-tiering `PROFILE_STEPS` moves this with it.
    */
   const canSkipBoosters =
-    currentStep >= FIRST_BOOSTER_STEP_INDEX &&
+    currentStep >= FIRST_BOOSTER_SCREEN_INDEX &&
     currentStep < TOTAL_STEPS &&
-    essentialsDone === ESSENTIAL_STEP_KEYS.length;
+    essentialsDone === ESSENTIAL_SCREENS.length;
 
   /** Whether the success panel should offer a route back to the extras. */
   const boostersOutstanding = railSteps.some((step) => step.tier === 'booster' && !step.done);
+
+  /**
+   * The unlock moment: the essentials are complete, so `runMatching` can run.
+   *
+   * Gated on the CURRENT SCREEN VALIDATING, not merely on the fields being non-empty.
+   * `stepCompletion` for an essential screen already is "the validator passes", so
+   * `essentialsDone` cannot go high off a half-typed field — but the guard is stated
+   * explicitly because the obvious version of this feature checks presence, and a
+   * presence check launches a full-screen celebration over somebody who has typed one
+   * letter of their email address.
+   *
+   * Fires once per session (`celebrated`), and never during a save.
+   */
+  const essentialsComplete = essentialsDone === ESSENTIAL_SCREENS.length;
+  useEffect(() => {
+    if (celebrated || submitted || !essentialsComplete) return;
+    setCelebrated(true);
+    setCelebrationOpen(true);
+    // Ascendi would otherwise be talking underneath a modal.
+    hushAscendi();
+  }, [celebrated, submitted, essentialsComplete, hushAscendi]);
+
+  /**
+   * React to a COMPLETE set of IB grades — never to a partial one, which is why this
+   * keys on `ibSubjectSum` only once every row has a name and a grade. Commenting on
+   * a running total mid-entry means commenting on a number that is wrong.
+   *
+   * The bands say nothing discouraging at any level; see `wizard-reactions.ts`.
+   */
+  const ibGradesComplete =
+    programmeType === 'IB' &&
+    subjects.length === 6 &&
+    subjects.every((s) => s.subject_name.trim() && String(s.grade_value).trim());
+  useEffect(() => {
+    if (!ibGradesComplete || ibSubjectSum === null) return;
+    const reaction = ibTotalReaction(ibSubjectSum);
+    speak(reaction.message, reaction.id);
+  }, [ibGradesComplete, ibSubjectSum, speak]);
+
+  /** The unlocks ledger. Derived from form state only — no fetch, no scoring. */
+  const unlocks = useMemo(() => buildUnlocks(formState), [formState]);
+
+  // ── The subject suggestion ──
+  const suggestion = useMemo(
+    () => suggestionFor(academicInput.intended_clusters, subjects, dismissedSuggestions),
+    [academicInput.intended_clusters, subjects, dismissedSuggestions]
+  );
+
+  const acceptSuggestion = useCallback(() => {
+    if (!suggestion) return;
+    setSubjects((prev) => applySuggestion(prev, suggestion));
+    setDismissedSuggestions((prev) => [...prev, suggestion.cluster]);
+    speak(SUGGESTION_APPLIED_REACTION, 'suggestion-applied');
+  }, [suggestion, speak]);
+
+  const declineSuggestion = useCallback(() => {
+    if (!suggestion) return;
+    setDismissedSuggestions((prev) => [...prev, suggestion.cluster]);
+  }, [suggestion]);
+
+  /**
+   * Most students study in the country they live in, so answering one answers the
+   * other. Inferred, never silently: the About screen labels the field and offers a
+   * one-click way to take it back.
+   *
+   * A plain function, not a `useCallback`, for the same reason `goToStep` is one:
+   * it closes over `updateAcademicInput`, which is itself re-created every render, so
+   * memoising this would either need that in the dependency array (defeating the
+   * memo) or omit it (a stale closure). Deliberate, and the reason the exhaustive-deps
+   * warning budget in `eslint.config.mjs` stays at its frozen 2.
+   */
+  const updateSchoolCountry = (value: string) => {
+    updateAcademicInput('school_country', value);
+
+    /**
+     * Mirror while the residence is EMPTY **or still assumed** — not only while empty.
+     *
+     * `Combobox` reports its query on every keystroke, not just on selection, so the
+     * first version of this fired once on "N", set residence to "N", and then stopped
+     * because the field was no longer empty. Measured: typing "Nigeria" into the
+     * school country left the student with a residence of "N" and a note claiming the
+     * app had assumed it for them.
+     *
+     * An assumed value keeps following its source until the student takes ownership of
+     * it — which they do by editing the field or pressing "Change", both of which
+     * clear `assumedResidence`.
+     */
+    // Ownership is tracked in a REF, not read off state.
+    //
+    // `Combobox` fires `onChange` once per keystroke, and this handler is re-created
+    // every render — so reading `assumedResidence` from the closure races the very
+    // updates it is making. Measured: typing "Nigeria" mirrored the first "N" and
+    // then stopped, leaving the student with a residence of "N" under a note claiming
+    // the app had worked it out for them. A ref is read at call time and cannot be a
+    // render behind.
+    if (personalInfo.resident_country && !residenceAssumedRef.current) return;
+    residenceAssumedRef.current = true;
+    setAssumedResidence(true);
+    setPersonalInfo((prev) => ({ ...prev, resident_country: value }));
+  };
+
+  const clearAssumedResidence = () => {
+    residenceAssumedRef.current = false;
+    setAssumedResidence(false);
+    setPersonalInfo((prev) => ({ ...prev, resident_country: '' }));
+  };
+
+  /** The student typing in the residence field takes ownership of it. */
+  const claimResidence = (value: string) => {
+    residenceAssumedRef.current = false;
+    setAssumedResidence(false);
+    updatePersonalInfo('resident_country', value);
+  };
+
+  /**
+   * Option lists for the two hero `ChoiceGroup`s.
+   *
+   * The `note` on each cluster is the point of the card treatment: it turns a list of
+   * ten labels into ten decisions with a consequence attached. Every line is a fact
+   * about applying for that subject, not a judgement of the student — the same rule
+   * `wizard-reactions.ts` documents at length.
+   */
+  const clusterChoices = useMemo<ChoiceOption[]>(() => {
+    const notes: Record<string, string> = {
+      computer_science: 'The most oversubscribed subject in the UK right now',
+      maths: 'Often wants Further Maths too',
+      engineering: 'Maths and Physics almost everywhere',
+      life_sciences_biochem: 'Chemistry is the usual gatekeeper',
+      medicine_dentistry: 'Admissions test, and an early deadline',
+      economics_quant: 'Maths required at most of the top schools',
+      business_non_quant: 'Offered nearly everywhere',
+      law: 'Personal statement carries real weight',
+      humanities: 'Essay-led, wide subject freedom',
+      creative: 'Portfolio usually matters more than grades'
+    };
+    return CLUSTER_OPTIONS.map((opt) => ({
+      value: opt.value,
+      label: opt.label,
+      note: notes[opt.value],
+      icon: CLUSTER_ICONS[opt.value]
+    }));
+  }, []);
+
+  const programmeChoices = useMemo<ChoiceOption[]>(() => [
+    {
+      value: 'IB',
+      label: 'IB Diploma',
+      note: 'Six subjects, three at Higher Level, scored out of 45',
+      icon: PROGRAMME_ICONS.IB
+    },
+    {
+      value: 'A_LEVEL',
+      label: 'A-levels',
+      note: 'Three or four subjects, graded A* to E',
+      icon: PROGRAMME_ICONS.A_LEVEL
+    }
+  ], []);
 
   /** aria-invalid / aria-describedby props for an errored input. */
   const a11yError = (key: string) =>
@@ -1201,7 +1498,7 @@ export const StudentIntakeForm = ({
         essentialPct={essentialPct}
         onStepSelect={goToStepKey}
         currentIndex={currentStep}
-        currentTitle={STEP_META[currentStep]?.title ?? ''}
+        currentTitle={screenAt(currentStep).railLabel}
       />
 
       <div className="flex flex-col lg:flex-row gap-6">
@@ -1214,7 +1511,6 @@ export const StudentIntakeForm = ({
         <div className="hidden lg:block lg:w-64">
           <IntakeRail
             sticky
-            tourAnchor
             steps={railSteps}
             essentialPct={essentialPct}
             onStepSelect={goToStepKey}
@@ -1230,7 +1526,7 @@ export const StudentIntakeForm = ({
           />
         </div>
 
-        {/* ── The work ──
+        {/* ── The work, and what it buys ──
           * Its own surface, separate from the rail's. `min-w-0` is load-bearing
           * in a flex row: without it the grids inside refuse to shrink and the
           * whole page gains a horizontal scrollbar. */}
@@ -1310,14 +1606,38 @@ export const StudentIntakeForm = ({
             * Durations and easing come from `@/lib/motion` rather than the raw
             * 0.2/0.25/'easeOut' that were here — this wizard imported
             * framer-motion but none of the app's motion vocabulary. */}
-          <motion.div
+          {/* ── The step ──
+            * One keyed element, heading and body together, and the travel is CSS
+            * rather than Framer. Everything the original comment established still
+            * holds — no `AnimatePresence`, no `mode="wait"`, no exit to wait on, and
+            * the direction follows the axis the student is paging through — but this
+            * is an entrance with no exit and no layout animation, which is exactly the
+            * case a keyframe already covers. `key` still forces a fresh mount, so the
+            * animation replays per step and NOT on every keystroke.
+            *
+            * `motion-safe:` rather than a JS reduced-motion read: unlike the
+            * `scrollIntoView` calls elsewhere in this file, a CSS animation genuinely
+            * is covered by the media query. */}
+          <div
             key={currentStep}
-            initial={{ opacity: 0, x: stepDirection * TRAVEL.app }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: DURATION.fast, ease: EASE }}
-            className="space-y-6"
+            className={cn(
+              'space-y-6',
+              stepDirection < 0
+                ? 'motion-safe:animate-step-in-back'
+                : 'motion-safe:animate-step-in-forward'
+            )}
           >
-            <div className="mb-6">
+            {/* ── The question ──
+              * At hero scale, with the eyebrow carrying a short rule so it reads as
+              * a label attached to the question rather than a stray line of small
+              * caps. The heading and its sub-line rise in a beat apart on a step
+              * change (see the `animate-rise-in` delays), which reads as composed
+              * rather than as a page swap. */}
+            <div className="mb-7">
+              <p className="eyebrow flex items-center gap-2.5">
+                <span aria-hidden className="h-0.5 w-[1.125rem] shrink-0 rounded-full bg-primary" />
+                {stepMeta(currentStep).eyebrow}
+              </p>
               {/* `tabIndex={-1}` so the step-change effect can focus it: that is
                 * what announces the new step to a screen reader and puts a keyboard
                 * user at the top of the new fields instead of at the Next button
@@ -1325,18 +1645,18 @@ export const StudentIntakeForm = ({
               <h2
                 ref={stepHeadingRef}
                 tabIndex={-1}
-                className="text-balance font-heading text-xl font-semibold tracking-tight text-foreground outline-none md:text-2xl"
+                className="mt-2.5 text-balance font-heading text-2xl font-semibold leading-[1.12] tracking-[-0.025em] text-foreground outline-none sm:text-3xl"
               >
-                {STEP_META[currentStep]?.title}
+                {stepMeta(currentStep).title}
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {STEP_META[currentStep]?.subtitle}
+              <p className="mt-2.5 max-w-[58ch] text-body-sm leading-relaxed text-muted-foreground">
+                {stepMeta(currentStep).subtitle}
               </p>
             </div>
             <div className="space-y-6">
 
-              {/* ═══ STEP 1 — Personal info ═══════════════════════════════════ */}
-              {currentStep === 1 ? (
+              {/* ═══ SCREEN 5 — About you (was the opening screen) ═══════════════ */}
+              {currentStep === 5 ? (
                 <section className="space-y-5">
                   {/* Name + email */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1435,11 +1755,27 @@ export const StudentIntakeForm = ({
                         options={COUNTRY_OPTIONS}
                         id="intake-resident-country"
                         value={personalInfo.resident_country}
-                        onChange={(v) => updatePersonalInfo('resident_country', v)}
+                        onChange={claimResidence}
                         placeholder="Search country…"
                         error={errors['personal_information.resident_country']}
                         errorId={fieldErrorId('personal_information.resident_country')}
                       />
+                      {/* The app filled this in from the school country. It SAYS so,
+                        * and offers the way out in the same breath — a pre-filled
+                        * field the student did not choose is worse than an empty one. */}
+                      {assumedResidence && personalInfo.resident_country ? (
+                        <p className="flex flex-wrap items-center gap-1.5 text-label text-muted-foreground">
+                          <INFERRED_ICON className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                          Assumed from your school.
+                          <button
+                            type="button"
+                            onClick={clearAssumedResidence}
+                            className="-my-2 rounded-lg px-1.5 py-2.5 font-semibold text-primary-ink underline transition-colors hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          >
+                            Change
+                          </button>
+                        </p>
+                      ) : null}
                     </div>
                     <label className="space-y-1.5">
                       <span className="text-sm font-medium text-muted-foreground">City <span className="text-xs">(optional)</span></span>
@@ -1482,21 +1818,85 @@ export const StudentIntakeForm = ({
                 </section>
               ) : null}
 
-              {/* ═══ STEP 2 — Your studies ════════════════════════════════════ */}
+              {/* ═══ SCREEN 1 — What do you want to study? ═══════════════════════
+                * The wizard now OPENS here. This used to be the third thing on the
+                * second screen, behind eight fields of paperwork — the single
+                * highest-intent question in the product, rendered as a chip grid
+                * below a school address. */}
+              {currentStep === 1 ? (
+                <section className="space-y-6">
+                  <ChoiceGroup
+                    label="What do you want to study?"
+                    /* `required` → a real radiogroup, which announces "2 of 10" and
+                     * selects on arrow. Correct here because a subject area is
+                     * mandatory; see the boundary note in `choice-card.tsx`. */
+                    required
+                    size="lg"
+                    fieldKey="academic_input.intended_clusters"
+                    options={clusterChoices}
+                    selected={academicInput.intended_clusters}
+                    onSelect={(value) => toggleCluster(value as IntendedCluster, 'intended_clusters')}
+                  />
+                  <FieldError msg={errors['academic_input.intended_clusters']} id={fieldErrorId('academic_input.intended_clusters')} />
+
+                  {/* Revealed only once there is a primary choice to widen FROM.
+                    * Asking for secondary interests before a main one has been made
+                    * is asking the same question twice. */}
+                  {academicInput.intended_clusters.length > 0 ? (
+                    <SectionCard className="motion-safe:animate-rise-in">
+                      <SectionTitle
+                        label="Anything else pulling at you?"
+                        hint={academicInput.secondary_clusters.length >= 2
+                          ? 'Two picked — deselect one to swap.'
+                          : 'Up to two. We use these to widen the shortlist, not to replace your main choice.'}
+                      />
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {CLUSTER_OPTIONS.filter((opt) => !academicInput.intended_clusters.includes(opt.value)).map((opt) => (
+                          <Chip
+                            key={`sec-${opt.value}`} label={opt.label}
+                            icon={CLUSTER_ICONS[opt.value]}
+                            selected={academicInput.secondary_clusters.includes(opt.value)}
+                            disabled={!academicInput.secondary_clusters.includes(opt.value) && academicInput.secondary_clusters.length >= 2}
+                            onClick={() => toggleCluster(opt.value, 'secondary_clusters')}
+                          />
+                        ))}
+                      </div>
+                    </SectionCard>
+                  ) : null}
+
+                  <label className="block space-y-1.5">
+                    <span className="text-sm font-medium text-muted-foreground">Career aspiration <span className="text-xs">(optional)</span></span>
+                    <input
+                      type="text" className="form-input"
+                      placeholder="Investment banker, software engineer, doctor…"
+                      value={academicInput.career_aspiration}
+                      onChange={(e) => updateAcademicInput('career_aspiration', e.target.value)}
+                    />
+                  </label>
+                </section>
+              ) : null}
+
+              {/* ═══ SCREEN 2 — Where are you studying? ══════════════════════════ */}
               {currentStep === 2 ? (
-                <section className="space-y-5">
-                  {/* Programme type */}
-                  <div className="space-y-2" data-field="academic_input.programme_type">
+                <section className="space-y-6">
+                  {/* Programme type. A `ChoiceGroup`, not two chips: this decides how
+                    * every grade on the next screen is read, so it earns the space. */}
+                  <div className="space-y-2.5">
                     <p className="text-sm font-medium">Which qualification are you taking?</p>
-                    <div className="flex flex-wrap gap-2">
-                      {[{ value: 'IB', label: 'IB Diploma' }, { value: 'A_LEVEL', label: 'A-levels' }].map((opt) => (
-                        <Chip
-                          key={opt.value} label={opt.label}
-                          selected={programmeType === opt.value}
-                          onClick={() => setProgrammeType(opt.value as ProgrammeType)}
-                        />
-                      ))}
-                    </div>
+                    <ChoiceGroup
+                      label="Which qualification are you taking?"
+                      required
+                      size="lg"
+                      columns="duo"
+                      fieldKey="academic_input.programme_type"
+                      options={programmeChoices}
+                      selected={programmeType ? [programmeType] : []}
+                      onSelect={(value) => {
+                        const next = value as ProgrammeType;
+                        if (PROGRAMME_REACTIONS[next]) speak(PROGRAMME_REACTIONS[next], `programme-${next}`);
+                        setProgrammeType(next);
+                      }}
+                    />
                     <FieldError msg={errors['academic_input.programme_type']} id={fieldErrorId('academic_input.programme_type')} />
                   </div>
 
@@ -1521,7 +1921,7 @@ export const StudentIntakeForm = ({
                         options={COUNTRY_OPTIONS}
                         id="intake-school-country"
                         value={academicInput.school_country}
-                        onChange={(v) => updateAcademicInput('school_country', v)}
+                        onChange={updateSchoolCountry}
                         error={errors['academic_input.school_country']}
                         errorId={fieldErrorId('academic_input.school_country')}
                       />
@@ -1588,66 +1988,39 @@ export const StudentIntakeForm = ({
                     </label>
                   </div>
 
-                  {/* Subject clusters */}
-                  <SectionCard>
-                    <SectionTitle
-                      label="What do you want to study?"
-                      hint="Select your primary focus area."
-                      why="We use this to shortlist the most relevant programmes and weight your eligibility scores."
-                    />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" data-field="academic_input.intended_clusters">
-                      {CLUSTER_OPTIONS.map((opt) => (
-                        // NOT disabled at the cap. `toggleCluster` already REPLACES
-                        // the selection for this single-choice group, so disabling the
-                        // other nine was decoration that (a) dropped them out of the
-                        // tab order with no announcement of why, (b) crushed them to
-                        // opacity-40 — 2.5:1, unreadable — and (c) forced a
-                        // deselect-then-select round trip to change your mind. Picking
-                        // another one just works.
-                        <Chip
-                          key={opt.value} label={opt.label} emoji={opt.emoji}
-                          selected={academicInput.intended_clusters.includes(opt.value)}
-                          onClick={() => toggleCluster(opt.value, 'intended_clusters')}
-                        />
-                      ))}
-                    </div>
-                    <FieldError msg={errors['academic_input.intended_clusters']} id={fieldErrorId('academic_input.intended_clusters')} />
-                  </SectionCard>
-
-                  <SectionCard>
-                    <SectionTitle
-                      label="Secondary interests"
-                      hint={academicInput.secondary_clusters.length >= 2
-                        ? 'Two picked — deselect one to swap.'
-                        : 'Up to two — used to broaden your match pool.'}
-                    />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {CLUSTER_OPTIONS.map((opt) => (
-                        <Chip
-                          key={`sec-${opt.value}`} label={opt.label} emoji={opt.emoji}
-                          selected={academicInput.secondary_clusters.includes(opt.value)}
-                          disabled={!academicInput.secondary_clusters.includes(opt.value) && academicInput.secondary_clusters.length >= 2}
-                          onClick={() => toggleCluster(opt.value, 'secondary_clusters')}
-                        />
-                      ))}
-                    </div>
-                  </SectionCard>
-
-                  <label className="space-y-1.5 block">
-                    <span className="text-sm font-medium text-muted-foreground">Career aspiration <span className="text-xs">(optional)</span></span>
-                    <input
-                      type="text" className="form-input"
-                      placeholder="Investment banker, software engineer, doctor…"
-                      value={academicInput.career_aspiration}
-                      onChange={(e) => updateAcademicInput('career_aspiration', e.target.value)}
-                    />
-                  </label>
                 </section>
               ) : null}
 
-              {/* ═══ STEP 3 — Grades & tests ══════════════════════════════════ */}
+              {/* ═══ SCREEN 3 — Subjects & predicted grades ══════════════════════
+                * Split out of the old grades-and-tests screen, which carried ~21
+                * controls across ten cards. English and admissions tests are now
+                * screen 4. */}
               {currentStep === 3 ? (
                 <section className="space-y-5">
+                  {/* ── The subject suggestion ──
+                    * Offered only while every row is still empty, so it can never
+                    * overwrite an answer, and it writes NAMES only — a suggested grade
+                    * would be a fabrication attributed to the student. Nothing in
+                    * `intake-validation.ts` knows it exists; see the `968b331` note in
+                    * `wizard-suggestions.ts` for why that separation is the whole
+                    * feature. */}
+                  {suggestion ? (
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 px-4 py-3.5 motion-safe:animate-rise-in">
+                      <p className="min-w-[15rem] flex-1 text-body-sm leading-relaxed text-foreground">
+                        Most <strong className="font-semibold">{suggestion.clusterLabel}</strong> applicants take{' '}
+                        {suggestion.subjects.slice(0, -1).join(', ')} and {suggestion.subjects[suggestion.subjects.length - 1]}. Want to start there?
+                      </p>
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        <Button type="button" size="sm" onClick={acceptSuggestion}>
+                          Use these
+                        </Button>
+                        <Button type="button" size="sm" variant="outline" onClick={declineSuggestion}>
+                          No thanks
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+
                   {/* Subjects */}
                   <SectionCard>
                     <div className="flex items-center justify-between gap-3">
@@ -1879,6 +2252,40 @@ export const StudentIntakeForm = ({
                     </>
                   ) : null}
 
+                  {/* EPQ / Extended Project — A-level only. It is coursework, so it
+                    * belongs with the grades rather than with the extracurriculars,
+                    * and `wizard-screens.ts` routes its two columns here. */}
+                  {(programmeType === 'A_LEVEL' || programmeType === 'ACT') ? (
+                    <SectionCard>
+                      <SectionTitle
+                        label="Extended Project (EPQ)"
+                        hint="Optional — if you've written an EPQ or equivalent independent research project."
+                        why="Universities value self-directed research. A relevant EPQ can strengthen your application for competitive programmes."
+                      />
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <label className="space-y-1.5">
+                          <span className="text-sm font-medium text-muted-foreground">Subject area <span className="text-xs">(optional)</span></span>
+                          <input type="text" className="form-input"
+                            value={activities.epq_subject}
+                            onChange={(e) => setActivities((prev) => ({ ...prev, epq_subject: e.target.value }))}
+                            placeholder="e.g. Biology, Economics, History" />
+                        </label>
+                        <label className="space-y-1.5">
+                          <span className="text-sm font-medium text-muted-foreground">Project title <span className="text-xs">(optional)</span></span>
+                          <input type="text" className="form-input"
+                            value={activities.epq_title}
+                            onChange={(e) => setActivities((prev) => ({ ...prev, epq_title: e.target.value }))}
+                            placeholder="e.g. To what extent does microfinance reduce poverty?" />
+                        </label>
+                      </div>
+                    </SectionCard>
+                  ) : null}
+                </section>
+              ) : null}
+
+              {/* ═══ SCREEN 4 — English & admissions tests ═══════════════════════ */}
+              {currentStep === 4 ? (
+                <section className="space-y-5">
                   {/* English proficiency */}
                   <SectionCard>
                     <SectionTitle
@@ -1989,34 +2396,13 @@ export const StudentIntakeForm = ({
                     </SectionCard>
                   ) : null}
 
-                  {/* EPQ / Extended Project — A-level only */}
-                  {(programmeType === 'A_LEVEL' || programmeType === 'ACT') ? (
-                    <SectionCard>
-                      <SectionTitle
-                        label="Extended Project (EPQ)"
-                        hint="Optional — if you've written an EPQ or equivalent independent research project."
-                        why="Universities value self-directed research. A relevant EPQ can strengthen your application for competitive programmes."
-                      />
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <label className="space-y-1.5">
-                          <span className="text-sm font-medium text-muted-foreground">Subject area <span className="text-xs">(optional)</span></span>
-                          <input type="text" className="form-input"
-                            value={activities.epq_subject}
-                            onChange={(e) => setActivities((prev) => ({ ...prev, epq_subject: e.target.value }))}
-                            placeholder="e.g. Biology, Economics, History" />
-                        </label>
-                        <label className="space-y-1.5">
-                          <span className="text-sm font-medium text-muted-foreground">Project title <span className="text-xs">(optional)</span></span>
-                          <input type="text" className="form-input"
-                            value={activities.epq_title}
-                            onChange={(e) => setActivities((prev) => ({ ...prev, epq_title: e.target.value }))}
-                            placeholder="e.g. To what extent does microfinance reduce poverty?" />
-                        </label>
-                      </div>
-                    </SectionCard>
-                  ) : null}
-
-                  {/* SAT / ACT — optional, for international applications */}
+                  {/* SAT / ACT — optional, for international applications.
+                    * These live HERE, with the other admissions tests, and
+                    * `wizard-screens.ts` routes their payload keys to this screen.
+                    * That routing is the fix for the third instance of a bug this
+                    * file has now had twice: the old prefix ladder had no branch for
+                    * them, so a rejected SAT of 1650 sent the student to the
+                    * activities screen, which does not contain the field. */}
                   <SectionCard>
                     <SectionTitle
                       label="SAT / ACT scores"
@@ -2064,8 +2450,8 @@ export const StudentIntakeForm = ({
                 </section>
               ) : null}
 
-              {/* ═══ STEP 4 — Activities & ambitions ═════════════════════════ */}
-              {currentStep === 4 ? (
+              {/* ═══ SCREEN 6 — Activities & ambitions (booster) ════════════════ */}
+              {currentStep === 6 ? (
                 <section className="space-y-5">
 
                   {/* ── Leadership ─────────────────────────────────────────── */}
@@ -2240,8 +2626,8 @@ export const StudentIntakeForm = ({
                 </section>
               ) : null}
 
-              {/* ═══ STEP 5 — Lifestyle preferences ══════════════════════════ */}
-              {currentStep === 5 ? (
+              {/* ═══ SCREEN 7 — Life at university (booster) ════════════════════ */}
+              {currentStep === 7 ? (
                 <section className="space-y-5">
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Teaching style preference</p>
@@ -2253,6 +2639,7 @@ export const StudentIntakeForm = ({
                         { value: '', label: 'No preference' },
                       ].map((opt) => (
                         <Chip key={opt.value} label={opt.label} description={opt.desc}
+                          icon={iconFor(TEACHING_ICONS, opt.value)}
                           selected={lifestylePreference.teaching_style === opt.value}
                           onClick={() => updateLifestylePreference('teaching_style', opt.value)} />
                       ))}
@@ -2263,19 +2650,20 @@ export const StudentIntakeForm = ({
                     <p className="text-sm font-medium">Preferred location type</p>
                     <p className="text-xs text-muted-foreground">Select as many as you like. Choosing multiple is fine — it won&apos;t affect your score.</p>
                     <div className="flex flex-wrap gap-2">
-                      {/* The emoji goes in `emoji`, NOT baked into `label`. It used
-                        * to be part of the label string, which made it part of the
-                        * chip's accessible name — a screen reader read "cityscape
-                        * Capital city". Every other chip group in this form already
-                        * passed it separately, so this was also the odd one out. */}
+                      {/* Icons, not emoji. The emoji were passed separately from the
+                        * label so a screen reader would not read "cityscape Capital
+                        * city" — that fix is preserved by `aria-hidden` on the icon,
+                        * and the icon additionally tints with the chip, which an
+                        * emoji could not do. See `wizard-icons.ts`. */}
                       {[
-                        { value: 'capital_city', label: 'Capital city', emoji: '🏙' },
-                        { value: 'major_city', label: 'Major city', emoji: '🌆' },
-                        { value: 'smaller_city', label: 'Smaller city', emoji: '🏘' },
-                        { value: 'suburban', label: 'Suburban / campus', emoji: '🌿' },
+                        { value: 'capital_city', label: 'Capital city' },
+                        { value: 'major_city', label: 'Major city' },
+                        { value: 'smaller_city', label: 'Smaller city' },
+                        { value: 'suburban', label: 'Suburban / campus' },
                         { value: 'no_preference', label: 'No preference' },
                       ].map((opt) => (
-                        <Chip key={opt.value} label={opt.label} emoji={opt.emoji}
+                        <Chip key={opt.value} label={opt.label}
+                          icon={iconFor(LOCATION_ICONS, opt.value)}
                           selected={lifestylePreference.desired_location_type.includes(opt.value)}
                           onClick={() => toggleLocationPreference(opt.value)} />
                       ))}
@@ -2291,7 +2679,8 @@ export const StudentIntakeForm = ({
                         { value: 'large', label: 'Large', desc: '15k+' },
                         { value: 'no_preference', label: 'No preference' },
                       ].map((opt) => (
-                        <Chip key={opt.value} label={opt.label} description={(opt as any).desc}
+                        <Chip key={opt.value} label={opt.label} description={(opt as { desc?: string }).desc}
+                          icon={iconFor(CAMPUS_ICONS, opt.value)}
                           selected={lifestylePreference.campus_size === opt.value}
                           onClick={() => updateLifestylePreference('campus_size', opt.value)} />
                       ))}
@@ -2322,7 +2711,7 @@ export const StudentIntakeForm = ({
                 </section>
               ) : null}
 
-              {/* ═══ STEP 6 — Review ══════════════════════════════════════════ */}
+              {/* ═══ SCREEN 8 — Review ══════════════════════════════════════════ */}
               {currentStep === TOTAL_STEPS ? (
                 <section className="space-y-3">
                   {/* One card per step, in step order, ALL FIVE. The old summary
@@ -2349,7 +2738,7 @@ export const StudentIntakeForm = ({
               ) : null}
 
             </div>
-          </motion.div>
+          </div>
 
           {/* ── Status line ──
             * OUTSIDE the keyed step body, so it renders on every step and is not
@@ -2418,7 +2807,7 @@ export const StudentIntakeForm = ({
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => setCurrentStep(FIRST_BOOSTER_STEP_INDEX)}
+                    onClick={() => setCurrentStep(FIRST_BOOSTER_SCREEN_INDEX)}
                   >
                     Add the optional extras
                   </Button>
@@ -2477,9 +2866,52 @@ export const StudentIntakeForm = ({
               </Button>
             )}
           </div>
+
+          {/* ── What the answers so far actually buy ──
+            * The honest replacement for the live preview reverted in `be04bab`. It
+            * makes no claim about the catalogue and never grades the student: every
+            * row is a capability that a particular answer enables, derived from form
+            * state with no fetch and no scoring engine. The last two rows depend on
+            * the OPTIONAL screens, which is what makes those visibly worth doing.
+            *
+            * Hidden on Review, where the summary below already accounts for
+            * everything and a second inventory is noise. */}
+          {currentStep !== TOTAL_STEPS ? (
+            <div className="mt-5">
+              <UnlocksLedger entries={unlocks} />
+            </div>
+          ) : null}
         </div>
       </div>
 
+      {/* ── The two overlays, both code-split ──
+        * Ascendi reacts to answers; the celebration fires once, when the essentials
+        * validate. Neither is on the first-paint path, so both live behind
+        * `next/dynamic` (see `wizard-overlays-lazy.tsx`).
+        *
+        * THE GUARDS ARE LOAD-BEARING, not tidiness. `next/dynamic` fetches on first
+        * RENDER, and both components return `null` while idle — so mounting them
+        * unconditionally would pull both chunks on mount and the split would save
+        * nothing while every test still passed. Rendering them only when they have
+        * something to show is what keeps the route inside its budget.
+        *
+        * Ascendi is `role="status"`, so it never takes focus from the field that
+        * triggered it. */}
+      {ascendi.message ? (
+        <LazyAscendiAside message={ascendi.message} token={ascendi.token} onDismiss={hushAscendi} />
+      ) : null}
+
+      {celebrationOpen ? (
+        <LazyMilestoneCelebration
+          open
+          boostersOutstanding={boostersOutstanding}
+          onContinue={() => {
+            setCelebrationOpen(false);
+            setCurrentStep(FIRST_BOOSTER_SCREEN_INDEX);
+          }}
+          onDismiss={() => setCelebrationOpen(false)}
+        />
+      ) : null}
     </form>
   );
 };

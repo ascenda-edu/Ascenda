@@ -5,7 +5,7 @@ import { List, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { IntakeRail, CompletionRing, type RailStep } from './intake-rail';
-import type { StepKey } from '@/lib/profile/steps';
+
 
 /**
  * The wizard's step navigation below `lg`, where the rail does not fit.
@@ -30,7 +30,7 @@ import type { StepKey } from '@/lib/profile/steps';
 interface IntakeStepMeterProps {
   steps: RailStep[];
   essentialPct: number;
-  onStepSelect: (key: StepKey | 'review') => void;
+  onStepSelect: (key: string) => void;
   /** 1-based, for the "Step 3 of 6" readout. */
   currentIndex: number;
   currentTitle: string;
@@ -45,7 +45,7 @@ export function IntakeStepMeter({
 }: IntakeStepMeterProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const select = (key: StepKey | 'review') => {
+  const select = (key: string) => {
     onStepSelect(key);
     setSheetOpen(false);
   };

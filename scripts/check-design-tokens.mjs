@@ -59,6 +59,13 @@ const ALLOW = {
     // 34 hex values inside an SVG illustration. Genuinely outside the token system:
     // these are artwork fills, not UI chrome. (09-design-system.md:222)
     'src/components/landing-preview/rocket-art.tsx',
+    // 5 hex values, and the same case as rocket-art.tsx above: the mascot's own
+    // palette, sampled from public/ascenda-rocket.png for the badge-sized Ascendi in
+    // the profile wizard. Artwork fills rather than UI chrome, and they must NOT
+    // follow the theme — Ascendi is a character with fixed colours, so a teal hull
+    // that inverted in dark mode would be a different character. Deliberately not
+    // `currentColor` for the same reason.
+    'src/components/profile/wizard/ascendi-mark.tsx',
     // <meta name="theme-color"> must be a literal colour; it cannot read a CSS var.
     // (src/app/layout.tsx:28-29)
     'src/app/layout.tsx',

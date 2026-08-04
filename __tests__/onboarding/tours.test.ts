@@ -61,6 +61,36 @@ describe('every anchor in the registry exists in the source', () => {
   it.each(steps)('$id → data-tour="$anchor" is rendered somewhere in src/', ({ anchor }) => {
     expect(present.has(anchor)).toBe(true);
   });
+
+  /**
+   * …and the REVERSE, which is the direction nothing checked.
+   *
+   * Only the forward assertion existed, so an `data-tour` attribute that no tour step
+   * pointed at was invisible. `data-tour="wizard-progress"` sat on the intake rail
+   * with eight lines of comment explaining a duplicate-anchor hazard it was guarding
+   * against, and no tour had ever spotlighted it — dead code that read as load-bearing
+   * infrastructure, which is worse than dead code that reads as dead.
+   *
+   * An orphan is cheap to create (delete a tour step, keep the attribute) and costs
+   * nothing at runtime, so this is a maintenance assertion rather than a correctness
+   * one. That is the point: it keeps the anchors and the registry honest about each
+   * other in both directions.
+   */
+  it('has no orphan anchors — every data-tour in src/ is used by some tour', () => {
+    const used = new Set(steps.map((step) => step.anchor));
+    // The grep is deliberately dumb — it matches the attribute pattern anywhere in
+    // `src`, including two places that are not anchors at all: the selector template
+    // in `product-tour.tsx` (`[data-tour="${CSS.escape(anchor)}"]`), and prose
+    // comments that write `data-tour="…"` to mean "some anchor". Restricting to
+    // kebab-case ASCII excludes both by shape rather than by naming them, so a third
+    // kind of false positive does not need a third special case.
+    const ANCHOR_SHAPE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+    const orphans = Array.from(present)
+      .filter((anchor) => ANCHOR_SHAPE.test(anchor))
+      .filter((anchor) => !used.has(anchor))
+      .sort();
+    expect(orphans).toEqual([]);
+  });
 });
 
 describe('the registry itself', () => {

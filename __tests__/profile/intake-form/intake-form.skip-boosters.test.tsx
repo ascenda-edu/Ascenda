@@ -35,6 +35,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { StudentProfilePayload } from '@/lib/profile/intake-types';
 import { FIRST_BOOSTER_STEP_INDEX, PROFILE_STEPS } from '@/lib/profile/steps';
+import { FIRST_BOOSTER_SCREEN_INDEX, WIZARD_SCREENS } from '@/lib/profile/wizard-screens';
 
 // ── Seams (same set, and same reasons, as the characterization suite) ─────────
 
@@ -194,18 +195,44 @@ const setup = () => userEvent.setup();
 const renderForm = (props: Parameters<typeof StudentIntakeForm>[0] = {}) =>
   render(<StudentIntakeForm {...props} />);
 
+/**
+ * The eight SCREENS, by name. See `wizard-screens.ts`: the reorder leads with the
+ * subject area, splits the old grades screen in two, and puts the paperwork fifth.
+ * Referring to screens by number does not survive a reorder.
+ */
+const SCREEN = {
+  subject: 1, school: 2, grades: 3, tests: 4,
+  about: 5, activities: 6, life: 7, review: 8
+} as const;
+
 const SIDEBAR: Record<number, RegExp> = {
-  1: /Personal info/, 2: /Your studies/, 3: /Grades & tests/,
-  4: /Activities/, 5: /Lifestyle/, 6: /Review/
+  [SCREEN.subject]: /Subject area/,
+  [SCREEN.school]: /^School/,
+  [SCREEN.grades]: /Subjects & grades/,
+  [SCREEN.tests]: /^Tests/,
+  [SCREEN.about]: /About you/,
+  [SCREEN.activities]: /Activities/,
+  [SCREEN.life]: /Life at university/,
+  [SCREEN.review]: /Review & send/
 };
 const STEP_TITLE: Record<number, string> = {
-  1: 'Who are you?', 2: 'Your studies', 3: 'Grades & tests',
-  4: 'Activities & ambitions', 5: 'Life at university', 6: 'Review & confirm'
+  [SCREEN.subject]: 'What do you want to study?',
+  [SCREEN.school]: 'Where are you studying?',
+  [SCREEN.grades]: 'Your subjects and predicted grades',
+  [SCREEN.tests]: 'English and admissions tests',
+  [SCREEN.about]: 'Now the boring bit',
+  [SCREEN.activities]: 'What do you do outside class?',
+  [SCREEN.life]: 'What should university feel like?',
+  [SCREEN.review]: 'Does this all look right?'
 };
 const STEP_BODY: Record<number, string> = {
-  1: 'Add more than one if applicable.', 2: 'Which qualification are you taking?',
-  3: 'Subjects & predicted grades', 4: 'Leadership roles',
-  5: 'Teaching style preference'
+  [SCREEN.subject]: 'Portfolio usually matters more than grades',
+  [SCREEN.school]: 'Which qualification are you taking?',
+  [SCREEN.grades]: 'Subjects & predicted grades',
+  [SCREEN.tests]: 'English proficiency',
+  [SCREEN.about]: 'Add more than one if applicable.',
+  [SCREEN.activities]: 'Leadership roles',
+  [SCREEN.life]: 'Teaching style preference'
 };
 
 const skipButton = () => screen.queryByRole('button', { name: 'Skip for now' });
@@ -228,14 +255,14 @@ const railButton = (name: RegExp | string) => within(rail()).getByRole('button',
 const hydrateThenGoTo = async (
   user: ReturnType<typeof setup>,
   payload: StudentProfilePayload,
-  step: 2 | 3 | 4 | 5 | 6
+  step: 2 | 3 | 4 | 5 | 6 | 7 | 8
 ) => {
-  const view = renderForm({ initialPayload: payload, initialStep: 1 });
+  const view = renderForm({ initialPayload: payload, initialStep: SCREEN.subject });
   await user.click(railButton(SIDEBAR[step]));
   await screen.findByRole('heading', { name: STEP_TITLE[step] });
   // Step 6 has no fixture-independent body string — the summary omits empty rows —
   // so wait for its per-section Edit buttons instead.
-  if (step === 6) await screen.findAllByRole('button', { name: /^Edit/ });
+  if (step === SCREEN.review) await screen.findAllByRole('button', { name: /^Edit/ });
   else await screen.findByText(STEP_BODY[step]);
   // Returned so a test that renders the form TWICE can unmount the first tree.
   // Two live copies make every `getByRole` ambiguous.
@@ -261,45 +288,53 @@ afterEach(async () => {
 // ═════════════════════════════════════════════════════════════════════════════
 
 describe('Skip for now — where it is offered', () => {
-  it('the tier boundary is derived, not hardcoded at 4', () => {
-    // If this ever fails, the step numbers below are lying and the rest of this
-    // file is testing the wrong boundary. `steps.ts` is the source of truth.
+  it('the tier boundary is derived, not hardcoded', () => {
+    // If this ever fails, the screen numbers below are lying and the rest of this
+    // file is testing the wrong boundary.
+    //
+    // TWO boundaries now, and they are different numbers on purpose: sections are
+    // still five with the boosters starting at 4 (`steps.ts`, which drives the DB
+    // completion and the middleware gate), while the wizard walks eight SCREENS with
+    // the boosters starting at 6 (`wizard-screens.ts`). The wizard's "Skip for now"
+    // keys off the SCREEN boundary.
     expect(FIRST_BOOSTER_STEP_INDEX).toBe(4);
     expect(PROFILE_STEPS).toHaveLength(5);
+    expect(FIRST_BOOSTER_SCREEN_INDEX).toBe(SCREEN.activities);
+    expect(WIZARD_SCREENS).toHaveLength(8);
   });
 
   it('is absent on step 1, even with everything essential already filled in', () => {
-    renderForm({ initialPayload: clone(SKIPPABLE), initialStep: 1 });
+    renderForm({ initialPayload: clone(SKIPPABLE), initialStep: SCREEN.subject });
     expect(skipButton()).not.toBeInTheDocument();
   });
 
   it('is absent on step 2 — submitting there would fail validation and bounce backwards', async () => {
     const user = setup();
-    await hydrateThenGoTo(user, clone(SKIPPABLE), 2);
+    await hydrateThenGoTo(user, clone(SKIPPABLE), SCREEN.school);
     expect(skipButton()).not.toBeInTheDocument();
   });
 
   it('is absent on step 3, the last essential step', async () => {
     const user = setup();
-    await hydrateThenGoTo(user, clone(SKIPPABLE), 3);
+    await hydrateThenGoTo(user, clone(SKIPPABLE), SCREEN.grades);
     expect(skipButton()).not.toBeInTheDocument();
   });
 
   it('appears on step 4, the first booster step', async () => {
     const user = setup();
-    await hydrateThenGoTo(user, clone(SKIPPABLE), 4);
+    await hydrateThenGoTo(user, clone(SKIPPABLE), SCREEN.activities);
     expect(skipButton()).toBeInTheDocument();
   });
 
   it('appears on step 5, the second booster step', async () => {
     const user = setup();
-    await hydrateThenGoTo(user, clone(SKIPPABLE), 5);
+    await hydrateThenGoTo(user, clone(SKIPPABLE), SCREEN.life);
     expect(skipButton()).toBeInTheDocument();
   });
 
   it('is absent on Review, which has its own submit button', async () => {
     const user = setup();
-    await hydrateThenGoTo(user, clone(SKIPPABLE), 6);
+    await hydrateThenGoTo(user, clone(SKIPPABLE), SCREEN.review);
     expect(skipButton()).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Submit & see matches' })).toBeInTheDocument();
   });
@@ -308,7 +343,7 @@ describe('Skip for now — where it is offered', () => {
     // An empty form rendered straight onto step 4. The student is standing on a
     // booster step, but steps 1-3 are empty — so a skip would write a profile
     // `runMatching` cannot rank, and the offer is withheld.
-    renderForm({ initialStep: 4 });
+    renderForm({ initialStep: SCREEN.activities });
     expect(skipButton()).not.toBeInTheDocument();
   });
 
@@ -316,7 +351,7 @@ describe('Skip for now — where it is offered', () => {
     const user = setup();
     const payload = clone(SKIPPABLE);
     payload.academic_input.school_name = ''; // step 2 now fails
-    await hydrateThenGoTo(user, payload, 4);
+    await hydrateThenGoTo(user, payload, SCREEN.activities);
     expect(skipButton()).not.toBeInTheDocument();
   });
 });
@@ -328,7 +363,7 @@ describe('Skip for now — where it is offered', () => {
 describe('Skip for now — what it does', () => {
   it('saves, and records the skipped_boosters_at breadcrumb', async () => {
     const user = setup();
-    await hydrateThenGoTo(user, clone(SKIPPABLE), 4);
+    await hydrateThenGoTo(user, clone(SKIPPABLE), SCREEN.activities);
     await user.click(skipButton()!);
 
     await waitFor(() => expect(saveStudentIntake).toHaveBeenCalledTimes(1));
@@ -340,7 +375,7 @@ describe('Skip for now — what it does', () => {
     // and a completed one must not diverge in what they persist. This is the
     // assertion that catches them drifting apart.
     const user = setup();
-    const first = await hydrateThenGoTo(user, clone(SKIPPABLE), 4);
+    const first = await hydrateThenGoTo(user, clone(SKIPPABLE), SCREEN.activities);
     await user.click(skipButton()!);
     await waitFor(() => expect(saveStudentIntake).toHaveBeenCalledTimes(1));
     const viaSkip = saveStudentIntake.mock.calls[0][0] as StudentProfilePayload;
@@ -349,7 +384,7 @@ describe('Skip for now — what it does', () => {
     window.localStorage.clear(); // the first tree left a draft; it must not hydrate the second
     saveStudentIntake.mockClear();
     const second = setup();
-    await hydrateThenGoTo(second, clone(SKIPPABLE), 6);
+    await hydrateThenGoTo(second, clone(SKIPPABLE), SCREEN.review);
     await second.click(screen.getByRole('button', { name: 'Submit & see matches' }));
     await waitFor(() => expect(saveStudentIntake).toHaveBeenCalledTimes(1));
     const viaReview = saveStudentIntake.mock.calls[0][0] as StudentProfilePayload;
@@ -364,7 +399,7 @@ describe('Skip for now — what it does', () => {
     // would clear the gate and see zero matches — with tiering.test.ts still
     // green, because it never renders the form.
     const user = setup();
-    await hydrateThenGoTo(user, clone(SKIPPABLE), 4);
+    await hydrateThenGoTo(user, clone(SKIPPABLE), SCREEN.activities);
     await user.click(skipButton()!);
 
     await waitFor(() => expect(saveStudentIntake).toHaveBeenCalledTimes(1));
@@ -379,7 +414,7 @@ describe('Skip for now — what it does', () => {
     // the student the save they actually asked for.
     const user = setup();
     markOnboardingStep.mockRejectedValue(new Error('offline'));
-    await hydrateThenGoTo(user, clone(SKIPPABLE), 4);
+    await hydrateThenGoTo(user, clone(SKIPPABLE), SCREEN.activities);
     await user.click(skipButton()!);
 
     await waitFor(() => expect(saveStudentIntake).toHaveBeenCalledTimes(1));
@@ -388,12 +423,12 @@ describe('Skip for now — what it does', () => {
 
   it('reports success on the booster step itself, without a detour through Review', async () => {
     const user = setup();
-    await hydrateThenGoTo(user, clone(SKIPPABLE), 4);
+    await hydrateThenGoTo(user, clone(SKIPPABLE), SCREEN.activities);
     await user.click(skipButton()!);
 
     expect(await screen.findByText('Profile saved — your matches are ready')).toBeInTheDocument();
     // Still on step 4 — the skip is an exit, not a jump to Review.
-    expect(screen.getByRole('heading', { name: 'Activities & ambitions' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: STEP_TITLE[SCREEN.activities] })).toBeInTheDocument();
   });
 
   it('the success panel offers a route BACK to the extras it just skipped', async () => {
@@ -401,13 +436,13 @@ describe('Skip for now — what it does', () => {
     // exit — there was no way back to the boosters from the save confirmation, so
     // "for now" was effectively "never" unless they went looking.
     const user = setup();
-    await hydrateThenGoTo(user, clone(SKIPPABLE), 4);
+    await hydrateThenGoTo(user, clone(SKIPPABLE), SCREEN.activities);
     await user.click(skipButton()!);
     await screen.findByText('Profile saved — your matches are ready');
 
     const back = screen.getByRole('button', { name: 'Add the optional extras' });
     await user.click(back);
-    expect(await screen.findByRole('heading', { name: 'Activities & ambitions' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: STEP_TITLE[SCREEN.activities] })).toBeInTheDocument();
   }, 20000);
 
   it('a COMPLETE profile gets no "add the extras" prompt', async () => {
@@ -415,7 +450,7 @@ describe('Skip for now — what it does', () => {
     const payload = clone(SKIPPABLE);
     payload.lifestyle_preference.key_activities = ['Debate / Model UN'];
     payload.lifestyle_preference.teaching_style = 'academic';
-    await hydrateThenGoTo(user, payload, 6);
+    await hydrateThenGoTo(user, payload, SCREEN.review);
     await user.click(screen.getByRole('button', { name: 'Submit & see matches' }));
 
     await screen.findByText('Profile saved — your matches are ready');
@@ -425,7 +460,7 @@ describe('Skip for now — what it does', () => {
   it('a failed save surfaces an alert and does not claim the profile was saved', async () => {
     const user = setup();
     saveStudentIntake.mockResolvedValue({ success: false, message: 'Some answers could not be saved.' });
-    await hydrateThenGoTo(user, clone(SKIPPABLE), 4);
+    await hydrateThenGoTo(user, clone(SKIPPABLE), SCREEN.activities);
     await user.click(skipButton()!);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Some answers could not be saved.');

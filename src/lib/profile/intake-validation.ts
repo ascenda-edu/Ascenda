@@ -15,6 +15,7 @@
 import { formatNationalities, parseNumber, type IntakeFormState } from '@/lib/profile/intake-logic';
 import { getMaxSubjects } from '@/lib/profile/intake-options';
 import { studentProfilePayloadSchema } from '@/lib/profile/intake-schema';
+import { screenAt, screenIndexForFieldKey } from '@/lib/profile/wizard-screens';
 
 export type IntakeErrors = Record<string, string>;
 
@@ -141,60 +142,58 @@ export const validatePayload = (payload: unknown): IntakeErrors => {
 };
 
 /**
- * Which wizard step owns a given payload field, so a failed `validatePayload`
- * can put the student in front of the field rather than on the review page
- * reading a message about a step name.
+ * Which wizard SCREEN owns a payload field, so a failed `validatePayload` can put
+ * the student in front of the field rather than on the review page reading a
+ * message about a step name.
  *
- * Order matters: the subject/test keys are checked before the general
- * `academic_input.` prefix, because they live on step 3 while the rest of
- * `academic_input` is step 2.
+ * ── This used to be a hand-ordered prefix ladder, and that was the bug ───────
+ * The ladder encoded the mapping by ORDERING: a broad `academic_input.` branch sat
+ * below the specific ones and swallowed anything a specific branch had forgotten.
+ * `academic_input.ee_*` was forgotten, so it mapped to the studies step — which
+ * does not contain those fields. Three consequences, all user-visible: a payload
+ * rejection bounced the student to the wrong screen, blur validation skipped the
+ * fields entirely, and the live-clear pass never fired for them, so a trimmed
+ * 351-character EE summary kept showing "Under 350 characters." forever. A second
+ * instance shipped at the same time: all of `lifestyle_preference` went to the
+ * activities step while five of its columns render on the lifestyle step.
+ *
+ * Ownership is now DECLARED per screen in `./wizard-screens.ts` and resolved by
+ * longest match, so a specific path can never be shadowed by a broader one, and
+ * `__tests__/profile/wizard-screens.test.ts` fails if a schema field is unclaimed.
  */
-export const stepForFieldKey = (key: string): number => {
-  if (key.startsWith('personal_information.')) return 1;
-  if (
-    key.startsWith('academic_input.subject_list') ||
-    key.startsWith('academic_input.admissions_tests') ||
-    key.startsWith('academic_input.english') ||
-    key.startsWith('academic_input.ib_') ||
-    // `ee_subject` / `ee_title` / `ee_summary`: emitted by validateStep3 and
-    // rendered on step 3, but they used to fall through to the general
-    // `academic_input.` prefix below and map to 2. Consequences, all real: the
-    // live-clear pass never fired for them (2 !== 3), so a trimmed 351-character
-    // EE summary kept showing "Under 350 characters."; blur validation skipped
-    // them entirely; and a payload rejection would have bounced to step 2, where
-    // the field does not exist.
-    key.startsWith('academic_input.ee_') ||
-    key.startsWith('academic_input.epq_')
-  ) {
-    return 3;
-  }
-  if (key.startsWith('academic_input.')) return 2;
-  // `lifestyle_preference` is split across TWO steps: steps 4 and 5 both persist
-  // into that one row. Sending all of it to 4 meant a rejection on, say,
-  // `other_extracurriculars` bounced the student to Activities — a step that does
-  // not contain the field. These five render on step 5.
-  if (
-    key.startsWith('lifestyle_preference.teaching_style') ||
-    key.startsWith('lifestyle_preference.desired_location_type') ||
-    key.startsWith('lifestyle_preference.campus_size') ||
-    key.startsWith('lifestyle_preference.extracurricular_interests') ||
-    key.startsWith('lifestyle_preference.other_extracurriculars')
-  ) {
-    return 5;
-  }
-  // Everything else the payload schema can still reject — SAT/ACT, the free-text
-  // ambition and work-experience answers, the activity rows — is step 4.
-  return 4;
-};
+export const stepForFieldKey = (key: string): number => screenIndexForFieldKey(key);
 
-/** Dispatch for the wizard's "can I leave this step?" check. Step 6 (Review) never blocks. */
+/**
+ * Dispatch for the wizard's "can I leave this screen?" check.
+ *
+ * ── Screens partition messages; SECTIONS own the rules ──────────────────────
+ * The five validators above are unchanged and still keyed to the three essential
+ * SECTIONS. Several screens share a section — `subject_area` and `school` are both
+ * `academic_input`; `academic_details` and `tests` are both grades-and-tests — so a
+ * screen validator runs its section's validator and then keeps only the messages
+ * for the fields THAT SCREEN renders.
+ *
+ * Deriving instead of writing eight new validators is the point: there is still one
+ * place each rule lives, the exact message strings the characterization suite pins
+ * are untouched, and splitting or reordering a screen cannot change what counts as
+ * valid — only where the student is told about it. Get this backwards and you get
+ * the class of bug the ladder above produced.
+ *
+ * Review never blocks.
+ */
 export const validateStep = (step: number, state: IntakeFormState): IntakeErrors => {
-  switch (step) {
-    case 1: return validateStep1(state);
-    case 2: return validateStep2(state);
-    case 3: return validateStep3(state);
-    case 4: return validateStep4();
-    case 5: return validateStep5();
-    default: return {};
-  }
+  const screen = screenAt(step);
+  if (!screen.section) return {};
+
+  const sectionErrors =
+    screen.section === 'personal_information' ? validateStep1(state)
+    : screen.section === 'academic_input' ? validateStep2(state)
+    : screen.section === 'academic_details' ? validateStep3(state)
+    : {};
+
+  const owned: IntakeErrors = {};
+  Object.keys(sectionErrors).forEach((key) => {
+    if (screenIndexForFieldKey(key) === step) owned[key] = sectionErrors[key];
+  });
+  return owned;
 };

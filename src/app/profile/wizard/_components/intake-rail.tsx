@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EASE } from '@/lib/motion';
-import { type StepKey } from '@/lib/profile/steps';
+import { type ScreenTier } from '@/lib/profile/wizard-screens';
 
 /**
  * The wizard's step map: a completion ring, a vertical stepper, and the tier
@@ -32,10 +32,16 @@ import { type StepKey } from '@/lib/profile/steps';
  */
 
 export interface RailStep {
-  key: StepKey | 'review';
+  /**
+   * A SCREEN key from `wizard-screens.ts`, not a `StepKey`. Several screens share a
+   * section (the subject area and the school are both `academic_input`), so the rail
+   * cannot be keyed by section without collapsing rows that need to tick
+   * independently.
+   */
+  key: string;
   title: string;
   /** `essential` gates matching; `booster` only sharpens it. `review` is neither. */
-  tier: 'essential' | 'booster' | 'review';
+  tier: ScreenTier;
   done: boolean;
   current: boolean;
 }
@@ -44,16 +50,9 @@ interface IntakeRailProps {
   steps: RailStep[];
   /** 0-100 across the ESSENTIAL steps only — see the note above. */
   essentialPct: number;
-  onStepSelect: (key: StepKey | 'review') => void;
+  onStepSelect: (key: string) => void;
   /** Rendered inside the sheet on mobile, where `sticky` would fight the scroll container. */
   sticky?: boolean;
-  /**
-   * Whether this instance carries the `data-tour` anchor. The mobile sheet
-   * renders a SECOND copy of this rail, and `product-tour.tsx` resolves an
-   * anchor with `querySelector` — two matches means the spotlight can land on
-   * the hidden one. Only the desktop instance opts in.
-   */
-  tourAnchor?: boolean;
   /**
    * Drop this component's own card chrome. Set inside the mobile sheet, which is
    * already a `bg-card` surface — a card nested in a card reads as a mistake.
@@ -138,7 +137,6 @@ export function IntakeRail({
   essentialPct,
   onStepSelect,
   sticky = false,
-  tourAnchor = false,
   bare = false,
   className,
   footer
@@ -148,9 +146,15 @@ export function IntakeRail({
    * mobile (`hidden lg:block` is display:none, not unmount), so opening the Steps
    * sheet puts two rails in the tree — and a shared `layoutId` makes Framer treat
    * them as one element and project between their boxes, one of which measures
-   * 0×0. The pill then animates from nothing or fails to paint. Same
-   * two-copies-of-one-rail hazard as the `data-tour` collision this file already
-   * guards with `tourAnchor`; that one was caught and this one was not.
+   * 0×0. The pill then animates from nothing or fails to paint.
+   *
+   * This file used to carry a second guard for the same two-copies hazard: a
+   * `tourAnchor` prop gating a product-tour anchor attribute, so the tour's
+   * `querySelector` could not resolve the hidden copy. It has been removed because NO
+   * tour step ever pointed at that anchor. `tours.ts` requires every anchor it names
+   * to exist, but nothing checked the reverse, so an orphan attribute and eight lines
+   * of comment guarded a spotlight that was never aimed here. The reverse assertion
+   * now lives in `__tests__/onboarding/tours.test.ts`.
    */
   const instanceId = useId();
   const complete = essentialPct >= 100;
@@ -158,10 +162,7 @@ export function IntakeRail({
   const firstBoosterKey = boosters[0]?.key;
 
   return (
-    <aside
-      {...(tourAnchor ? { 'data-tour': 'wizard-progress' } : {})}
-      className={cn('w-full shrink-0', sticky && 'lg:sticky lg:top-24 lg:h-fit', className)}
-    >
+    <aside className={cn('w-full shrink-0', sticky && 'lg:sticky lg:top-24 lg:h-fit', className)}>
       <div className={bare ? '' : 'surface-card rounded-3xl !p-5'}>
         {/* ── Ring + the one line of copy that carries the tier model ── */}
         <div className="flex items-center gap-4">

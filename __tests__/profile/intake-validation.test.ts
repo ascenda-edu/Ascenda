@@ -282,21 +282,37 @@ describe('validateStep3 — grades & tests', () => {
       expect(validateStep3(state)['academic_input.ee_summary']).toBeUndefined();
     });
 
-    it('routes the EE and EPQ keys to step 3, where their fields actually are', () => {
+    it('routes the EE keys to the grades screen, where their fields actually are', () => {
       // Regression: these fell through to the general `academic_input.` prefix and
-      // mapped to step 2. `validateStep3` is what emits them and the fields render
-      // on step 3, so the wizard's blur and live-clear passes both skipped them and
-      // a payload rejection would have bounced to a step without the field.
+      // mapped to the studies step. `validateStep3` is what emits them and the
+      // fields render with the grades, so the wizard's blur and live-clear passes
+      // both skipped them and a payload rejection bounced to a screen without the
+      // field. Ownership is now declared in `wizard-screens.ts`; see
+      // `__tests__/profile/wizard-screens.test.ts` for the totality guarantee.
       expect(stepForFieldKey('academic_input.ee_summary')).toBe(3);
       expect(stepForFieldKey('academic_input.ee_subject')).toBe(3);
       expect(stepForFieldKey('academic_input.ee_title')).toBe(3);
-      expect(stepForFieldKey('academic_input.epq_subject')).toBe(3);
-      // Unchanged neighbours, so the added prefixes cannot have over-reached.
-      expect(stepForFieldKey('academic_input.school_name')).toBe(2);
-      expect(stepForFieldKey('academic_input.a_level_predicted_grades')).toBe(2);
       expect(stepForFieldKey('academic_input.subject_list.0.grade_value')).toBe(3);
-      expect(stepForFieldKey('personal_information.email')).toBe(1);
+      // `a_level_predicted_grades` now resolves to the GRADES screen (3), not the
+      // studies screen. The old ladder sent it to 2 because it only had a broad
+      // `academic_input.` fallback, and nothing rendered it there.
+      expect(stepForFieldKey('academic_input.a_level_predicted_grades')).toBe(3);
+
+      // EPQ lives under `lifestyle_preference`, not `academic_input`. The old
+      // ladder tested `academic_input.epq_` — a branch that could never match — and
+      // the real key reached the right screen only via the catch-all.
+      // EPQ renders WITH the grades (it is A-level coursework), so it resolves to
+      // the grades screen, not the activities screen.
+      expect(stepForFieldKey('lifestyle_preference.epq_subject')).toBe(3);
+
+      // ── Screens the 2026-08 reorder MOVED, asserted so the move is deliberate ──
+      // Paperwork is fifth now, not first; the subject area leads.
+      expect(stepForFieldKey('personal_information.email')).toBe(5);
+      expect(stepForFieldKey('academic_input.intended_clusters')).toBe(1);
+      expect(stepForFieldKey('academic_input.school_name')).toBe(2);
+      // SAT/ACT render on the tests screen (4) rather than with the activities.
       expect(stepForFieldKey('lifestyle_preference.sat_score')).toBe(4);
+      expect(stepForFieldKey('lifestyle_preference.act_score')).toBe(4);
     });
   });
 
@@ -357,22 +373,56 @@ describe('validateStep4 / validateStep5 — optional steps', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe('validateStep — dispatch', () => {
-  it('routes each step at its own validator', () => {
+describe('validateStep — screen dispatch', () => {
+  /**
+   * Screens PARTITION a section validator's messages; they do not add rules of
+   * their own. Two screens share `academic_input` (subject area, school) and two
+   * share the grades section (subjects, tests), so each screen runs its section's
+   * validator and keeps only the keys it renders. The union across a section's
+   * screens must therefore equal that section's validator exactly — if it does not,
+   * some message has become unreachable, which is how a student ends up unable to
+   * pass a screen with no visible reason why.
+   */
+  it('partitions each section validator across its screens, losing nothing', () => {
     const empty = buildInitialFormState();
-    expect(validateStep(1, empty)).toEqual(validateStep1(empty));
-    expect(validateStep(2, empty)).toEqual(validateStep2(empty));
-    expect(validateStep(3, empty)).toEqual(validateStep3(empty));
-    expect(validateStep(4, empty)).toEqual({});
-    expect(validateStep(5, empty)).toEqual({});
+
+    // academic_input → screens 1 (subject area) + 2 (school)
+    expect({ ...validateStep(1, empty), ...validateStep(2, empty) }).toEqual(validateStep2(empty));
+    // academic_details → screens 3 (subjects & grades) + 4 (tests)
+    expect({ ...validateStep(3, empty), ...validateStep(4, empty) }).toEqual(validateStep3(empty));
+    // personal_information → screen 5, whole and undivided
+    expect(validateStep(5, empty)).toEqual(validateStep1(empty));
   });
 
-  it('lets the Review step through — it re-runs 1–3 at submit instead', () => {
+  it('gives each screen only its own fields', () => {
+    const empty = buildInitialFormState();
+    // The subject area asks one thing, so a student on screen 1 is never told about
+    // a school name they have not been asked for yet.
+    expect(Object.keys(validateStep(1, empty))).toEqual(['academic_input.intended_clusters']);
+    expect(Object.keys(validateStep(2, empty)).sort()).toEqual([
+      'academic_input.graduation_year',
+      'academic_input.programme_type',
+      'academic_input.school_country',
+      'academic_input.school_name'
+    ]);
+    // The tests screen owns the English questions; the grades screen does not.
+    expect(validateStep(4, empty)['academic_input.english_required']).toBe('Select an option.');
+    expect(validateStep(3, empty)['academic_input.english_required']).toBeUndefined();
+  });
+
+  it('never blocks the two optional screens', () => {
     expect(validateStep(6, buildInitialFormState())).toEqual({});
+    expect(validateStep(7, buildInitialFormState())).toEqual({});
+  });
+
+  it('lets the Review screen through — it re-runs the essentials at submit instead', () => {
+    expect(validateStep(8, buildInitialFormState())).toEqual({});
   });
 
   it('returns no errors for an out-of-range step rather than throwing', () => {
-    expect(validateStep(0, buildInitialFormState())).toEqual({});
+    // `screenAt` clamps, so 0 resolves to the first screen and 99 to Review. Neither
+    // throws, which is the property that matters — a bad `?step=` must not 500.
+    expect(() => validateStep(0, buildInitialFormState())).not.toThrow();
     expect(validateStep(99, buildInitialFormState())).toEqual({});
   });
 });

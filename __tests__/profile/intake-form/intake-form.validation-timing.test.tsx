@@ -137,6 +137,17 @@ const COMPLETE_IB: StudentProfilePayload = {
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 const setup = () => userEvent.setup();
+/**
+ * The eight SCREENS by name (see `wizard-screens.ts`). Every test in this file is
+ * about WHEN an error appears for a personal-information field, and the paperwork is
+ * the fifth screen now rather than the first — so they all open there explicitly
+ * instead of relying on the default.
+ */
+const SCREEN = {
+  subject: 1, school: 2, grades: 3, tests: 4,
+  about: 5, activities: 6, life: 7, review: 8
+} as const;
+
 const renderForm = (props: Parameters<typeof StudentIntakeForm>[0] = {}) =>
   render(<StudentIntakeForm {...props} />);
 
@@ -163,7 +174,7 @@ afterEach(async () => {
 describe('errors do not appear while you are still typing', () => {
   it('a partial email produces no error', async () => {
     const user = setup();
-    renderForm();
+    renderForm({ initialStep: SCREEN.about });
     await user.type(labelled('Email'), 'a');
     expect(screen.queryByText(BAD_EMAIL)).not.toBeInTheDocument();
   });
@@ -173,7 +184,7 @@ describe('errors do not appear while you are still typing', () => {
     // email is itself invalid, so validating on change flashes an error the whole
     // way through.
     const user = setup();
-    renderForm();
+    renderForm({ initialStep: SCREEN.about });
     await user.type(labelled('Email'), 'alex@school.example');
     expect(screen.queryByText(BAD_EMAIL)).not.toBeInTheDocument();
   });
@@ -182,7 +193,7 @@ describe('errors do not appear while you are still typing', () => {
 describe('errors appear on blur, per field', () => {
   it('leaving an invalid email surfaces its error', async () => {
     const user = setup();
-    renderForm();
+    renderForm({ initialStep: SCREEN.about });
     await user.type(labelled('Email'), 'not-an-email');
     await user.tab();
     expect(await screen.findByText(BAD_EMAIL)).toBeInTheDocument();
@@ -191,7 +202,7 @@ describe('errors appear on blur, per field', () => {
   it('leaving an EMPTY required field surfaces nothing', async () => {
     // Tabbing through a form you have not filled in yet is not a mistake.
     const user = setup();
-    renderForm();
+    renderForm({ initialStep: SCREEN.about });
     await user.click(labelled('First name'));
     await user.tab();
     await new Promise((resolve) => setTimeout(resolve, 60));
@@ -200,7 +211,7 @@ describe('errors appear on blur, per field', () => {
 
   it('surfaces only the field left, not the whole step', async () => {
     const user = setup();
-    renderForm();
+    renderForm({ initialStep: SCREEN.about });
     await user.type(labelled('Email'), 'nope');
     await user.tab();
     expect(await screen.findByText(BAD_EMAIL)).toBeInTheDocument();
@@ -213,7 +224,7 @@ describe('errors appear on blur, per field', () => {
 describe('errors clear the moment they are fixed', () => {
   it('correcting an email drops its error without waiting for Next', async () => {
     const user = setup();
-    renderForm();
+    renderForm({ initialStep: SCREEN.about });
     await user.type(labelled('Email'), 'not-an-email');
     await user.tab();
     expect(await screen.findByText(BAD_EMAIL)).toBeInTheDocument();
@@ -225,7 +236,7 @@ describe('errors clear the moment they are fixed', () => {
 
   it('filling a required field surfaced by Next clears it as you type', async () => {
     const user = setup();
-    renderForm();
+    renderForm({ initialStep: SCREEN.about });
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(await screen.findByText(NO_FIRST_NAME)).toBeInTheDocument();
 
@@ -237,7 +248,7 @@ describe('errors clear the moment they are fixed', () => {
 
   it('a cleared error does not come back on the next keystroke elsewhere', async () => {
     const user = setup();
-    renderForm();
+    renderForm({ initialStep: SCREEN.about });
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(await screen.findByText(NO_FIRST_NAME)).toBeInTheDocument();
 
@@ -270,13 +281,15 @@ describe('a payload rejection survives the live-clear pass', () => {
     const user = setup();
     const payload = clone(COMPLETE_IB);
     payload.personal_information.first_name = LONG_NAME;
-    renderForm({ initialPayload: payload, initialStep: 6 });
+    renderForm({ initialPayload: payload, initialStep: SCREEN.review });
 
     await user.click(screen.getByRole('button', { name: /Submit & see matches/ }));
 
-    // Bounced to step 1 …
+    // Bounced to the screen that OWNS the field — the paperwork, which is fifth
+    // now. That target comes from `stepForFieldKey`, so it moved with the reorder
+    // rather than staying pinned to a literal 1.
     await waitFor(
-      () => expect(screen.getByRole('heading', { name: 'Who are you?' })).toBeInTheDocument(),
+      () => expect(screen.getByRole('heading', { name: 'Now the boring bit' })).toBeInTheDocument(),
       { timeout: 4000 }
     );
     // … and the reason is actually on screen. This is the assertion that fails
@@ -291,11 +304,11 @@ describe('a payload rejection survives the live-clear pass', () => {
     const user = setup();
     const payload = clone(COMPLETE_IB);
     payload.personal_information.first_name = LONG_NAME;
-    renderForm({ initialPayload: payload, initialStep: 6 });
+    renderForm({ initialPayload: payload, initialStep: SCREEN.review });
 
     await user.click(screen.getByRole('button', { name: /Submit & see matches/ }));
     await waitFor(
-      () => expect(screen.getByRole('heading', { name: 'Who are you?' })).toBeInTheDocument(),
+      () => expect(screen.getByRole('heading', { name: 'Now the boring bit' })).toBeInTheDocument(),
       { timeout: 4000 }
     );
     await new Promise((resolve) => setTimeout(resolve, 250));
@@ -308,10 +321,10 @@ describe('a payload rejection survives the live-clear pass', () => {
     const user = setup();
     const payload = clone(COMPLETE_IB);
     payload.personal_information.first_name = LONG_NAME;
-    renderForm({ initialPayload: payload, initialStep: 6 });
+    renderForm({ initialPayload: payload, initialStep: SCREEN.review });
     await user.click(screen.getByRole('button', { name: /Submit & see matches/ }));
     await waitFor(
-      () => expect(screen.getByRole('heading', { name: 'Who are you?' })).toBeInTheDocument(),
+      () => expect(screen.getByRole('heading', { name: 'Now the boring bit' })).toBeInTheDocument(),
       { timeout: 4000 }
     );
 
@@ -319,8 +332,11 @@ describe('a payload rejection survives the live-clear pass', () => {
     await user.type(labelled('First name'), 'Alex');
     await user.click(screen.getByRole('button', { name: 'Next' }));
 
-    // Step 1 now validates, so it advances rather than bouncing again.
-    expect(await screen.findByRole('heading', { name: 'Your studies' })).toBeInTheDocument();
+    // The paperwork screen now validates, so Next ADVANCES rather than bouncing
+    // again — and from the fifth screen the next one is Activities.
+    expect(
+      await screen.findByRole('heading', { name: 'What do you do outside class?' })
+    ).toBeInTheDocument();
   }, 25000);
 });
 
@@ -329,7 +345,7 @@ describe('Next still reports everything at once', () => {
     // The guard on rules 1-3: they must not have turned batch validation into
     // field-at-a-time validation.
     const user = setup();
-    renderForm();
+    renderForm({ initialStep: SCREEN.about });
     await user.click(screen.getByRole('button', { name: 'Next' }));
 
     expect(await screen.findByText(NO_FIRST_NAME)).toBeInTheDocument();
@@ -339,9 +355,9 @@ describe('Next still reports everything at once', () => {
 
   it('and still refuses to advance', async () => {
     const user = setup();
-    renderForm();
+    renderForm({ initialStep: SCREEN.about });
     await user.click(screen.getByRole('button', { name: 'Next' }));
     await screen.findByText(NO_FIRST_NAME);
-    expect(screen.getByRole('heading', { name: 'Who are you?' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Now the boring bit' })).toBeInTheDocument();
   });
 });

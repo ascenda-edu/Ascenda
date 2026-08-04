@@ -1,6 +1,6 @@
 'use client';
 
-import { Check } from 'lucide-react';
+import { Check, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -27,14 +27,25 @@ export function Chip({
   selected,
   onClick,
   disabled,
-  emoji,
+  icon: Icon,
   description
 }: {
   label: string;
   selected: boolean;
   onClick: () => void;
   disabled?: boolean;
-  emoji?: string;
+  /**
+   * Replaces the old `emoji` prop.
+   *
+   * Emoji were dropped from this component's callers entirely: they are rendered by
+   * the OS, so the same chip was a flat glyph on one platform and a glossy 3D blob
+   * on another, they never matched the icon weight used elsewhere in the product,
+   * and — the mechanical reason — they do not inherit `currentColor`, so a selected
+   * chip tinted its label and border while the emoji inside stayed put. A Lucide
+   * icon changes colour with the chip, which is what makes selection read as one
+   * object changing state. See `wizard-icons.ts`.
+   */
+  icon?: LucideIcon;
   description?: string;
 }) {
   return (
@@ -58,7 +69,7 @@ export function Chip({
     >
       <span className="flex w-full items-center justify-between gap-2">
         <span className="flex items-center gap-1.5">
-          {emoji ? <span aria-hidden>{emoji}</span> : null}
+          {Icon ? <Icon aria-hidden className="h-3.5 w-3.5 shrink-0" /> : null}
           {label}
         </span>
         {selected ? <Check className="h-3.5 w-3.5 shrink-0 text-primary-ink" aria-hidden /> : null}

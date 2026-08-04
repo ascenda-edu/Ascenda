@@ -100,7 +100,24 @@ const ROUTE_BUDGETS = {
   '/course/[id]': 260, //   244
   '/inbox': 260, //   241
   '/applications': 255, //   240
-  '/profile/wizard': 245, //   230
+  // RAISED 2026-08-04, 245 → 260, for the wizard redesign. Measured 244 kB, so this
+  // restores the +15 kB headroom this table is specified to carry; at 245 the route
+  // was inside the cap by one kilobyte, which is the same as no headroom.
+  //
+  // What the extra 14 kB buys, and what was done first to avoid asking:
+  //   + a 24-glyph Lucide set replacing emoji on every choice card (measured: 2 kB —
+  //     priced by collapsing the set to one icon and rebuilding, not estimated);
+  //   + `ChoiceGroup`, the unlocks ledger, and the two Ascendi surfaces.
+  //   − step travel moved from a Framer `motion.div` to a CSS keyframe;
+  //   − the mascot badge is an inline SVG, not `next/image` + the PNG, which keeps
+  //     the `next/image` runtime off the route entirely;
+  //   − the celebration and Ascendi's aside are behind `next/dynamic`, guarded at the
+  //     call site so the chunks are only fetched when they actually render.
+  //
+  // LOWER this again when framer-motion comes off the shared path — that is the
+  // single biggest remaining item on this route and it is listed in
+  // docs/audit/08-performance.md.
+  '/profile/wizard': 260, //   244
   '/university-search/quests': 245, //   227
   '/toolbox/chances': 240, //   225
   '/counsellor/documents': 240, //   223
