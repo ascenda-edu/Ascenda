@@ -381,6 +381,16 @@ const submitButton = () => screen.getByRole('button', { name: /Submit & see matc
 const labelled = (label: string) =>
   screen.getByLabelText(new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
 
+/**
+ * Chip lookups are by LABEL ONLY — no emoji.
+ *
+ * Changed 2026-08-04. Chips take their emoji as a separate `emoji` prop which is
+ * `aria-hidden`, so it is not part of the accessible name: a screen reader says
+ * "Engineering", not "gear Engineering". The location group was the exception —
+ * it baked the emoji into its `label` string, so those names really did contain
+ * one — and it now passes `emoji` like every other group. If a lookup here ever
+ * needs an emoji again, that is the bug, not this helper.
+ */
 const chip = (name: string) => screen.getByRole('button', { name });
 const chips = (name: string) => screen.getAllByRole('button', { name });
 
@@ -833,7 +843,7 @@ describe('validateStep2', () => {
       await user.click(options[1]);
       await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
     }
-    if (omit !== 'cluster') await user.click(chips('⚙️ Engineering')[0]);
+    if (omit !== 'cluster') await user.click(chips('Engineering')[0]);
   };
 
   it.each([
@@ -870,24 +880,24 @@ describe('validateStep2', () => {
   it('primary cluster is single-select: picking a second replaces the first', async () => {
     const user = setup();
     renderForm({ initialStep: 2 });
-    await user.click(chips('⚖️ Law')[0]);
-    expect(chips('⚖️ Law')[0]).toHaveAttribute('aria-pressed', 'true');
+    await user.click(chips('Law')[0]);
+    expect(chips('Law')[0]).toHaveAttribute('aria-pressed', 'true');
     // Every other primary chip is disabled once one is chosen, so replacing means
     // deselecting first — clicking the pressed chip clears it.
-    expect(chips('📚 Humanities')[0]).toBeDisabled();
-    await user.click(chips('⚖️ Law')[0]);
-    expect(chips('⚖️ Law')[0]).toHaveAttribute('aria-pressed', 'false');
-    expect(chips('📚 Humanities')[0]).toBeEnabled();
+    expect(chips('Humanities')[0]).toBeDisabled();
+    await user.click(chips('Law')[0]);
+    expect(chips('Law')[0]).toHaveAttribute('aria-pressed', 'false');
+    expect(chips('Humanities')[0]).toBeEnabled();
   });
 
   it('secondary clusters cap at two', async () => {
     const user = setup();
     renderForm({ initialStep: 2 });
-    await user.click(chips('📐 Mathematics')[1]);
-    await user.click(chips('💻 Computer science')[1]);
-    expect(chips('⚖️ Law')[1]).toBeDisabled();
-    expect(chips('📐 Mathematics')[1]).toHaveAttribute('aria-pressed', 'true');
-    expect(chips('💻 Computer science')[1]).toHaveAttribute('aria-pressed', 'true');
+    await user.click(chips('Mathematics')[1]);
+    await user.click(chips('Computer science')[1]);
+    expect(chips('Law')[1]).toBeDisabled();
+    expect(chips('Mathematics')[1]).toHaveAttribute('aria-pressed', 'true');
+    expect(chips('Computer science')[1]).toHaveAttribute('aria-pressed', 'true');
   });
 });
 
@@ -1680,7 +1690,7 @@ describe('subject rows', () => {
     const { listbox } = await openSelect(user, 'Graduation year');
     await user.click(within(listbox).getAllByRole('option')[1]);
     await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
-    await user.click(chips('⚙️ Engineering')[0]);
+    await user.click(chips('Engineering')[0]);
     await user.click(nextButton());
 
     await screen.findByRole('heading', { name: 'Grades & tests' });
@@ -1849,27 +1859,27 @@ describe('lifestyle chips', () => {
   it('"No preference" is exclusive within the location group', async () => {
     const user = setup();
     renderForm({ initialStep: 5 });
-    await user.click(chip('🏙 Capital city'));
-    await user.click(chip('🌆 Major city'));
-    expect(chip('🏙 Capital city')).toHaveAttribute('aria-pressed', 'true');
+    await user.click(chip('Capital city'));
+    await user.click(chip('Major city'));
+    expect(chip('Capital city')).toHaveAttribute('aria-pressed', 'true');
 
     // "No preference" appears three times on this step (teaching style, location,
     // campus size); the location one is the second.
     await user.click(chips('No preference')[1]);
-    expect(chip('🏙 Capital city')).toHaveAttribute('aria-pressed', 'false');
-    expect(chip('🌆 Major city')).toHaveAttribute('aria-pressed', 'false');
+    expect(chip('Capital city')).toHaveAttribute('aria-pressed', 'false');
+    expect(chip('Major city')).toHaveAttribute('aria-pressed', 'false');
     expect(chips('No preference')[1]).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('location is multi-select and does not cap', async () => {
     const user = setup();
     renderForm({ initialStep: 5 });
-    await user.click(chip('🏙 Capital city'));
-    await user.click(chip('🌆 Major city'));
-    await user.click(chip('🏘 Smaller city'));
-    await user.click(chip('🌿 Suburban / campus'));
-    expect(chip('🌿 Suburban / campus')).toHaveAttribute('aria-pressed', 'true');
-    expect(chip('🏙 Capital city')).toHaveAttribute('aria-pressed', 'true');
+    await user.click(chip('Capital city'));
+    await user.click(chip('Major city'));
+    await user.click(chip('Smaller city'));
+    await user.click(chip('Suburban / campus'));
+    expect(chip('Suburban / campus')).toHaveAttribute('aria-pressed', 'true');
+    expect(chip('Capital city')).toHaveAttribute('aria-pressed', 'true');
   });
 });
 

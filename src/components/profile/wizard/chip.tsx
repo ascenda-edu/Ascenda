@@ -1,0 +1,67 @@
+'use client';
+
+import { Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+/**
+ * The intake form's toggle chip — the control behind every choice in the wizard
+ * that is not a text field or a Select: programme type, clusters, gender,
+ * leadership roles, teaching style, campus size, and a dozen more.
+ *
+ * `aria-pressed` rather than `role="radio"` or a checkbox, because the same
+ * component serves both single- and multi-select groups. That is a compromise
+ * worth naming: for a genuinely single-choice group a `role="radiogroup"` of
+ * radios is the better semantic, and `SegmentedControl`
+ * (`src/components/university-search/filters/SegmentedControl.tsx`) already
+ * implements it with arrow-key navigation. Converting the single-choice groups
+ * over is worth doing; it is a per-group behaviour change, so it is not folded
+ * into a component move.
+ *
+ * Tap size needs no `min-h`: `py-3` (12 + 12) plus the 20px `text-sm` line box is
+ * exactly the 44px floor, and a wrapped label or a `description` only makes it
+ * taller. An explicit `min-h-[44px]` here would be redundant AND would add to the
+ * arbitrary-geometry ratchet for nothing.
+ */
+export function Chip({
+  label,
+  selected,
+  onClick,
+  disabled,
+  emoji,
+  description
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  emoji?: string;
+  description?: string;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      aria-pressed={selected}
+      onClick={onClick}
+      className={cn(
+        'group flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-150',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        selected
+          ? 'border-primary bg-primary/8 text-primary-ink shadow-e-1'
+          : 'border-border bg-background text-foreground hover:border-primary/40 hover:bg-muted/50',
+        disabled && !selected && 'cursor-not-allowed opacity-40 hover:border-border hover:bg-background'
+      )}
+    >
+      <span className="flex w-full items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5">
+          {emoji ? <span aria-hidden>{emoji}</span> : null}
+          {label}
+        </span>
+        {selected ? <Check className="h-3.5 w-3.5 shrink-0 text-primary-ink" aria-hidden /> : null}
+      </span>
+      {description ? (
+        <span className="text-label font-normal leading-snug text-muted-foreground">{description}</span>
+      ) : null}
+    </button>
+  );
+}

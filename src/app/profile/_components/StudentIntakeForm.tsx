@@ -1,14 +1,16 @@
 'use client';
 
-import { type FormEvent, type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Check, ChevronDown, ChevronRight, ChevronLeft,
+  ChevronRight, ChevronLeft,
   Trash2, PlusCircle, Info, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PROFILE_STEPS, FIRST_BOOSTER_STEP_INDEX, ESSENTIAL_STEP_KEYS } from '@/lib/profile/steps';
+import { Chip } from '@/components/profile/wizard/chip';
+import { Combobox } from '@/components/profile/wizard/combobox';
 import { IntakeRail, type RailStep } from '../wizard/_components/intake-rail';
 import { IntakeStepMeter } from '../wizard/_components/intake-step-meter';
 import { cn } from '@/lib/utils';
@@ -177,255 +179,6 @@ function SectionTitle({ label, hint, why }: { label: string; hint?: string; why?
           {why}
         </div>
       ) : null}
-    </div>
-  );
-}
-
-/** Searchable country combobox — replaces <input list="..."> */
-function CountryCombobox({
-  value, onChange, placeholder, error, id, errorId
-}: { value: string; onChange: (v: string) => void; placeholder?: string; error?: string; id?: string; errorId?: string }) {
-  const [query, setQuery] = useState(value);
-  const [open, setOpen] = useState(false);
-  const [highlight, setHighlight] = useState(-1);
-  const ref = useRef<HTMLDivElement>(null);
-  const listboxId = useId();
-  const optionId = (index: number) => `${listboxId}-opt-${index}`;
-
-  // Keep display in sync when value changes externally (hydration)
-  useEffect(() => { setQuery(value); }, [value]);
-
-  const filtered = useMemo(() => {
-    if (!query.trim()) return COUNTRY_OPTIONS.slice(0, 8);
-    const q = query.toLowerCase();
-    return COUNTRY_OPTIONS.filter((c) => c.toLowerCase().includes(q)).slice(0, 8);
-  }, [query]);
-
-  // Reset the active option whenever the visible list changes.
-  useEffect(() => { setHighlight(-1); }, [query, open]);
-
-  // Close on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const select = (country: string) => {
-    onChange(country);
-    setQuery(country);
-    setOpen(false);
-    setHighlight(-1);
-  };
-
-  const onKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (!open) { setOpen(true); return; }
-      setHighlight((h) => Math.min(filtered.length - 1, h + 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setHighlight((h) => Math.max(0, h - 1));
-    } else if (e.key === 'Enter') {
-      if (open && highlight >= 0 && highlight < filtered.length) {
-        e.preventDefault();
-        select(filtered[highlight]);
-      }
-    } else if (e.key === 'Escape') {
-      setOpen(false);
-      setHighlight(-1);
-    }
-  };
-
-  return (
-    <div ref={ref} className="relative">
-      <div className="relative">
-        <input
-          id={id}
-          type="text"
-          autoComplete="off"
-          role="combobox"
-          aria-expanded={open}
-          aria-controls={listboxId}
-          aria-autocomplete="list"
-          aria-activedescendant={open && highlight >= 0 ? optionId(highlight) : undefined}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-          className={cn('form-input', 'pr-9', error && 'border-destructive')}
-          value={query}
-          placeholder={placeholder ?? 'Search country…'}
-          onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-          onKeyDown={onKeyDown}
-        />
-        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-      </div>
-      {open && filtered.length > 0 && (
-        <ul
-          id={listboxId}
-          role="listbox"
-          className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-background shadow-e-3 overflow-hidden max-h-52 overflow-y-auto"
-        >
-          {filtered.map((c, index) => (
-            <li key={c} id={optionId(index)} role="option" aria-selected={index === highlight}>
-              <button
-                type="button"
-                tabIndex={-1}
-                className={cn(
-                  'w-full text-left px-4 py-2.5 text-sm transition-colors',
-                  index === highlight ? 'bg-muted/60' : 'hover:bg-muted/60'
-                )}
-                onMouseDown={() => select(c)}
-                onMouseEnter={() => setHighlight(index)}
-              >
-                {c}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {error && <FieldError msg={error} id={errorId} />}
-    </div>
-  );
-}
-
-/** Chip toggle button — used for radio/multi-select chip groups */
-function Chip({
-  label, selected, onClick, disabled, emoji, description
-}: {
-  label: string; selected: boolean; onClick: () => void;
-  disabled?: boolean; emoji?: string; description?: string;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      aria-pressed={selected}
-      onClick={onClick}
-      className={cn(
-        'group flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-150',
-        selected
-          ? 'bg-primary/8 border-primary text-primary-ink shadow-e-1'
-          : 'bg-background border-border text-foreground hover:border-primary/40 hover:bg-muted/50',
-        disabled && !selected && 'opacity-40 cursor-not-allowed hover:border-border hover:bg-background'
-      )}
-    >
-      <span className="flex w-full items-center justify-between gap-2">
-        <span className="flex items-center gap-1.5">
-          {emoji ? <span>{emoji}</span> : null}
-          {label}
-        </span>
-        {selected && <Check className="w-3.5 h-3.5 text-primary-ink shrink-0" />}
-      </span>
-      {description ? <span className="text-label text-muted-foreground font-normal leading-snug">{description}</span> : null}
-    </button>
-  );
-}
-
-/** Searchable subject combobox */
-function SubjectCombobox({
-  value, onChange, error, errorId
-}: { value: string; onChange: (v: string) => void; error?: string; errorId?: string }) {
-  const [query, setQuery] = useState(value);
-  const [open, setOpen] = useState(false);
-  const [highlight, setHighlight] = useState(-1);
-  const ref = useRef<HTMLDivElement>(null);
-  const listboxId = useId();
-  const optionId = (index: number) => `${listboxId}-opt-${index}`;
-
-  useEffect(() => { setQuery(value); }, [value]);
-
-  const filtered = useMemo(() => {
-    if (!query.trim()) return SUBJECT_OPTIONS.slice(0, 8);
-    const q = query.toLowerCase();
-    return SUBJECT_OPTIONS.filter((s) => s.toLowerCase().includes(q)).slice(0, 8);
-  }, [query]);
-
-  useEffect(() => { setHighlight(-1); }, [query, open]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const select = (subject: string) => {
-    onChange(subject);
-    setQuery(subject);
-    setOpen(false);
-    setHighlight(-1);
-  };
-
-  const onKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (!open) { setOpen(true); return; }
-      setHighlight((h) => Math.min(filtered.length - 1, h + 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setHighlight((h) => Math.max(0, h - 1));
-    } else if (e.key === 'Enter') {
-      if (open && highlight >= 0 && highlight < filtered.length) {
-        e.preventDefault();
-        select(filtered[highlight]);
-      }
-    } else if (e.key === 'Escape') {
-      setOpen(false);
-      setHighlight(-1);
-    }
-  };
-
-  return (
-    <div ref={ref} className="relative">
-      <div className="relative">
-        <input
-          type="text"
-          autoComplete="off"
-          role="combobox"
-          aria-expanded={open}
-          aria-controls={listboxId}
-          aria-autocomplete="list"
-          aria-activedescendant={open && highlight >= 0 ? optionId(highlight) : undefined}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-          className={cn('form-input', 'pr-9', error && 'border-destructive')}
-          value={query}
-          placeholder="Subject name"
-          onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-          onKeyDown={onKeyDown}
-        />
-        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-      </div>
-      {open && filtered.length > 0 && (
-        <ul
-          id={listboxId}
-          role="listbox"
-          className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-background shadow-e-3 overflow-hidden max-h-52 overflow-y-auto"
-        >
-          {filtered.map((s, index) => (
-            <li key={s} id={optionId(index)} role="option" aria-selected={index === highlight}>
-              <button
-                type="button"
-                tabIndex={-1}
-                className={cn(
-                  'w-full text-left px-4 py-2.5 text-sm transition-colors',
-                  index === highlight ? 'bg-muted/60' : 'hover:bg-muted/60'
-                )}
-                onMouseDown={() => select(s)}
-                onMouseEnter={() => setHighlight(index)}
-              >
-                {s}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {error && <FieldError msg={error} id={errorId} />}
     </div>
   );
 }
@@ -1346,7 +1099,8 @@ export const StudentIntakeForm = ({
                       {nationalities.map((val, i) => (
                         <div key={i} className="flex gap-2 items-center">
                           <div className="flex-1">
-                            <CountryCombobox
+                            <Combobox
+                              options={COUNTRY_OPTIONS}
                               value={val}
                               onChange={(v) => updateNationality(i, v)}
                               placeholder="Search nationality…"
@@ -1373,7 +1127,8 @@ export const StudentIntakeForm = ({
                       * id instead. */}
                     <div className="space-y-1.5" data-field="personal_information.resident_country">
                       <label htmlFor="intake-resident-country" className="text-sm font-medium block">Country of residence</label>
-                      <CountryCombobox
+                      <Combobox
+                        options={COUNTRY_OPTIONS}
                         id="intake-resident-country"
                         value={personalInfo.resident_country}
                         onChange={(v) => updatePersonalInfo('resident_country', v)}
@@ -1458,7 +1213,8 @@ export const StudentIntakeForm = ({
                     </div>
                     <div className="space-y-1.5" data-field="academic_input.school_country">
                       <label htmlFor="intake-school-country" className="text-sm font-medium block">School country</label>
-                      <CountryCombobox
+                      <Combobox
+                        options={COUNTRY_OPTIONS}
                         id="intake-school-country"
                         value={academicInput.school_country}
                         onChange={(v) => updateAcademicInput('school_country', v)}
@@ -1619,7 +1375,10 @@ export const StudentIntakeForm = ({
                         >
                           <div className="md:col-span-5" data-field={`academic_input.subject_list.${i}.subject_name`}>
                             <label className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">Subject</label>
-                            <SubjectCombobox
+                            <Combobox
+                              options={SUBJECT_OPTIONS}
+                              placeholder="Subject name"
+                              emptyLabel="No subjects match"
                               value={subj.subject_name}
                               onChange={(v) => updateSubject(i, 'subject_name', v)}
                               error={errors[`academic_input.subject_list.${i}.subject_name`]}
@@ -2155,14 +1914,19 @@ export const StudentIntakeForm = ({
                     <p className="text-sm font-medium">Preferred location type</p>
                     <p className="text-xs text-muted-foreground">Select as many as you like. Choosing multiple is fine — it won&apos;t affect your score.</p>
                     <div className="flex flex-wrap gap-2">
+                      {/* The emoji goes in `emoji`, NOT baked into `label`. It used
+                        * to be part of the label string, which made it part of the
+                        * chip's accessible name — a screen reader read "cityscape
+                        * Capital city". Every other chip group in this form already
+                        * passed it separately, so this was also the odd one out. */}
                       {[
-                        { value: 'capital_city', label: '🏙 Capital city' },
-                        { value: 'major_city', label: '🌆 Major city' },
-                        { value: 'smaller_city', label: '🏘 Smaller city' },
-                        { value: 'suburban', label: '🌿 Suburban / campus' },
+                        { value: 'capital_city', label: 'Capital city', emoji: '🏙' },
+                        { value: 'major_city', label: 'Major city', emoji: '🌆' },
+                        { value: 'smaller_city', label: 'Smaller city', emoji: '🏘' },
+                        { value: 'suburban', label: 'Suburban / campus', emoji: '🌿' },
                         { value: 'no_preference', label: 'No preference' },
                       ].map((opt) => (
-                        <Chip key={opt.value} label={opt.label}
+                        <Chip key={opt.value} label={opt.label} emoji={opt.emoji}
                           selected={lifestylePreference.desired_location_type.includes(opt.value)}
                           onClick={() => toggleLocationPreference(opt.value)} />
                       ))}
