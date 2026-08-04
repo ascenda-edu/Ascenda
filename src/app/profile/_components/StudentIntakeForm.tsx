@@ -148,7 +148,15 @@ function SectionTitle({ label, hint, why }: { label: string; hint?: string; why?
   return (
     <div ref={containerRef} className="relative flex items-start justify-between gap-3">
       <div>
-        <p className="font-semibold text-foreground text-sm">{label}</p>
+        {/* An <h3>, not a <p>. These are the form's section headings — "Subjects &
+          * predicted grades", "English proficiency", "Admissions tests" — and they
+          * read as headings, but as paragraphs they were invisible to the
+          * heading-navigation a screen-reader user relies on to move through a long
+          * step. h3 is the right level: PageHero owns the h1, the step title is the
+          * h2. `.text-body-sm` rather than `text-sm` because h1-h6 pick up
+          * `font-heading tracking-tight` from globals.css, and these should stay in
+          * the body voice — they are labels, not display type. */}
+        <h3 className="text-body-sm font-semibold text-foreground">{label}</h3>
         {hint ? <p className="text-xs text-muted-foreground mt-0.5">{hint}</p> : null}
       </div>
       {why ? (
@@ -1261,7 +1269,7 @@ export const StudentIntakeForm = ({
             className="space-y-6"
           >
             <div className="mb-6">
-              <h2 className="font-heading text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+              <h2 className="text-balance font-heading text-xl font-semibold tracking-tight text-foreground md:text-2xl">
                 {STEP_META[currentStep]?.title}
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -1377,7 +1385,7 @@ export const StudentIntakeForm = ({
                     <label className="space-y-1.5">
                       <span className="text-sm font-medium text-muted-foreground">City <span className="text-xs">(optional)</span></span>
                       <input
-                        type="text" className="form-input"
+                        type="text" autoComplete="address-level2" className="form-input"
                         value={personalInfo.current_location_city}
                         onChange={(e) => updatePersonalInfo('current_location_city', e.target.value)}
                         placeholder="London"
