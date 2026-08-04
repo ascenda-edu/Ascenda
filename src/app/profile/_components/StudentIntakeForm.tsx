@@ -79,16 +79,24 @@ const isValidDraft = (d: unknown): d is IntakeDraft => {
 
 // ─── Reusable field components ────────────────────────────────────────────────
 
-const inputCls = 'flex h-11 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-0 transition-[color,border-color,box-shadow] duration-150';
-// SelectTrigger's default size clones the global `.form-input` (46px, rounded-2xl).
-// This wizard predates that class and uses `inputCls` (44px, rounded-xl), so every
-// trigger is nudged onto the input shape — a select and a text field share a grid
-// row here, and a 2px/4px-of-radius mismatch between them is visible.
-// Radix forbids an item with value='' , but these fields are OPTIONAL and their
-// native predecessors had a selectable `<option value="">` — so a user could set a
-// value and then take it back. A placeholder alone is not a substitute: it only
-// shows while the field is empty and can never be re-chosen. This sentinel restores
-// that path, mapped back to '' at the boundary so the submitted payload is unchanged.
+// FIELD SHAPE: `.form-input` (tailwind.config.ts) — the app-wide input treatment,
+// and the reason this wizard stopped looking a generation behind the rest of the
+// app. It replaced a local `inputCls` (h-11, rounded-xl, ring-primary/30,
+// ring-offset-0) that predated the shared class, so the wizard's fields were 2px
+// shorter, 4px sharper and had a different focus ring from every other form in
+// the product. `SelectTrigger`'s default size is a deliberate clone of the same
+// class (see src/components/ui/select.tsx), so a select and a text field sharing
+// a grid row now match BY CONSTRUCTION rather than by two constants agreeing.
+// Do not reintroduce a local variant: use `cn('form-input', …)`.
+
+// These fields are OPTIONAL and their native predecessors had a selectable
+// `<option value="">` — so a user could set a value and then take it back. A
+// placeholder alone is not a substitute: it only shows while the field is empty
+// and can never be re-chosen. This sentinel restores that path, mapped back to
+// '' at the boundary so the submitted payload is unchanged. It is NOT decoration:
+// `<SelectItem value="">` mounts fine and then does nothing when clicked, because
+// the wrapper swallows `onValueChange('')` app-wide — see ui/select.tsx. Pinned by
+// "the CLEAR sentinel un-sets an optional Select" in the characterization suite.
 const CLEAR = '__clear';
 
 // NOTE the Selects below bind `value={state || ''}`, NOT `|| undefined`. Radix decides
@@ -96,9 +104,7 @@ const CLEAR = '__clear';
 // UNCONTROLLED — and on the way back from a real value to '' it then renders its stale
 // internal value. Net effect: picking "Not specified" saved null but kept displaying
 // the old option. An unmatched '' on the ROOT is fine and shows the placeholder; only
-// SelectItem forbids ''.
-
-const selectTriggerCls = 'h-11 rounded-xl';
+// SelectItem is the case that silently fails.
 
 /** Stable DOM id for a validation error message, so inputs can point at it via aria-describedby. */
 const fieldErrorId = (key: string) => `intake-error-${key.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
@@ -237,7 +243,7 @@ function CountryCombobox({
           aria-activedescendant={open && highlight >= 0 ? optionId(highlight) : undefined}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
-          className={cn(inputCls, 'pr-9', error && 'border-destructive')}
+          className={cn('form-input', 'pr-9', error && 'border-destructive')}
           value={query}
           placeholder={placeholder ?? 'Search country…'}
           onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
@@ -376,7 +382,7 @@ function SubjectCombobox({
           aria-activedescendant={open && highlight >= 0 ? optionId(highlight) : undefined}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
-          className={cn(inputCls, 'pr-9', error && 'border-destructive')}
+          className={cn('form-input', 'pr-9', error && 'border-destructive')}
           value={query}
           placeholder="Subject name"
           onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
@@ -1199,7 +1205,7 @@ export const StudentIntakeForm = ({
                       <label className="space-y-1.5 block">
                         <span className="text-sm font-medium">First name</span>
                         <input
-                          type="text" autoComplete="given-name" className={cn(inputCls, errors['personal_information.first_name'] && 'border-destructive')}
+                          type="text" autoComplete="given-name" className={cn('form-input', errors['personal_information.first_name'] && 'border-destructive')}
                           {...a11yError('personal_information.first_name')}
                           value={personalInfo.first_name}
                           onChange={(e) => updatePersonalInfo('first_name', e.target.value)}
@@ -1212,7 +1218,7 @@ export const StudentIntakeForm = ({
                       <label className="space-y-1.5 block">
                         <span className="text-sm font-medium">Last name</span>
                         <input
-                          type="text" autoComplete="family-name" className={cn(inputCls, errors['personal_information.last_name'] && 'border-destructive')}
+                          type="text" autoComplete="family-name" className={cn('form-input', errors['personal_information.last_name'] && 'border-destructive')}
                           {...a11yError('personal_information.last_name')}
                           value={personalInfo.last_name}
                           onChange={(e) => updatePersonalInfo('last_name', e.target.value)}
@@ -1226,7 +1232,7 @@ export const StudentIntakeForm = ({
                     <label className="space-y-1.5 block">
                       <span className="text-sm font-medium">Email</span>
                       <input
-                        type="email" autoComplete="email" inputMode="email" spellCheck={false} className={cn(inputCls, errors['personal_information.email'] && 'border-destructive')}
+                        type="email" autoComplete="email" inputMode="email" spellCheck={false} className={cn('form-input', errors['personal_information.email'] && 'border-destructive')}
                         {...a11yError('personal_information.email')}
                         value={personalInfo.email}
                         onChange={(e) => updatePersonalInfo('email', e.target.value)}
@@ -1291,7 +1297,7 @@ export const StudentIntakeForm = ({
                     <label className="space-y-1.5">
                       <span className="text-sm font-medium text-muted-foreground">City <span className="text-xs">(optional)</span></span>
                       <input
-                        type="text" className={inputCls}
+                        type="text" className="form-input"
                         value={personalInfo.current_location_city}
                         onChange={(e) => updatePersonalInfo('current_location_city', e.target.value)}
                         placeholder="London"
@@ -1300,7 +1306,7 @@ export const StudentIntakeForm = ({
                     <label className="space-y-1.5">
                       <span className="text-sm font-medium text-muted-foreground">Age <span className="text-xs">(optional)</span></span>
                       <input
-                        type="number" min={10} max={60} className={inputCls}
+                        type="number" min={10} max={60} className="form-input"
                         value={personalInfo.age}
                         onChange={(e) => updatePersonalInfo('age', e.target.value)}
                         placeholder="17"
@@ -1353,7 +1359,7 @@ export const StudentIntakeForm = ({
                       <label className="space-y-1.5 block">
                         <span className="text-sm font-medium">School name</span>
                         <input
-                          type="text" className={cn(inputCls, errors['academic_input.school_name'] && 'border-destructive')}
+                          type="text" className={cn('form-input', errors['academic_input.school_name'] && 'border-destructive')}
                           {...a11yError('academic_input.school_name')}
                           value={academicInput.school_name}
                           onChange={(e) => updateAcademicInput('school_name', e.target.value)}
@@ -1375,7 +1381,7 @@ export const StudentIntakeForm = ({
                     <label className="space-y-1.5">
                       <span className="text-sm font-medium text-muted-foreground">School city <span className="text-xs">(optional)</span></span>
                       <input
-                        type="text" className={inputCls}
+                        type="text" className="form-input"
                         value={academicInput.school_city}
                         onChange={(e) => updateAcademicInput('school_city', e.target.value)}
                       />
@@ -1391,7 +1397,7 @@ export const StudentIntakeForm = ({
                         * thing that does not work. */}
                       <Select value={academicInput.school_type || ''}
                         onValueChange={(v) => updateAcademicInput('school_type', v === CLEAR ? '' : v)}>
-                        <SelectTrigger aria-label="School type" className={selectTriggerCls}>
+                        <SelectTrigger aria-label="School type">
                           <SelectValue placeholder="Select…" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1413,7 +1419,7 @@ export const StudentIntakeForm = ({
                         <SelectTrigger
                           aria-label="Graduation year"
                           {...a11yError('academic_input.graduation_year')}
-                          className={cn(selectTriggerCls, errors['academic_input.graduation_year'] && 'border-destructive')}>
+                          className={cn(errors['academic_input.graduation_year'] && 'border-destructive')}>
                           <SelectValue placeholder="Select…" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1427,7 +1433,7 @@ export const StudentIntakeForm = ({
                     <label className="space-y-1.5">
                       <span className="text-sm font-medium text-muted-foreground">Preferred start date <span className="text-xs">(optional)</span></span>
                       <input
-                        type="date" className={inputCls}
+                        type="date" className="form-input"
                         value={academicInput.desired_start_date}
                         onChange={(e) => updateAcademicInput('desired_start_date', e.target.value)}
                       />
@@ -1471,7 +1477,7 @@ export const StudentIntakeForm = ({
                   <label className="space-y-1.5 block">
                     <span className="text-sm font-medium text-muted-foreground">Career aspiration <span className="text-xs">(optional)</span></span>
                     <input
-                      type="text" className={inputCls}
+                      type="text" className="form-input"
                       placeholder="Investment banker, software engineer, doctor…"
                       value={academicInput.career_aspiration}
                       onChange={(e) => updateAcademicInput('career_aspiration', e.target.value)}
@@ -1529,7 +1535,7 @@ export const StudentIntakeForm = ({
                               onValueChange={(v) => updateSubject(i, 'level', v)}
                               disabled={programmeType === 'A_LEVEL'}
                             >
-                              <SelectTrigger aria-label={`Level for subject ${i + 1}`} className={selectTriggerCls}>
+                              <SelectTrigger aria-label={`Level for subject ${i + 1}`}>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1542,7 +1548,7 @@ export const StudentIntakeForm = ({
                           <div className="md:col-span-3" data-field={`academic_input.subject_list.${i}.grade_value`}>
                             <label className="md:hidden text-xs font-medium text-muted-foreground mb-1 block">Grade</label>
                             {programmeType === 'IB'
-                              ? <input type="number" min={1} max={7} className={cn(inputCls, errors[`academic_input.subject_list.${i}.grade_value`] && 'border-destructive')}
+                              ? <input type="number" min={1} max={7} className={cn('form-input', errors[`academic_input.subject_list.${i}.grade_value`] && 'border-destructive')}
                                   {...a11yError(`academic_input.subject_list.${i}.grade_value`)}
                                   value={subj.grade_value} onChange={(e) => updateSubject(i, 'grade_value', e.target.value)} placeholder="1–7" />
                               : <Select value={subj.grade_value || ''}
@@ -1550,7 +1556,7 @@ export const StudentIntakeForm = ({
                                   <SelectTrigger
                                     aria-label={`Grade for subject ${i + 1}`}
                                     {...a11yError(`academic_input.subject_list.${i}.grade_value`)}
-                                    className={cn(selectTriggerCls, errors[`academic_input.subject_list.${i}.grade_value`] && 'border-destructive')}>
+                                    className={cn(errors[`academic_input.subject_list.${i}.grade_value`] && 'border-destructive')}>
                                     <SelectValue placeholder="Grade…" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1615,7 +1621,7 @@ export const StudentIntakeForm = ({
                           <label className="space-y-1.5 block">
                             <span className="text-sm font-medium text-muted-foreground">Core points <span className="text-xs">(optional)</span></span>
                             <input type="number" min={0} max={3}
-                              className={cn(inputCls, errors['academic_input.ib_core_points'] && 'border-destructive')}
+                              className={cn('form-input', errors['academic_input.ib_core_points'] && 'border-destructive')}
                               {...a11yError('academic_input.ib_core_points')}
                               value={academicInput.ib_core_points}
                               onChange={(e) => updateAcademicInput('ib_core_points', e.target.value)}
@@ -1627,7 +1633,7 @@ export const StudentIntakeForm = ({
                           <span className="text-sm font-medium text-muted-foreground">TOK grade <span className="text-xs">(optional)</span></span>
                           <Select value={academicInput.ib_tok_grade || ''}
                             onValueChange={(v) => updateAcademicInput('ib_tok_grade', v === CLEAR ? '' : v)}>
-                            <SelectTrigger aria-label="TOK grade" className={selectTriggerCls}>
+                            <SelectTrigger aria-label="TOK grade">
                               <SelectValue placeholder="Select…" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1640,7 +1646,7 @@ export const StudentIntakeForm = ({
                           <span className="text-sm font-medium text-muted-foreground">EE grade <span className="text-xs">(optional)</span></span>
                           <Select value={academicInput.ib_ee_grade || ''}
                             onValueChange={(v) => updateAcademicInput('ib_ee_grade', v === CLEAR ? '' : v)}>
-                            <SelectTrigger aria-label="EE grade" className={selectTriggerCls}>
+                            <SelectTrigger aria-label="EE grade">
                               <SelectValue placeholder="Select…" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1651,12 +1657,12 @@ export const StudentIntakeForm = ({
                         </label>
                         <label className="space-y-1.5">
                           <span className="text-sm font-medium text-muted-foreground">EE subject <span className="text-xs">(optional)</span></span>
-                          <input type="text" className={inputCls} value={academicInput.ee_subject}
+                          <input type="text" className="form-input" value={academicInput.ee_subject}
                             onChange={(e) => updateAcademicInput('ee_subject', e.target.value)} />
                         </label>
                         <label className="space-y-1.5">
                           <span className="text-sm font-medium text-muted-foreground">EE title <span className="text-xs">(optional)</span></span>
-                          <input type="text" className={inputCls} value={academicInput.ee_title}
+                          <input type="text" className="form-input" value={academicInput.ee_title}
                             onChange={(e) => updateAcademicInput('ee_title', e.target.value)} />
                         </label>
                       </div>
@@ -1664,7 +1670,7 @@ export const StudentIntakeForm = ({
                         <label className="space-y-1.5 block">
                           <span className="text-sm font-medium text-muted-foreground">EE summary <span className="text-xs">(optional, max 350 chars)</span></span>
                           <textarea rows={3} maxLength={350}
-                            className={cn(inputCls, 'h-auto py-3 resize-y', errors['academic_input.ee_summary'] && 'border-destructive')}
+                            className={cn('form-input', 'form-input--textarea', errors['academic_input.ee_summary'] && 'border-destructive')}
                             {...a11yError('academic_input.ee_summary')}
                             value={academicInput.ee_summary}
                             onChange={(e) => updateAcademicInput('ee_summary', e.target.value)}
@@ -1703,7 +1709,7 @@ export const StudentIntakeForm = ({
                             <SelectTrigger
                               aria-label="Test type"
                               {...a11yError('academic_input.english_test_type')}
-                              className={cn(selectTriggerCls, errors['academic_input.english_test_type'] && 'border-destructive')}>
+                              className={cn(errors['academic_input.english_test_type'] && 'border-destructive')}>
                               <SelectValue placeholder="Select…" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1726,7 +1732,7 @@ export const StudentIntakeForm = ({
                         {showEnglishScore ? (
                           <label className="space-y-1.5">
                             <span className="text-sm font-medium text-muted-foreground">Overall score <span className="text-xs">(optional)</span></span>
-                            <input type="number" className={inputCls} value={englishScoreOverall}
+                            <input type="number" className="form-input" value={englishScoreOverall}
                               onChange={(e) => setEnglishScoreOverall(e.target.value)} placeholder="e.g. 7.0" />
                           </label>
                         ) : null}
@@ -1769,14 +1775,14 @@ export const StudentIntakeForm = ({
                           <div className="md:col-span-2">
                             <label className="space-y-1">
                               <span className="text-xs font-semibold text-muted-foreground">Score</span>
-                              <input type="number" className={inputCls} value={test.score_numeric}
+                              <input type="number" className="form-input" value={test.score_numeric}
                                 onChange={(e) => updateAdmissionsTest(i, 'score_numeric', e.target.value)} placeholder="Value" />
                             </label>
                           </div>
                           <div className="md:col-span-3">
                             <label className="space-y-1">
                               <span className="text-xs font-semibold text-muted-foreground">Percentile</span>
-                              <input type="number" min={0} max={100} className={inputCls} value={test.percentile}
+                              <input type="number" min={0} max={100} className="form-input" value={test.percentile}
                                 onChange={(e) => updateAdmissionsTest(i, 'percentile', e.target.value)} placeholder="0–100" />
                             </label>
                           </div>
@@ -1796,14 +1802,14 @@ export const StudentIntakeForm = ({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <label className="space-y-1.5">
                           <span className="text-sm font-medium text-muted-foreground">Subject area <span className="text-xs">(optional)</span></span>
-                          <input type="text" className={inputCls}
+                          <input type="text" className="form-input"
                             value={activities.epq_subject}
                             onChange={(e) => setActivities((prev) => ({ ...prev, epq_subject: e.target.value }))}
                             placeholder="e.g. Biology, Economics, History" />
                         </label>
                         <label className="space-y-1.5">
                           <span className="text-sm font-medium text-muted-foreground">Project title <span className="text-xs">(optional)</span></span>
-                          <input type="text" className={inputCls}
+                          <input type="text" className="form-input"
                             value={activities.epq_title}
                             onChange={(e) => setActivities((prev) => ({ ...prev, epq_title: e.target.value }))}
                             placeholder="e.g. To what extent does microfinance reduce poverty?" />
@@ -1822,14 +1828,14 @@ export const StudentIntakeForm = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <label className="space-y-1.5">
                         <span className="text-sm font-medium text-muted-foreground">SAT score <span className="text-xs">(400–1600, optional)</span></span>
-                        <input type="number" min={400} max={1600} className={inputCls}
+                        <input type="number" min={400} max={1600} className="form-input"
                           value={activities.sat_score}
                           onChange={(e) => setActivities((prev) => ({ ...prev, sat_score: e.target.value }))}
                           placeholder="e.g. 1450" />
                       </label>
                       <label className="space-y-1.5">
                         <span className="text-sm font-medium text-muted-foreground">ACT score <span className="text-xs">(1–36, optional)</span></span>
-                        <input type="number" min={1} max={36} className={inputCls}
+                        <input type="number" min={1} max={36} className="form-input"
                           value={activities.act_score}
                           onChange={(e) => setActivities((prev) => ({ ...prev, act_score: e.target.value }))}
                           placeholder="e.g. 32" />
@@ -1941,7 +1947,7 @@ export const StudentIntakeForm = ({
                                 : 'Key achievement or highlight'}
                               <span className="font-normal ml-1">(optional)</span>
                             </span>
-                            <input type="text" maxLength={150} className={inputCls}
+                            <input type="text" maxLength={150} className="form-input"
                               value={row.highlight}
                               onChange={(e) => updateActivityRow(row.localId, 'highlight', e.target.value)}
                               placeholder={
@@ -1978,7 +1984,7 @@ export const StudentIntakeForm = ({
                     {activities.work_experience ? (
                       <label className="space-y-1.5 block">
                         <span className="text-sm font-medium text-muted-foreground">Brief description <span className="text-xs">(optional)</span></span>
-                        <textarea rows={2} className={cn(inputCls, 'h-auto py-3 resize-none')}
+                        <textarea rows={2} className={cn('form-input', 'resize-none')}
                           value={activities.work_experience_summary}
                           onChange={(e) => setActivities((prev) => ({ ...prev, work_experience_summary: e.target.value }))}
                           placeholder="e.g. Summer internship at a law firm, 2 months" />
@@ -1993,7 +1999,7 @@ export const StudentIntakeForm = ({
                       hint="Optional — 2–3 sentences on your goals or what drives you."
                       why="Your counsellor uses this to give more targeted guidance and personalise your programme shortlist."
                     />
-                    <textarea rows={3} className={cn(inputCls, 'h-auto py-3 resize-none')}
+                    <textarea rows={3} className={cn('form-input', 'resize-none')}
                       value={activities.ambition_statement}
                       onChange={(e) => setActivities((prev) => ({ ...prev, ambition_statement: e.target.value }))}
                       placeholder="e.g. I want to study biomedical sciences and eventually research treatments for autoimmune diseases. I'm particularly interested in universities with strong research output and lab access for undergraduates." />
@@ -2069,7 +2075,7 @@ export const StudentIntakeForm = ({
                     </div>
                     <label className="space-y-1.5 block pt-1">
                       <span className="text-xs text-muted-foreground">Anything else?</span>
-                      <input type="text" className={inputCls}
+                      <input type="text" className="form-input"
                         value={lifestylePreference.other_extracurriculars}
                         onChange={(e) => updateLifestylePreference('other_extracurriculars', e.target.value)}
                         placeholder="Chess club, anime society…" />
