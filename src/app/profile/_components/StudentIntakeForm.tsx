@@ -12,7 +12,7 @@ import { PROFILE_STEPS, FIRST_BOOSTER_STEP_INDEX, ESSENTIAL_STEP_KEYS } from '@/
 import { IntakeRail, type RailStep } from '../wizard/_components/intake-rail';
 import { IntakeStepMeter } from '../wizard/_components/intake-step-meter';
 import { cn } from '@/lib/utils';
-import { EASE, DURATION, TRAVEL } from '@/lib/motion';
+import { EASE, EASE_POP, DURATION, TRAVEL } from '@/lib/motion';
 import type {
   AdmissionsTestType, EnglishStatus, EnglishTestType,
   IntendedCluster, ProgrammeType, StudentProfilePayload
@@ -1596,11 +1596,21 @@ export const StudentIntakeForm = ({
                       <div className="md:col-span-3 eyebrow">Grade</div>
                     </div>
 
+                    {/* One card per subject below `md`, the 12-column table above it.
+                      * Six IB subjects used to stack as eighteen loose fields on a
+                      * phone — Subject / Level / Grade / remove, six times, with
+                      * nothing grouping a row together. The card gives each subject
+                      * an edge, and `md:contents` on the Level+Grade pair dissolves
+                      * its wrapper at `md` so those two rejoin the 12-column grid
+                      * instead of needing a second markup path. */}
                     <div className="space-y-3" data-field="academic_input.subject_list">
                       {subjects.map((subj, i) => (
-                        <div key={i} className="md:grid md:grid-cols-12 md:gap-3 space-y-2 md:space-y-0 md:items-start">
+                        <div
+                          key={i}
+                          className="space-y-3 rounded-xl border border-border/60 bg-background p-3 md:grid md:grid-cols-12 md:items-start md:gap-3 md:space-y-0 md:rounded-none md:border-0 md:bg-transparent md:p-0"
+                        >
                           <div className="md:col-span-5" data-field={`academic_input.subject_list.${i}.subject_name`}>
-                            <label className="md:hidden text-xs font-medium text-muted-foreground mb-1 block">Subject</label>
+                            <label className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">Subject</label>
                             <SubjectCombobox
                               value={subj.subject_name}
                               onChange={(v) => updateSubject(i, 'subject_name', v)}
@@ -1608,6 +1618,7 @@ export const StudentIntakeForm = ({
                               errorId={fieldErrorId(`academic_input.subject_list.${i}.subject_name`)}
                             />
                           </div>
+                          <div className="grid grid-cols-2 gap-3 md:contents">
                           <div className="md:col-span-3">
                             <label className="md:hidden text-xs font-medium text-muted-foreground mb-1 block">Level</label>
                             <Select
@@ -1647,11 +1658,12 @@ export const StudentIntakeForm = ({
                             }
                             <FieldError msg={errors[`academic_input.subject_list.${i}.grade_value`]} id={fieldErrorId(`academic_input.subject_list.${i}.grade_value`)} />
                           </div>
-                          <div className="md:col-span-1 flex items-end justify-end md:justify-center pb-0.5">
+                          </div>
+                          <div className="flex items-end justify-end pb-0.5 md:col-span-1 md:justify-center">
                             <button type="button" onClick={() => removeSubject(i)}
                               aria-label={`Remove subject ${i + 1}`}
-                              className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
-                              <Trash2 className="w-4 h-4" />
+                              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                              <Trash2 className="h-4 w-4" aria-hidden />
                             </button>
                           </div>
                         </div>
@@ -1660,23 +1672,47 @@ export const StudentIntakeForm = ({
                     <FieldError msg={errors['academic_input.subject_list']} id={fieldErrorId('academic_input.subject_list')} />
                     <FieldError msg={errors['academic_input.subject_list.hl']} id={fieldErrorId('academic_input.subject_list.hl')} />
 
-                    {/* IB auto-calculated total */}
+                    {/* ── The running IB total ──
+                      * The only immediate feedback anywhere in this form: type a
+                      * grade and a number moves. It was a small line of bold text
+                      * among several; it is now the foot of the subjects card, with
+                      * the figure at heading scale and keyed on its own value so it
+                      * LANDS when it changes (`EASE_POP`, entrances only — the
+                      * overshoot is what makes it read as a score going up rather
+                      * than a label being repainted).
+                      *
+                      * `ibSubjectSum`, never `academicInput.ib_total_points`: the
+                      * total is derived from the rows, and the stored field only
+                      * ever holds the last save's value. Reading it here made the
+                      * strip contradict the grades just entered. The Review step
+                      * reads the same derived value for the same reason. */}
                     {programmeType === 'IB' && ibSubjectSum !== null ? (
-                      <div className="mt-1 flex items-center gap-2 rounded-xl bg-primary/5 border border-primary/15 px-4 py-3">
-                        <span className="text-xs text-muted-foreground font-medium">Predicted from subjects:</span>
-                        <span className={cn(
-                          'text-sm font-bold',
-                          ibSubjectSum >= 35 ? 'text-success' : ibSubjectSum >= 28 ? 'text-warning' : 'text-foreground'
-                        )}>
-                          {ibSubjectSum}/42
+                      <div
+                        aria-live="polite"
+                        className="mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3"
+                      >
+                        <span className="text-xs font-medium text-muted-foreground">Predicted from subjects:</span>
+                        <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                          <motion.span
+                            key={ibSubjectSum}
+                            initial={{ opacity: 0, y: -4, scale: 0.94 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ duration: DURATION.fast, ease: EASE_POP }}
+                            className={cn(
+                              'font-heading text-xl font-semibold tabular-nums',
+                              ibSubjectSum >= 35 ? 'text-success' : ibSubjectSum >= 28 ? 'text-warning' : 'text-foreground'
+                            )}
+                          >
+                            {ibSubjectSum}/42
+                          </motion.span>
+                          {academicInput.ib_core_points ? (
+                            <span className="text-xs text-muted-foreground">
+                              + {academicInput.ib_core_points} core = <strong className="text-foreground">{ibSubjectSum + (Number(academicInput.ib_core_points) || 0)}</strong>/45
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">points (add core points below for total)</span>
+                          )}
                         </span>
-                        {academicInput.ib_core_points ? (
-                          <span className="text-xs text-muted-foreground">
-                            + {academicInput.ib_core_points} core = <strong>{ibSubjectSum + (Number(academicInput.ib_core_points) || 0)}</strong>/45
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">points (add core points below for total)</span>
-                        )}
                       </div>
                     ) : null}
                   </SectionCard>
