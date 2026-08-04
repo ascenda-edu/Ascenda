@@ -827,6 +827,76 @@ export const StudentIntakeForm = ({
    * reading it off `activities` (which is where it looks like it belongs) is a
    * type error rather than a silent wrong answer only because the slices differ.
    */
+  /**
+   * ── When an error appears, and when it goes away ─────────────────────────────
+   *
+   * Three rules, and the whole point is that the form stops arguing with someone
+   * who is mid-answer.
+   *
+   *   1. NEVER on change for a field that has no error yet. Being told "enter a
+   *      valid email" after typing "a" is the single most disliked behaviour a
+   *      form has. `goNext` and submit are what surface untouched fields.
+   *   2. ON BLUR, for that one field — but only if the student actually put
+   *      something in it. Tabbing through an empty required field and being
+   *      scolded for not having filled it in yet is the same mistake as (1);
+   *      "what you typed is wrong" is useful, "you have not got there yet" is not.
+   *   3. LIVE-CLEAR the moment it is satisfied. An error that lingers after being
+   *      fixed is what makes a form feel broken.
+   *
+   * Both additions only ever move errors in ONE direction (blur adds one key,
+   * change removes keys), so `goNext`'s "set every error for this step at once"
+   * behaviour is untouched and every existing assertion about it still holds.
+   *
+   * `stepForFieldKey` gates both, and that gate is load-bearing: `errors` can hold
+   * keys from OTHER steps — `handleFinalSubmit` routes a payload rejection back to
+   * its own step, and `validateStep(currentStep, …)` knows nothing about those
+   * keys. Without the gate, reconciling the current step would silently delete
+   * them and the student would be bounced to a step showing no reason why.
+   */
+
+  /** Surface one field's error on blur, if it has content to be wrong about. */
+  const handleFieldBlur = useCallback((event: React.FocusEvent<HTMLFormElement>) => {
+    const target = event.target as HTMLElement | null;
+    const owner = target?.closest?.('[data-field]');
+    const key = owner?.getAttribute('data-field');
+    if (!key || stepForFieldKey(key) !== currentStepRef.current) return;
+
+    // Rule 2: an empty field has not been answered wrongly, only not yet.
+    const value = (target as HTMLInputElement | HTMLTextAreaElement | null)?.value;
+    if (typeof value === 'string' && value.trim() === '') return;
+
+    const stepErrors = validateStep(currentStepRef.current, formState);
+    setErrors((prev) => {
+      const message = stepErrors[key];
+      if (message === prev[key]) return prev;
+      const next = { ...prev };
+      if (message) next[key] = message;
+      else delete next[key];
+      return next;
+    });
+  }, [formState]);
+
+  /**
+   * Rule 3. An effect rather than an onChange handler, because a form-level
+   * change handler reads `formState` from before the field's own setState has been
+   * applied — it would validate the previous keystroke.
+   */
+  useEffect(() => {
+    setErrors((prev) => {
+      const shown = Object.keys(prev);
+      if (shown.length === 0) return prev;
+      const stepErrors = validateStep(currentStep, formState);
+      let changed = false;
+      const next: Record<string, string> = {};
+      for (const key of shown) {
+        // Only this step's keys are ours to clear; see the gate note above.
+        if (stepForFieldKey(key) !== currentStep || stepErrors[key]) next[key] = prev[key];
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [formState, currentStep]);
+
   const stepCompletion = useMemo<Record<number, boolean>>(() => ({
     1: Object.keys(validateStep1(formState)).length === 0,
     2: Object.keys(validateStep2(formState)).length === 0,
@@ -898,7 +968,7 @@ export const StudentIntakeForm = ({
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <form className="relative font-sans" onSubmit={handleSubmit}>
+    <form className="relative font-sans" onSubmit={handleSubmit} onBlur={handleFieldBlur}>
       {/* Step navigation below `lg`, where the rail does not fit. Without it a
         * phone user has no way to jump steps and no sense of progress — only Back
         * and Next.
