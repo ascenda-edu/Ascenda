@@ -475,10 +475,20 @@ export const StudentIntakeForm = ({
     setAdmissionsTests((prev) => {
       if (prev.some((t) => t.test_type === 'NONE')) return prev; // "no tests" is an explicit choice
       const additions: typeof prev = [];
+      // `status: 'missing'`, NOT `''`. A suggested row with an empty status was a
+      // trap the app set for itself: `validateStep3` requires a status for every
+      // non-NONE row, so choosing "Medicine & dentistry" on step 2 silently added a
+      // UCAT row and then BLOCKED step 3 on it. Measured on a fully complete saved
+      // profile: the ring read 67%, "Grades & tests" had no tick, Next did nothing,
+      // the only error was "Select a status." for a row the student never added —
+      // and because the essentials were incomplete, `canSkipBoosters` was false so
+      // "Skip for now" never appeared either. Every medicine and law applicant hit
+      // that on first load. `missing` means "not taken yet", which is the truthful
+      // default for a test the APP is suggesting, and the student can change it.
       if (wantsLaw && !prev.some((t) => t.test_type === 'LNAT'))
-        additions.push({ test_type: 'LNAT', status: '', score_numeric: '', percentile: '' });
+        additions.push({ test_type: 'LNAT', status: 'missing', score_numeric: '', percentile: '' });
       if (wantsMed && !prev.some((t) => t.test_type === 'UCAT'))
-        additions.push({ test_type: 'UCAT', status: '', score_numeric: '', percentile: '' });
+        additions.push({ test_type: 'UCAT', status: 'missing', score_numeric: '', percentile: '' });
       if (additions.length === 0) return prev; // same reference — no re-render, no loop
       return [...prev, ...additions];
     });
