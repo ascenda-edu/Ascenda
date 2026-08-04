@@ -20,9 +20,19 @@ import { hasE2ECredentials, E2E_SKIP_REASON } from './credentials';
  * broke.
  *
  * ── STATUS ────────────────────────────────────────────────────────────────
- * Still NEVER EXECUTED against a live account: the authoring environment has no
- * E2E credentials (see playwright.config.ts). The skip below is honest, not
- * decorative.
+ * FIRST EXECUTED AGAINST A LIVE ACCOUNT 2026-08-04, and it passed — the fill,
+ * the save, and the full round trip after a reload with the draft dropped. Every
+ * prior version of this header said "never executed"; CI does have E2E secrets,
+ * so what was actually keeping it unrun was the `auth.setup` dependency, which
+ * had been asserting a hero title that the redesign made conditional.
+ *
+ * It still skips where credentials are absent, so a local run without
+ * `E2E_EMAIL`/`E2E_PASSWORD` proves nothing. That skip is honest, not decorative.
+ *
+ * The two findings from that first real run are recorded where they were fixed:
+ * the milestone celebration intercepting every click (see
+ * `dismissCelebrationIfOpen`), and the state-dependent title in
+ * `auth.setup.e2e.ts`. Neither was a selector problem.
  *
  * ── REWRITTEN 2026-08-04 FOR THE EIGHT-SCREEN WIZARD ──────────────────────
  * The redesign did not just move selectors, it changed the SHAPE of the flow, so
