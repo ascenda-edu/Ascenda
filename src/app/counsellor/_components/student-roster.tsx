@@ -160,9 +160,18 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
             <div className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary-ink">
               <Filter className="h-3 w-3" />
               Showing {filterLabel} students
+              {/* 12px glyph + p-0.5 = a 16x16 target, under the WCAG 2.5.8 (AA)
+                  24px floor. The inset ::after grows the hit box without moving
+                  the glyph — but the ::after CANNOT be symmetric here: the
+                  animating parent needs `overflow-hidden` for its height
+                  transition, so anything taller than the ~30px chip gets clipped
+                  and the extra target area would silently not exist. So the box
+                  grows to 44 on the drag-free horizontal axis (16 + 2*14, which
+                  still fits inside the chip's px-4) and to exactly the 24px AA
+                  floor vertically (16 + 2*4, inside the chip's py-1.5). */}
               <button
                 onClick={onClearExternalFilter}
-                className="ml-1 rounded-full p-0.5 hover:bg-primary/10"
+                className='relative ml-1 rounded-full p-0.5 after:absolute after:-inset-x-3.5 after:-inset-y-1 after:content-[""] hover:bg-primary/10'
                 title="Clear dashboard filter"
                 aria-label="Clear filters"
               >
@@ -184,9 +193,12 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
             <div className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-semibold capitalize text-primary-ink">
               <Filter className="h-3 w-3" />
               Field: {fieldFilter.replace(/_/g, ' ')}
+              {/* Same 16x16 target and the same overflow-hidden parent as the
+                  dashboard-filter chip above — see that comment for why the
+                  ::after is asymmetric. */}
               <button
                 onClick={() => setFieldFilter('')}
-                className="ml-1 rounded-full p-0.5 hover:bg-primary/10"
+                className='relative ml-1 rounded-full p-0.5 after:absolute after:-inset-x-3.5 after:-inset-y-1 after:content-[""] hover:bg-primary/10'
                 title="Clear field filter"
                 aria-label="Clear field filter"
               >

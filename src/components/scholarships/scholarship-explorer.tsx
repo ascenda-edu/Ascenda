@@ -150,7 +150,13 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
               className="w-full rounded-xl border border-border bg-background pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             {query && (
-              <button onClick={() => setQuery('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              // 14px glyph = a 14x14 target, under the WCAG 2.5.8 (AA) 24px
+              // floor. The inset ::after adds 16px per side (14 + 32 = 46) so the
+              // hit box clears both the AA floor and the house 44px guideline
+              // while the glyph and the layout stay exactly as they are. The
+              // button is already `absolute`, which is enough of a containing
+              // block for the ::after; no ancestor here is overflow-hidden.
+              <button onClick={() => setQuery('')} aria-label="Clear search" className='absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground after:absolute after:-inset-4 after:content-[""] hover:text-foreground'>
                 <X className="h-3.5 w-3.5" aria-hidden />
               </button>
             )}

@@ -43,7 +43,10 @@ export const ThemeToggle = ({ compact = false, className }: ThemeToggleProps) =>
         className
       )}
     >
-      <div className="inline-flex items-center gap-1 rounded-full bg-background p-1">
+      {/* gap-2, was gap-1: three ~36px segments 4px apart is inside the mis-tap
+          band on touch, and System/Light/Dark are mutually exclusive so a
+          mis-tap is always wrong rather than merely extra. */}
+      <div className="inline-flex items-center gap-2 rounded-full bg-background p-1">
         <Button
           type="button"
           size="sm"

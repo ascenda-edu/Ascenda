@@ -405,11 +405,21 @@ export function WidgetGridCore<Id extends string, Sizes extends object>({
                       )} />
                     </button>
                     {onDeleteCustomWidget && (
+                      // 20x20 fails the WCAG 2.5.8 (AA) 24px floor, so the hit box
+                      // grows via an inset ::after. Deliberately -inset-1 (4px per
+                      // side -> 28x28) rather than the -inset-3 that would reach the
+                      // house 44px guideline: this badge is positioned OVER the
+                      // corner of its own toggle button, and the cells sit in a
+                      // `gap-2` grid, so it is 8px from the next cell's toggle. At
+                      // 44px it would put a 26x26 region of an unconfirmed,
+                      // irreversible delete on top of a benign toggle and reach 10px
+                      // into the neighbouring cell's. 28px clears AA and adds only
+                      // 4px of encroachment over the state it already overlaps.
                       <button
                         onClick={() => onDeleteCustomWidget(entry.id)}
                         aria-label={`Delete ${entry.label} ${noun}`}
                         title={`Delete custom ${noun}`}
-                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-e-1 transition hover:border-destructive/30 hover:text-destructive"
+                        className='absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-e-1 transition after:absolute after:-inset-1 after:content-[""] hover:border-destructive/30 hover:text-destructive'
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>

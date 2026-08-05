@@ -423,9 +423,17 @@ export function IntelligentSearchBar({
                         type="button"
                         onClick={() => onChange('')}
                         aria-label="Clear search"
+                        // The X stays 20px (default) / 12px (compact) — both under the
+                        // 24px WCAG 2.5.8 floor — so the hit box is grown with an inset
+                        // ::after instead of by resizing the glyph: 20 + 2*12 and
+                        // 12 + 2*16 both land on 44. Nothing on this row is clipped
+                        // (the wrapper is `relative flex`, and the only
+                        // overflow-hidden here is the suggestions dropdown, a sibling).
                         className={cn(
-                            "rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                            variant === 'default' ? "" : "absolute right-3 top-1/2 -translate-y-1/2"
+                            'relative rounded-full text-muted-foreground after:absolute after:content-[""] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                            variant === 'default'
+                                ? "after:-inset-3"
+                                : "absolute right-3 top-1/2 -translate-y-1/2 after:-inset-4"
                         )}
                     >
                         <X className={cn(variant === 'default' ? "h-5 w-5" : "h-3 w-3")} aria-hidden />

@@ -213,9 +213,11 @@ export function ThreadPane({
                     </div>
                   )}
 
-                  {/* Thumbs feedback */}
+                  {/* Thumbs feedback. gap-2, not gap-0.5: these are two 24×24
+                      controls with OPPOSITE meanings, and 2px apart a fat finger
+                      rates the answer backwards. */}
                   {showFeedback && (
-                    <div className="mt-1 flex items-center gap-0.5">
+                    <div className="mt-1 flex items-center gap-2">
                       <button
                         onClick={() => onRate(msg.id, 1)}
                         aria-label="Good answer"

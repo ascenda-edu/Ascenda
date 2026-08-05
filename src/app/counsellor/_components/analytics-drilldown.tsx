@@ -154,11 +154,17 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
                   className="form-input rounded-xl py-2.5 pl-9 pr-4"
                 />
                 {search && (
+                  // 14px glyph = a 14x14 target, under the WCAG 2.5.8 (AA) 24px
+                  // floor. The inset ::after adds 16px per side (14 + 32 = 46)
+                  // without touching the glyph or the layout. DialogContent IS
+                  // overflow-hidden, but the row sits inside `mx-6 mb-3`, so the
+                  // 46px box has 20px of slack to the dialog edge and is not
+                  // clipped.
                   <button
                     type="button"
                     onClick={() => setSearch('')}
                     aria-label="Clear search"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className='absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground after:absolute after:-inset-4 after:content-[""] hover:text-foreground'
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>

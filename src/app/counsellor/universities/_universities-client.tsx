@@ -766,11 +766,22 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                               {card.country ? ` · ${card.country}` : ''}
                             </p>
                           </div>
+                          {/* 14px glyph + p-1 = a 22x22 target, a hair under the
+                              WCAG 2.5.8 (AA) 24px floor, so the hit box grows via
+                              an inset ::after rather than by resizing the glyph.
+                              -inset-3 is 22 + 2*12 = 46 nominal; the card needs
+                              `overflow-hidden` for its exit height animation and
+                              this button sits flush against the top-right corner
+                              of the p-3 padding box, so the top and right 12px are
+                              clipped and the box lands at ~34x34 in practice —
+                              still comfortably over the AA floor, and the clipped
+                              area was outside the card where it would have
+                              overlapped nothing anyway. */}
                           <button
                             type="button"
                             onClick={() => removeCard(selectedDeck.id, card)}
                             aria-label={`Remove ${card.university} from deck`}
-                            className="rounded-full p-1 text-muted-foreground transition hover:bg-danger-subtle hover:text-danger"
+                            className='relative rounded-full p-1 text-muted-foreground transition after:absolute after:-inset-3 after:content-[""] hover:bg-danger-subtle hover:text-danger'
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -854,11 +865,22 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                       className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 py-1 pl-2.5 pr-1.5 text-xs font-medium text-primary-ink"
                     >
                       {a.flag} {a.name}
+                      {/* 12px glyph + p-0.5 = a 16x16 target, under the WCAG 2.5.8
+                          (AA) 24px floor. The ::after is asymmetric on purpose:
+                          these chips wrap in a `gap-1.5` flex, so a symmetric 44px
+                          box would reach 9px past a 26px chip and start overlapping
+                          the unassign button of the chip in the row above or below —
+                          two adjacent targets for the same destructive action is a
+                          worse outcome than a slightly shorter one. 44 wide
+                          (16 + 2*14, inside the chip's own padding) x 28 tall
+                          (16 + 2*6, which stops 1px past the chip edge and 5px
+                          short of the next row's box). No overflow-hidden ancestor
+                          here, so nothing is clipped. */}
                       <button
                         type="button"
                         onClick={() => unassign(selectedDeck.id, a.assignmentId)}
                         aria-label={`Unassign ${a.name}`}
-                        className="rounded-full p-0.5 transition hover:bg-primary/30"
+                        className='relative rounded-full p-0.5 transition after:absolute after:-inset-x-3.5 after:-inset-y-1.5 after:content-[""] hover:bg-primary/30'
                       >
                         <X className="h-3 w-3" />
                       </button>

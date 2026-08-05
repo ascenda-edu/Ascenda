@@ -95,8 +95,20 @@ const ToastCard = ({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
         <p className="text-sm font-semibold">{toast.title}</p>
         {toast.description ? <p className="text-xs text-muted-foreground">{toast.description}</p> : null}
       </div>
+      {/* WCAG 2.5.8 (AA) sets a 24x24 CSS px floor on pointer targets. A bare
+          <button> around a 16px icon is a 16x16 target — the smallest one in the
+          app, and it ships on every route because the provider is mounted in the
+          root tree. The icon must stay 16px (a bigger X reads as a second action
+          competing with the toast's own copy), so the target grows via an inset
+          ::after instead: -inset-3.5 is 14px on each side, 16 + 28 = 44, which
+          clears the AA floor and hits the house 44px guideline (G6) without
+          moving a single pixel of layout. Needs `relative` for the ::after to
+          resolve against, and no ancestor here clips it — the card is
+          `rounded-2xl p-4` with no overflow-hidden, so the hit box may spill
+          ~10px past the card edge into the pointer-events-none viewport, where
+          it overlaps nothing. */}
       <button
-        className="text-muted-foreground transition hover:text-foreground"
+        className='relative inline-flex text-muted-foreground transition after:absolute after:-inset-3.5 after:content-[""] hover:text-foreground'
         aria-label="Dismiss notification"
         onClick={() => onDismiss(toast.id)}
       >
@@ -111,7 +123,16 @@ const ToastViewport = ({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id:
     // z-toast (300), not z-50: at z-50 the viewport sat BEHIND the help thread
     // drawer (z-modal) that raises most of these toasts, so success/error
     // feedback was invisible exactly when it mattered.
-    <div className="pointer-events-none fixed bottom-4 right-4 z-toast flex flex-col gap-3 sm:bottom-6 sm:right-6">
+    //
+    // The bottom offset is the same fluid expression the chat launcher dock uses
+    // (chat/chatbot-widget.tsx:509). At a flat `bottom-4` the toast landed inside
+    // the mobile nav's ~74px band and under the iPhone home indicator, so the
+    // dismiss target was physically unreachable on the exact viewport where a
+    // 44px target matters most. env(safe-area-inset-bottom,8px)+72px clears both.
+    // The step back to `bottom-6` is at `md`, NOT `sm`: mobile-nav.tsx is
+    // `md:hidden`, so an `sm:` step would put the toast back under the nav for
+    // the whole 640–768px band.
+    <div className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom,8px)+72px)] right-4 z-toast flex flex-col gap-3 sm:right-6 md:bottom-6">
       {toasts.map((toast) => (
         <ToastCard key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}

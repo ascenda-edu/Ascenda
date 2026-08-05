@@ -411,7 +411,16 @@ function ProgramHeaderCard({ uni, onRemove }: { uni: ProgramSearchResult; onRemo
             />
             <button
                 onClick={onRemove}
-                className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background/70 text-muted-foreground opacity-0 backdrop-blur-sm transition-[opacity,color,background-color,border-color] hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 group-hover:opacity-100"
+                /* This X is the ONLY way to drop a university from the
+                   comparison, and it used to be `opacity-0` +
+                   `group-hover:opacity-100` — a hover-only control, i.e. one
+                   that does not exist on a touch device, so the comparison set
+                   was un-editable on a phone. `[@media(hover:hover)]` scopes the
+                   hide-then-reveal to pointers that can hover; touch gets it
+                   permanently. The `focus-visible:opacity-100` below is a
+                   2-selector rule and still outranks the single-class
+                   media-gated `opacity-0`, so keyboard reach is unchanged. */
+                className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background/70 text-muted-foreground backdrop-blur-sm transition-[opacity,color,background-color,border-color] hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
                 aria-label={`Remove ${uni.universityName}`}
             >
                 <X className="h-3.5 w-3.5" />

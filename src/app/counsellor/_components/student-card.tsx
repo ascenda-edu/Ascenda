@@ -128,8 +128,21 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
           </div>
         )}
 
-        {/* Quick actions */}
-        <div className="absolute right-0 top-0 flex gap-1 opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 group-focus-within:opacity-100 z-20">
+        {/* Quick actions.
+            A control that only appears on `:hover` does not exist on a phone —
+            `:hover` never fires for a touch pointer, and the `focus-within`
+            fallback below needs a Tab key a phone does not have. With a bare
+            `opacity-0` these two were the ONLY actions on a counsellor student
+            card, so the card had no reachable actions at all on touch.
+            `[@media(hover:hover)]` scopes the hide-then-reveal to pointers that
+            can actually hover (mouse/trackpad); every other pointer gets the
+            cluster permanently visible. Same pattern as
+            cross-application-tasks.tsx:415.
+            Specificity note: the two focus rules are `.group:focus-within .x` /
+            `:focus-visible` (≥2 classes) so they still beat the single-class
+            `[@media(hover:hover)]:opacity-0` — a media query adds no
+            specificity. */}
+        <div className="absolute right-0 top-0 z-20 flex gap-1 transition focus-visible:opacity-100 group-focus-within:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100">
           <Link
             href={`/counsellor/students/${student.id}`}
             className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground backdrop-blur-sm transition hover:border-primary/30 hover:text-primary-ink"

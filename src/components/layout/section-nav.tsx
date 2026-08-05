@@ -62,7 +62,13 @@ export const SectionNav = (props: SectionNavProps) => (
         <Skeleton
           key={item.href}
           aria-hidden
-          className="inline-flex h-8 shrink-0 items-center px-3 text-xs text-transparent sm:text-sm"
+          // Padding, not `h-8`: the comment above promises hydration doesn't shift
+          // the row, but it only held for WIDTH. `h-8` is 32px against `.nav-pill`'s
+          // 46px, so every navigation into a section jumped the row 14px taller.
+          // Mirroring the pill's own recipe — same padding, same text steps, same
+          // transparent border — makes the two byte-equal in height by construction
+          // rather than by a hardcoded number that can drift from it again.
+          className="inline-flex shrink-0 items-center border border-transparent px-3 py-3.5 text-xs text-transparent sm:py-3 sm:text-sm"
         >
           {item.label}
         </Skeleton>

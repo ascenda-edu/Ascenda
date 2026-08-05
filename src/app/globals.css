@@ -650,8 +650,20 @@
     @apply relative overflow-hidden rounded-xl border border-border bg-card p-4 sm:p-5 shadow-e-1 transition-[border-color,background-color] duration-200 dark:border-white/10 dark:bg-card;
   }
 
+  /* Touch height, and it is load-bearing: this one class is the geometry for the
+     SectionNav item AND every TabsTrigger, so it is the second-most-used tap target
+     in the app — and, sitting at the top of the screen, the one furthest from the
+     thumb. It measured 34px in both bands (mobile: py-2 = 16 + 12px line + 2px
+     border; sm+: py-1.5 = 12 + 20px line + 2px), well under the 44px floor.
+
+     py-3.5/sm:py-3 lands both bands on 46px rather than exactly 44. That is
+     deliberate: `.form-input` and `SelectTrigger` are already 46px and already pass,
+     so 46 is this app's established touch height and matching it keeps one number in
+     play instead of two. Padding rather than `min-h-11` because these consumers do
+     not all set a display mode, and adding `inline-flex` here would change the
+     layout of every call site. */
   .nav-pill {
-    @apply relative rounded-lg border border-transparent px-3 py-2 sm:py-1.5 text-xs sm:text-sm font-medium text-muted-foreground transition-[color,background-color,border-color,box-shadow] duration-200 hover:bg-muted hover:text-foreground;
+    @apply relative rounded-lg border border-transparent px-3 py-3.5 sm:py-3 text-xs sm:text-sm font-medium text-muted-foreground transition-[color,background-color,border-color,box-shadow] duration-200 hover:bg-muted hover:text-foreground;
   }
 
   /* The active tab used to be a SOLID brand fill. It was the only solid

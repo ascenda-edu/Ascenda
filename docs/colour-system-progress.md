@@ -4,9 +4,12 @@
 [colour-palette-research.md](./colour-palette-research.md) where they disagree. PR mechanics are in
 [colour-system-remaining-prs.md](./colour-system-remaining-prs.md).
 
-Branch `chore/tone-desaturation` — **not pushed**.
+Branch `chore/tone-desaturation` — **pushed, open as PR #79**.
 `51b3bed` tone desaturation · `4d54604` Signal placement · `0d6d0a1` residual brand fills ·
-`6bc4619` **PR 2 — periwinkle on a true-neutral canvas**.
+`6bc4619` **PR 2 — periwinkle on a true-neutral canvas** · `4d18a23` **PR 3 — the alpha ladder** ·
+`b361015` **G8 — Schibsted Grotesk + the two type rules** (§2c) ·
+`77193fe` **the reward layer — progress is a quantity** (§2e) ·
+then **G6 — the AA failures and touch outages** (§2d).
 
 ---
 
@@ -254,30 +257,101 @@ had to be find-and-replaced through `tailwind.config.ts` *and* its `typography` 
 fails silently. Hand-synced copies that moved: `layout.tsx`, `tailwind.config.ts` (×5),
 `src/components/landing/CLAUDE.md` (×2).
 
-## 2d. G6 — the mobile audit (findings only, NOT fixed)
+## 2d. G6 — the mobile audit, and the conformance half of the fix
 
-**The bottom nav is already right** — `mobile-nav.tsx:110` gives 4 destinations + "More" = exactly 5 for
-every role, ~52×67px items, and it uses `pb-[env(safe-area-inset-bottom,8px)]`. Viewport meta allows zoom.
+**Read this distinction first, because it reorders the whole list.** WCAG **2.5.8 Target Size (Minimum)**
+is AA and requires **24×24** CSS px. The 44px in G6 is the Apple/AAA *guideline*. So most of the ~150-row
+inventory below is a guideline miss, not a conformance failure — but a handful genuinely fail AA, and three
+are functional outages. **Those are fixed; the 44px sweep is not.**
 
-Everything else fails. Ranked by call-sites × severity:
+### Fixed: the actual AA failures (all were under 24px)
 
-1. **`Button size="sm"` is `h-9` = 36px, 100 call sites** (`ui/button.tsx:49`). `default` is 40px, `xs` 28px.
-2. **`.nav-pill` computes to 34px** (`globals.css:653`) and is the shared geometry for SectionNav *and* every
-   `TabsTrigger` — top-of-screen sub-nav on ~35 pages. It also overflows invisibly
-   (`overflow-x-auto scrollbar-none`, items `shrink-0`).
-3. **The Toast dismiss X is 16×16 unpadded** (`ui/toast.tsx:98`) and the viewport is `fixed bottom-4 right-4`
-   with no safe-area inset — inside the mobile nav's band, under the home indicator, on every route.
-4. **`Dialog` ships no close button**, so 12+ call sites hand-roll one and 10 land at 24–32px.
-5. **Hover-gated row actions with no touch fallback** make three features unreachable on a phone:
-   `student-card.tsx:127`, `conversation-rail.tsx:213`, `ComparisonModal.tsx:414`. The correct pattern is one
-   file away at `cross-application-tasks.tsx:415` (`[@media(hover:hover)]:opacity-0`).
+The pattern throughout is `after:absolute after:-inset-N after:content-[""]`, which expands the *hit box*
+without changing the visual size or the layout — already proven in-repo at `filter-pill.tsx:52` and
+`RangeSlider.tsx:148`.
 
-Two things worth knowing before fixing: the 44px hit-box escape hatch (`after:-inset-2.5`) is already proven
-at `filter-pill.tsx:52` and `RangeSlider.tsx:148` and ~60 icon buttons could adopt it verbatim — **but
-expanding hit boxes on targets already 2px apart makes overlap worse, not better**, so the `gap-0.5` clusters
-need spacing first. And `100vh` is used everywhere with `100dvh` nowhere, because Tailwind is pinned at 3.3.5
-and `dvh` landed in 3.4; the assistant panes are `h-[calc(100vh-220px)] min-h-[480px]`, which overflows the
-visual viewport on a 390×664 iPhone and pushes the composer under the bottom nav.
+Toast dismiss 16→44 · two clear-search X's 14→46 · search-bar clear 20/12→44 · two roster clear-filters
+16→44×24 · universities chip X 16→44×28 and deck X 22→~34 · widget remove 20→28 · two native range thumbs
+20→24.
+
+⚠ **`overflow-hidden` clips a pseudo-element hit box, silently.** Three sites needed asymmetric insets or a
+reduced target because an ancestor clips: the roster chips' `motion.div` (needs `overflow-hidden` for its
+height animation) takes 44 wide × exactly the 24px floor tall; the deck card's `motion.li` clips the box to
+~34×34 effective. **A hit box you cannot see is a hit box you cannot verify** — check the ancestors.
+
+⚠ **A native `::-webkit-slider-thumb` cannot take a pseudo-element**, so the two range thumbs were *enlarged*
+to the 24px floor instead. `filters/RangeSlider.tsx` is not a portable precedent — it is div-based, which is
+exactly why it can carry an `::after`. `chances-calculator` also had no `::-moz-range-thumb` rule at all, so
+Firefox was drawing a sub-24px default.
+
+The **widget delete badge stops at 28×28, deliberately**: it sits over its own toggle in a `gap-2` grid and
+`deleteCustomWidget` fires with no confirm and no undo, so a 44px box would drop an unconfirmed destructive
+region onto a benign neighbour. Clearing AA beat maximising the target.
+
+### Fixed: three features were unreachable on touch
+
+A control that only appears on `:hover` **does not exist on a phone**. Counsellor student-card row actions,
+the assistant conversation rail's rename/delete, and the *only* way to remove a university from the
+comparison were all `opacity-0 group-hover:opacity-100`. Now on the correct pattern, which already existed
+one file away at `cross-application-tasks.tsx:415`:
+
+```
+focus-visible:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100
+```
+
+Always visible by default; only hover-*capable* pointers get hide-then-reveal.
+
+⚠ **The trap in that conversion is `tailwind-merge`.** The rail's delete-confirm override was
+`isConfirmingDelete && 'opacity-100'`, which worked only because tailwind-merge collapsed it against the
+*base* `opacity-0`. Once the base becomes variant-scoped they stop deduping, a plain `opacity-100` **ties**
+on specificity with `[@media(hover:hover)]:opacity-0` and loses on source order — silently re-hiding the
+"Delete?" confirmation on every desktop. The override has to repeat the variant.
+
+### Fixed: spacing, as a prerequisite
+
+Enlarging hit boxes is only safe once neighbours have real spacing — at `gap-0.5` two enlarged 24px targets
+**overlap**, making mis-taps certain rather than likely. Seven `gap-0.5`/`gap-1` clusters went to `gap-2`
+(the essay toolbar to `gap-1.5`, where `gap-2` would have shrunk the `w-7` buttons in the narrowest column).
+Three of them were thumbs-up/thumbs-down pairs — opposite-meaning actions 2px apart.
+
+### Fixed: `.nav-pill`, 34px → 46px
+
+One class is the geometry for the SectionNav item **and** every `TabsTrigger`, so this is the second-most-used
+tap target in the app and, sitting at the top of the screen, the furthest from the thumb. 46 rather than 44
+because `.form-input` and `SelectTrigger` are already 46 and already pass — matching keeps one number in play.
+Padding, not `min-h-11`, because the consumers do not all set a display mode and adding `inline-flex` would
+change every call site. The Suspense skeleton was `h-8` (32px) against it, so every navigation into a section
+jumped the row 14px; it now mirrors the pill's own recipe rather than a hardcoded number that can drift again.
+
+### The Toast viewport was in the wrong place entirely
+
+`fixed bottom-4 right-4` put it **inside the mobile nav's ~74px band and under the home indicator** on every
+route. Now offset by `env(safe-area-inset-bottom)` + the nav height, stepping back at **`md:`** — not `sm:`,
+because `mobile-nav` is `md:hidden` and an `sm:` step-back re-buries it across the whole 640–768px band.
+
+### Still open — the 44px guideline, which needs a decision
+
+- **`Button size="sm"` is `h-9` = 36px across 100 call sites** (`ui/button.tsx:49`); `default` is 40, `xs` 28.
+  All clear the 24px AA floor, so this is guideline work, not conformance. Bumping `sm` to 44 collapses it
+  into `lg`; bumping visual size at all reflows 100 sites; hit-box expansion is now *safe* (the gap clusters
+  are fixed) but wants per-site checks for `overflow-hidden` ancestors.
+- **`Dialog` still ships no close button**, so 12+ call sites hand-roll one and most land at 24–32px. The
+  primitive's silence is what produced the divergence; adding a proper `DialogClose` is the real fix.
+- **`SelectItem` 36px, `SelectTrigger size="sm"` 30px, `ShowMoreToggle` 30px, sidebar rows 36px** (desktop).
+- **Six of ten counsellor destinations sit behind one unlabelled "More" icon** — within the letter of
+  "bottom nav ≤ 5" but a discoverability failure in spirit.
+- **`100vh` everywhere, `100dvh` nowhere** — Tailwind is pinned at 3.3.5 and `dvh` landed in 3.4. The
+  assistant panes are `h-[calc(100vh-220px)] min-h-[480px]`, which overflows the visual viewport on a
+  390×664 iPhone and pushes the composer under the bottom nav.
+- **SectionNav and every `TabsList` still overflow invisibly** (`overflow-x-auto scrollbar-none`, items
+  `shrink-0`), with no gradient mask or arrows. The taller pills make this *more* visible, not less.
+
+### What already passed, before any of this
+
+The **bottom nav** is genuinely right: `mobile-nav.tsx:110` gives 4 destinations + "More" = exactly 5 for
+every role, ~52×67px items, and `pb-[env(safe-area-inset-bottom,8px)]`. Viewport meta allows zoom. And
+`src/components/university-search/filters/` plus the wizard rail are the one subtree that had already been
+through a touch pass (`min-h-[44px]`, `h-11 w-11`).
 
 ## 2e. The reward layer — progress is a quantity
 
@@ -374,7 +448,7 @@ JPGs: `~/Desktop/ascenda-teen-guidelines/` (per-section, per-rule, and full page
 | G3 | One accent, and it has to be earned | ✓ PR 1 |
 | G4 | Dark mode is first-class, not an inversion | ⚠ card L 0.24 is media-dark; chat/utility sit 0.28–0.34 |
 | G5 | Chrome recedes; content leads | ✓ PR 1 |
-| G6 | Thumb reach, 44pt targets, bottom nav ≤5 | ⚠ **AUDITED, not fixed** — bottom nav passes; tap targets fail broadly. See §2d |
+| G6 | Thumb reach, 44pt targets, bottom nav ≤5 | ⚠ **AA failures + touch outages FIXED; the 44px guideline is not met app-wide.** See §2d |
 | G7 | Motion carries meaning, interruptible | ✓ |
 | G8 | Type decides credibility before colour | ✓ **Outfit → Schibsted Grotesk**, + the two type rules. See §2c |
 | G9 | Colour never alone; each tone owns a shape | ✓ |
@@ -394,10 +468,11 @@ body-text risk.
 
 Still open, in order:
 
-1. **G6 — actually fix the tap targets.** The audit is §2d; nothing is fixed. Start with
-   `Button size="sm"` (one line, 100 call sites) and `.nav-pill` (one line, ~35 pages). Read the
-   hit-box-overlap warning in §2d before sweeping — expanding hit areas on the `gap-0.5` clusters makes
-   mis-taps worse, so those need spacing first.
+1. **G6 — the 44px guideline sweep.** The AA failures, the touch outages, the spacing prerequisite and
+   `.nav-pill` are all done (§2d). What remains is guideline-not-conformance and needs a decision:
+   `Button size="sm"` (36px × 100 call sites), a real `DialogClose` on the primitive, `SelectItem` at 36px,
+   and the invisible `overflow-x-auto scrollbar-none` overflow on SectionNav / `TabsList` — which the taller
+   pills make *more* visible, not less.
 2. **A shared `Progress` primitive.** All 49 bars are hand-rolled and only 3 carry a real
    `role="progressbar"`. §2e fixed the colours; a primitive is what stops it recurring.
 3. **A `lint:tokens` rule for quantity-vs-status.** Nothing currently catches a status tone on a

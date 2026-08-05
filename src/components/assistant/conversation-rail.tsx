@@ -206,12 +206,27 @@ export function ConversationRail({
                       </button>
                     )}
 
-                    {/* Hover actions */}
+                    {/* Row actions — pin / rename / delete.
+                        Was hidden behind a bare `opacity-0` + `group-hover`,
+                        which on a touch device means "does not exist": there is
+                        no hover pointer, and the `focus-within` escape hatch
+                        needs a Tab key. `[@media(hover:hover)]` scopes the
+                        hide-then-reveal to pointers that can hover, so touch
+                        sees the cluster permanently. `focus-within` is
+                        `.x:focus-within` (2 selectors) and still outranks the
+                        single-class media-gated `opacity-0`, so keyboard reach
+                        is unchanged. Gap was `gap-0.5` — 2px between three 24px
+                        controls, one of which deletes the conversation. */}
                     {!isRenaming && (
                       <div
                         className={cn(
-                          'absolute right-1.5 top-1.5 flex items-center gap-0.5 rounded-full bg-card/80 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100 focus-within:opacity-100',
-                          isConfirmingDelete && 'opacity-100'
+                          'absolute right-1.5 top-1.5 flex items-center gap-2 rounded-full bg-card/80 backdrop-blur transition-opacity focus-within:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100',
+                          // The variant is repeated deliberately: without a base
+                          // `opacity-0` for tailwind-merge to collapse against, a
+                          // plain `opacity-100` ties on specificity with
+                          // `[@media(hover:hover)]:opacity-0` and loses on source
+                          // order, which would re-hide the "Delete?" confirmation.
+                          isConfirmingDelete && 'opacity-100 [@media(hover:hover)]:opacity-100'
                         )}
                       >
                         <button

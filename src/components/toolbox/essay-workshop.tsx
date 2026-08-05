@@ -178,8 +178,12 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
           <span className="text-sm font-semibold text-foreground">Essay Workshop</span>
         </div>
 
-        {/* Platform switcher */}
-        <div className="flex gap-0.5 bg-muted p-0.5 rounded-lg ml-4">
+        {/* Platform switcher. Was gap-0.5 p-0.5 — four ~24.5px-tall pills 2px
+            apart, which is a mis-tap generator on touch since picking the wrong
+            platform silently swaps the word/character limit. p-1 goes up with
+            the gap so the outer pills are not 2px from the container edge while
+            the inner ones sit 8px apart. */}
+        <div className="flex gap-2 bg-muted p-1 rounded-lg ml-4">
           {PLATFORMS.map((p) => (
             <button
               key={p}
@@ -381,8 +385,17 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
 
         {/* ── CENTER: Editor ───────────────────────────────────────────────── */}
         <main className="flex-1 flex flex-col min-w-0">
-          {/* Toolbar */}
-          <div className="flex items-center gap-0.5 px-4 h-10 border-b border-border bg-muted shrink-0">
+          {/* Toolbar. gap-1.5 (6px), NOT the 8px used elsewhere in this pass:
+              this bar is genuinely dense — six 28px TBtns, two Seps and three
+              text buttons in one non-wrapping row, and the centre column can be
+              as narrow as ~376px usable (1024px viewport with both the 256px
+              blocks aside and the 360px AI panel open). At gap-2 the eleven gaps
+              add ~66px and the flex children start shrinking below their w-7,
+              distorting the icons. 6px still separates the hit boxes enough for
+              the enlarge-targets workstream to land safely. Sep dropped its
+              `mx-0.5` in the same spirit — the flex gap alone now governs
+              spacing, which is consistent and buys back 10px. */}
+          <div className="flex items-center gap-1.5 px-4 h-10 border-b border-border bg-muted shrink-0">
             <TBtn icon={Bold} active={editor?.isActive('bold') ?? false} onClick={() => editor?.chain().focus().toggleBold().run()} title="Bold" />
             <TBtn icon={Italic} active={editor?.isActive('italic') ?? false} onClick={() => editor?.chain().focus().toggleItalic().run()} title="Italic" />
             <Sep />
@@ -518,4 +531,6 @@ function TBtn({ icon: Icon, active, onClick, title, disabled }: { icon: typeof B
   );
 }
 
-function Sep() { return <div className="w-px h-4 bg-border mx-0.5" />; }
+// No `mx-0.5`: the toolbar's own `gap-1.5` supplies the spacing, so a margin here
+// would only make the separator sit unevenly against its neighbours.
+function Sep() { return <div className="w-px h-4 bg-border" />; }

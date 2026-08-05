@@ -158,11 +158,24 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
               aria-valuemax={45}
               aria-valuenow={sliderScore}
               aria-valuetext={`${sliderScore} out of 45 points`}
+              // The thumb is 24px, not the 20px it was: this is a NATIVE
+              // <input type="range">, and the inset-::after trick the rest of the
+              // app uses to grow a small target (see filters/filter-pill.tsx) cannot
+              // reach a ::-webkit-slider-thumb — a UA pseudo-element takes no
+              // pseudo-element of its own. filters/RangeSlider.tsx is not a
+              // precedent to copy either: it is div-based, which is exactly why it
+              // CAN carry an ::after. So the only way this control meets the WCAG
+              // 2.5.8 (AA) 24px floor is a genuinely bigger knob, sized to the floor
+              // rather than to the house 44px guideline to keep the growth minimal.
+              // The -moz- rules are new for the same reason: without them Firefox
+              // draws its own default thumb, which is under 24px.
               className="w-full h-2 rounded-full appearance-none cursor-pointer bg-muted accent-primary
-                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5
+                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6
                 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-e-2
                 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background
-                [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110"
+                [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110
+                [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:rounded-full
+                [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-background [&::-moz-range-thumb]:bg-primary"
             />
             <div className="flex justify-between mt-1 px-0.5">
               <span className="text-label text-muted-foreground">24</span>
