@@ -49,28 +49,34 @@ export function ProfileProgressCard({
     return () => clearTimeout(timer);
   }, [isComplete]);
 
+  /* One chromatic element on this card, and it is the progress BAR — a data mark,
+     which encodes a quantity rather than a status.
+
+     This card previously spent the band tone five times over: a tinted border, a
+     `border-l-4` rail, a filled icon plate, a toned eyebrow and the bar. At 100%
+     that meant five green marks saying one thing, on the screen whose whole
+     problem was saying "done" too loudly. The surface, rail, plate and eyebrow are
+     neutral now; the bar still carries the band, so a profile at 20% still reads
+     as urgent at a glance. */
   return (
-    <div
-      className={cn(
-        'surface-card relative overflow-hidden rounded-4xl border-l-4 p-6',
-        visual.border,
-        visual.accent
-      )}
-    >
+    <div className="surface-card relative overflow-hidden rounded-4xl p-6">
       <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-4">
-          <div className={visual.swatch}>
+          <div className="flex h-9 w-9 items-center justify-center rounded-2xl text-muted-foreground">
             <visual.icon className="h-5 w-5" />
           </div>
           <div>
-            <p className={cn('eyebrow', visual.text)}>Profile completion</p>
+            <p className="eyebrow">Profile completion</p>
             <p className="text-2xl font-semibold text-foreground">{clampedPercent}%</p>
             <p className="mt-1 text-xs text-muted-foreground">
               {completedCount}/{totalSteps} steps done {nextStepTitle ? `• Next: ${nextStepTitle}` : ''}
             </p>
           </div>
         </div>
-        <div className={cn('inline-flex items-center gap-2 rounded-full px-4 py-2 text-label uppercase tracking-[0.35em]', visual.chip)}>
+        {/* Neutral: this chip says "Progress", which is a label for the number
+            beside it, not a state. It was the band tone, so at 100% it was a
+            green chip on a green card next to a green plate. */}
+        <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-4 py-2 text-label uppercase tracking-[0.35em] text-muted-foreground">
           <Sparkles className="h-4 w-4" />
           Progress
         </div>

@@ -60,14 +60,26 @@ export function SegmentedControl({ options, value, onChange, ariaLabel }: Segmen
             onKeyDown={onKeyDown(index)}
             className={cn(
               'relative flex min-h-[44px] flex-1 items-center justify-center rounded-full px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-              active ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+              active ? 'font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground'
             )}
           >
+            {/* The thumb is an ELEVATED NEUTRAL surface, not a brand fill.
+                Two reasons it changed. A filter row can hold several of these at
+                once, and a solid `--primary` each would put three or four
+                level-5 fills in one viewport against a cap of one — selecting a
+                filter value is not the loudest thing on a search page. And the
+                label was `text-primary-foreground` on `bg-primary`, which is
+                3.94:1 in dark.
+
+                A raised neutral thumb on a recessed track is also the platform
+                convention for a segmented control, so this reads as more
+                familiar rather than less. The `layoutId` is untouched: the thumb
+                still slides. */}
             {active ? (
               <motion.span
                 layoutId={`${groupId}-active`}
                 transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                className="absolute inset-0 rounded-full bg-primary shadow-e-1"
+                className="absolute inset-0 rounded-full border border-border bg-card shadow-e-1"
                 aria-hidden
               />
             ) : null}
