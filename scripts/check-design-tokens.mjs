@@ -161,8 +161,14 @@ const RULES = [
     // meter (a real limit you can exceed), the deadline urgency bars and dots, and
     // the notification count dot. That is the ideal resting state for a ratchet:
     // today's count is the list of earned exceptions, and anything new fails.
+    // The leading `(?<=[\s(])` is load-bearing: without it the bare `>` alternative
+    // matches a JSX TAG CLOSER, so `<span>\n  3 of 5 overdue\n</span>` sitting near a
+    // legitimate `bg-danger-fill` false-positives. A comparison operator in this
+    // codebase is always preceded by whitespace or `(` (prettier enforces it), while a
+    // tag closer is preceded by the tag or attribute name. The trade is that an
+    // unspaced `ratio<0.8` would be missed — which prettier does not permit.
     multiline: true,
-    re: /(?:>=|<=|>|<)\s*(?:0?\.\d+|\d+)[\s\S]{0,160}?\b(?:bg-(?:success|warning|danger)-fill|stroke-(?:success|warning|danger))\b/g,
+    re: /(?<=[\s(])(?:>=|<=|>|<)\s*(?:0?\.\d+|\d+)[\s\S]{0,160}?\b(?:bg-(?:success|warning|danger)-fill|stroke-(?:success|warning|danger))\b/g,
     msg: 'A quantity banded by a status tone. A percentage/count is not a status — use PROGRESS_FILL (continuous) or PROGRESS_SEGMENT_FILL (stepped) from src/lib/theme/categories.ts. Genuine deadlines and real limits are the exceptions already in the baseline.',
   },
   {
@@ -197,9 +203,19 @@ const LEGAL_OPACITY = new Set([
  * Offsets are preserved rather than the text removed, so a match index still maps to
  * the right line number for `--report`.
  *
- * Heuristic limit: a regex literal containing `//` or `/*` could be misread as the
- * start of a comment. Accepted — the alternative is a real parser, and the failure
- * mode is a few under-counted lines in a ratchet, not a wrong build.
+ * ⚠ Heuristic limits, and the second one is worse than it first looks. A regex literal
+ * containing `//` or `/*` can be misread as a comment opener; and a QUOTE inside a
+ * regex character class — `/[",\n]/` — puts the scanner into string state, which it
+ * then never leaves, so **every comment for the REST OF THE FILE goes un-blanked**.
+ * It is not "a few lines". Two files in the tree do this today
+ * (`api/profile/export/route.ts`, `api/essay-assist/route.ts`); neither contains a
+ * tone token, so neither affects a count.
+ *
+ * Accepted anyway, because the failure direction is safe: a desync makes the scanner
+ * treat comments as code, i.e. it can only ever OVER-count and produce a loud false
+ * positive on a PR. It cannot hide a real violation, which is the failure that would
+ * matter. Fixing it properly means a real parser; if the false positives ever bite,
+ * the cheap mitigation is to skip regex literals rather than to parse.
  */
 function blankComments(src) {
   const out = src.split('');

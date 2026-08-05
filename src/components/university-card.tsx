@@ -232,8 +232,14 @@ export function UniversityCard({
                 {logoTile('sm')}
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-3">
+                        {/* `font-sans`, not `font-heading`: 14px is below the 16px floor
+                            (brand.md §9 rule 2), and the two faces are not tellable apart
+                            down here anyway. It needs the explicit opt-out rather than just
+                            dropping the class, because the globals.css base rule puts the
+                            heading face on every `h1`–`h6` — the tag stays for the document
+                            outline. This was the only sub-floor `font-heading` left. */}
                         <h3
-                            className="min-w-0 flex-1 truncate font-heading text-sm font-semibold text-foreground"
+                            className="min-w-0 flex-1 truncate font-sans text-sm font-semibold text-foreground"
                             title={program}
                         >
                             {programEl}

@@ -14,9 +14,12 @@ import { PROGRESS_FILL, PROGRESS_TRACK } from '@/lib/theme/categories';
  *     no single place to be right. `lint:tokens`' `quantity-as-status` rule now
  *     catches the colour half at authoring time; this component removes the reason
  *     anyone hand-rolls the markup in the first place.
- *  2. **Accessibility was absent.** Exactly **three** of the 49 carried a real
- *     `role="progressbar"` with `aria-value*`. The rest were `aria-hidden`, or simply
- *     unlabelled — a screen reader got nothing. That is the more important half, and
+ *  2. **Accessibility was absent.** Exactly **two** of the 49 carried a real
+ *     `role="progressbar"` with `aria-value*` — `intake-step-meter.tsx` and
+ *     `getting-started-card.tsx`. (An audit corrected this from three: the third
+ *     candidate was prose in a comment, and the other `aria-valuenow` uses are
+ *     sliders.) The rest were `aria-hidden`, or simply unlabelled — a screen reader
+ *     got nothing. That is the more important half, and
  *     it is why `label` is a required prop rather than an optional one: a progressbar
  *     with no accessible name is a worse defect than no progressbar at all.
  *

@@ -2185,8 +2185,21 @@ export const StudentIntakeForm = ({
                             initial={{ opacity: 0, y: -4, scale: 0.94 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             transition={{ duration: DURATION.fast, ease: EASE_POP }}
+                            /* Inter, not the heading face: this is a FIGURE, and the heading
+                               face is for words (brand.md §9 rule 1). It was the app's only
+                               `font-heading` + `tabular-nums` pairing, in the same file whose
+                               own comment already said these "should stay in the body voice".
+
+                               ⚠ The success/warning banding below is a separate open question
+                               and is deliberately NOT changed here. It is a quantity wearing
+                               status tones — the defect this branch spent two commits removing
+                               — but unlike a completion percentage it is arguably tier-like
+                               (a predicted total measured against entry thresholds), which
+                               brand.md §4 does sanction. Changing it would remove information
+                               a student may be using, so it wants a product decision, not a
+                               sweep. Note `>= 35`/`>= 28` are not the real TIER_THRESHOLDS. */
                             className={cn(
-                              'font-heading text-xl font-semibold tabular-nums',
+                              'text-xl font-semibold tabular-nums',
                               ibSubjectSum >= 35 ? 'text-success' : ibSubjectSum >= 28 ? 'text-warning' : 'text-foreground'
                             )}
                           >
