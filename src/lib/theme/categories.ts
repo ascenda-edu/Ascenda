@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  ArrowRight,
   Award,
   BookOpen,
   Briefcase,
@@ -407,31 +408,111 @@ export const PROFILE_SECTION_VISUAL: Record<ProfileSection, CategoryVisual> = {
   aspirations: make('primary', Target)
 };
 
-/* ─── Profile completion banding ────────────────────────────────────── */
+/* ─── Progress and completion — a QUANTITY, never a status ───────────── */
+
+/**
+ * Fills for a SEGMENTED progress bar, walking `--series-1…5`.
+ *
+ * Use this when the work has a known, small number of discrete steps — a profile
+ * with five sections, a wizard with five screens. The segment count then tells the
+ * truth about the data, where a continuous bar springing to 60% implies a precision
+ * that does not exist.
+ *
+ * ⚠ A segmented bar is the ONLY legal place for the full ramp. `--series-5`
+ * measures 2.57:1 (light) and 2.70:1 (dark) against a `bg-muted` track — under the
+ * 3:1 a non-text mark needs. It clears 3:1 against the CARD, which is what it sits
+ * on once the 2px card-coloured gap between segments is there. So a continuous bar
+ * cannot walk this ramp; it would fail for its whole first band, in both themes.
+ */
+export const PROGRESS_SEGMENT_FILL = [
+  'bg-series-1',
+  'bg-series-2',
+  'bg-series-3',
+  'bg-series-4',
+  'bg-series-5'
+] as const;
+
+/**
+ * The gap between segments — the thing that actually separates adjacent ramp steps,
+ * since 1.32–1.48:1 of lightness between them does not.
+ *
+ * `gap-0.5`, not `gap-[2px]`: 0.125rem resolves to exactly 2px at the 16px root, and
+ * it is a named scale step, so it does not add an `arbitrary-geometry` hit — that
+ * rule is a ratchet whose count may only fall. Being rem-based it also participates
+ * in the fluid root scaling (`globals.css` grows the root to 1.125rem on very wide
+ * viewports), which a hard 2px would not.
+ */
+export const PROGRESS_SEGMENT_GAP = 'gap-0.5';
+
+/** An unfilled segment, and the track behind a continuous bar. */
+export const PROGRESS_TRACK = 'bg-muted';
+
+/**
+ * Fill for a CONTINUOUS progress bar — upload progress, a percentage with no step
+ * structure. One solid brand fill; the length is the encoding.
+ *
+ * `brand.md` §5: "Progress bar — level 5 — Brand. Green only at a genuine terminal
+ * outcome." Do not band this by value. A colour that changes with the quantity
+ * reads as a status change, which is the error this section exists to undo.
+ */
+export const PROGRESS_FILL = 'bg-primary';
 
 export type CompletionBand = 'none' | 'low' | 'mid' | 'high' | 'full';
+
+/**
+ * Icon + chip treatment for a completion band. **Brand and neutral only.**
+ *
+ * This used to map the bands onto `rose` / `amber` / `amber` / `emerald`, and that
+ * was wrong twice over:
+ *
+ *  1. **A percentage is a quantity, not a status.** `warning` means "act soon",
+ *     which implies a deadline; a half-finished profile has none — it is simply the
+ *     next thing to do, which makes it a primary action and therefore the brand's
+ *     job. The card's own comment used to defend the old behaviour as "so a profile
+ *     at 20% still reads as urgent at a glance", which is the error stated out loud.
+ *     Note that `classifyProgress` below already argued the opposite case for its
+ *     own callers — the bug was found once and fixed only locally.
+ *  2. **`warning-fill` is olive.** It measures OKLCH L 0.673 / C 0.126 / hue 80° in
+ *     light — yellow turning green at little over half the brand's chroma — and in
+ *     dark it is L 0.396 at 1.55:1 against the track, i.e. very nearly invisible.
+ *     A dark yellow is olive at every saturation; see `brand.md` §4.
+ *     Do NOT "fix" this by darkening or brightening gold.
+ *
+ * `full` is deliberately NEUTRAL, not green. `brand.md` §4 rule 3: `success` is for
+ * terminal positive outcomes, never for "done". A finished section needs nothing
+ * from the reader, so it goes silent. The celebratory spike belongs on the
+ * *transition* to complete, not on the resting state — see `ProfileProgressCard`.
+ *
+ * ⚠ **Do NOT use `.bar` from this table.** It is inherited from `CategoryVisual`'s
+ * shape and it is a trap here: because `full` resolves to `neutral`
+ * (`bg-muted-foreground/30`) while `low`/`mid`/`high` resolve to `primary`
+ * (`bg-primary`), banding a bar through this table draws a **100% bar in the faintest
+ * grey and a 99% bar in full brand** — the bar gets paler the closer the student gets
+ * to done. That is worse than the olive it replaced. A bar is not a chip: use
+ * `PROGRESS_FILL` (continuous) or `PROGRESS_SEGMENT_FILL` (stepped) above, and let
+ * this table drive only the ICON and the chip's `bg`/`text`/`border`, where "silent
+ * at 100%" is the correct reading.
+ */
 export const COMPLETION_VISUAL: Record<CompletionBand, CategoryVisual> = {
   // "Nothing started" is not "failing". Only reachable via `classifyProgress`,
   // never via `classifyCompletion` — see both below.
   none: make('neutral', Circle),
-  low: make('rose', AlertTriangle),
-  // `mid` and `high` are both "unfinished, keep going" — they differ in DEGREE,
-  // and the percentage beside them already carries the degree. `high` was sky,
-  // which read as a third meaning rather than as more of the second.
-  mid: make('amber', Target),
-  high: make('amber', TrendingUp),
-  full: make('emerald', CheckCircle2)
+  // low/mid/high are one meaning — "unfinished, keep going" — at three degrees, and
+  // the percentage beside them already carries the degree. So they share a tone and
+  // differ only by icon. An arrow says GO where a clock said HURRY.
+  low: make('primary', ArrowRight),
+  mid: make('primary', ArrowRight),
+  high: make('primary', TrendingUp),
+  full: make('neutral', CheckCircle2)
 };
 
 /**
  * Band a COMPLETION percentage — how much of a fixed, known set of work is done.
  *
- * 0% lands in `low` (rose) deliberately, and that is not an oversight: every
- * caller of this function measures something the user is expected to finish, so
- * "0% of your profile" and "0% of this student's profile" are genuinely the
- * worst state, not a neutral one. The counsellor roster
- * (`_components/student-card.tsx`) and the cohort chart (`_analytics-client.tsx`,
- * whose lowest bucket is literally labelled `<50%`) both depend on that.
+ * The bands still exist because they drive the ICON and give ordinal buckets a
+ * stable name. They no longer drive a status colour: every band from `low` to
+ * `high` is the brand, and `full` is silent. If you want the bar itself, use
+ * `PROGRESS_SEGMENT_FILL` (stepped work) or `PROGRESS_FILL` (continuous).
  *
  * If you are banding a counter that can legitimately be empty — a task list with
  * no tasks, a quest deck nobody has opened — you want `classifyProgress`.

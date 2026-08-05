@@ -3,6 +3,21 @@
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
+/**
+ * Average progress across the toolbox tools, drawn as a ring.
+ *
+ * Brand, at every value. The stroke and the centred figure used to run the same
+ * three-way ternary — `>= 80 ? success : >= 50 ? warning : danger` — which read an
+ * average as a verdict: a student halfway through the tools was told in the
+ * overdue colour that they were behind on work nobody had asked them to do. A
+ * percentage is a quantity; the arc length is the encoding (brand.md §5, Data).
+ *
+ * Shape copied from `dashboard/hub/profile-progress-card.tsx`: `stroke-primary`
+ * arc on a `stroke-muted` track. Deliberately NOT copied from it: that card flips
+ * to `stroke-success` at 100%. Per brand.md §4 rule 3, `success` is for terminal
+ * positive outcomes and "done" is silent — and unlike a profile, "all five tools
+ * touched" is not an outcome at all.
+ */
 export function ToolboxProgressRing({ value }: { value: number }) {
   const circumference = 2 * Math.PI * 28;
   return (
@@ -13,10 +28,10 @@ export function ToolboxProgressRing({ value }: { value: number }) {
           * swallowed — the server shipped "67% progress" as a single text node while the
           * client hydrated two, which threw "Hydration failed" on every /toolbox load. */}
         <title>{`${value}% progress`}</title>
-        <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" strokeWidth="4" className="text-muted" />
+        <circle cx="32" cy="32" r="28" fill="none" strokeWidth="4" className="stroke-muted" />
         <motion.circle
           cx="32" cy="32" r="28" fill="none" strokeWidth="4" strokeLinecap="round"
-          className={cn(value >= 80 ? 'stroke-success' : value >= 50 ? 'stroke-warning' : 'stroke-danger')}
+          className="stroke-primary"
           initial={{ strokeDasharray: `0 ${circumference}` }}
           animate={{ strokeDasharray: `${(value / 100) * circumference} ${circumference}` }}
           transition={{ duration: 1, ease: 'easeOut' }}
@@ -26,7 +41,7 @@ export function ToolboxProgressRing({ value }: { value: number }) {
         <motion.span
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className={cn('text-sm font-bold tabular-nums', value >= 80 ? 'text-success' : value >= 50 ? 'text-warning' : 'text-danger')}
+          className="text-sm font-bold tabular-nums text-foreground"
         >
           {value}%
         </motion.span>
@@ -35,6 +50,14 @@ export function ToolboxProgressRing({ value }: { value: number }) {
   );
 }
 
+/**
+ * Days to the nearest deadline. The tone ladder here STAYS — this is the case the
+ * ring above is not. A date is not a quantity you are filling up, it is an
+ * obligation with a fixed end, so "3 days left" genuinely asks the reader to act
+ * now and `danger`/`warning` are saying exactly what they mean (brand.md §4:
+ * `danger` = urgent/overdue, `warning` = act soon). `DEADLINE_VISUAL` in
+ * lib/theme/categories bands the same axis the same way at day 7.
+ */
 export function ToolboxCountdown({ days }: { days: number }) {
   return (
     <motion.div

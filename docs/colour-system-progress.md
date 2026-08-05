@@ -210,6 +210,157 @@ alpha except `/60`" will flatten them again. Check the sibling state first.
 
 ---
 
+## 2c. G8 — type (Outfit → Schibsted Grotesk)
+
+The durable version of all of this is **[brand.md](./brand.md) §9**. This is the working record.
+
+**The scan came first, and it changed the recommendation.** There are exactly two ways to get the heading
+face — a semantic `<h1>`–`<h6>` tag, or a literal `font-heading` class. `font-heading` appears **once** in
+`globals.css` (line 488, the base rule). No utility or component class sets a family. So:
+
+- Outfit reached 66 semantic headings + 38 explicit classes; **~110 heading-shaped elements rendered in
+  Inter** purely because they were a `<p>` or `<span>`.
+- **The wordmark shipped in both faces** — Inter in `navbar.tsx`, Outfit in `LandingFooter.tsx`.
+- The **largest type in the app proper was Inter** (a 30px score readout in `chances-calculator.tsx`).
+- The **PageHero stat value is Inter**, inches from its own Outfit `<h1>`, on every student page.
+- Stat numbers split **4 Outfit / 22 Inter**; bold 14px titles **6 / 60**. No rule was in force.
+- Outfit also leaked *down* to an 11px bar label and one button.
+- **The primitives were all correct** — CardTitle, DialogTitle, PageHero, EmptyState, HubCard all reach the
+  heading face via a semantic tag. Every failure was at a call site. That is what made the swap safe.
+
+**The measured case against Outfit** (from the font binaries at weight 600, the house weight): x-height
+0.483 vs Inter's 0.546 (−11.5%), lowercase 6.9% narrower. At 18px — every card title, the app's most common
+heading — its lowercase sat **+6.1%** above the 15px Inter body beneath it, where Inter semibold at the same
+size gives **+20%**. **The second font was a net negative at the size it was used most.** Schibsted measures
+**+15.8%** at Inter's own width: presence gained, nothing reflowed.
+
+**Two rules now decide which face an element gets** (both in brand.md §9):
+1. **The heading face is for words, not figures.** Stat values, scores, percentages, counts, currency stay
+   Inter regardless of size — they are data, and nearly all carry `tabular-nums`.
+2. **The heading face applies at 16px and up.** Below `text-base` the faces are not tellable apart anyway,
+   and tight heading tracking hurts at 11–13px. So 14px card titles, eyebrows, labels and **buttons** are
+   Inter.
+
+Together these meant most of the ~110 Inter sites were *correct*; only ~14 genuine word-titles needed the
+heading face. Net: 13 `font-heading` removals, 16 additions, 3 `font-sans` opt-outs on semantic headings kept
+for their document outline.
+
+⚠ **A weak heading face masks a coverage problem.** When two faces look alike, using the wrong one costs
+nothing visible — which is how the wordmark came to ship in both. Re-run the coverage scan whenever the face
+changes.
+
+**The variable is `--font-heading`, not `--font-outfit`/`--font-schibsted`.** Bind to the role: the old name
+had to be find-and-replaced through `tailwind.config.ts` *and* its `typography` prose block, and a missed copy
+fails silently. Hand-synced copies that moved: `layout.tsx`, `tailwind.config.ts` (×5),
+`src/components/landing/CLAUDE.md` (×2).
+
+## 2d. G6 — the mobile audit (findings only, NOT fixed)
+
+**The bottom nav is already right** — `mobile-nav.tsx:110` gives 4 destinations + "More" = exactly 5 for
+every role, ~52×67px items, and it uses `pb-[env(safe-area-inset-bottom,8px)]`. Viewport meta allows zoom.
+
+Everything else fails. Ranked by call-sites × severity:
+
+1. **`Button size="sm"` is `h-9` = 36px, 100 call sites** (`ui/button.tsx:49`). `default` is 40px, `xs` 28px.
+2. **`.nav-pill` computes to 34px** (`globals.css:653`) and is the shared geometry for SectionNav *and* every
+   `TabsTrigger` — top-of-screen sub-nav on ~35 pages. It also overflows invisibly
+   (`overflow-x-auto scrollbar-none`, items `shrink-0`).
+3. **The Toast dismiss X is 16×16 unpadded** (`ui/toast.tsx:98`) and the viewport is `fixed bottom-4 right-4`
+   with no safe-area inset — inside the mobile nav's band, under the home indicator, on every route.
+4. **`Dialog` ships no close button**, so 12+ call sites hand-roll one and 10 land at 24–32px.
+5. **Hover-gated row actions with no touch fallback** make three features unreachable on a phone:
+   `student-card.tsx:127`, `conversation-rail.tsx:213`, `ComparisonModal.tsx:414`. The correct pattern is one
+   file away at `cross-application-tasks.tsx:415` (`[@media(hover:hover)]:opacity-0`).
+
+Two things worth knowing before fixing: the 44px hit-box escape hatch (`after:-inset-2.5`) is already proven
+at `filter-pill.tsx:52` and `RangeSlider.tsx:148` and ~60 icon buttons could adopt it verbatim — **but
+expanding hit boxes on targets already 2px apart makes overlap worse, not better**, so the `gap-0.5` clusters
+need spacing first. And `100vh` is used everywhere with `100dvh` nowhere, because Tailwind is pinned at 3.3.5
+and `dvh` landed in 3.4; the assistant panes are `h-[calc(100vh-220px)] min-h-[480px]`, which overflows the
+visual viewport on a 390×664 iPhone and pushes the composer under the bottom nav.
+
+## 2e. The reward layer — progress is a quantity
+
+**49 progress/completion indicators inventoried. There is no `Progress` primitive** — every bar in the app
+is hand-rolled, and only three carry a real `role="progressbar"` with `aria-value*`.
+
+### The defect, three errors deep
+
+`/profile`'s bar was `COMPLETION_VISUAL[classifyCompletion(pct)].bar`:
+
+1. **Semantic.** `classifyCompletion` bands at 100/75/50 and mapped **both** 50–74 and 75–99 to amber.
+   The card's own comment defended it — *"so a profile at 20% still reads as urgent at a glance"* — which
+   is the error stated out loud. `warning` means "act soon", implying a deadline an unfinished profile has
+   none of. Note `classifyProgress`, immediately below it in the same file, already argued the opposite for
+   its own callers (*"told a brand-new student they were failing at something they had not been asked to do
+   yet"*) — **the bug was found once and fixed only locally.**
+2. **Colour.** Light `warning-fill` is OKLCH **L 0.673 / C 0.126 / hue 80°** — yellow turning green at
+   little over half the brand's chroma. Dark is L 0.396 at **1.55:1 against the track**, i.e. a 60%-complete
+   profile drew a nearly invisible bar.
+3. **Form.** Completion moves in 20-point steps (5 sections), so only six values are reachable and two of
+   them were amber — yet the bar spring-animated to arbitrary widths, implying precision the data lacks.
+
+`brand.md` §5 already prescribed the answer ("Progress bar — level 5 — Brand"). The code predated the
+register rather than violating a new rule.
+
+### The constraint that shapes the fix
+
+⚠ **The series ramp is only legal on a SEGMENTED bar.** `--series-5` measures **2.57:1 (light) / 2.70:1
+(dark)** against a `bg-muted` track — under the 3:1 a non-text mark needs. It clears 3:1 against the
+*card*, which is what it sits on once the 2px card-coloured gap is there. A continuous ramp bar fails its
+whole first band in both themes. Separately, `text-series-4` is **4.11:1** and fails AA as text — which is
+why `CHART_SERIES` sets `text: 'text-foreground'` on every step. **The ramp lives on marks, never on type.**
+
+### What landed
+
+New constants in `src/lib/theme/categories.ts`: `PROGRESS_SEGMENT_FILL`, `PROGRESS_SEGMENT_GAP`,
+`PROGRESS_TRACK`, `PROGRESS_FILL`. `COMPLETION_VISUAL` retoned to **brand/neutral only**, `full` neutral
+(rule 3: "done" is silent). Swept by three parallel agents partitioned by file, lead owning the helper.
+
+- `/profile` bar is now **5 segments walking `series-1…5`**, driven off `stepCompletion` (not the rounded
+  percentage, so completing step 4 before step 3 shows the truth), with a real `role="progressbar"`.
+- **Continuous bars → `PROGRESS_FILL`**: counsellor roster, student detail, application tasks, parent
+  progress board, rec-letter, requirements categories, toolbox rings.
+- **Ordinal buckets → `chartPaletteAt(idx)`**: the analytics completion breakdown and its drill-down.
+  ⚠ The ramp index runs by **completion magnitude, not array position** — both arrays print 100% first, so
+  indexing as-written inverts the encoding. Two hand-synced copies: `analytics-charts.tsx` and
+  `_analytics-client.tsx`.
+- **The celebration now fires on the TRANSITION, once.** It keyed on `isComplete` from a *server-rendered
+  prop*, and `/profile` is a server component, so an already-complete student got confetti **every visit and
+  refresh**. A `useRef` cannot fix this — the component remounts fresh each navigation — so it uses a
+  `localStorage` latch (`ascenda-profile-complete-celebrated`), cleared if the student regresses.
+- Confetti went `from-primary via-muted to-success` → `from-primary to-series-4`. It was the only place in
+  the app mixing the brand with a status tone in one gradient.
+- The permanent `bg-success-subtle` 100% panel on `/profile` is now neutral. At 100% the screen said "done"
+  four times; it now says it once.
+
+`task-list.tsx` and `quests/_quests-client.tsx` inherited the fix through the helper with no edit.
+
+### Two traps found during the sweep
+
+1. **Do NOT use `.bar` from `COMPLETION_VISUAL`.** Because `full` → `neutral` (`bg-muted-foreground/30`)
+   while `low`/`mid`/`high` → `primary`, banding a *bar* through the table draws a **100% bar in the faintest
+   grey and a 99% bar in full brand** — paler the closer you get to done, which is worse than the olive it
+   replaced. The table drives the icon and chip only. Documented at the source.
+2. **`gap-[2px]` broke the `arbitrary-geometry` ratchet** (92 → 93, and that rule may only fall). Fixed with
+   **`gap-0.5`** — 0.125rem is exactly 2px at the 16px root, is a named scale step, and being rem-based it
+   participates in the fluid root scaling a hard 2px would not.
+
+### Kept on status tones, deliberately
+
+**Match tiers stay.** `brand.md` §4 explicitly maps `danger`=reach, `warning`=match, `success`=safety, so
+every fit-score ring and tier bar is correct doctrine — do not "fix" them. Also kept: the essay length meter
+(a real limit you can exceed), the deadline urgency bar and the toolbox countdown (genuinely dated),
+per-requirement and per-letter status registries (a missing requirement really is a thing to do), the
+outcome-dashboard result tiles (keyed to result *category*, not magnitude), and the admin simulation
+pass-rate (a build-health signal — a failing batch is actionable, like CI red).
+
+### Still owed
+
+**No gate catches any of this.** `lint:tokens` reads `bg-warning-fill` as a legal semantic token, and the
+tone solver checks the tokens' own contrast, not which one you picked. A quantity-vs-status rule — and a
+shared `Progress` primitive — are what stop it recurring.
+
 ## 3. Guidelines derived from the top teen apps
 
 Ten checkable rules, each with its evidence and Ascenda's current status. Artifact:
@@ -223,9 +374,9 @@ JPGs: `~/Desktop/ascenda-teen-guidelines/` (per-section, per-rule, and full page
 | G3 | One accent, and it has to be earned | ✓ PR 1 |
 | G4 | Dark mode is first-class, not an inversion | ⚠ card L 0.24 is media-dark; chat/utility sit 0.28–0.34 |
 | G5 | Chrome recedes; content leads | ✓ PR 1 |
-| G6 | Thumb reach, 44pt targets, bottom nav ≤5 | **✗ never audited — likely the biggest usability win** |
+| G6 | Thumb reach, 44pt targets, bottom nav ≤5 | ⚠ **AUDITED, not fixed** — bottom nav passes; tap targets fail broadly. See §2d |
 | G7 | Motion carries meaning, interruptible | ✓ |
-| G8 | Type decides credibility before colour | **✗ highest-leverage item still open** |
+| G8 | Type decides credibility before colour | ✓ **Outfit → Schibsted Grotesk**, + the two type rules. See §2c |
 | G9 | Colour never alone; each tone owns a shape | ✓ |
 | G10 | Do not infantilise a sixteen-year-old | ✓ |
 
@@ -238,19 +389,23 @@ body-text risk.
 
 ## 4. Next actions, in order
 
-1. **Render periwinkle on warm paper** (see §2). Decide the canvas. This is the last open palette question.
-2. **PR 2** — apply the values. Four hand-synced copies must move together; see the remaining-PRs doc.
-   The dark-button 3.94:1 AA failure is fixed by the same edit.
-3. **PR 3** — the per-role alpha ladder. 890 of 1,456 occurrences (61%).
-4. **Type (G8)** — replace Outfit.
-5. **Mobile audit (G6)** — thumb reach and tap targets, entirely unchecked.
-6. **PR 4** — the 236 landing literals.
-7. **`docs/brand.md`** — still owed. The durable guideline: instrument ladder, three caps, three
-   semantic rules, the 81-row element register, the token table, do/don't. Use the **measured** numbers.
-8. **The reward layer.** PR 1 removed the green completion flood correctly but added nothing back, so
-   there is now no moment of delight anywhere. Duolingo's lesson is "spend colour on progress", not
-   "use more colour" — a bounded celebratory moment on the *transition* to complete. The `celebrate`
-   state already exists in `ProfileProgressCard`.
+✅ Done: the canvas question (§2) · PR 2 · PR 3 · `docs/brand.md` · **G8 type (§2c)** ·
+**the reward layer / progress (§2e)** · **G6 audited (§2d)**.
+
+Still open, in order:
+
+1. **G6 — actually fix the tap targets.** The audit is §2d; nothing is fixed. Start with
+   `Button size="sm"` (one line, 100 call sites) and `.nav-pill` (one line, ~35 pages). Read the
+   hit-box-overlap warning in §2d before sweeping — expanding hit areas on the `gap-0.5` clusters makes
+   mis-taps worse, so those need spacing first.
+2. **A shared `Progress` primitive.** All 49 bars are hand-rolled and only 3 carry a real
+   `role="progressbar"`. §2e fixed the colours; a primitive is what stops it recurring.
+3. **A `lint:tokens` rule for quantity-vs-status.** Nothing currently catches a status tone on a
+   percentage — `bg-warning-fill` reads as a legal semantic token, and the tone solver only checks the
+   tokens' own contrast, not which one you picked. This is the gate that would have caught §2e at
+   authoring time.
+4. **PR 4** — the 236 landing literals, and delete `--accent` with its four call sites.
+5. **The `100vh` → `100dvh` question**, which needs a Tailwind 3.3.5 → 3.4 bump. See §2d.
 
 ---
 

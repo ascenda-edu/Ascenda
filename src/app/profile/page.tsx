@@ -392,8 +392,14 @@ export default async function ProfilePage() {
       ) : null}
       {completionPercent === 100 && (
         <AnimatedSection delay={0.12}>
-          <div className="rounded-4xl border border-success/30 bg-success-subtle p-8">
-            <p className="text-base font-semibold text-success">Profile complete</p>
+          {/* Neutral, deliberately. The copy is worth keeping — it tells a student
+              there is nothing left to do and where to go if they want to change
+              something — but the tone is not: `success` is for terminal positive
+              outcomes, never for "done" (brand.md §4 rule 3), and a finished section
+              is silent. This panel was the fourth thing on the screen announcing
+              100%, after the bar, the icon and the confetti. */}
+          <div className="surface-card rounded-4xl">
+            <p className="text-base font-semibold text-foreground">Profile complete</p>
             <p className="mt-2 text-sm text-muted-foreground">
               All sections are filled in. You can revisit the wizard anytime from the top of this page to update details.
             </p>

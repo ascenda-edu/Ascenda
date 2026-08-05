@@ -3,7 +3,7 @@ import { AlertTriangle, Clock, CheckCircle2, BookOpen, Eye, Mail } from 'lucide-
 import { cn } from '@/lib/utils';
 import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
-import { TIER_VISUAL, COMPLETION_VISUAL, classifyCompletion } from '@/lib/theme/categories';
+import { TIER_VISUAL, PROGRESS_FILL, PROGRESS_TRACK } from '@/lib/theme/categories';
 import { avatarColor } from './avatar-palette';
 import { MessageStudentButton } from './message-student-button';
 
@@ -35,11 +35,17 @@ function getInitials(first: string, last: string) {
   return `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase() || '–';
 }
 
-// Completion banding is COMPLETION_VISUAL's, not a private copy of the same
-// thresholds (100 / 75 / 50 → full / high / mid / low).
-function getCompletionColor(pct: number) {
-  return COMPLETION_VISUAL[classifyCompletion(pct)].bar;
-}
+// There is no `getCompletionColor` here any more, and there should never be one
+// again. It banded the bar through `COMPLETION_VISUAL[classifyCompletion(pct)].bar`,
+// which now resolves to `bg-primary` for low/mid/high and `bg-muted-foreground/30`
+// for `full` — so routing through the bands would draw a FINISHED profile in the
+// quietest grey on the card and a 99% one in full brand, i.e. the bar would get
+// paler as the student got closer. That is the banding error at its most literal:
+// a percentage is a quantity, and the LENGTH is the encoding. `PROGRESS_FILL` is
+// one solid brand fill at every value (see lib/theme/categories.ts).
+//
+// The bands still have a job — they pick the icon and name the ordinal buckets —
+// just not on a continuous bar over an arbitrary percentage.
 
 function getNextDeadline(student: CounsellorStudent) {
   // Date-only strings must be parsed as LOCAL dates (see lib/utils/dates.ts).
@@ -75,7 +81,6 @@ function isActiveSoon(iso: string) {
 export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
   const initials = getInitials(student.personal.firstName, student.personal.lastName);
   const avColor = avatarColor(student.id);
-  const completionColor = getCompletionColor(student.profile.completionPct);
   const nextDeadline = getNextDeadline(student);
   const tierCounts = {
     Reach: student.matches.filter((m) => m.tier === 'Reach').length,
@@ -166,13 +171,18 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
       <div className="relative z-10 space-y-1.5">
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">Profile complete</span>
-          <span className={cn('font-semibold', student.profile.completionPct === 100 ? 'text-success' : 'text-warning')}>
+          {/* Ink, not a tone. This was `=== 100 ? 'text-success' : 'text-warning'`,
+              which coloured a READOUT by its own value: every student under 100
+              wore the "act soon" amber, so a 96%-complete profile and a 4% one
+              were the same colour, and the one number that distinguishes them was
+              sitting right there in the span. The digits are the quantity. */}
+          <span className="font-semibold text-foreground">
             {student.profile.completionPct}%
           </span>
         </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+        <div className={cn('h-1.5 overflow-hidden rounded-full', PROGRESS_TRACK)}>
           <div
-            className={cn('h-1.5 rounded-full transition-[width]', completionColor)}
+            className={cn('h-1.5 rounded-full transition-[width]', PROGRESS_FILL)}
             style={{ width: `${student.profile.completionPct}%` }}
           />
         </div>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { CHART_ACCENT } from './chart-palette';
+import { CHART_ACCENT, chartPaletteAt } from './chart-palette';
 import type { CohortStats } from './types';
 
 // ─── Programme Split ──────────────────────────────────────────────────────────
@@ -394,16 +394,29 @@ interface CompletionBreakdownProps {
 }
 
 export const CompletionBreakdown = ({ students, onSelect }: CompletionBreakdownProps) => {
-  // Completion bands are a STATUS scale, not categorical data, so they use the tone
-  // tokens rather than chart series colours. (They were emerald/sky/amber/red-500 —
-  // note `red`, where the rest of the app used `rose`, one of the drifts that made
-  // status colour untunable.)
+  /* These four buckets are ORDINAL SLOTS on a quantity, not statuses — so they walk
+     the monochrome `--series-*` ramp, not the tone tokens.
+
+     The comment that used to sit here asserted the opposite ("completion bands are a
+     STATUS scale"), and that premise is the bug: a percentage is a quantity, and
+     `warning` means "act soon", which implies a deadline a half-finished profile has
+     none of. `bg-warning-fill` is also measurably olive (OKLCH hue 80° at chroma
+     0.126 in light; 1.55:1 against the track in dark). The old scale was additionally
+     non-monotone in chroma — coloured, then `bg-muted-foreground` grey, then coloured
+     again — so the middle of the range was the dullest part of it.
+
+     The ramp index runs by COMPLETION MAGNITUDE, not by position in this array: the
+     array prints 100% first (most-complete at the top reads better), so indexing it
+     as written would inverse the encoding. `<50%` takes step 1, `100%` step 4.
+     ⚠ Keep this in step with `RAMP_INDEX_BY_BUCKET` in `../_analytics-client.tsx` —
+     the accent on the drill-down panel is meant to be the colour of the bar the
+     counsellor just clicked, and these are two hand-synced copies of one mapping. */
   const buckets = [
-    { label: '100%', count: students.filter((s) => s.pct === 100).length, color: 'bg-success-fill', hoverColor: 'hover:bg-success-fill/85', tooltip: 'Fully complete', min: 100, max: 100 },
-    { label: '75–99%', count: students.filter((s) => s.pct >= 75 && s.pct < 100).length, color: 'bg-muted-foreground', hoverColor: 'hover:bg-muted-foreground/85', tooltip: 'Almost complete', min: 75, max: 99 },
-    { label: '50–74%', count: students.filter((s) => s.pct >= 50 && s.pct < 75).length, color: 'bg-warning-fill', hoverColor: 'hover:bg-warning-fill/85', tooltip: 'Partially complete', min: 50, max: 74 },
-    { label: '<50%', count: students.filter((s) => s.pct < 50).length, color: 'bg-danger-fill', hoverColor: 'hover:bg-danger-fill/85', tooltip: 'Needs attention', min: 0, max: 49 }
-  ];
+    { label: '100%', count: students.filter((s) => s.pct === 100).length, ramp: 3, tooltip: 'Fully complete', min: 100, max: 100 },
+    { label: '75–99%', count: students.filter((s) => s.pct >= 75 && s.pct < 100).length, ramp: 2, tooltip: 'Almost complete', min: 75, max: 99 },
+    { label: '50–74%', count: students.filter((s) => s.pct >= 50 && s.pct < 75).length, ramp: 1, tooltip: 'Partially complete', min: 50, max: 74 },
+    { label: '<50%', count: students.filter((s) => s.pct < 50).length, ramp: 0, tooltip: 'Needs attention', min: 0, max: 49 }
+  ].map((b) => ({ ...b, color: chartPaletteAt(b.ramp).bar, hoverColor: chartPaletteAt(b.ramp).barHover }));
   const max = Math.max(...buckets.map((b) => b.count), 1);
   const avg = Math.round(students.reduce((a, s) => a + s.pct, 0) / (students.length || 1));
 

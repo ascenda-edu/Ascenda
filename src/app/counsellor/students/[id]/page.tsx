@@ -6,6 +6,7 @@ import { PageHero } from '@/components/layout/page-hero';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Badge, type BadgeVariant } from '@/components/ui/badge';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
+import { PROGRESS_FILL, PROGRESS_TRACK } from '@/lib/theme/categories';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { loadStudentById, loadStudentEvolution } from '@/lib/counsellor/data';
 import { avatarColor } from '../../_components/avatar-palette';
@@ -154,13 +155,23 @@ export default async function StudentDetailPage(props: Props) {
 
           {completionPct < 100 && (
             <div className={cn('space-y-1.5', clusters.length > 0 && 'border-t border-border pt-4')}>
+              {/* Brand, not `warning`. This whole block only renders when
+                  `completionPct < 100`, so the amber here had no threshold behind
+                  it at all — it was unconditional, and a 95%-complete profile drew
+                  the identical bar to a 10% one. Amber also promises a deadline
+                  ("act soon") that an unfinished profile does not have; finishing
+                  it is simply the next thing to do, which makes it the primary
+                  action and therefore the brand's job. `warning-fill` is olive
+                  besides (OKLCH hue 80°, and 1.55:1 against this very track in
+                  dark) — see lib/theme/categories.ts. The MISSING list below is
+                  what carries the urgency, in words. */}
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Profile completion</span>
-                <span className="font-semibold text-warning">{completionPct}%</span>
+                <span className="font-semibold text-foreground">{completionPct}%</span>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+              <div className={cn('h-1.5 overflow-hidden rounded-full', PROGRESS_TRACK)}>
                 <div
-                  className="h-1.5 rounded-full bg-warning-fill transition-[width]"
+                  className={cn('h-1.5 rounded-full transition-[width]', PROGRESS_FILL)}
                   style={{ width: `${completionPct}%` }}
                 />
               </div>

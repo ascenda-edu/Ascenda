@@ -95,7 +95,11 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
 
         {decks.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-3">
-            <StatCard label="Quests cleared" value={`${totals.cleared}/${totals.quests}`} icon={CheckCircle2} tone="text-success" />
+            {/* `text-primary-ink`, not `text-success`: "3/5 cleared" is a COUNT, and
+                `success` is reserved for terminal positive outcomes (brand.md §4 rule 3).
+                A partly-cleared deck is not an outcome at all — it is a quantity, so it
+                gets the register's level-2 treatment for one emphasised figure. */}
+            <StatCard label="Quests cleared" value={`${totals.cleared}/${totals.quests}`} icon={CheckCircle2} tone="text-primary-ink" />
             <StatCard label="Active decks" value={String(totals.decks)} icon={Scroll} tone="text-primary-ink" />
             <StatCard
               label="Progress"
@@ -168,7 +172,7 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
                               <p className="eyebrow">
                                 {quest.country || 'Location TBC'}
                               </p>
-                              <p className="truncate text-base font-semibold text-foreground" title={quest.university}>
+                              <p className="truncate font-heading text-base font-semibold text-foreground" title={quest.university}>
                                 {quest.university}
                               </p>
                               <p className="truncate text-sm text-muted-foreground" title={quest.courseName}>

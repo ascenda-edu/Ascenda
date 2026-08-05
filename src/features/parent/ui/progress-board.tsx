@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   APPLICATION_STATUS_VISUAL,
+  PROGRESS_FILL,
   TIER_VISUAL,
   type CategoryVisual,
   type FitTier,
@@ -119,12 +120,13 @@ export function ProgressBoard({
 
             {app.tasksTotal > 0 ? (
               <div className="mt-3 flex items-center gap-3">
+                {/* PROGRESS_FILL, not a value-banded ternary. This bar held a byte-identical
+                    copy of the one in components/applications/application-list.tsx — see the
+                    long note there for why the bands were wrong. A parent reading "3/8 tasks
+                    done" is reading a count, and the bar's length already says it. */}
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                   <div
-                    className={cn(
-                      'h-full rounded-full transition-[width]',
-                      progress >= 75 ? 'bg-success-fill' : progress >= 40 ? 'bg-muted-foreground' : 'bg-warning-fill'
-                    )}
+                    className={cn('h-full rounded-full transition-[width]', PROGRESS_FILL)}
                     style={{ width: `${progress}%` }}
                   />
                 </div>

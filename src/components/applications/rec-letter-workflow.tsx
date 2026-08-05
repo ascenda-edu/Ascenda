@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast';
 import { useSupabase } from '@/hooks/useSupabase';
 import { insertHelpRequest } from '@/lib/demo/help-request-client';
+import { PROGRESS_FILL } from '@/lib/theme/categories';
 import { parseLocalDate } from '@/lib/utils/dates';
 import type { RecLetterRequest, RecLetterStatus } from '@/lib/data/student-demo-data';
 
@@ -178,11 +179,20 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
             <span className="font-semibold text-foreground">{completedCount}</span> of{' '}
             <span className="font-semibold text-foreground">{letters.length}</span> letters received
           </p>
+          {/* Brand, not green. This bar was unconditionally `bg-success-fill`, which
+              claimed a terminal positive outcome for a running count: at 1 of 4 letters
+              received it drew a short green bar, reading as "good" about a state that is
+              mostly outstanding work. brand.md §4 rule 3 reserves `success` for genuine
+              outcomes — an offer, not a tally — and §5 puts a progress bar on the brand.
+              The per-letter STATUS_COLORS below are a real status ladder and keep their
+              tones; this bar is the sum of them, which is a quantity. */}
           <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
             <motion.div
-              className="h-2 rounded-full bg-success-fill"
+              className={cn('h-2 rounded-full', PROGRESS_FILL)}
               initial={{ width: 0 }}
-              animate={{ width: `${(completedCount / letters.length) * 100}%` }}
+              // Guard the empty case: `0 / 0` is NaN, which renders as `width: "NaN%"`
+              // and silently drops the declaration. Pre-existing, found while retoning.
+              animate={{ width: `${letters.length ? (completedCount / letters.length) * 100 : 0}%` }}
               transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
             />
           </div>
