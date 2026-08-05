@@ -89,7 +89,7 @@ export function NextUpCard({ items }: { items: HubFocusItem[] }) {
                 <span className={cn('h-1.5 w-1.5 rounded-full', TONE[hero.tone].dot)} aria-hidden />
                 {hero.label}
               </span>
-              <p className="mt-2 text-lg font-semibold leading-snug text-foreground sm:text-xl">{hero.title}</p>
+              <p className="mt-2 font-heading text-lg font-semibold leading-snug text-foreground sm:text-xl">{hero.title}</p>
               <p className="mt-1 text-sm text-muted-foreground">{hero.detail}</p>
             </div>
             <span

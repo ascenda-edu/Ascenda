@@ -1,15 +1,26 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import { Outfit, Inter } from 'next/font/google';
+import { Schibsted_Grotesk, Inter } from 'next/font/google';
 import '@/app/globals.css';
 import { Providers } from './providers';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme/theme-provider';
 import { ThemeScript } from '@/components/theme/theme-script';
 
-const outfit = Outfit({
+/* The heading face. Was Outfit, which was measurably costing hierarchy rather than
+   adding personality: at a shared font-size Outfit's x-height is 11.5% shorter than
+   Inter's and its lowercase 6.9% narrower, so an 18px `h3` card title — the app's most
+   common heading — rendered with only a +6.1% lowercase step over the 15px Inter body
+   beneath it. Inter semibold at the same 18px gives +20%, i.e. the second font was a net
+   NEGATIVE at the size it is used most. Schibsted Grotesk measures +15.8% at Inter's own
+   width, so headings gain presence without a single card reflowing.
+
+   The variable is `--font-heading`, not `--font-schibsted`, deliberately: the previous
+   name meant a face change had to be find-and-replaced across the Tailwind config and the
+   prose block. Bind to the ROLE, not the face. */
+const heading = Schibsted_Grotesk({
   subsets: ['latin'],
-  variable: '--font-outfit',
+  variable: '--font-heading',
   display: 'swap',
   adjustFontFallback: true,
 });
@@ -70,7 +81,7 @@ export default function RootLayout({
       </head>
       <body className={cn(
         "min-h-screen bg-background font-sans antialiased",
-        outfit.variable,
+        heading.variable,
         inter.variable
       )}>
         {/* `fixed`, not `absolute`: anchored to the document, focusing the skip

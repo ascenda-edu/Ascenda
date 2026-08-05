@@ -414,7 +414,75 @@ it would render the hero **headline invisible in production**. Do not add usages
 
 ---
 
-## 9. Appendix — rejected directions
+## 9. Type
+
+Two faces, both variable, both loaded via `next/font/google` in `src/app/layout.tsx`:
+
+| role | face | class | CSS var |
+|---|---|---|---|
+| Heading | **Schibsted Grotesk** | `font-heading` | `--font-heading` |
+| Body, and everything else | **Inter** | `font-sans` (body default) | `--font-inter` |
+
+The variable is `--font-heading`, **not** `--font-schibsted`. Bind to the role: the previous name
+(`--font-outfit`) meant a face change had to be find-and-replaced through the Tailwind config *and* the
+`typography` prose block, and a missed copy fails silently.
+
+### The scale — 7 steps, declared in `globals.css`
+
+`h1` 28→32px · `h2` 22→24px · `h3` 18px · `h4` 16px · body 15px · `.text-body-sm` 13px · `text-xs` 12px ·
+`.text-label` 11px. **11px is the floor.** Marketing pages may opt out inline; nothing else may.
+
+### There are exactly two ways to get the heading face
+
+A semantic `<h1>`–`<h6>` tag (via the base-layer rule in `globals.css`), or a literal `font-heading` class.
+**No utility or component class sets a family** — not `.eyebrow`, `.nav-pill`, `.navbar-brand`, `.form-label`
+or any `surface-*`. If you expect a `<div>` to be a heading because it looks like one, it is Inter.
+
+### The two rules that decide which face an element gets
+
+1. **The heading face is for words, not figures.** A stat value, a score, a percentage, a count and a
+   currency amount are all *data* and stay Inter — regardless of size, including the 48px scrubbing figure on
+   the landing page. Inter's tabular figures are purpose-built for it and nearly all of these carry
+   `tabular-nums`. This is also what the element register already implies: a figure is a data mark, not a
+   heading.
+2. **The heading face applies at 16px and above.** Below `text-base` the two faces are not tellable apart at
+   a glance, and the heading face's tighter tracking actively hurts at 11–13px. So bold 14px card titles,
+   eyebrows, labels, captions and **buttons** are all Inter.
+
+A semantic heading used at label scale is the one case needing an explicit escape: keep the tag for the
+document outline and add `font-sans` to opt out of the base rule. Three elements do this
+(`requirement-renderer.tsx`, `application-overview.tsx`, `StudentIntakeForm.tsx`).
+
+The wordmark **does** get the heading face. It shipped in both faces for a while — Inter in the navbar,
+Outfit in the landing footer.
+
+### Why Outfit was replaced — measured, not felt
+
+Measured from the font binaries at weight 600, which is the app's house weight:
+
+| | x-height / em | cap / em | avg lowercase width | vs Inter | o / n |
+|---|---|---|---|---|---|
+| Inter | 0.546 | 0.728 | 0.554 | — | 0.995 |
+| **Outfit** (was) | **0.483** | 0.703 | 0.516 | **−6.9%** | **1.012** |
+| **Schibsted Grotesk** | **0.527** | 0.703 | 0.551 | **−0.6%** | 1.004 |
+
+**Outfit was costing hierarchy, not adding personality.** At 18px — the app's most common heading, every
+card title — its lowercase sat only **+6.1%** above the 15px Inter body beneath it. Inter semibold at the
+same 18px gives **+20%**, so the second font was a *net negative at the size it was used most*: an 18px card
+title read as 16px. Schibsted measures **+15.8%** at Inter's own width, so headings gained presence and
+nothing reflowed.
+
+`o / n` is the geometric tell — Outfit was the only face measured whose `o` is wider than its `n`, a true
+circle in a monoline. That was its entire structural difference from Inter, and it is invisible below ~24px.
+
+⚠ **A weak heading face masks a coverage problem.** When the two faces look alike, using the wrong one costs
+nothing visible — which is how ~110 heading-shaped elements came to render in Inter, and how the wordmark
+came to ship in both faces, without anyone noticing. A face with real personality makes each of those read
+as a mistake. If you change the face again, re-run the coverage scan in the same pass.
+
+---
+
+## 10. Appendix — rejected directions
 
 Recorded with their values so nobody re-litigates from scratch.
 
@@ -427,6 +495,20 @@ Recorded with their values so nobody re-litigates from scratch.
 | **Warmer paper** | H 70, C 0.018, card L 0.975 | Unambiguously cream. At this chroma the paper has an opinion, and an opinion competes with content. |
 | **Paper at the brand's hue** | H 275, C 0.006 | The incumbent, and the defect: canvas and accent 4° apart, so the greys *were* the brand desaturated 36×. The screen read as one colour at five strengths and the accent took the blame. |
 | **Gold darkened to fix the CVD collapse** | `#4a361c` | A mud brown — trap 1 in disguise. Handled semantically instead (§4 rule 1). |
+
+### Rejected heading faces
+
+Specimens were rendered at the real scale on the shipped tokens, not judged from a list of names.
+
+| face | x-ht / em | 18px hierarchy lift | why not |
+|---|---|---|---|
+| **Bricolage Grotesque** | 0.523 | +14.9% | The strongest alternative and the only one nobody would mistake for a generated app. Rejected on cost, not quality: 131 KB against Schibsted's 47, and distinctive enough that it will date. |
+| **Instrument Sans** | 0.510 | +12.1% | Fixes the defect with the least visual change, but it is close enough to Inter that the second face stops paying for itself — the mirror of Outfit's problem. |
+| **Familjen Grotesk** | 0.500 | +9.9% | 19 KB, a third of Outfit, and genuinely distinctive letterforms. But it is *narrower* than Outfit (−9.2%) with a low 0.650 cap-height, so it only half-fixes the presence problem. Chosen for payload, not for type. |
+| **Fraunces** (serif) | 0.482 | +5.9% | Settles the serif question by looking rather than by memory. At 0.482 it has Outfit's x-height problem exactly and scored worst of everything tested. A serif also re-opens the "institution, not tool" positioning §1 deliberately closed. |
+
+"18px hierarchy lift" is the lowercase height of an 18px card title relative to the 15px Inter body beneath
+it. Inter-on-Inter is +20.0%; anything below that means the heading face is subtracting hierarchy.
 
 ### One finding worth keeping, because it will come up again
 

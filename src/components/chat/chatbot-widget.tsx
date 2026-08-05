@@ -592,7 +592,7 @@ export function ChatbotWidget() {
                   <Bot className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="font-heading text-sm font-semibold text-foreground">Ascendi</p>
+                  <p className="text-sm font-semibold text-foreground">Ascendi</p>
                   <p className="text-label text-muted-foreground">
                     {mode === 'counsellor'
                       ? 'Counsellor assistant'
@@ -653,7 +653,7 @@ export function ChatbotWidget() {
                   <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full">
                     <Bot className="h-6 w-6 text-muted-foreground" />
                   </div>
-                  <p className="font-heading text-sm font-semibold text-foreground">
+                  <p className="text-sm font-semibold text-foreground">
                     Hey! I&apos;m Ascendi
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground max-w-[260px]">

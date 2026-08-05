@@ -324,7 +324,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
         </motion.div>
       ) : (
         <div className="rounded-4xl border border-dashed border-border bg-muted p-12 text-center">
-          <p className="text-base font-semibold text-foreground">No students match these filters</p>
+          <p className="font-heading text-base font-semibold text-foreground">No students match these filters</p>
           <p className="mt-1 text-sm text-muted-foreground">Adjust the search, programme, or status filter.</p>
           {(hasExternalFilter || query || programme !== 'all' || flagFilter !== 'all') && (
             <button

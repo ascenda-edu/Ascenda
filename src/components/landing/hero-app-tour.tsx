@@ -106,7 +106,7 @@ function ChancesPanel({ onInteract }: { onInteract: () => void }) {
                     <label htmlFor="hero-ib-slider" className="text-[0.8125rem] font-semibold text-foreground">
                         What if I score…
                     </label>
-                    <p className="font-heading text-xl font-bold leading-none text-primary tabular-nums">
+                    <p className="text-xl font-bold leading-none text-primary tabular-nums">
                         {score} <span className="text-[0.625rem] font-semibold text-muted-foreground">IB pts</span>
                     </p>
                 </div>

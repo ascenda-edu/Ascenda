@@ -171,7 +171,7 @@ export function UniversityCard({
                 aria-hidden
                 className={cn(
                     sizeClass,
-                    'flex shrink-0 items-center justify-center rounded-xl font-heading text-sm font-semibold',
+                    'flex shrink-0 items-center justify-center rounded-xl text-sm font-semibold',
                     MONOGRAM_TONE
                 )}
             >

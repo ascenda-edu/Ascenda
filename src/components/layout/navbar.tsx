@@ -89,7 +89,7 @@ export const Navbar = () => {
                 className={cn('rounded-full object-contain transition')}
               />
             </div>
-            <span className="navbar-brand text-base sm:text-lg transition-colors">Ascenda</span>
+            <span className="navbar-brand font-heading text-base sm:text-lg transition-colors">Ascenda</span>
           </Link>
           <nav className="hidden items-center gap-5 text-xs font-medium text-muted-foreground md:flex">
             {navEntries.map((entry) =>

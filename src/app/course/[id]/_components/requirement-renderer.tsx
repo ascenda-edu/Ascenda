@@ -31,7 +31,7 @@ const RequirementList = ({ text, title }: { text: string; title?: string }) => {
   return (
     <div className="space-y-3">
       {title ? (
-        <h4 className="eyebrow-accent flex items-center gap-2">
+        <h4 className="font-sans eyebrow-accent flex items-center gap-2">
           <span className="h-px w-4 bg-primary/30" aria-hidden />
           {title}
         </h4>

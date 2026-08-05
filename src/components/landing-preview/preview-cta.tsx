@@ -217,7 +217,7 @@ function LaunchReadout({ p, ready }: { p: MotionValue<number>; ready: boolean })
         <p
             aria-hidden
             className={cn(
-                'font-heading text-xs font-semibold uppercase tabular-nums transition-colors duration-300',
+                'text-xs font-semibold uppercase tabular-nums transition-colors duration-300',
                 launched ? 'tracking-[0.2em] text-emerald-400' : 'tracking-[0.28em] text-slate-400',
             )}
         >

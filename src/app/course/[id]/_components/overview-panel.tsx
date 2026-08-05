@@ -36,7 +36,7 @@ const CrossLinkCard = ({
     className="surface-card hover-lift group block w-full text-left hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
   >
     <span className="mb-4 flex items-center justify-between gap-2">
-      <span className="flex items-center gap-2 text-lg font-semibold text-foreground">
+      <span className="flex items-center gap-2 font-heading text-lg font-semibold text-foreground">
         <Icon className="h-5 w-5 text-primary-ink" aria-hidden />
         {title}
       </span>

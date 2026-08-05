@@ -167,7 +167,7 @@ export function WelcomeScreen({
                 <div className={cn('flex h-11 w-11 items-center justify-center rounded-2xl', VALUE_SWATCH)}>
                   <Icon className="h-5 w-5" aria-hidden />
                 </div>
-                <p className="mt-4 text-base font-semibold leading-tight text-foreground">{value.title}</p>
+                <p className="mt-4 font-heading text-base font-semibold leading-tight text-foreground">{value.title}</p>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{value.body}</p>
               </motion.div>
             );

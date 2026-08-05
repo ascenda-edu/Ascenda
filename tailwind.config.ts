@@ -253,7 +253,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-inter)", "sans-serif"],
-        heading: ["var(--font-outfit)", "sans-serif"],
+        heading: ["var(--font-heading)", "sans-serif"],
       },
       // Rich text (DB-sourced course descriptions, essay content) is rendered with
       // `prose`. Bound to our tokens so it inherits the app's colours and heading
@@ -297,10 +297,10 @@ const config: Config = {
             "--tw-prose-invert-th-borders": "hsl(var(--border))",
             "--tw-prose-invert-td-borders": "hsl(var(--border))",
             maxWidth: "none",
-            h1: { fontFamily: "var(--font-outfit)" },
-            h2: { fontFamily: "var(--font-outfit)" },
-            h3: { fontFamily: "var(--font-outfit)" },
-            h4: { fontFamily: "var(--font-outfit)" },
+            h1: { fontFamily: "var(--font-heading)" },
+            h2: { fontFamily: "var(--font-heading)" },
+            h3: { fontFamily: "var(--font-heading)" },
+            h4: { fontFamily: "var(--font-heading)" },
           },
         },
       },

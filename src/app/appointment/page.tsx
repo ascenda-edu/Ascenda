@@ -154,7 +154,7 @@ export default function AppointmentPage() {
               <Check className="h-5 w-5" />
             </div>
             <div className="space-y-2">
-              <p className="text-base font-semibold text-foreground">Got it — {DEMO_COUNSELLOR.firstName} has your request</p>
+              <p className="font-heading text-base font-semibold text-foreground">Got it — {DEMO_COUNSELLOR.firstName} has your request</p>
               <p className="text-sm text-muted-foreground">
                 We&apos;ve sent your preferred time to {DEMO_COUNSELLOR.firstName}. Her reply will appear in your{' '}
                 <Link href="/inbox" className="font-semibold text-primary-ink hover:underline">

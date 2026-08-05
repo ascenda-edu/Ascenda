@@ -200,7 +200,7 @@ function SectionTitle({ label, hint, why }: { label: string; hint?: string; why?
           * h2. `.text-body-sm` rather than `text-sm` because h1-h6 pick up
           * `font-heading tracking-tight` from globals.css, and these should stay in
           * the body voice — they are labels, not display type. */}
-        <h3 className="text-body-sm font-semibold text-foreground">{label}</h3>
+        <h3 className="font-sans text-body-sm font-semibold text-foreground">{label}</h3>
         {hint ? <p className="text-xs text-muted-foreground mt-0.5">{hint}</p> : null}
       </div>
       {why ? (

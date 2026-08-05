@@ -113,7 +113,7 @@ export function ThreadPane({
     <div className="flex h-[calc(100vh-220px)] min-h-[480px] flex-col overflow-hidden rounded-3xl border border-border bg-card">
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-        <p className="truncate font-heading text-sm font-semibold text-foreground">{title}</p>
+        <p className="truncate text-sm font-semibold text-foreground">{title}</p>
       </div>
 
       {/* Messages */}

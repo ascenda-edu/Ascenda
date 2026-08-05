@@ -169,7 +169,7 @@ export const UniversityInformation = ({
 
       {error ? (
         <div className="surface-card">
-          <p className="text-xl font-semibold text-foreground">We hit a snag loading this university.</p>
+          <p className="font-heading text-xl font-semibold text-foreground">We hit a snag loading this university.</p>
           <p className="text-sm text-muted-foreground">{error}</p>
         </div>
       ) : null}

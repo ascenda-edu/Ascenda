@@ -153,7 +153,7 @@ export function TeamSection() {
                             {/* Capped width so the one-liner wraps instead of widening the
                                 middle column and squeezing both surfaces. */}
                             <div className="max-w-[8.5rem] text-center">
-                                <p className="font-heading text-sm font-semibold text-foreground">Ascendi</p>
+                                <p className="text-sm font-semibold text-foreground">Ascendi</p>
                                 <p className="text-xs leading-snug text-muted-foreground">
                                     Answers questions and keeps everyone on the same page
                                 </p>
@@ -216,7 +216,7 @@ export function TeamSection() {
                             </div>
                             <div className="mt-3 flex items-baseline justify-between px-1 text-[0.8125rem] text-muted-foreground">
                                 <span>Est. total · 2-year programme</span>
-                                <span className="font-heading text-lg font-bold tabular-nums text-foreground">€56,700</span>
+                                <span className="text-lg font-bold tabular-nums text-foreground">€56,700</span>
                             </div>
                         </AppFrame>
                         </div>

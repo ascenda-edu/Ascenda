@@ -34,7 +34,7 @@ export async function MatchesPeek({ profileId }: { profileId: string }) {
     >
       {matchError ? (
         <div className="space-y-2 rounded-2xl border border-dashed border-border bg-muted p-6 text-sm text-muted-foreground">
-          <p className="text-base font-semibold text-foreground">Can&apos;t pull your matches right now</p>
+          <p className="font-heading text-base font-semibold text-foreground">Can&apos;t pull your matches right now</p>
           <p>Something&apos;s off on our side. Refresh in a moment and you should be back in business.</p>
         </div>
       ) : matches.length > 0 ? (
@@ -77,7 +77,7 @@ export async function MatchesPeek({ profileId }: { profileId: string }) {
         </div>
       ) : (
         <div className="flex h-full flex-col items-start justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted p-6">
-          <p className="text-base font-semibold text-foreground">Tell us a bit more, then we&apos;ll find your matches</p>
+          <p className="font-heading text-base font-semibold text-foreground">Tell us a bit more, then we&apos;ll find your matches</p>
           <p className="text-sm text-muted-foreground">Finish your profile and add a country or two — we&apos;ll do the matching.</p>
           <div className="flex flex-wrap gap-2">
             <Button asChild size="sm">

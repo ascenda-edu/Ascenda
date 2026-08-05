@@ -135,7 +135,7 @@ export function CoachInvitation({
               <Bot className="h-4 w-4 text-muted-foreground" aria-hidden />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="font-heading text-sm font-semibold leading-tight text-foreground">
+              <p className="text-sm font-semibold leading-tight text-foreground">
                 Want a quick look around?
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">

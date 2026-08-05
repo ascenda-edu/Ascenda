@@ -153,7 +153,7 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
             return (
               <div key={status} className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <h3 className={cn('text-sm font-semibold', cfg.text)}>{cfg.label}</h3>
+                  <h3 className={cn('font-sans text-sm font-semibold', cfg.text)}>{cfg.label}</h3>
                   <span className={cn('rounded-full px-2 py-0.5 text-label font-bold', cfg.bg, cfg.text)}>
                     {studentGroups.length} student{studentGroups.length !== 1 ? 's' : ''}
                   </span>

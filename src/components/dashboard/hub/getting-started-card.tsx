@@ -66,7 +66,10 @@ export function GettingStartedCard({
           </span>
           <div>
             <p className="eyebrow">Getting started</p>
-            <p className="font-heading text-lg font-semibold leading-tight text-foreground">
+            {/* Inter, not the heading face: this is a figure, and the heading face is for
+                words. The sibling hub card (hub/profile-progress-card) already set the
+                identical stat in Inter — this was the outlier of the two. */}
+            <p className="text-lg font-semibold leading-tight text-foreground">
               {completed} of {total} done
             </p>
           </div>
