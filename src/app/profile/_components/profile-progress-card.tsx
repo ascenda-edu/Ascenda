@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, Check, Sparkles } from 'lucide-react';
 import { PROFILE_STEPS, type StepCompletionMap } from '@/lib/profile/steps';
@@ -51,6 +51,8 @@ export function ProfileProgressCard({
   stepCompletion
 }: ProfileProgressCardProps) {
   const [celebrate, setCelebrate] = useState(false);
+  /* Whether THIS mount armed the celebration — see the note in the effect below. */
+  const armedThisMount = useRef(false);
   const clampedPercent = useMemo(() => Math.min(100, Math.max(0, completionPercent)), [completionPercent]);
   const isComplete = clampedPercent >= 100;
   const band = classifyCompletion(clampedPercent);
@@ -87,7 +89,16 @@ export function ProfileProgressCard({
     } catch {
       /* storage unavailable — fall through and celebrate; see the note above */
     }
-    if (alreadyCelebrated) return;
+    /* `armedThisMount` and not a bare `if (alreadyCelebrated) return` — that version
+       left the confetti STUCK ON in development. `reactStrictMode` is true
+       (next.config.js), so the effect double-invokes on one mount: pass 1 wrote the
+       latch, set `celebrate` and armed the 2200ms timer, cleanup cleared the timer,
+       and pass 2 then read its OWN latch write, returned early, and never re-armed —
+       so nothing was left to turn it off. A ref survives both invocations of the same
+       mount, which is exactly the distinction needed: "someone already celebrated" and
+       "I already celebrated" are different questions, and only the first should bail. */
+    if (alreadyCelebrated && !armedThisMount.current) return;
+    armedThisMount.current = true;
 
     setCelebrate(true);
     const timer = setTimeout(() => setCelebrate(false), 2200);
