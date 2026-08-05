@@ -174,10 +174,10 @@ export function ChoiceGroup({
               // fill would put two type sizes on a saturated ground for the sake of
               // a state that the tile already states unmistakably.
               isSelected
-                ? 'border-primary bg-primary/10 text-primary-ink shadow-e-2 ring-1 ring-primary/25'
-                : 'border-primary/15 bg-card text-foreground hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-e-2',
+                ? 'border-primary bg-primary/10 text-primary-ink shadow-e-2 ring-1 ring-primary/30'
+                : 'border-primary/10 bg-card text-foreground hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-e-2',
               option.disabled &&
-                'cursor-not-allowed border-border/60 bg-muted/40 text-muted-foreground hover:translate-y-0 hover:border-border/60 hover:shadow-none'
+                'cursor-not-allowed border-border bg-muted text-muted-foreground hover:translate-y-0 hover:border-border hover:shadow-none'
             )}
           >
             {isSelected ? (
@@ -209,7 +209,7 @@ export function ChoiceGroup({
                 size === 'lg' ? 'h-10 w-10' : 'h-9 w-9',
                 isSelected
                   ? 'bg-primary text-primary-foreground'
-                  : 'bg-primary/8 text-primary-ink ring-1 ring-primary/15'
+                  : 'bg-primary/10 text-primary-ink ring-1 ring-primary/30'
               )}
             >
               <Icon className={size === 'lg' ? 'h-5 w-5' : 'h-[1.15rem] w-[1.15rem]'} />

@@ -49,7 +49,7 @@ const STATUS_COLORS: Record<RecLetterStatus, string> = {
 };
 
 const STATUS_BG: Record<RecLetterStatus, string> = {
-  draft: 'bg-muted/60',
+  draft: 'bg-muted',
   requested: 'bg-warning-subtle',
   writing: 'bg-muted',
   signed: 'bg-primary/10',
@@ -178,7 +178,7 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
             <span className="font-semibold text-foreground">{completedCount}</span> of{' '}
             <span className="font-semibold text-foreground">{letters.length}</span> letters received
           </p>
-          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted/60">
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
             <motion.div
               className="h-2 rounded-full bg-success-fill"
               initial={{ width: 0 }}
@@ -219,10 +219,10 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
                     'shrink-0 rounded-full border px-3 py-1 text-xs font-semibold',
                     STATUS_BG[letter.status],
                     STATUS_COLORS[letter.status],
-                    letter.status === 'uploaded' ? 'border-success/25' :
+                    letter.status === 'uploaded' ? 'border-success/30' :
                     letter.status === 'signed' ? 'border-primary/30' :
                     letter.status === 'writing' ? 'border-border' :
-                    letter.status === 'requested' ? 'border-warning/25' :
+                    letter.status === 'requested' ? 'border-warning/30' :
                     'border-border'
                   )}
                 >
@@ -244,8 +244,8 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
                           'flex h-8 w-8 items-center justify-center rounded-full border text-xs transition-[color,background-color,border-color,box-shadow]',
                           isComplete
                             ? cn('border-transparent', STATUS_BG[letter.status], STATUS_COLORS[letter.status])
-                            : 'border-border/60 text-muted-foreground/40',
-                          isCurrent && 'ring-2 ring-primary/20'
+                            : 'border-border text-muted-foreground',
+                          isCurrent && 'ring-2 ring-primary/30'
                         )}
                       >
                         <StepIcon className="h-3.5 w-3.5" />
@@ -254,7 +254,7 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
                         <div
                           className={cn(
                             'h-px flex-1',
-                            i < currentIdx ? 'bg-success/40' : 'bg-border/40'
+                            i < currentIdx ? 'bg-success/30' : 'bg-border/60'
                           )}
                         />
                       )}
@@ -279,7 +279,7 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
 
               {/* Remind affordance — ask the counsellor to chase the recommender. */}
               {(letter.status === 'requested' || letter.status === 'writing') ? (
-                <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
+                <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
                   {reminders[letter.id] ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-label font-semibold text-muted-foreground">
                       <Send className="h-3 w-3" aria-hidden />
@@ -290,7 +290,7 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
                       type="button"
                       onClick={() => handleRemind(letter)}
                       disabled={busy === letter.id}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1 text-label font-semibold text-muted-foreground transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted/60 hover:text-foreground disabled:cursor-wait disabled:opacity-60"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-label font-semibold text-muted-foreground transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted hover:text-foreground disabled:cursor-wait disabled:opacity-60"
                     >
                       <Send className="h-3 w-3" aria-hidden />
                       {busy === letter.id ? 'Sending…' : `Ask your counsellor to chase ${letter.teacherName.split(' ')[0]}`}

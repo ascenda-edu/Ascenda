@@ -14,7 +14,7 @@ type Mode = 'student' | 'counsellor' | 'parent';
 // palette: "Parent view" was rendered in the done-green purely because it was
 // third. Nothing here has succeeded or is pending; the icon and the label tell
 // the three apart.
-const MODE_ACCENT = 'text-muted-foreground hover:bg-muted/60';
+const MODE_ACCENT = 'text-muted-foreground hover:bg-muted';
 
 const MODES: Record<Mode, { path: string; label: string; icon: LucideIcon; accent: string }> = {
   student: {

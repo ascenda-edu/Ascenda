@@ -78,7 +78,7 @@ export function EvolutionTimeline({ entries, studentName }: EvolutionTimelinePro
         viewport={{ once: true, margin: '-40px' }}
       >
         {/* Timeline spine */}
-        <div className="absolute left-[19px] top-2 bottom-2 w-px bg-border/60" />
+        <div className="absolute left-[19px] top-2 bottom-2 w-px bg-border" />
 
         <div className="space-y-3">
           {sorted.map((entry) => {
@@ -101,7 +101,7 @@ export function EvolutionTimeline({ entries, studentName }: EvolutionTimelinePro
                       {formatDate(entry.date)}
                     </time>
                   </div>
-                  <p className="text-[0.8125rem] text-muted-foreground/90 leading-relaxed mb-2">
+                  <p className="text-[0.8125rem] text-muted-foreground leading-relaxed mb-2">
                     {entry.description}
                   </p>
                   <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-label font-semibold ${src.className}`}>

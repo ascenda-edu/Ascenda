@@ -11,7 +11,7 @@ export default function LoginPage() {
       <div className="space-y-3">
         {/* `bg-card/60` on a `surface-card` was white-on-white with a grey hairline —
             invisible as a pill, and the first thing anyone sees on sign-in. */}
-        <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1 text-xs font-medium text-foreground shadow-e-1 backdrop-blur">
+        <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-foreground shadow-e-1 backdrop-blur">
           <span className="h-2 w-2 rounded-full bg-success-fill" aria-hidden />
           Invite-only access
         </span>

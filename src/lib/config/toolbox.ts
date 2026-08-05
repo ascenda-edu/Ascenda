@@ -29,12 +29,12 @@ import type { BlockCategory } from '@/lib/data/student-demo-data';
 // authorship of a block is stated in its label, not its hue. The six are now
 // byte-identical: one tint, six icons, six headings.
 export const CATEGORY_CONFIG: Record<BlockCategory, { icon: typeof Globe; label: string; color: string; bg: string }> = {
-  identity: { icon: User, label: 'Identity', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/25' },
-  experience: { icon: Globe, label: 'Experience', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/25' },
-  strength: { icon: Star, label: 'Strengths', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/25' },
-  interest: { icon: Heart, label: 'Interests', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/25' },
-  achievement: { icon: Trophy, label: 'Achievements', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/25' },
-  counsellor_insight: { icon: MessageSquare, label: 'Counsellor', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/25' },
+  identity: { icon: User, label: 'Identity', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/30' },
+  experience: { icon: Globe, label: 'Experience', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/30' },
+  strength: { icon: Star, label: 'Strengths', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/30' },
+  interest: { icon: Heart, label: 'Interests', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/30' },
+  achievement: { icon: Trophy, label: 'Achievements', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/30' },
+  counsellor_insight: { icon: MessageSquare, label: 'Counsellor', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/30' },
 };
 
 export const CATEGORY_ORDER: BlockCategory[] = ['identity', 'experience', 'strength', 'interest', 'achievement', 'counsellor_insight'];

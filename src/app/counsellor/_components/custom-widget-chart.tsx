@@ -32,7 +32,7 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
 
   if (total === 0) {
     return (
-      <div className="flex h-28 items-center justify-center rounded-2xl border border-dashed border-border/60 text-xs text-muted-foreground">
+      <div className="flex h-28 items-center justify-center rounded-2xl border border-dashed border-border text-xs text-muted-foreground">
         No {unitPlural} to show yet
       </div>
     );
@@ -65,14 +65,14 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
               onClick={() => clickable && onSelect?.(bucket)}
               className={cn(
                 'group flex w-full items-center gap-3 rounded-xl px-1 py-0.5 transition',
-                clickable ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default',
+                clickable ? 'cursor-pointer hover:bg-muted' : 'cursor-default',
                 bucket.count === 0 && 'opacity-60'
               )}
             >
               <span className="w-28 shrink-0 truncate text-right text-xs text-muted-foreground">{bucket.label}</span>
               {/* The fill carries its own rounded-xl, so clipping here is redundant —
                   and it used to swallow the hover tooltip. */}
-              <div className="flex-1 rounded-xl bg-muted/50">
+              <div className="flex-1 rounded-xl bg-border">
                 <div
                   className={cn(
                     'group relative h-7 rounded-xl transition-[width,background-color] duration-700',
@@ -98,7 +98,7 @@ export const CustomWidgetChart = ({ def, students, onSelect }: CustomWidgetChart
     return (
       <div className="space-y-4">
         {/* No overflow-hidden: it clipped the tooltips. Segments round their own outer corners. */}
-        <div className="flex h-10 rounded-2xl border border-border/50">
+        <div className="flex h-10 rounded-2xl border border-border">
           {buckets.map((bucket, idx) => {
             const pct = (bucket.count / total) * 100;
             if (pct <= 0) return null;

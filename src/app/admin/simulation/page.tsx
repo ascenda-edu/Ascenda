@@ -198,7 +198,7 @@ export default async function SimulationPage() {
                 </TableHeader>
                 <TableBody>
                   {batch.rows.map(row => (
-                    <TableRow key={row.id} className={row.validation_pass ? '' : 'bg-danger/5'}>
+                    <TableRow key={row.id} className={row.validation_pass ? '' : 'bg-danger/10'}>
                       <TableCell className="font-medium text-foreground">{row.profile_name}</TableCell>
                       <TableCell className="text-muted-foreground">{row.programme_type}</TableCell>
                       <TableCell numeric className="text-foreground">{row.student_ib_equivalent ?? '—'}</TableCell>

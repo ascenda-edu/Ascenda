@@ -82,7 +82,7 @@ export function ProfileProgressCard({
         </div>
       </div>
 
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted/70">
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
         <motion.div
           className={cn('h-full rounded-full', visual.bar)}
           initial={{ width: 0 }}
@@ -115,7 +115,7 @@ export function ProfileProgressCard({
                     'inline-flex items-center gap-1 rounded-full px-3 py-1 text-label font-semibold uppercase tracking-[0.2em]',
                     complete
                       ? 'text-muted-foreground'
-                      : 'bg-muted/70 text-muted-foreground ring-1 ring-border'
+                      : 'bg-muted text-muted-foreground ring-1 ring-border'
                   )}
                 >
                   {complete
@@ -147,7 +147,12 @@ export function ProfileProgressCard({
         {celebrate ? (
           <>
             <motion.div
-              className="pointer-events-none absolute inset-0 rounded-4xl ring-2 ring-primary/40"
+              // /60, not the /30 nearest-rung mapping would have given: this is the
+              // one celebratory moment in the app, and the ladder was about to make
+              // it fainter. An inset-0 ring with no fill is not a scrim — nothing is
+              // obscured — so it is a tint, and a tint marking a reward earns the
+              // rung above the one that marks a hover.
+              className="pointer-events-none absolute inset-0 rounded-4xl ring-2 ring-primary/60"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}

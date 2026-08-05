@@ -32,7 +32,7 @@ const RequirementList = ({ text, title }: { text: string; title?: string }) => {
     <div className="space-y-3">
       {title ? (
         <h4 className="eyebrow-accent flex items-center gap-2">
-          <span className="h-px w-4 bg-primary/40" aria-hidden />
+          <span className="h-px w-4 bg-primary/30" aria-hidden />
           {title}
         </h4>
       ) : null}
@@ -44,10 +44,10 @@ const RequirementList = ({ text, title }: { text: string; title?: string }) => {
           {items.map((item, i) => (
             <li
               key={i}
-              className="flex items-start gap-3 rounded-lg border border-border/40 bg-muted/20 p-3 text-sm transition-colors hover:bg-muted/40"
+              className="flex items-start gap-3 rounded-lg border border-border bg-muted p-3 text-sm transition-colors hover:bg-border"
             >
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary-ink/70" aria-hidden />
-              <span className="leading-relaxed text-foreground/90">{emphasize(item)}</span>
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary-ink" aria-hidden />
+              <span className="leading-relaxed text-foreground">{emphasize(item)}</span>
             </li>
           ))}
         </ul>

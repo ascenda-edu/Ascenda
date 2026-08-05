@@ -98,8 +98,8 @@ export function ApplicationList({ rows }: Props) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: index * 0.03 }}
               className={cn(
-                'rounded-2xl border bg-card/60 px-4 py-3 transition',
-                isClosed ? 'border-border/40 opacity-80' : 'hover-lift border-border/60 hover:border-primary/40'
+                'rounded-2xl border bg-card px-4 py-3 transition',
+                isClosed ? 'border-border opacity-80' : 'hover-lift border-border hover:border-primary/30'
               )}
             >
               <div className="flex items-center gap-4">
@@ -147,7 +147,7 @@ export function ApplicationList({ rows }: Props) {
                         tasksRemaining: row.tasksOpen
                       })
                     }
-                    className="shrink-0 border-primary/30 bg-primary/10 text-primary-ink transition hover:bg-primary/15"
+                    className="shrink-0 border-primary/30 bg-primary/10 text-primary-ink transition hover:border-primary/60"
                   >
                     <Sparkles className="mr-1.5 h-3.5 w-3.5" aria-hidden />
                     Need help
@@ -157,7 +157,7 @@ export function ApplicationList({ rows }: Props) {
 
               {!isClosed && row.tasksTotal > 0 ? (
                 <div className="mt-2.5 flex items-center gap-3">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted/60">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                     <div
                       className={cn(
                         'h-full rounded-full transition-[width,background-color]',

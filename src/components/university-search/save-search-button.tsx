@@ -76,7 +76,7 @@ export function SaveSearchButton({ query, chips: chipsProp }: Props) {
           setOpen((v) => !v);
           setTimeout(() => inputRef.current?.focus(), 50);
         }}
-        className="inline-flex h-9 items-center gap-2 rounded-full border border-border bg-background px-4 text-sm font-medium transition hover:-translate-y-0.5 hover:border-primary/50"
+        className="inline-flex h-9 items-center gap-2 rounded-full border border-border bg-background px-4 text-sm font-medium transition hover:-translate-y-0.5 hover:border-primary/60"
       >
         {alreadySaved || justSaved ? (
           <>
@@ -110,7 +110,7 @@ export function SaveSearchButton({ query, chips: chipsProp }: Props) {
                 if (e.key === 'Escape') setOpen(false);
               }}
               placeholder={defaultName}
-              className="w-full rounded-full border border-border bg-background/60 px-3.5 py-2 text-sm outline-none focus:border-primary/50"
+              className="w-full rounded-full border border-border bg-background px-3.5 py-2 text-sm outline-none focus:border-primary/60"
             />
             <div className="mt-2 flex justify-end gap-2">
               <button

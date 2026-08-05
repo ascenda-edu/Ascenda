@@ -160,7 +160,7 @@ export const NotesPanel = ({ notes: seedNotes, studentId }: NotesPanelProps) => 
           const cfg = TYPE_CONFIG[note.type];
           const Icon = cfg.icon;
           return (
-            <div key={note.id} className="flex gap-3 rounded-2xl border border-border/60 bg-background/60 p-4">
+            <div key={note.id} className="flex gap-3 rounded-2xl border border-border bg-background p-4">
               <div className={cn('mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', cfg.bg)}>
                 <Icon className={cn('h-4 w-4', cfg.color)} />
               </div>
@@ -177,7 +177,7 @@ export const NotesPanel = ({ notes: seedNotes, studentId }: NotesPanelProps) => 
           );
         })}
         {notes.length === 0 && (
-          <div className="rounded-4xl border border-dashed border-border bg-muted/40 p-8 text-center">
+          <div className="rounded-4xl border border-dashed border-border bg-muted p-8 text-center">
             <p className="text-sm text-muted-foreground">No notes yet. Add your first note above.</p>
           </div>
         )}

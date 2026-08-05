@@ -82,7 +82,7 @@ export function ProgressBoard({
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, delay: index * 0.03 }}
-            className="rounded-2xl border border-border bg-card/60 p-4 sm:p-5"
+            className="rounded-2xl border border-border bg-card p-4 sm:p-5"
           >
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
               <div className="min-w-0">
@@ -119,7 +119,7 @@ export function ProgressBoard({
 
             {app.tasksTotal > 0 ? (
               <div className="mt-3 flex items-center gap-3">
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted/60">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                   <div
                     className={cn(
                       'h-full rounded-full transition-[width]',

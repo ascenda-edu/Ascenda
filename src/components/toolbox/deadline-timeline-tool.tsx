@@ -12,8 +12,8 @@ import type { TimelineDeadline, TimelineDeadlineType } from '@/lib/data/student-
 
 const TYPE_CONFIG: Record<TimelineDeadlineType, { color: string; bg: string; dot: string; label: string }> = {
   submission: { color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/30', dot: 'bg-primary', label: 'Submission' },
-  exam: { color: 'text-warning', bg: 'bg-warning-subtle border-warning/25', dot: 'bg-warning-fill', label: 'Exam' },
-  interview: { color: 'text-danger', bg: 'bg-danger-subtle border-danger/25', dot: 'bg-danger-fill', label: 'Interview' },
+  exam: { color: 'text-warning', bg: 'bg-warning-subtle border-warning/30', dot: 'bg-warning-fill', label: 'Exam' },
+  interview: { color: 'text-danger', bg: 'bg-danger-subtle border-danger/30', dot: 'bg-danger-fill', label: 'Interview' },
   document: { color: 'text-muted-foreground', bg: 'bg-muted border-border', dot: 'bg-muted-foreground', label: 'Document' },
 };
 
@@ -32,7 +32,7 @@ function urgencyColor(days: number): string {
   if (days <= 0) return 'text-danger bg-danger-subtle';
   if (days <= 3) return 'text-danger bg-danger-subtle';
   if (days <= 7) return 'text-warning bg-warning-subtle';
-  return 'text-muted-foreground bg-muted/30';
+  return 'text-muted-foreground bg-muted';
 }
 
 function getCalendarDays(year: number, month: number): (Date | null)[] {
@@ -122,7 +122,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
             <p className="text-sm font-semibold text-danger">{overdueDeadlines.length} overdue deadline{overdueDeadlines.length !== 1 ? 's' : ''}</p>
             <div className="flex flex-wrap gap-2 mt-1.5">
               {overdueDeadlines.map((d) => (
-                <span key={d.id} className="text-xs text-danger/80">{d.title} ({Math.abs(daysUntilMap.get(d.id) ?? daysUntil(d.date))}d ago)</span>
+                <span key={d.id} className="text-xs text-danger">{d.title} ({Math.abs(daysUntilMap.get(d.id) ?? daysUntil(d.date))}d ago)</span>
               ))}
             </div>
           </div>
@@ -155,7 +155,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                   <p className="text-sm font-semibold text-foreground">{d.title}</p>
                   <p className="text-xs text-muted-foreground">{d.university}</p>
                   {/* Urgency bar */}
-                  <div className="h-1 rounded-full bg-muted/30 overflow-hidden">
+                  <div className="h-1 rounded-full bg-muted overflow-hidden">
                     <motion.div
                       className={cn('h-full rounded-full', days <= 3 ? 'bg-danger-fill' : days <= 7 ? 'bg-warning-fill' : 'bg-success-fill')}
                       initial={{ width: '100%' }}
@@ -195,7 +195,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                 aria-pressed={filterType === type}
                 className={cn(
                   'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                  filterType === type ? cn(cfg.bg, cfg.color, 'border') : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                  filterType === type ? cn(cfg.bg, cfg.color, 'border') : 'bg-muted text-muted-foreground hover:bg-border'
                 )}
               >
                 <div className={cn('h-2 w-2 rounded-full', cfg.dot)} />
@@ -245,13 +245,13 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
         <div className="space-y-4">
           {/* Month navigation */}
           <div className="flex items-center justify-between">
-            <button onClick={() => navigateMonth(-1)} aria-label="Previous month" className="rounded-lg p-2 hover:bg-muted/60 transition-colors">
+            <button onClick={() => navigateMonth(-1)} aria-label="Previous month" className="rounded-lg p-2 hover:bg-muted transition-colors">
               <ChevronLeft className="h-4 w-4 text-muted-foreground" />
             </button>
             <p className="text-sm font-semibold text-foreground">
               {new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(new Date(calYear, calMonth))}
             </p>
-            <button onClick={() => navigateMonth(1)} aria-label="Next month" className="rounded-lg p-2 hover:bg-muted/60 transition-colors">
+            <button onClick={() => navigateMonth(1)} aria-label="Next month" className="rounded-lg p-2 hover:bg-muted transition-colors">
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
           </div>
@@ -282,10 +282,10 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                   onClick={() => dayDeadlines.length > 0 && setSelectedCalendarDate(selectedCalendarDate === dateStr ? null : dateStr)}
                   className={cn(
                     'h-20 rounded-xl border p-1.5 transition-colors overflow-hidden text-left',
-                    isToday ? 'border-primary/40 bg-primary/5' : 'border-border/50 hover:bg-muted/20',
+                    isToday ? 'border-primary/30 bg-primary/10' : 'border-border hover:bg-muted',
                     isPast && 'opacity-50',
-                    dayDeadlines.length > 0 && 'ring-1 ring-primary/10 cursor-pointer',
-                    selectedCalendarDate === dateStr && 'ring-2 ring-primary/40 bg-primary/5'
+                    dayDeadlines.length > 0 && 'ring-1 ring-primary/30 cursor-pointer',
+                    selectedCalendarDate === dateStr && 'ring-2 ring-primary/30 bg-primary/10'
                   )}
                 >
                   <p className={cn(
@@ -343,7 +343,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                           <span className="text-sm font-semibold text-foreground">{d.title}</span>
                         </div>
                         <p className="text-xs text-muted-foreground">{d.university}</p>
-                        {d.detail && <p className="text-xs text-muted-foreground/80">{d.detail}</p>}
+                        {d.detail && <p className="text-xs text-muted-foreground">{d.detail}</p>}
                       </div>
                     );
                   })}
@@ -362,7 +362,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
               <div className="flex items-center gap-3 mb-4">
                 <p className="eyebrow">{month}</p>
                 <span className="rounded-full bg-primary/10 px-2 py-0.5 text-label font-medium text-primary-ink">{items.length} items</span>
-                <div className="flex-1 h-px bg-border/50" />
+                <div className="flex-1 h-px bg-border" />
               </div>
               <div className="relative border-l-2 border-border pl-6 space-y-4">
                 {items.map((d) => {
@@ -395,7 +395,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
                           <span>·</span>
                           <span>{dayOfWeek.format(parseLocalDate(d.date))}</span>
                         </div>
-                        {d.detail && <p className="text-xs text-muted-foreground/80">{d.detail}</p>}
+                        {d.detail && <p className="text-xs text-muted-foreground">{d.detail}</p>}
                       </div>
                     </motion.div>
                   );

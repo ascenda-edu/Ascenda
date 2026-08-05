@@ -75,7 +75,7 @@ export function GettingStartedCard({
         <button
           type="button"
           onClick={handleDismiss}
-          className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="Hide the getting started checklist"
         >
           <X className="h-4 w-4" aria-hidden />
@@ -102,7 +102,7 @@ export function GettingStartedCard({
 
       {/* The next action, promoted out of the list. This is what the card is
           for: one thing to do, not seven things to read. */}
-      <div className="mt-5 rounded-2xl border border-border/60 bg-muted/30 p-4">
+      <div className="mt-5 rounded-2xl border border-border bg-muted p-4">
         <p className="text-label font-semibold uppercase tracking-widest text-muted-foreground">Next up</p>
         <p className="mt-1.5 text-sm font-semibold text-foreground">{next.title}</p>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{next.body}</p>
@@ -118,7 +118,7 @@ export function GettingStartedCard({
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
         aria-expanded={expanded}
-        className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {expanded ? 'Hide the full list' : `Show all ${total} steps`}
         <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', expanded && 'rotate-180')} aria-hidden />
@@ -135,11 +135,11 @@ export function GettingStartedCard({
             className="overflow-hidden"
           >
             {items.map((item) => (
-              <li key={item.id} className="border-t border-border/50 first:mt-2">
+              <li key={item.id} className="border-t border-border first:mt-2">
                 <Link
                   href={item.href}
                   className={cn(
-                    'flex items-start gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-muted/50',
+                    'flex items-start gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-muted',
                     item.done && 'opacity-60'
                   )}
                 >
@@ -147,7 +147,7 @@ export function GettingStartedCard({
                     className={cn(
                       'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md ring-1',
                       item.done
-                        ? 'bg-success-subtle text-success ring-success/25'
+                        ? 'bg-success-subtle text-success ring-success/30'
                         : 'bg-muted text-muted-foreground ring-border'
                     )}
                     aria-hidden
@@ -159,13 +159,13 @@ export function GettingStartedCard({
                       <span
                         className={cn(
                           'text-sm font-medium text-foreground',
-                          item.done && 'line-through decoration-muted-foreground/50'
+                          item.done && 'line-through decoration-muted-foreground/60'
                         )}
                       >
                         {item.title}
                       </span>
                       {item.optional ? (
-                        <span className="text-label font-medium uppercase tracking-wide text-muted-foreground/70">
+                        <span className="text-label font-medium uppercase tracking-wide text-muted-foreground">
                           Optional
                         </span>
                       ) : null}

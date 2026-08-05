@@ -153,12 +153,12 @@ export default async function StudentDetailPage(props: Props) {
           )}
 
           {completionPct < 100 && (
-            <div className={cn('space-y-1.5', clusters.length > 0 && 'border-t border-border/60 pt-4')}>
+            <div className={cn('space-y-1.5', clusters.length > 0 && 'border-t border-border pt-4')}>
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Profile completion</span>
                 <span className="font-semibold text-warning">{completionPct}%</span>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
+              <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-1.5 rounded-full bg-warning-fill transition-[width]"
                   style={{ width: `${completionPct}%` }}

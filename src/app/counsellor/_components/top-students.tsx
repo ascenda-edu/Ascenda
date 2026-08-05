@@ -21,13 +21,14 @@ function getInitials(first: string, last: string) {
   return `${first[0]}${last[0]}`.toUpperCase();
 }
 
-// Gold / silver / bronze. The medal ramp has no token family of its own, so it
-// borrows the warning tone at two strengths with the neutral ink between them —
-// three distinguishable steps, all tokenised.
+// An ordinal registry, so it is monochrome: rank 1 takes the warning tone (a medal
+// IS a real distinction), ranks 2 and 3 take the neutral ink. A three-step ramp
+// would have to come from one token's alpha, and every rung below solid fails AA
+// on text. The rank NUMBER already carries the order — colour is never alone.
 const RANK_STYLES = [
   'text-warning',
   'text-muted-foreground',
-  'text-warning/70'
+  'text-muted-foreground'
 ];
 
 export const TopStudents = ({ students }: TopStudentsProps) => {
@@ -66,8 +67,8 @@ export const TopStudents = ({ students }: TopStudentsProps) => {
           className={cn(
             'flex items-center gap-1.5 rounded-full border px-3 py-1 text-label font-medium transition hover:-translate-y-0.5',
             manageOpen
-              ? 'border-primary/40 bg-primary/10 text-primary-ink'
-              : 'border-border/60 bg-background/60 text-muted-foreground hover:text-foreground'
+              ? 'border-primary/30 bg-primary/10 text-primary-ink'
+              : 'border-border bg-background text-muted-foreground hover:text-foreground'
           )}
         >
           <Settings2 className="h-3 w-3" />
@@ -86,7 +87,7 @@ export const TopStudents = ({ students }: TopStudentsProps) => {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="rounded-2xl border border-border/60 bg-muted/30 p-3 space-y-1.5">
+            <div className="rounded-2xl border border-border bg-muted p-3 space-y-1.5">
               <p className="eyebrow px-1 pb-0.5">
                 Students
               </p>
@@ -98,7 +99,7 @@ export const TopStudents = ({ students }: TopStudentsProps) => {
                     key={student.id}
                     className={cn(
                       'flex items-center gap-2 rounded-xl px-2 py-1.5 transition',
-                      isHidden ? 'opacity-40' : 'bg-background/60'
+                      isHidden ? 'opacity-40' : 'bg-background'
                     )}
                   >
                     <div className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-label font-bold', avatarColorAt(allRanked.indexOf(student)))}>
@@ -114,8 +115,8 @@ export const TopStudents = ({ students }: TopStudentsProps) => {
                       className={cn(
                         'flex h-6 w-6 items-center justify-center rounded-lg border transition',
                         isPinned
-                          ? 'border-primary/40 bg-primary/10 text-primary-ink'
-                          : 'border-border/60 text-muted-foreground hover:text-primary-ink hover:border-primary/40'
+                          ? 'border-primary/30 bg-primary/10 text-primary-ink'
+                          : 'border-border text-muted-foreground hover:text-primary-ink hover:border-primary/30'
                       )}
                     >
                       {isPinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
@@ -126,8 +127,8 @@ export const TopStudents = ({ students }: TopStudentsProps) => {
                       className={cn(
                         'flex h-6 w-6 items-center justify-center rounded-lg border transition',
                         isHidden
-                          ? 'border-success/25 bg-success-subtle text-success'
-                          : 'border-border/60 text-muted-foreground hover:text-destructive hover:border-destructive/40'
+                          ? 'border-success/30 bg-success-subtle text-success'
+                          : 'border-border text-muted-foreground hover:text-destructive hover:border-destructive/30'
                       )}
                     >
                       {isHidden ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
@@ -169,11 +170,11 @@ export const TopStudents = ({ students }: TopStudentsProps) => {
                 <Link
                   href={`/counsellor/students/${student.id}`}
                   className={cn(
-                    'flex items-center gap-3 rounded-2xl border border-border/60 bg-background/60 px-4 py-3 transition hover:bg-muted/40',
-                    isPinned && 'border-primary/20 bg-primary/5'
+                    'flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3 transition hover:bg-muted/60',
+                    isPinned && 'border-primary/30 bg-primary/10'
                   )}
                 >
-                  {isPinned && <Pin className="h-3 w-3 shrink-0 text-primary-ink/50" />}
+                  {isPinned && <Pin className="h-3 w-3 shrink-0 text-primary-ink" />}
                   <span className={cn('w-5 shrink-0 text-center text-xs font-bold', RANK_STYLES[idx] ?? 'text-muted-foreground')}>
                     {idx + 1}
                   </span>

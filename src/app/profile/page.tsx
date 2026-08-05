@@ -371,7 +371,7 @@ export default async function ProfilePage() {
       </AnimatedGrid>
       {outcomeHints.length > 0 ? (
         <AnimatedSection delay={0.08}>
-          <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card/60 p-5 shadow-e-1 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-e-1 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <div className={PROFILE_SECTION_VISUAL.aspirations.swatch}>
                 <Compass className="h-4 w-4" />
@@ -392,7 +392,7 @@ export default async function ProfilePage() {
       ) : null}
       {completionPercent === 100 && (
         <AnimatedSection delay={0.12}>
-          <div className="rounded-4xl border border-success/25 bg-success-subtle p-8">
+          <div className="rounded-4xl border border-success/30 bg-success-subtle p-8">
             <p className="text-base font-semibold text-success">Profile complete</p>
             <p className="mt-2 text-sm text-muted-foreground">
               All sections are filled in. You can revisit the wizard anytime from the top of this page to update details.

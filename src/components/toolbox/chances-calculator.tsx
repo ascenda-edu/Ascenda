@@ -158,18 +158,18 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
               aria-valuemax={45}
               aria-valuenow={sliderScore}
               aria-valuetext={`${sliderScore} out of 45 points`}
-              className="w-full h-2 rounded-full appearance-none cursor-pointer bg-muted/50 accent-primary
+              className="w-full h-2 rounded-full appearance-none cursor-pointer bg-muted accent-primary
                 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5
                 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-e-2
                 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background
                 [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110"
             />
             <div className="flex justify-between mt-1 px-0.5">
-              <span className="text-label text-muted-foreground/50">24</span>
-              <span className="text-label text-muted-foreground/50">30</span>
-              <span className="text-label text-muted-foreground/50">35</span>
-              <span className="text-label text-muted-foreground/50">40</span>
-              <span className="text-label text-muted-foreground/50">45</span>
+              <span className="text-label text-muted-foreground">24</span>
+              <span className="text-label text-muted-foreground">30</span>
+              <span className="text-label text-muted-foreground">35</span>
+              <span className="text-label text-muted-foreground">40</span>
+              <span className="text-label text-muted-foreground">45</span>
             </div>
           </div>
         </div>
@@ -227,7 +227,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
               'rounded-full px-3 py-1 text-xs font-medium transition-colors',
               sortBy === opt.key
                 ? 'bg-primary text-primary-foreground'
-                : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                : 'bg-muted/60 text-muted-foreground hover:bg-muted'
             )}
           >
             {opt.label}
@@ -236,7 +236,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
       </div>
 
       {/* Disclaimer */}
-      <p className="text-label text-muted-foreground/60 italic">
+      <p className="text-label text-muted-foreground italic">
         Chance percentages are illustrative estimates based on score thresholds, not real admissions probabilities. Actual outcomes depend on many factors beyond grades.
       </p>
 
@@ -266,7 +266,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
                   {/* Chance ring */}
                   <div className="relative h-14 w-14 shrink-0">
                     <svg className="h-14 w-14 -rotate-90" viewBox="0 0 44 44">
-                      <circle cx="22" cy="22" r="18" fill="none" stroke="currentColor" strokeWidth="3" className="text-muted/20" />
+                      <circle cx="22" cy="22" r="18" fill="none" stroke="currentColor" strokeWidth="3" className="text-muted" />
                       <motion.circle
                         cx="22" cy="22" r="18" fill="none" strokeWidth="3" strokeLinecap="round"
                         className={cfg.ringColor}
@@ -300,7 +300,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
                       <Link
                         href={`/course/${uni.id}`}
                         onClick={(event) => event.stopPropagation()}
-                        className="relative z-raised inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-label font-semibold text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
+                        className="relative z-raised inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-label font-semibold text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
                         aria-label={`View ${uni.university} course details`}
                       >
                         View course
@@ -314,10 +314,10 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
                 {/* Score comparison bar */}
                 <div className="mt-3 flex items-center gap-3">
                   <span className="text-label text-muted-foreground w-12 shrink-0">Min {uni.minimumScore}</span>
-                  <div className="flex-1 h-2 rounded-full bg-muted/30 overflow-hidden relative">
+                  <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden relative">
                     {/* Minimum score marker */}
                     <div
-                      className="absolute top-0 h-full w-0.5 bg-foreground/20 z-raised"
+                      className="absolute top-0 h-full w-0.5 bg-foreground/30 z-raised"
                       style={{ left: `${(uni.minimumScore / 45) * 100}%` }}
                     />
                     <motion.div
@@ -338,7 +338,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="mt-4 grid gap-3 sm:grid-cols-3 border-t border-border/50 pt-4">
+                      <div className="mt-4 grid gap-3 sm:grid-cols-3 border-t border-border pt-4">
                         {uni.hlRequirements && uni.hlRequirements.length > 0 && (
                           <div className="space-y-1.5">
                             <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">

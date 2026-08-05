@@ -102,7 +102,7 @@ export function MilestoneCelebration({
       >
         <span
           aria-hidden
-          className="mx-auto flex h-[4.75rem] w-[4.75rem] items-center justify-center rounded-full bg-primary/15"
+          className="mx-auto flex h-[4.75rem] w-[4.75rem] items-center justify-center rounded-full bg-primary/10"
         >
           <AscendiMark size={42} />
         </span>

@@ -81,7 +81,7 @@ export function QuickLinks() {
           <Item key={link.href} {...(reduced ? {} : { variants: childFade })}>
             <Link
               href={link.href}
-              className="surface-card hover-lift group flex h-full items-center gap-3 !p-4 hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="surface-card hover-lift group flex h-full items-center gap-3 !p-4 hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-transform group-hover:scale-105">
                 <Icon className="h-[18px] w-[18px]" aria-hidden />

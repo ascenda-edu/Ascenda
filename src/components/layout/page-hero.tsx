@@ -138,7 +138,7 @@ export const PageHero = ({
                 {eyebrow ? (
                   <span className={tone === 'student' ? 'eyebrow-accent' : 'eyebrow'}>{eyebrow}</span>
                 ) : null}
-                {eyebrow && highlight ? <span className="text-label text-muted-foreground/40">·</span> : null}
+                {eyebrow && highlight ? <span className="text-label text-muted-foreground">·</span> : null}
                 {highlight ? (
                   <span className="text-label font-semibold text-foreground">
                     {highlight}
@@ -169,7 +169,7 @@ export const PageHero = ({
             ) : null}
           </motion.div>
           {stats && stats.length > 0 ? (
-            <div className="border-t border-border/60 pt-3 md:border-l md:border-t-0 md:pl-5 md:pt-0 md:shrink-0">
+            <div className="border-t border-border pt-3 md:border-l md:border-t-0 md:pl-5 md:pt-0 md:shrink-0">
               <motion.div
                 className={cn(
                   'flex gap-2',
@@ -203,7 +203,7 @@ export const PageHero = ({
                       {stat.label}
                     </p>
                     {stat.detail ? (
-                      <p className="truncate text-label text-muted-foreground/70" title={stat.detail}>
+                      <p className="truncate text-label text-muted-foreground" title={stat.detail}>
                         {stat.detail}
                       </p>
                     ) : null}

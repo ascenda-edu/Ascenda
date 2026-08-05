@@ -27,8 +27,8 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 
 const STATUS_PILL: Record<HelpRequestStatus, { label: string; tone: string }> = {
   open: { label: 'Open', tone: 'border-primary/30 bg-primary/10 text-primary-ink' },
-  accepted: { label: 'In progress', tone: 'border-warning/25 bg-warning-subtle text-warning' },
-  resolved: { label: 'Resolved', tone: 'border-success/25 bg-success-subtle text-success' }
+  accepted: { label: 'In progress', tone: 'border-warning/30 bg-warning-subtle text-warning' },
+  resolved: { label: 'Resolved', tone: 'border-success/30 bg-success-subtle text-success' }
 };
 
 export function CounsellorInbox() {
@@ -135,7 +135,7 @@ export function CounsellorInbox() {
                   'rounded-full px-3 py-1.5 text-xs font-semibold transition',
                   isActive
                     ? 'bg-primary text-primary-foreground shadow-e-1'
-                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 )}
               >
                 {f.label}
@@ -163,20 +163,20 @@ export function CounsellorInbox() {
       {loading ? (
         <div className="space-y-2">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-[76px] animate-pulse rounded-2xl bg-muted/40" />
+            <div key={i} className="h-[76px] animate-pulse rounded-2xl bg-muted" />
           ))}
         </div>
       ) : loadFailed && items.length === 0 ? (
         <div className="rounded-4xl border border-dashed border-border bg-card p-12 text-center" role="alert">
-          <Inbox className="mx-auto mb-3 h-8 w-8 text-danger/50" />
+          <Inbox className="mx-auto mb-3 h-8 w-8 text-danger" />
           <p className="font-semibold text-foreground">Couldn&apos;t load your inbox</p>
           <p className="mt-1 text-sm text-muted-foreground">
             This is a connection problem, not an empty inbox. It retries automatically — or reload the page.
           </p>
         </div>
       ) : visible.length === 0 ? (
-        <div className="rounded-4xl border border-dashed border-border bg-muted/40 p-12 text-center">
-          <Inbox className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+        <div className="rounded-4xl border border-dashed border-border bg-muted p-12 text-center">
+          <Inbox className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
           <p className="font-semibold text-foreground">
             {query.trim() || filter !== 'open' ? 'No conversations match' : 'No open conversations'}
           </p>
@@ -207,13 +207,13 @@ export function CounsellorInbox() {
                     onClick={() => openRequest(request.id)}
                     className={cn(
                       'group flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left hover-lift',
-                      isUnread ? 'border-primary/30 bg-primary/5' : 'border-border bg-card hover:bg-muted/40'
+                      isUnread ? 'border-primary/30 bg-primary/10' : 'border-border bg-card hover:bg-muted'
                     )}
                   >
                     <span
                       className={cn(
                         'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
-                        isUnread ? 'bg-primary/20 text-primary-ink' : 'bg-muted text-muted-foreground'
+                        isUnread ? 'bg-primary/10 text-primary-ink' : 'bg-muted text-muted-foreground'
                       )}
                       aria-hidden
                     >
@@ -233,7 +233,7 @@ export function CounsellorInbox() {
                           {formatRelativeTime(item.lastMessageAt)}
                         </span>
                       </div>
-                      <p className="truncate text-xs font-medium text-foreground/80">{request.subject}</p>
+                      <p className="truncate text-xs font-medium text-foreground">{request.subject}</p>
                       <p className="line-clamp-1 text-xs text-muted-foreground">
                         {item.lastMessageFromCounsellor ? (
                           <span className="inline-flex items-center gap-1">

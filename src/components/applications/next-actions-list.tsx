@@ -23,7 +23,7 @@ interface Props {
 }
 
 const urgencyTone = (days: number | null): { dot: string; label: string; labelTone: string } => {
-  if (days === null) return { dot: 'bg-muted-foreground/40', label: 'No deadline', labelTone: 'text-muted-foreground' };
+  if (days === null) return { dot: 'bg-muted-foreground/30', label: 'No deadline', labelTone: 'text-muted-foreground' };
   if (days < 0) return { dot: 'bg-danger-fill', label: `${Math.abs(days)}d overdue`, labelTone: 'text-danger' };
   if (days === 0) return { dot: 'bg-danger-fill', label: 'Due today', labelTone: 'text-danger' };
   if (days === 1) return { dot: 'bg-danger-fill', label: 'Due tomorrow', labelTone: 'text-danger' };
@@ -68,7 +68,7 @@ export function NextActionsList({ items }: Props) {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: index * 0.05 }}
-              className="hover-lift group flex items-center gap-4 rounded-2xl border border-border/60 bg-card/60 px-4 py-3 hover:border-primary/40"
+              className="hover-lift group flex items-center gap-4 rounded-2xl border border-border bg-card px-4 py-3 hover:border-primary/30"
             >
               <span
                 className={cn('h-2.5 w-2.5 shrink-0 rounded-full', tone.dot)}
@@ -100,12 +100,12 @@ export function NextActionsList({ items }: Props) {
                     tasksRemaining: item.tasksRemaining
                   })
                 }
-                className="shrink-0 border-primary/30 bg-primary/10 text-primary-ink transition hover:bg-primary/15"
+                className="shrink-0 border-primary/30 bg-primary/10 text-primary-ink transition hover:border-primary/60"
               >
                 <Sparkles className="mr-1.5 h-3.5 w-3.5" aria-hidden />
                 Need help
               </Button>
-              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100" aria-hidden />
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100" aria-hidden />
             </motion.li>
           );
         })}

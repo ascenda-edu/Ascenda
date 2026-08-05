@@ -34,10 +34,10 @@ const buttonVariants = cva(
         // 6.99:1 / 3.57:1. `bg-transparent` (not `bg-card`) so the button doesn't
         // punch a hole in a tinted panel; the tint arrives on hover instead.
         outline:
-          "border border-primary bg-transparent text-primary-ink hover:bg-primary/8",
+          "border border-primary bg-transparent text-primary-ink hover:bg-primary/10",
         secondary:
           `bg-secondary text-secondary-foreground shadow-e-2 ${lift}`,
-        ghost: "text-foreground hover:bg-muted/60",
+        ghost: "text-foreground hover:bg-muted",
         link: "text-primary-ink underline-offset-4 hover:underline",
         // Brand indigo, not `--accent`: that token is gone. Same three-step alpha
         // ladder the rest of the app uses (/10 rest, /30 hover and edge).

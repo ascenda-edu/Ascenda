@@ -127,7 +127,7 @@ export function CoachPanel({ scope }: { scope: CoachPanelScope }) {
         onClick={() => setOpen((v) => !v)}
         className={cn(
           'flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-e-2 hover:text-foreground',
-          allowReset ? 'border-dashed border-warning/50' : 'border-primary/30'
+          allowReset ? 'border-dashed border-warning/60' : 'border-primary/30'
         )}
         aria-expanded={open}
         // Only while the target exists. Emitted unconditionally it is an IDREF to
@@ -146,7 +146,7 @@ export function CoachPanel({ scope }: { scope: CoachPanelScope }) {
           id={PANEL_ID}
           className={cn(
             'mb-2 w-56 rounded-2xl border bg-card p-3 shadow-e-3',
-            allowReset ? 'border-dashed border-warning/50' : 'border-primary/30'
+            allowReset ? 'border-dashed border-warning/60' : 'border-primary/30'
           )}
         >
           <p className="text-label font-semibold uppercase tracking-widest text-muted-foreground">

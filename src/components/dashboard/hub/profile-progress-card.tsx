@@ -38,14 +38,14 @@ export function ProfileProgressCard({ percent, steps, nextStepTitle }: ProfilePr
       title={complete ? 'Profile complete' : 'Finish your profile'}
       icon={UserCircle}
       iconClassName={
-        complete ? 'bg-success-subtle text-success ring-success/25' : undefined
+        complete ? 'bg-success-subtle text-success ring-success/30' : undefined
       }
     >
       <div className="flex h-full flex-col gap-4">
         <div className="flex items-center gap-4">
           <div className="relative h-20 w-20 shrink-0" role="img" aria-label={`Profile ${percent}% complete`}>
             <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90">
-              <circle cx="40" cy="40" r={RADIUS} fill="none" strokeWidth="7" className="stroke-muted/60" />
+              <circle cx="40" cy="40" r={RADIUS} fill="none" strokeWidth="7" className="stroke-muted" />
               <motion.circle
                 cx="40"
                 cy="40"
@@ -83,8 +83,8 @@ export function ProfileProgressCard({ percent, steps, nextStepTitle }: ProfilePr
                 className={cn(
                   'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border',
                   step.done
-                    ? 'border-success/40 bg-success-subtle text-success'
-                    : 'border-border bg-muted/40 text-transparent'
+                    ? 'border-success/30 bg-success-subtle text-success'
+                    : 'border-border bg-muted text-transparent'
                 )}
                 aria-hidden
               >

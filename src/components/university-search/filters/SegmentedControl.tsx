@@ -42,7 +42,7 @@ export function SegmentedControl({ options, value, onChange, ariaLabel }: Segmen
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className="inline-flex w-full items-stretch gap-1 rounded-full bg-muted/50 p-1"
+      className="inline-flex w-full items-stretch gap-1 rounded-full bg-muted p-1"
     >
       {options.map((option, index) => {
         const active = option.value === value;

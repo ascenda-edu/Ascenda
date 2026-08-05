@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 // for the chevron, the placeholder/disabled states a `<button>` needs rather
 // than the ones an `<input>` needs, and `group` for the chevron rotation.
 const selectTriggerVariants = cva(
-  'group flex w-full items-center justify-between gap-2 border border-input bg-background text-foreground shadow-e-1 transition-[border-color,box-shadow] duration-200 hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:bg-muted/40 disabled:text-muted-foreground disabled:opacity-60 disabled:shadow-none disabled:hover:border-input data-[placeholder]:text-muted-foreground/80 [&>span]:min-w-0 [&>span]:truncate [&>span]:text-left',
+  'group flex w-full items-center justify-between gap-2 border border-input bg-background text-foreground shadow-e-1 transition-[border-color,box-shadow] duration-200 hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-60 disabled:shadow-none disabled:hover:border-input data-[placeholder]:text-muted-foreground [&>span]:min-w-0 [&>span]:truncate [&>span]:text-left',
   {
     variants: {
       size: {

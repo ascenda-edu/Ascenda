@@ -320,6 +320,19 @@
     --primary: 232 100% 75.7%;
     --primary-foreground: 0 0% 6.9%;
 
+    /* ⚠ --secondary IS BYTE-IDENTICAL TO --muted IN THIS THEME, and 1.04:1 away
+       from it in light. It has been that way since the UI uplift; it is recorded
+       here because it is a silent trap. `bg-secondary` CANNOT be used to separate
+       two states that would otherwise both be `bg-muted` — it measures 1.00:1
+       against it in dark, so the "fix" renders identically and reads as working.
+       PR 3 hit this twice and two agents caught it independently.
+
+       For a neutral separator use `bg-border` (1.24:1 light, 1.30:1 dark against
+       muted) — it is the best available; `bg-card` is only 1.18/1.14. For a
+       selection or highlight use `bg-primary/10`, because selection is
+       brand-eligible. Giving --secondary its own step in the ramp would be the
+       real fix, but it moves every `bg-secondary` in the app and needs its own
+       visual pass. */
     --secondary: 0 0% 16.3%;
     --secondary-foreground: 0 0% 93.4%;
 
@@ -439,7 +452,7 @@
   }
 
   ::selection {
-    @apply bg-primary/20 text-foreground;
+    @apply bg-primary/30 text-foreground;
   }
 
   /* Custom scrollbar */
@@ -453,7 +466,7 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-border/60 rounded-full;
+    @apply bg-border rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
@@ -577,7 +590,7 @@
   }
 
   .helper-text {
-    @apply text-sm text-muted-foreground/90 leading-relaxed;
+    @apply text-sm text-muted-foreground leading-relaxed;
   }
 
   /* THE app-wide horizontal gutter. The fixed navbar and the shell row both
@@ -601,12 +614,12 @@
   }
 
   .surface-subcard {
-    @apply rounded-xl border border-border bg-background p-5 transition-colors dark:border-white/10 dark:bg-muted/30;
+    @apply rounded-xl border border-border bg-background p-5 transition-colors dark:border-white/10 dark:bg-muted;
   }
 
   /* THE neutral pill — a pill with no status meaning.
      "No status" is not the same as "no design". This used to be `border-border
-     bg-muted/50`, i.e. dead grey with a hard edge, which in dark mode meant a
+     bg-muted`, i.e. dead grey with a hard edge, which in dark mode meant a
      near-black border (--border is 18% lightness there) around a grey blob. Next
      to the five tone pills it read as unstyled rather than as deliberate, and it
      is the single most-repeated pill in the app (course tags, subject lists,
@@ -622,7 +635,7 @@
      a UI control, so the 3:1 non-text rule that governs `border-input` on form
      fields and buttons does not apply to the edge here. */
   .surface-chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-xs font-medium text-foreground transition-colors;
+    @apply inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-foreground transition-colors;
   }
 
   .surface-toolbar {
@@ -638,7 +651,7 @@
   }
 
   .nav-pill {
-    @apply relative rounded-lg border border-transparent px-3 py-2 sm:py-1.5 text-xs sm:text-sm font-medium text-muted-foreground transition-[color,background-color,border-color,box-shadow] duration-200 hover:bg-muted/60 hover:text-foreground;
+    @apply relative rounded-lg border border-transparent px-3 py-2 sm:py-1.5 text-xs sm:text-sm font-medium text-muted-foreground transition-[color,background-color,border-color,box-shadow] duration-200 hover:bg-muted hover:text-foreground;
   }
 
   /* The active tab used to be a SOLID brand fill. It was the only solid
@@ -648,7 +661,7 @@
      by the call site (section-nav's `layoutId` element, so the indicator still
      slides between tabs; it slides a rule instead of a pill).
 
-     No background at all: `.nav-pill` already owns `hover:bg-muted/60`, and a
+     No background at all: `.nav-pill` already owns `hover:bg-muted`, and a
      resting background here would fight it. */
   .nav-pill-active {
     @apply border-transparent font-semibold text-primary-ink;

@@ -575,7 +575,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
               className="rounded-4xl"
             />
           ) : (
-            <ul className="divide-y divide-border/60">
+            <ul className="divide-y divide-border">
               <AnimatePresence initial={false}>
                 {results.map((r) => {
                   const inDeck = selectedDeck?.cards.some((c) => c.programId === r.programId) ?? false;
@@ -601,8 +601,8 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                         className={cn(
                           'flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition hover:-translate-y-0.5',
                           inDeck
-                            ? 'cursor-default border-success/25 bg-success-subtle text-success'
-                            : 'border-border bg-background/60 text-foreground hover:border-primary/50'
+                            ? 'cursor-default border-success/30 bg-success-subtle text-success'
+                            : 'border-border bg-background text-foreground hover:border-primary/60'
                         )}
                       >
                         {inDeck ? 'In deck' : (<><Plus className="h-3.5 w-3.5" /> Add</>)}
@@ -633,7 +633,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
             <button
               type="button"
               onClick={() => setCreateOpen((v) => !v)}
-              className="flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1.5 text-xs font-semibold transition hover:-translate-y-0.5 hover:border-primary/50"
+              className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold transition hover:-translate-y-0.5 hover:border-primary/60"
             >
               <Plus className="h-3.5 w-3.5" /> New deck
             </button>
@@ -647,7 +647,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden"
               >
-                <div className="space-y-3 rounded-3xl border border-border/60 bg-muted/30 p-4">
+                <div className="space-y-3 rounded-3xl border border-border bg-muted p-4">
                   <input
                     value={newDeckName}
                     onChange={(e) => setNewDeckName(e.target.value)}
@@ -665,7 +665,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                         onClick={() => setNewDeckEmoji(emoji)}
                         className={cn(
                           'flex h-8 w-8 items-center justify-center rounded-full text-base transition',
-                          newDeckEmoji === emoji ? 'bg-primary/20 ring-2 ring-primary/40' : 'hover:bg-muted'
+                          newDeckEmoji === emoji ? 'bg-primary/10 ring-2 ring-primary/30' : 'hover:bg-muted'
                         )}
                       >
                         {emoji}
@@ -697,8 +697,8 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                   className={cn(
                     'flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition',
                     deck.id === selectedDeckId
-                      ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/20'
-                      : 'border-border/60 bg-background/40 hover:border-border'
+                      ? 'border-primary/60 bg-primary/10 ring-1 ring-primary/30'
+                      : 'border-border bg-background hover:border-border'
                   )}
                 >
                   <span className="text-xl">{deck.theme.emoji ?? '🗡️'}</span>
@@ -756,7 +756,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                         initial={{ opacity: 0, y: 4 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                        className="overflow-hidden rounded-2xl border border-border/60 bg-background/40 p-3"
+                        className="overflow-hidden rounded-2xl border border-border bg-background p-3"
                       >
                         <div className="flex items-start gap-2">
                           <div className="min-w-0 flex-1">
@@ -830,7 +830,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
             )}
 
             {/* Assignees */}
-            <div className="space-y-2 border-t border-border/60 pt-4">
+            <div className="space-y-2 border-t border-border pt-4">
               <div className="flex items-center justify-between">
                 <p className="eyebrow flex items-center gap-1.5">
                   <Users className="h-3.5 w-3.5" /> On this quest
@@ -858,7 +858,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                         type="button"
                         onClick={() => unassign(selectedDeck.id, a.assignmentId)}
                         aria-label={`Unassign ${a.name}`}
-                        className="rounded-full p-0.5 transition hover:bg-primary/20"
+                        className="rounded-full p-0.5 transition hover:bg-primary/30"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -903,7 +903,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
               <ul className="max-h-64 space-y-1 overflow-y-auto">
                 {assignableRoster.map((s) => (
                   <li key={s.id}>
-                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl px-3 py-2 transition hover:bg-muted/60">
+                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl px-3 py-2 transition hover:bg-muted">
                       <input
                         type="checkbox"
                         checked={assignSelection.has(s.id)}
@@ -964,7 +964,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                 type="button"
                 onClick={closeDelete}
                 disabled={isDeletingDeck}
-                className="rounded-full border border-primary bg-transparent px-4 py-2 text-sm font-medium text-primary-ink transition hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+                className="rounded-full border border-primary bg-transparent px-4 py-2 text-sm font-medium text-primary-ink transition hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
               >
                 Cancel
               </button>

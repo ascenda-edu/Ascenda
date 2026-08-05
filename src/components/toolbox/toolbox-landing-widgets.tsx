@@ -13,7 +13,7 @@ export function ToolboxProgressRing({ value }: { value: number }) {
           * swallowed — the server shipped "67% progress" as a single text node while the
           * client hydrated two, which threw "Hydration failed" on every /toolbox load. */}
         <title>{`${value}% progress`}</title>
-        <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" strokeWidth="4" className="text-muted/20" />
+        <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" strokeWidth="4" className="text-muted" />
         <motion.circle
           cx="32" cy="32" r="28" fill="none" strokeWidth="4" strokeLinecap="round"
           className={cn(value >= 80 ? 'stroke-success' : value >= 50 ? 'stroke-warning' : 'stroke-danger')}
@@ -42,7 +42,7 @@ export function ToolboxCountdown({ days }: { days: number }) {
       animate={{ scale: 1, opacity: 1 }}
       className={cn(
         'flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl border',
-        days <= 3 ? 'bg-danger-subtle border-danger/25' : days <= 7 ? 'bg-warning-subtle border-warning/25' : 'bg-primary/10 border-primary/20'
+        days <= 3 ? 'bg-danger-subtle border-danger/30' : days <= 7 ? 'bg-warning-subtle border-warning/30' : 'bg-primary/10 border-primary/30'
       )}
     >
       <span className={cn(

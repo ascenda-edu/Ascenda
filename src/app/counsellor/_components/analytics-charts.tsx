@@ -21,7 +21,7 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
     <div className="space-y-4">
       {/* No overflow-hidden here: it would clip the hover tooltips out of existence.
           Each segment rounds its own outer corner instead, so the pill shape survives. */}
-      <div className="flex h-10 rounded-2xl border border-border/50">
+      <div className="flex h-10 rounded-2xl border border-border">
         {/* Steps 1 and 4 of the ramp, not 1 and 2 — adjacent steps are only 1.32:1
             apart. The `ring-2 ring-inset ring-card` on the second segment is the 2px surface gap
             that a monochrome stack depends on to stay readable; without it the two
@@ -65,7 +65,7 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
             identity, the number wears ink. */}
         <button
           onClick={() => onSelect?.('IB')}
-          className="hover-lift cursor-pointer rounded-2xl border border-series-1/25 bg-series-1/10 px-5 py-4 text-center"
+          className="hover-lift cursor-pointer rounded-2xl border border-series-1/30 bg-series-1/10 px-5 py-4 text-center"
         >
           <p className="text-2xl font-bold tabular-nums text-foreground">{breakdown.ib}</p>
           <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
@@ -75,7 +75,7 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
         </button>
         <button
           onClick={() => onSelect?.('A_LEVEL')}
-          className="hover-lift cursor-pointer rounded-2xl border border-series-4/25 bg-series-4/10 px-5 py-4 text-center"
+          className="hover-lift cursor-pointer rounded-2xl border border-series-4/30 bg-series-4/10 px-5 py-4 text-center"
         >
           <p className="text-2xl font-bold tabular-nums text-foreground">{breakdown.aLevel}</p>
           <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
@@ -108,13 +108,13 @@ export const IbDistribution = ({ buckets, onSelect }: IbDistributionProps) => {
             onClick={() => count > 0 && onSelect?.({ label, min, max })}
             className={cn(
               'group flex w-full items-center gap-3 rounded-xl px-1 py-0.5 transition',
-              count > 0 ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default opacity-60'
+              count > 0 ? 'cursor-pointer hover:bg-muted' : 'cursor-default opacity-60'
             )}
           >
             <span className="w-16 shrink-0 text-right text-xs font-semibold text-muted-foreground">{label}</span>
             {/* The fill carries its own rounded-xl, so clipping here is redundant —
                 and it used to swallow the hover tooltip. */}
-            <div className="flex-1 rounded-xl bg-muted/50">
+            <div className="flex-1 rounded-xl bg-border">
               <div
                 className={cn(
                   'group relative h-7 rounded-xl bg-primary transition-[width,background-color] duration-700',
@@ -162,11 +162,11 @@ export const FieldChart = ({ fields, onSelect }: FieldChartProps) => {
             onClick={() => count > 0 && onSelect?.({ key, label })}
             className={cn(
               'group flex w-full items-center gap-3 rounded-xl px-1 py-0.5 transition',
-              count > 0 ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default opacity-60'
+              count > 0 ? 'cursor-pointer hover:bg-muted' : 'cursor-default opacity-60'
             )}
           >
             <span className="w-28 shrink-0 truncate text-right text-xs text-muted-foreground">{label}</span>
-            <div className="flex-1 rounded-xl bg-muted/50">
+            <div className="flex-1 rounded-xl bg-border">
               <div
                 className={cn(
                   'group relative h-7 rounded-xl transition-[width,background-color] duration-700',
@@ -263,8 +263,8 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-label font-semibold transition',
             compareYoY
-              ? 'border-primary/30 bg-primary/10 text-primary-ink'
-              : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:bg-muted/60 hover:text-foreground'
+              ? 'border-primary/60 bg-primary/10 text-primary-ink'
+              : 'border-border text-muted-foreground hover:border-primary/30 hover:bg-muted hover:text-foreground'
           )}
         >
           Compare to last year
@@ -285,7 +285,7 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
               onClick={() => count > 0 && onSelect?.(key, label)}
               className={cn(
                 'group block w-full space-y-1.5 rounded-xl px-1 py-1 transition',
-                count > 0 ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default'
+                count > 0 ? 'cursor-pointer hover:bg-muted' : 'cursor-default'
               )}
             >
               <div className="flex items-center justify-between text-xs">
@@ -346,7 +346,7 @@ export const MatchTierSummary = ({ tiers, onSelect }: MatchTierSummaryProps) => 
     <div className="space-y-4">
       {/* Stacked bar */}
       {/* See ProgrammeSplit: no overflow-hidden, or the tooltips get clipped away. */}
-      <div className="flex h-10 rounded-2xl border border-border/50">
+      <div className="flex h-10 rounded-2xl border border-border">
         {tierList.map(({ key, label, count, color, hoverColor }) => {
           const pct = (count / total) * 100;
           return pct > 0 ? (
@@ -422,11 +422,11 @@ export const CompletionBreakdown = ({ students, onSelect }: CompletionBreakdownP
             onClick={() => count > 0 && onSelect?.({ label, min, max: bucketMax })}
             className={cn(
               'group flex w-full items-center gap-3 rounded-xl px-1 py-0.5 transition',
-              count > 0 ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default opacity-60'
+              count > 0 ? 'cursor-pointer hover:bg-muted' : 'cursor-default opacity-60'
             )}
           >
             <span className="w-14 shrink-0 text-right text-xs font-semibold text-muted-foreground">{label}</span>
-            <div className="flex-1 rounded-xl bg-muted/50">
+            <div className="flex-1 rounded-xl bg-border">
               <div
                 className={cn(
                   'group relative h-7 rounded-xl transition-[width,background-color] duration-700',

@@ -283,9 +283,35 @@ surface-adjacent, so alpha on it does almost nothing: `bg-muted/10` is ΔE 5 and
 both under the JND of 23, i.e. invisible.
 
 ```diff
-- hover:bg-muted/60      // ΔE 28, barely perceptible
+- hover:bg-muted/40      // ΔE 19, under the JND — not there at all
 + hover:bg-muted         // ΔE 46
 ```
+
+⚠ **The one exception, and it is the most important rule on this page.** When the hover sits on a row
+that also has a **brand-tinted active/selected state**, keep `hover:bg-muted/60`. Measured as OKLCH L\*
+on a white card: `bg-primary/10` is **95.7**, `bg-muted` **94.3**, `bg-border` **87.2**. Lower is heavier,
+so a solid `bg-muted` hover is *heavier than the active state it is supposed to sit under* — hovering an
+inactive row makes it look more selected than the selected one. `bg-muted/60` sits at roughly L\* 96,
+above the active tint, and at **ΔE 28** it is still over the JND, so it is visible *and* subordinate.
+
+This is not a taste call and it cannot be fixed from the neutral side: every usable neutral is heavier
+than `bg-primary/10`, because a tint that carries text is capped at `/10` (see above). Either the hover
+stays at `/60`, or the active state needs a second, non-fill signal — `ring-1 ring-primary/30` alongside
+its tint, which is the shape `chip.tsx` uses.
+
+**Do not reach for `bg-border` to fix this.** It is 1.24:1 from `bg-muted` and looks like a good
+separator, but that measures distance from `muted`, not position relative to the active tint — it is the
+heaviest neutral in both themes and makes the inversion worse, not better.
+
+**And `/60` does not tell you which side of the interaction it belongs on.** This is the trap for the next
+person who sweeps these values. `bg-muted/60` is now load-bearing in *two opposite directions*:
+
+- as the **hover**, above a transparent rest — an inactive row lifting under the cursor;
+- as the **rest**, below a solid `hover:bg-muted` — a chip that darkens on hover.
+
+Both are correct locally, and a mechanical pass reading only "surface tokens take no alpha except `/60`"
+will flatten them again. So before changing any `bg-muted/60`, read what the *other* state on that element
+is. If the sibling is solid, `/60` is the rest; if the sibling is transparent, `/60` is the hover.
 
 **Don't tint a card to mean "state".** Use the rail.
 
@@ -295,6 +321,41 @@ both under the JND of 23, i.e. invisible.
 ```
 
 **Don't reach for a tone because something looks flat.** Use the border and shadow ladders.
+
+**Don't use `bg-secondary` to separate two states.** `--secondary` is byte-identical to `--muted` in dark
+and 1.04:1 away in light, so the "fix" renders identically and reads as working. For a selection or
+highlight use `bg-primary/10`. For a neutral separator use `bg-border` (1.24:1 light / 1.30:1 dark against
+muted — the best available; `bg-card` is 1.18/1.14).
+
+⚠ **`bg-border` is a separator for tracks and icon chips only.** At 83.4% lightness it cannot carry
+`text-muted-foreground` at AA in light: that pair is **3.64:1**, where the same text on `bg-muted` is
+4.51:1 and just passes. An icon is fine (3.64:1 clears the 3:1 non-text threshold). If you move a
+text-bearing chip onto `bg-border`, promote its ink to `text-foreground` in the same edit.
+
+```diff
+- data-[state=selected]:bg-muted/40  hover:bg-muted/20   // both collapse to bg-muted
++ data-[state=selected]:bg-primary/10  hover:bg-muted    // selection is brand-eligible
+```
+
+**Keep a border or ring one rung above its own fill.** `border-primary/10 bg-primary/10` composites to the
+same colour: the edge disappears and the element just reads 1px larger.
+
+```diff
+- border-primary/10 bg-primary/10
++ border-primary/30 bg-primary/10
+```
+
+**Alpha on a text token is a contrast cut with no upside.** `text-muted-foreground` measures 1.50:1 at
+`/30`, 2.44:1 at `/60`, 2.92:1 at `/70` — every rung fails AA; only solid passes, at 5.36:1. Same for
+`stroke-*` and `fill-*`. The alpha ladder governs **tints**, never text.
+
+**A tint that carries text caps at `/10`.** `text-primary-ink` on `bg-primary/N` over a white card:
+`/10` = 4.73:1 pass, `/20` = 4.14 fail, `/30` = 3.60 fail. If such an element needs a hover, move it to
+the border — raising the fill breaks the label.
+
+**Dimming a solid fill is outside the ladder.** `bg-series-1` + `hover:bg-series-1/85` is dimming, not
+tinting; there is no rung above solid, and dropping the rest to `/60` would break both the legend-to-bar
+colour identity and any white label on it. Leave those off-ladder.
 
 **Never write a gate that exempts a mode.** The `|| mode === 'dark'` above is the whole lesson: the
 palette was wrong *and* the verifier was structurally unable to see it, while reporting success.

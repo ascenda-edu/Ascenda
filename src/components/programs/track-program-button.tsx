@@ -71,7 +71,7 @@ export const TrackProgramButton = ({
         variant={resolvedVariant}
         className={cn(
           'h-9 w-9 shrink-0 rounded-full',
-          isTracked && 'bg-success-subtle text-success hover:bg-success/20',
+          isTracked && 'bg-success-subtle text-success hover:ring-1 hover:ring-success/30',
           className
         )}
         onClick={handleClick}
@@ -91,7 +91,7 @@ export const TrackProgramButton = ({
       variant={resolvedVariant}
       className={cn(
         'w-full rounded-xl font-semibold',
-        isTracked && 'bg-success-subtle text-success hover:bg-success/20',
+        isTracked && 'bg-success-subtle text-success hover:ring-1 hover:ring-success/30',
         className
       )}
       onClick={handleClick}

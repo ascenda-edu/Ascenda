@@ -118,7 +118,7 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
               </DialogDescription>
             </div>
             <DialogClose
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Close"
             >
               <X className="h-5 w-5" />
@@ -131,7 +131,7 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
               {snapshot.summaryStats.map((stat) => (
                 <div
                   key={stat.label}
-                  className="flex min-w-0 shrink-0 items-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-3 py-2"
+                  className="flex min-w-0 shrink-0 items-center gap-2 rounded-xl border border-border bg-muted px-3 py-2"
                 >
                   <span className="text-sm font-bold text-foreground tabular-nums">{stat.value}</span>
                   <span className="truncate text-xs text-muted-foreground">{stat.label}</span>
@@ -202,12 +202,12 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
                           className={cn(
                             'flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition',
                             isExpanded
-                              ? 'bg-muted/60 shadow-e-1'
-                              : 'hover:bg-muted/40'
+                              ? 'bg-muted shadow-e-1'
+                              : 'hover:bg-muted'
                           )}
                         >
                           {/* Flag avatar */}
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/60 text-lg ring-2 ring-background">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-border text-lg ring-2 ring-background">
                             {student.personal.flagEmoji}
                           </div>
 
@@ -242,7 +242,7 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
 
                           {/* Expand indicator */}
                           <ChevronDown className={cn(
-                            'h-4 w-4 shrink-0 text-muted-foreground/50 transition-transform duration-200',
+                            'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
                             isExpanded && 'rotate-180'
                           )} />
                         </button>
@@ -257,7 +257,7 @@ export const DrilldownPanel = ({ data, onClose }: DrilldownPanelProps) => {
                               transition={{ duration: 0.2 }}
                               className="overflow-hidden"
                             >
-                              <div className="mx-4 mb-2 mt-1 rounded-xl border border-border/50 bg-card px-4 py-3 space-y-3">
+                              <div className="mx-4 mb-2 mt-1 rounded-xl border border-border bg-card px-4 py-3 space-y-3">
                                 {/* Detail text */}
                                 {detail && (
                                   <p className="text-xs leading-relaxed text-muted-foreground">

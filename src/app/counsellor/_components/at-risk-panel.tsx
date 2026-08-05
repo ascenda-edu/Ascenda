@@ -56,7 +56,7 @@ export function AtRiskPanel({ alerts }: AtRiskPanelProps) {
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => setUrgencyFilter(null)}
-          className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', !urgencyFilter ? 'bg-primary text-primary-foreground' : 'bg-muted/50 text-muted-foreground hover:bg-muted')}
+          className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', !urgencyFilter ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-border')}
         >
           All ({alerts.length})
         </button>
@@ -69,7 +69,7 @@ export function AtRiskPanel({ alerts }: AtRiskPanelProps) {
               onClick={() => setUrgencyFilter(urgencyFilter === u ? null : u)}
               className={cn(
                 'rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                urgencyFilter === u ? 'bg-primary text-primary-foreground' : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                urgencyFilter === u ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-border'
               )}
             >
               <span className={cn('inline-block h-1.5 w-1.5 rounded-full mr-1.5', cfg.bg)} />
@@ -90,7 +90,7 @@ export function AtRiskPanel({ alerts }: AtRiskPanelProps) {
               <motion.div key={`${alert.studentId}-${alert.riskType}`} variants={cardFade} exit={{ opacity: 0, scale: 0.95 }} layout>
                 <Link
                   href={`/counsellor/students/${alert.studentId}`}
-                  className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 transition-colors hover:bg-muted/30 group"
+                  className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 transition-colors hover:bg-muted group"
                 >
                   {/* Urgency dot */}
                   <div className={cn('h-2.5 w-2.5 rounded-full shrink-0', urgency.bg)} />
@@ -109,7 +109,7 @@ export function AtRiskPanel({ alerts }: AtRiskPanelProps) {
                       <span className={cn('rounded-full px-2 py-0.5 text-label font-semibold', risk.bg, risk.color)}>{risk.label}</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">{alert.description}</p>
-                    <p className="text-label text-muted-foreground/70 mt-0.5">{alert.suggestedAction}</p>
+                    <p className="text-label text-muted-foreground mt-0.5">{alert.suggestedAction}</p>
                   </div>
 
                   <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-[color,transform] shrink-0" />

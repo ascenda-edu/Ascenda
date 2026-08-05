@@ -109,7 +109,7 @@ export function CompletionRing({
           * this stroke width the muted token read as a grey washer around an indigo
           * arc, which is the single most prominent grey in the rail. A brand tint
           * makes the track and the fill read as one instrument. */}
-        <circle cx="40" cy="40" r={RADIUS} fill="none" strokeWidth="7" className="stroke-primary/15" />
+        <circle cx="40" cy="40" r={RADIUS} fill="none" strokeWidth="7" className="stroke-primary/10" />
         <motion.circle
           cx="40"
           cy="40"
@@ -217,7 +217,7 @@ export function IntakeRail({
                     aria-hidden
                     className={cn(
                       'h-1.5 w-1.5 rounded-full',
-                      booster.done ? 'bg-primary' : 'bg-primary/20'
+                      booster.done ? 'bg-primary' : 'bg-primary/30'
                     )}
                   />
                 ))}
@@ -242,7 +242,7 @@ export function IntakeRail({
             * `left-[1.4375rem]`, which tripped the arbitrary-geometry ratchet. */}
           <span
             aria-hidden
-            className="absolute bottom-5 left-6 top-5 w-px -translate-x-1/2 bg-primary/20"
+            className="absolute bottom-5 left-6 top-5 w-px -translate-x-1/2 bg-primary/30"
           />
           {steps.map((step) => {
             const isBoundary = step.key === firstBoosterKey;
@@ -255,7 +255,7 @@ export function IntakeRail({
                 {isBoundary ? (
                   <div className="flex items-center gap-2 py-2 pl-1">
                     <span className="eyebrow shrink-0">Optional extras</span>
-                    <span aria-hidden className="h-px flex-1 bg-primary/20" />
+                    <span aria-hidden className="h-px flex-1 bg-primary/30" />
                   </div>
                 ) : null}
                 <button
@@ -274,8 +274,8 @@ export function IntakeRail({
                     step.current
                       ? 'font-semibold text-primary-ink'
                       : step.done
-                        ? 'text-foreground hover:bg-muted/50'
-                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                        ? 'text-foreground hover:bg-muted/60'
+                        : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                   )}
                 >
                   {/* The travelling indicator. One `layoutId` means the active
@@ -291,7 +291,7 @@ export function IntakeRail({
                       // pill was doing all this work — the layoutId spring, the
                       // sliding — behind a fill you could not actually see, which is
                       // also the wash an unselected chip now carries.
-                      className="absolute inset-0 rounded-xl bg-primary/15 ring-1 ring-inset ring-primary/25"
+                      className="absolute inset-0 rounded-xl bg-primary/15 ring-1 ring-inset ring-primary/30"
                       aria-hidden
                     />
                   ) : null}
@@ -306,7 +306,7 @@ export function IntakeRail({
                         ? 'border-primary'
                         : step.done
                           ? 'border-success bg-success-subtle'
-                          : 'border-primary/25 group-hover:border-primary/40'
+                          : 'border-primary/30 group-hover:border-primary/60'
                     )}
                   >
                     {step.done && !step.current ? (
@@ -346,7 +346,7 @@ export function IntakeRail({
           })}
         </ol>
 
-        {footer ? <div className="mt-3 border-t border-border/60 pt-3">{footer}</div> : null}
+        {footer ? <div className="mt-3 border-t border-border pt-3">{footer}</div> : null}
       </div>
     </aside>
   );

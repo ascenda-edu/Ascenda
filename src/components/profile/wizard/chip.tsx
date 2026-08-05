@@ -70,26 +70,30 @@ export function Chip({
         //
         // Selected was `bg-primary/8` — the exact wash used for an UNSELECTED neutral
         // pill everywhere else — so an answered question looked identical to an
-        // unanswered one. Four signals now change at once: the fill triples to `/25`,
-        // the edge goes from barely-there to full-strength `border-primary`, the chip
-        // gains an elevation step, and a Check appears (which is also what keeps the
-        // state from being conveyed by colour alone).
+        // unanswered one. The fill can no longer carry that difference: a brand tint
+        // that holds text is capped at `/10` (measured: ink on `primary/10` is 4.73:1,
+        // on `/20` it is 4.14:1 and fails AA), so BOTH states now sit at
+        // `bg-primary/10`. Three signals carry it instead: the edge steps
+        // `/30` → full-strength `border-primary`, the chip gains an elevation step,
+        // and a Check appears (which is also what keeps the state from being conveyed
+        // by colour alone). The edge is doing more work than it used to — if selected
+        // starts reading as unselected, that is the signal to strengthen, not the fill.
         //
         // NOT a solid `bg-primary` fill, which was the first attempt and is measurably
         // wrong: `text-primary-foreground` on `bg-primary` is only 3.94:1 in dark mode,
         // because dark `--primary-foreground` is near-black against a light-ish
         // `--primary`. That is a pre-existing shortfall in the app's own solid-button
         // pairing, and globals.css:78-80 forbids retuning `--primary` to fix it — so a
-        // solid chip would have imported an AA failure into 17 new places. `/25` with
-        // `text-foreground` measures 11.49:1 light / 10.67:1 dark instead.
+        // solid chip would have imported an AA failure into 17 new places. A `/10`
+        // tint with `text-foreground` clears AA comfortably in both themes instead.
         selected
-          ? 'border-primary bg-primary/25 text-foreground shadow-e-1'
-          : 'border-primary/15 bg-primary/8 text-foreground hover:border-primary/30 hover:bg-primary/15',
+          ? 'border-primary bg-primary/10 text-foreground shadow-e-1'
+          : 'border-primary/30 bg-primary/10 text-foreground hover:border-primary/60 hover:bg-muted/60',
         // NOT `opacity-40`. Composited on a card that measured 2.50:1 (label) and
         // 1.81:1 (description) — unreadable, and for the groups that do have a real
         // cap the faded chip is the ONLY signal the cap was hit. Muted tokens keep
         // it legible while still reading as unavailable.
-        disabled && !selected && 'cursor-not-allowed border-border/60 bg-muted/40 text-muted-foreground hover:border-border/60 hover:bg-muted/40'
+        disabled && !selected && 'cursor-not-allowed border-border bg-muted text-muted-foreground hover:border-border hover:bg-muted'
       )}
     >
       <span className="flex w-full items-center justify-between gap-2">

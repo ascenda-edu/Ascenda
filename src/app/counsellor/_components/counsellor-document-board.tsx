@@ -188,7 +188,7 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-0 sm:min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             value={searchQuery}
@@ -255,7 +255,7 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
                       // Overdue gets a firmer EDGE, not a red panel: the status chip
                       // and the due-date already say it in the tone, and a tinted card
                       // makes a whole column of documents read as one alarm.
-                      doc.status === 'overdue' ? 'border-border bg-background/60' : 'border-border/60 bg-background/60'
+                      doc.status === 'overdue' ? 'border-border bg-background' : 'border-border/60 bg-background'
                     )}
                   >
                     <div className="flex items-center gap-4">
@@ -296,12 +296,12 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
                       </div>
                     </div>
                     {doc.notes && (
-                      <p className="mt-2 text-label italic text-muted-foreground/70" title={doc.notes}>
+                      <p className="mt-2 text-label italic text-muted-foreground" title={doc.notes}>
                         {doc.notes}
                       </p>
                     )}
                     {canNudge ? (
-                      <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border/40 pt-2">
+                      <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border pt-2">
                         <span className="eyebrow">
                           Chase
                         </span>
@@ -319,7 +319,7 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
                                 'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-label font-medium transition disabled:cursor-wait disabled:opacity-60',
                                 isActive
                                   ? 'border-border bg-muted text-foreground'
-                                  : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:bg-muted/60 hover:text-foreground'
+                                  : 'border-border text-muted-foreground hover:border-primary/30 hover:bg-muted/60 hover:text-foreground'
                               )}
                             >
                               <NudgeIcon className="h-3 w-3" aria-hidden />
@@ -338,8 +338,8 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
       })}
 
       {filtered.length === 0 && (
-        <div className="rounded-4xl border border-dashed border-border bg-muted/40 p-12 text-center">
-          <FileText className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+        <div className="rounded-4xl border border-dashed border-border bg-muted p-12 text-center">
+          <FileText className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
           <p className="font-semibold text-foreground">No documents found</p>
           <p className="mt-1 text-sm text-muted-foreground">Try adjusting your filters or search query.</p>
         </div>

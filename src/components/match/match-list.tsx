@@ -121,8 +121,8 @@ export const MatchList = ({ matches }: MatchListProps) => {
             {totalShown} of {matches.length} program{matches.length === 1 ? '' : 's'} ranked by admission probability
           </p>
           <div className="hidden sm:flex items-center gap-1.5 mt-1">
-            <Info className="h-3 w-3 text-muted-foreground/60 shrink-0" />
-            <p className="text-label text-muted-foreground/80">
+            <Info className="h-3 w-3 text-muted-foreground shrink-0" />
+            <p className="text-label text-muted-foreground">
               <span className={cn('font-semibold', TIER_VISUAL.reach.text)}>Reach</span>
               {' \u00B7 '}
               <span className={cn('font-semibold', TIER_VISUAL.match.text)}>Match</span>
@@ -133,7 +133,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
           </div>
         </div>
         <div className="relative z-10 flex items-center gap-2 overflow-x-auto scrollbar-none">
-          <div className="flex items-center gap-1 rounded-2xl border border-border/70 bg-background/80 p-1.5 shadow-e-1">
+          <div className="flex items-center gap-1 rounded-2xl border border-border bg-background p-1.5 shadow-e-1">
             {(['All', ...TIER_ORDER] as const).map((tier) => (
               <button
                 key={tier}
@@ -150,7 +150,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-1 rounded-2xl border border-border/70 bg-background/80 p-1.5 shadow-e-1">
+          <div className="flex items-center gap-1 rounded-2xl border border-border bg-background p-1.5 shadow-e-1">
             <button
               onClick={() => setViewMode('grid')}
               aria-pressed={viewMode === 'grid'}
@@ -186,7 +186,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
           everything. */}
       <section data-tour="match-list" className="space-y-6">
         {matches.length === 0 ? (
-          <div className="rounded-4xl border border-dashed border-border bg-muted/60 p-10 text-center text-muted-foreground">
+          <div className="rounded-4xl border border-dashed border-border bg-muted p-10 text-center text-muted-foreground">
             {MATCHES_TEXT.list.noResults}
           </div>
         ) : (
@@ -278,7 +278,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
                     )}
                   </>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-border bg-muted/40 px-4 py-6 text-sm text-muted-foreground">
+                  <div className="rounded-2xl border border-dashed border-border bg-muted px-4 py-6 text-sm text-muted-foreground">
                     No programs in this tier yet.
                   </div>
                 )}

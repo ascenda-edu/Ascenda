@@ -136,7 +136,7 @@ export function SortMenu({ value, onChange }: SortMenuProps) {
                   onMouseEnter={() => setActiveIndex(index)}
                   className={cn(
                     'flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm transition-colors cursor-pointer focus-visible:outline-none',
-                    index === activeIndex ? 'bg-muted' : 'hover:bg-muted/60',
+                    index === activeIndex ? 'bg-primary/10' : 'hover:bg-muted',
                     selected ? 'font-semibold text-primary-ink' : 'text-foreground'
                   )}
                 >

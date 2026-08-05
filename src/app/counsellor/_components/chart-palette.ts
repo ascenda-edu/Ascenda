@@ -31,8 +31,8 @@ export const CHART_ACCENT = {
   barHover: 'hover:bg-primary/85',
   /** Values and labels wear ink, never the mark colour. */
   text: 'text-foreground',
-  card: 'border-primary/25 bg-primary/10',
-  cardHover: 'hover:border-primary/45'
+  card: 'border-primary/30 bg-primary/10',
+  cardHover: 'hover:border-primary/60'
 } as const;
 
 export interface ChartPaletteEntry {
@@ -53,11 +53,11 @@ export interface ChartPaletteEntry {
  * categories by value before using this or you imply a ranking that isn't there.
  */
 export const CHART_SERIES: ChartPaletteEntry[] = [
-  { bar: 'bg-series-1', barHover: 'hover:bg-series-1/85', text: 'text-foreground', card: 'border-series-1/25 bg-series-1/10', cardHover: 'hover:border-series-1/45' },
-  { bar: 'bg-series-2', barHover: 'hover:bg-series-2/85', text: 'text-foreground', card: 'border-series-2/25 bg-series-2/10', cardHover: 'hover:border-series-2/45' },
-  { bar: 'bg-series-3', barHover: 'hover:bg-series-3/85', text: 'text-foreground', card: 'border-series-3/25 bg-series-3/10', cardHover: 'hover:border-series-3/45' },
-  { bar: 'bg-series-4', barHover: 'hover:bg-series-4/85', text: 'text-foreground', card: 'border-series-4/25 bg-series-4/10', cardHover: 'hover:border-series-4/45' },
-  { bar: 'bg-series-5', barHover: 'hover:bg-series-5/85', text: 'text-foreground', card: 'border-series-5/25 bg-series-5/10', cardHover: 'hover:border-series-5/45' }
+  { bar: 'bg-series-1', barHover: 'hover:bg-series-1/85', text: 'text-foreground', card: 'border-series-1/30 bg-series-1/10', cardHover: 'hover:border-series-1/60' },
+  { bar: 'bg-series-2', barHover: 'hover:bg-series-2/85', text: 'text-foreground', card: 'border-series-2/30 bg-series-2/10', cardHover: 'hover:border-series-2/60' },
+  { bar: 'bg-series-3', barHover: 'hover:bg-series-3/85', text: 'text-foreground', card: 'border-series-3/30 bg-series-3/10', cardHover: 'hover:border-series-3/60' },
+  { bar: 'bg-series-4', barHover: 'hover:bg-series-4/85', text: 'text-foreground', card: 'border-series-4/30 bg-series-4/10', cardHover: 'hover:border-series-4/60' },
+  { bar: 'bg-series-5', barHover: 'hover:bg-series-5/85', text: 'text-foreground', card: 'border-series-5/30 bg-series-5/10', cardHover: 'hover:border-series-5/60' }
 ];
 
 /** Kept as an alias so existing imports keep working. */

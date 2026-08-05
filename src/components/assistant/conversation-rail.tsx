@@ -128,7 +128,7 @@ export function ConversationRail({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search conversations…"
-            className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-3 text-xs transition-[border-color,box-shadow] hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-3 text-xs transition-[border-color,box-shadow] hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           />
         </div>
       </div>
@@ -156,7 +156,7 @@ export function ConversationRail({
                     transition={{ duration: 0.16 }}
                     className={cn(
                       'group relative rounded-xl border px-2.5 py-2 transition',
-                      isActive ? 'border-primary/30 bg-primary/5' : 'border-transparent hover:bg-muted/50'
+                      isActive ? 'border-primary/30 bg-primary/10' : 'border-transparent hover:bg-muted'
                     )}
                   >
                     {isRenaming ? (
@@ -174,7 +174,7 @@ export function ConversationRail({
                           }
                         }}
                         aria-label="Conversation title"
-                        className="w-full rounded-lg border border-primary/40 bg-background px-2 py-1 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        className="w-full rounded-lg border border-primary/30 bg-background px-2 py-1 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                       />
                     ) : (
                       <button
@@ -339,7 +339,7 @@ function ActionHistoryItem({ row }: { row: ChatMessageRow }) {
       {href ? (
         <Link
           href={href}
-          className="flex items-start gap-2 rounded-xl px-2 py-1.5 transition-colors hover:bg-muted/60"
+          className="flex items-start gap-2 rounded-xl px-2 py-1.5 transition-colors hover:bg-muted"
         >
           {inner}
         </Link>

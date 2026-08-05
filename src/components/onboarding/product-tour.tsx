@@ -473,7 +473,7 @@ export function ProductTour({ steps, onDismiss, onComplete, signOff }: ProductTo
               <button
                 type="button"
                 onClick={onDismiss}
-                className="-mr-1 -mt-1 rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="-mr-1 -mt-1 rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label="Close the tour"
               >
                 <X className="h-4 w-4" aria-hidden />

@@ -131,7 +131,7 @@ export default async function ParentOverviewPage() {
                       <span className="text-muted-foreground">{stage.label}</span>
                       <span className="font-semibold text-foreground">{stage.count}</span>
                     </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                       <div
                         className={cn('h-full rounded-full', pipelineBar(stage.key))}
                         style={{ width: `${(stage.count / pipelineMax) * 100}%` }}
@@ -242,7 +242,7 @@ export default async function ParentOverviewPage() {
                       'flex items-center gap-2 rounded-xl border px-3 py-2 text-sm',
                       step.done
                         ? 'border-border bg-card text-foreground'
-                        : 'border-border bg-muted/20 text-muted-foreground'
+                        : 'border-border bg-muted text-muted-foreground'
                     )}
                   >
                     {step.done ? (

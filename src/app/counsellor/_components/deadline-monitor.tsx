@@ -77,10 +77,10 @@ function formatDate(iso: string) {
 }
 
 function urgencyBadge(days: number) {
-  if (days < 0) return { text: `${Math.abs(days)}d overdue`, cls: 'text-danger bg-danger-subtle border-danger/25' };
-  if (days === 0) return { text: 'Due today', cls: 'text-danger bg-danger-subtle border-danger/25' };
-  if (days <= 3) return { text: `${days}d left`, cls: 'text-danger bg-danger-subtle border-danger/25' };
-  if (days <= 7) return { text: `${days}d left`, cls: 'text-warning bg-warning-subtle border-warning/25' };
+  if (days < 0) return { text: `${Math.abs(days)}d overdue`, cls: 'text-danger bg-danger-subtle border-danger/30' };
+  if (days === 0) return { text: 'Due today', cls: 'text-danger bg-danger-subtle border-danger/30' };
+  if (days <= 3) return { text: `${days}d left`, cls: 'text-danger bg-danger-subtle border-danger/30' };
+  if (days <= 7) return { text: `${days}d left`, cls: 'text-warning bg-warning-subtle border-warning/30' };
   // Beyond a week there is nothing to do today, so the pill goes quiet: the number
   // in it already says how much runway is left, and a hue on top of that number was
   // saying it twice. These two match DEADLINE_VISUAL's `this-month` and `later`,
@@ -152,7 +152,7 @@ export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
 
       {/* Groups */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border bg-muted/40 py-16 text-center">
+        <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border bg-muted py-16 text-center">
           <CheckCircle2 className="mb-3 h-8 w-8 text-success" />
           <p className="font-semibold text-foreground">No deadlines match your filters</p>
           <p className="mt-1 text-sm text-muted-foreground">Try adjusting your filter criteria.</p>
@@ -188,12 +188,12 @@ export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
                 <div className="space-y-2">
                   {items.map((d) => {
                     const badge = urgencyBadge(d.daysUntil);
-                    const typeCfg = TYPE_COLORS[d.type] ?? 'border-border bg-muted/40 text-muted-foreground';
+                    const typeCfg = TYPE_COLORS[d.type] ?? 'border-border bg-muted text-muted-foreground';
                     return (
                       <Link
                         key={d.id}
                         href={`/counsellor/students/${d.studentId}`}
-                        className="flex flex-col gap-2 rounded-2xl border border-border/60 bg-background/60 px-4 py-3 transition hover:bg-muted/40 sm:flex-row sm:items-center sm:gap-4"
+                        className="flex flex-col gap-2 rounded-2xl border border-border bg-background px-4 py-3 transition hover:bg-muted sm:flex-row sm:items-center sm:gap-4"
                       >
                         {/* Days badge */}
                         <span className={cn('flex h-8 w-16 shrink-0 items-center justify-center rounded-xl border text-xs font-bold', badge.cls)}>

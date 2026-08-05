@@ -202,7 +202,7 @@ export function HelpRequestModal({ open, onOpenChange, app }: HelpRequestModalPr
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 border-t border-border bg-muted/30 px-7 py-4">
+        <div className="flex items-center justify-end gap-2 border-t border-border bg-muted px-7 py-4">
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancel
           </Button>

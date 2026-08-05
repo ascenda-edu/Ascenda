@@ -200,8 +200,8 @@ export const DocumentUploader = ({ applicationId, taskId, onUpload, onUploaded }
         onDrop={handleDrop}
         className={`group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border border-dashed p-8 text-center transition ${
           isDragActive
-            ? 'border-primary bg-primary/5'
-            : 'border-border bg-muted/60 hover:border-muted-foreground hover:bg-card'
+            ? 'border-primary bg-primary/10'
+            : 'border-border bg-muted hover:border-muted-foreground hover:bg-card'
         }`}
       >
         <Upload className="h-6 w-6 text-muted-foreground" aria-hidden />

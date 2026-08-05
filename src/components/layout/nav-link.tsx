@@ -61,7 +61,7 @@ export const NAV_PILL =
 export const NAV_PILL_ACTIVE = 'border-transparent font-semibold text-primary-ink';
 
 /** Inactive pill hover. */
-export const NAV_PILL_IDLE = 'hover:bg-foreground/5 hover:text-foreground';
+export const NAV_PILL_IDLE = 'hover:bg-foreground/10 hover:text-foreground';
 
 /**
  * The sliding indicator. Rendered only for the active pill; framer hands its box

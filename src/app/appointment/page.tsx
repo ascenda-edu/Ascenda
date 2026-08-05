@@ -31,7 +31,7 @@ import { DEMO_COUNSELLOR } from '@/lib/demo/counsellor';
  */
 const TOPIC_VISUAL = {
   swatch: 'flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground',
-  activeBorder: 'border-primary/30 bg-primary/5',
+  activeBorder: 'border-primary/30 bg-primary/10',
   text: 'text-primary-ink'
 };
 
@@ -150,7 +150,7 @@ export default function AppointmentPage() {
         />
         <div className="surface-card mt-6">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-success-subtle text-success ring-1 ring-success/25">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-success-subtle text-success ring-1 ring-success/30">
               <Check className="h-5 w-5" />
             </div>
             <div className="space-y-2">
@@ -162,7 +162,7 @@ export default function AppointmentPage() {
                 </Link>{' '}
                 — watch for the confirmation there.
               </p>
-              <div className="rounded-xl bg-muted/40 p-4 text-sm text-foreground">
+              <div className="rounded-xl bg-muted p-4 text-sm text-foreground">
                 <p className="eyebrow">Notes shared with your counsellor</p>
                 <p className="mt-1">{notes || '— No additional notes —'}</p>
               </div>
@@ -209,7 +209,7 @@ export default function AppointmentPage() {
                     'flex items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                     active
                       ? cn(TOPIC_VISUAL.activeBorder, 'text-foreground')
-                      : 'border-border bg-background text-muted-foreground hover:border-border/80 hover:text-foreground'
+                      : 'border-border bg-background text-muted-foreground hover:text-foreground'
                   )}
                 >
                   <div className={TOPIC_VISUAL.swatch}>
@@ -274,7 +274,7 @@ export default function AppointmentPage() {
                       'inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition',
                       active
                         ? 'border-primary/30 bg-primary text-primary-foreground'
-                        : 'border-border bg-background text-muted-foreground hover:border-border/80 hover:text-foreground'
+                        : 'border-border bg-background text-muted-foreground hover:text-foreground'
                     )}
                   >
                     <Clock className="h-3 w-3" aria-hidden />

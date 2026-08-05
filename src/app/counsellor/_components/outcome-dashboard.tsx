@@ -14,7 +14,7 @@ const RESULT_CONFIG: Record<OutcomeResult, { icon: typeof CheckCircle2; color: s
   rejected: { icon: XCircle, color: 'text-danger', bg: 'bg-danger-subtle', label: 'Rejected' },
   waitlisted: { icon: Clock, color: 'text-warning', bg: 'bg-warning-subtle', label: 'Waitlisted' },
   pending: { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', label: 'Pending' },
-  withdrawn: { icon: MinusCircle, color: 'text-muted-foreground', bg: 'bg-muted/30', label: 'Withdrawn' },
+  withdrawn: { icon: MinusCircle, color: 'text-muted-foreground', bg: 'bg-muted', label: 'Withdrawn' },
 };
 
 const TIER_COLORS: Record<MatchTier, string> = {
@@ -79,7 +79,7 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
       <div className="surface-subcard p-4 flex items-center gap-4">
         <div className="relative h-16 w-16 shrink-0">
           <svg className="h-16 w-16 -rotate-90" viewBox="0 0 80 80">
-            <circle cx="40" cy="40" r="34" fill="none" stroke="currentColor" strokeWidth="6" className="text-muted/20" />
+            <circle cx="40" cy="40" r="34" fill="none" stroke="currentColor" strokeWidth="6" className="text-muted" />
             <motion.circle
               cx="40" cy="40" r="34" fill="none" strokeWidth="6" strokeLinecap="round"
               className={cn(stats.acceptanceRate >= 50 ? 'stroke-success' : 'stroke-warning')}
@@ -106,7 +106,7 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
               <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold', TIER_COLORS[tier])}>{tier}</span>
               <span className="text-sm font-bold text-foreground">{rate}%</span>
             </div>
-            <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
               <motion.div
                 className={cn('h-full rounded-full', rate >= 50 ? 'bg-success-fill' : rate >= 25 ? 'bg-warning-fill' : 'bg-danger-fill')}
                 initial={{ width: 0 }} animate={{ width: `${rate}%` }} transition={{ duration: 0.6 }}
@@ -133,7 +133,7 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
         <button
           onClick={() => setFilterResult(null)}
           aria-pressed={!filterResult}
-          className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', !filterResult ? 'bg-primary text-primary-foreground' : 'bg-muted/50 text-muted-foreground hover:bg-muted')}
+          className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', !filterResult ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-border')}
         >All</button>
         {(['accepted', 'rejected', 'waitlisted', 'pending'] as const).map((r) => {
           const cfg = RESULT_CONFIG[r];
@@ -142,7 +142,7 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
               key={r}
               onClick={() => setFilterResult(filterResult === r ? null : r)}
               aria-pressed={filterResult === r}
-              className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', filterResult === r ? 'bg-primary text-primary-foreground' : 'bg-muted/50 text-muted-foreground hover:bg-muted')}
+              className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', filterResult === r ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-border')}
             >{cfg.label}</button>
           );
         })}

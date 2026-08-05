@@ -72,11 +72,11 @@ export function CounsellorCard({ counsellor, openThreads, unreadTotal, latestSub
           href="/inbox"
           className={cn(
             'hover-lift group flex items-center gap-3 rounded-xl border p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            unreadTotal > 0 ? 'border-primary/30 bg-primary/10' : 'border-border/70 bg-background/60'
+            unreadTotal > 0 ? 'border-primary/30 bg-primary/10' : 'border-border bg-background'
           )}
         >
           <MailOpen
-            className={cn('h-4 w-4 shrink-0', unreadTotal > 0 ? 'text-primary-ink' : 'text-muted-foreground/60')}
+            className={cn('h-4 w-4 shrink-0', unreadTotal > 0 ? 'text-primary-ink' : 'text-muted-foreground')}
             aria-hidden
           />
           <div className="min-w-0 flex-1">
@@ -101,7 +101,7 @@ export function CounsellorCard({ counsellor, openThreads, unreadTotal, latestSub
         </Link>
 
         {nextMeeting ? (
-          <div className="rounded-xl border border-border/70 bg-background/60 p-3">
+          <div className="rounded-xl border border-border bg-background p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="eyebrow">Next meeting</p>
               <span

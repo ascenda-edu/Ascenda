@@ -150,15 +150,19 @@ function FieldError({ msg, id }: { msg?: string; id?: string }) {
 /**
  * The inset grouping box inside a step — "Where you study", "Your subjects", etc.
  *
- * `bg-primary/3` rather than `bg-muted/20`: this is the largest painted area on most
- * screens, so a grey wash here set the tone for the whole form regardless of how the
- * controls inside it were coloured. 3% of the brand hue reads as the same "quietly
- * inset" without the grey cast. Both are on the declared opacity scale
- * (tailwind.config.ts) — an off-scale step here would emit nothing at all.
+ * `bg-primary/10` rather than a grey `bg-muted` wash: this is the largest painted area on
+ * most screens, so a grey wash here set the tone for the whole form regardless of how the
+ * controls inside it were coloured. A light tint of the brand hue reads as the same
+ * "quietly inset" without the grey cast.
+ *
+ * `/10` is the lowest rung of the alpha ladder and the floor for a tint that carries text.
+ * It used to be `/3`, which measured ΔE 5 against the card — below the JND, i.e. it painted
+ * nothing at all. The border sits one rung up at `/30`; matching the fill's rung would
+ * composite to the same colour and the edge would disappear.
  */
 function SectionCard({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn('rounded-2xl border border-primary/15 bg-primary/3 p-5 space-y-5', className)}>
+    <div className={cn('rounded-2xl border border-primary/30 bg-primary/10 p-5 space-y-5', className)}>
       {children}
     </div>
   );
@@ -1523,7 +1527,7 @@ export const StudentIntakeForm = ({
           * says "map" without competing with the work beside it. The column is left
           * stretched (no `self-start`) so that rule runs the full height of the
           * frame, and so the sticky rail inside it has room to travel. */}
-        <div className="hidden lg:flex lg:w-72 lg:shrink-0 lg:flex-col lg:border-r lg:border-border/60 lg:pr-6">
+        <div className="hidden lg:flex lg:w-72 lg:shrink-0 lg:flex-col lg:border-r lg:border-border lg:pr-6">
           <IntakeRail
             bare
             sticky
@@ -1534,7 +1538,7 @@ export const StudentIntakeForm = ({
               <button
                 type="button"
                 onClick={restoreSavedProfile}
-                className="w-full rounded-xl px-3 py-3.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-primary/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="w-full rounded-xl px-3 py-3.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 Restore last save
               </button>
@@ -1598,7 +1602,7 @@ export const StudentIntakeForm = ({
                   type="button"
                   onClick={() => setDraftNotice(false)}
                   aria-label="Dismiss notice"
-                  className="-my-1 rounded-lg p-3 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="-my-1 rounded-lg p-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   <X className="h-3.5 w-3.5" aria-hidden />
                 </button>
@@ -1743,7 +1747,7 @@ export const StudentIntakeForm = ({
                         <p className="text-xs text-muted-foreground mt-0.5">Add more than one if applicable.</p>
                       </div>
                       <button type="button" onClick={addNationality}
-                        className="-my-2 rounded-lg px-2 py-3.5 text-xs font-semibold text-primary-ink transition-colors hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                        className="-my-2 rounded-lg px-2 py-3.5 text-xs font-semibold text-primary-ink transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                         + Add another
                       </button>
                     </div>
@@ -1798,7 +1802,7 @@ export const StudentIntakeForm = ({
                           <button
                             type="button"
                             onClick={clearAssumedResidence}
-                            className="-my-2 rounded-lg px-1.5 py-2.5 font-semibold text-primary-ink underline transition-colors hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            className="-my-2 rounded-lg px-1.5 py-2.5 font-semibold text-primary-ink underline transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           >
                             Change
                           </button>
@@ -2033,7 +2037,7 @@ export const StudentIntakeForm = ({
                     * `wizard-suggestions.ts` for why that separation is the whole
                     * feature. */}
                   {suggestion ? (
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 px-4 py-3.5 motion-safe:animate-rise-in">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border border-dashed border-primary/30 bg-primary/10 px-4 py-3.5 motion-safe:animate-rise-in">
                       <p className="min-w-[15rem] flex-1 text-body-sm leading-relaxed text-foreground">
                         Most <strong className="font-semibold">{suggestion.clusterLabel}</strong> applicants take{' '}
                         {suggestion.subjects.slice(0, -1).join(', ')} and {suggestion.subjects[suggestion.subjects.length - 1]}. Want to start there?
@@ -2062,7 +2066,7 @@ export const StudentIntakeForm = ({
                         type="button"
                         disabled={subjects.length >= getMaxSubjects(programmeType)}
                         onClick={addSubject}
-                        className="flex items-center gap-1.5 rounded-lg bg-primary/8 px-3 py-3.5 text-xs font-semibold text-primary-ink transition-[background-color,opacity] hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-3.5 text-xs font-semibold text-primary-ink transition-[background-color,opacity] hover:ring-1 hover:ring-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <PlusCircle className="w-3.5 h-3.5" />
                         Add
@@ -2087,7 +2091,7 @@ export const StudentIntakeForm = ({
                       {subjects.map((subj, i) => (
                         <div
                           key={i}
-                          className="space-y-3 rounded-xl border border-border/60 bg-background p-3 md:grid md:grid-cols-12 md:items-start md:gap-3 md:space-y-0 md:rounded-none md:border-0 md:bg-transparent md:p-0"
+                          className="space-y-3 rounded-xl border border-border bg-background p-3 md:grid md:grid-cols-12 md:items-start md:gap-3 md:space-y-0 md:rounded-none md:border-0 md:bg-transparent md:p-0"
                         >
                           <div className="md:col-span-5" data-field={`academic_input.subject_list.${i}.subject_name`}>
                             <label className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">Subject</label>
@@ -2172,7 +2176,7 @@ export const StudentIntakeForm = ({
                     {programmeType === 'IB' && ibSubjectSum !== null ? (
                       <div
                         aria-live="polite"
-                        className="mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3"
+                        className="mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3"
                       >
                         <span className="text-xs font-medium text-muted-foreground">Predicted from subjects:</span>
                         <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -2389,7 +2393,7 @@ export const StudentIntakeForm = ({
                         ))}
                       </div>
                       {admissionsTests.filter((t) => t.test_type !== 'NONE').map((test, i) => (
-                        <div key={`${test.test_type}-${i}`} className="rounded-xl border border-border/60 bg-background p-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
+                        <div key={`${test.test_type}-${i}`} className="rounded-xl border border-border bg-background p-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
                           <div className="md:col-span-2">
                             <p className="text-xs font-semibold text-muted-foreground mb-1">Test</p>
                             <p className="text-sm font-bold">{test.test_type}</p>
@@ -2527,7 +2531,7 @@ export const StudentIntakeForm = ({
 
                     <div className="space-y-3">
                       {activityRows.map((row) => (
-                        <div key={row.localId} className="rounded-xl border border-border/70 bg-background p-4 space-y-3">
+                        <div key={row.localId} className="rounded-xl border border-border bg-background p-4 space-y-3">
                           {/* Row header: category + delete */}
                           <div className="flex items-start gap-2">
                             <div className="flex-1">
@@ -2596,7 +2600,7 @@ export const StudentIntakeForm = ({
 
                     {activityRows.length < 10 && (
                       <button type="button"
-                        className="mt-1 flex items-center gap-1.5 rounded-lg px-3 py-3 text-sm font-medium text-primary-ink transition-colors hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="mt-1 flex items-center gap-1.5 rounded-lg px-3 py-3 text-sm font-medium text-primary-ink transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         onClick={addActivityRow}>
                         <PlusCircle className="w-4 h-4" aria-hidden />
                         Add activity
@@ -2817,7 +2821,7 @@ export const StudentIntakeForm = ({
               initial={{ opacity: 0, y: 8, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: DURATION.base, ease: EASE_POP }}
-              className="mt-4 rounded-2xl border border-success/25 bg-success-subtle p-5 text-center"
+              className="mt-4 rounded-2xl border border-success/30 bg-success-subtle p-5 text-center"
             >
               <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-success-fill">
                 <Check className="h-5 w-5 text-success-foreground" aria-hidden />
@@ -2853,7 +2857,7 @@ export const StudentIntakeForm = ({
             * on the four most-tapped controls in a six-step mobile form. The
             * default `h-10` plus the row's `pt-4` gives a comfortable target
             * without making them look like hero buttons. */}
-          <div className="mt-8 flex items-center justify-between gap-3 pt-4 border-t border-border/50">
+          <div className="mt-8 flex items-center justify-between gap-3 pt-4 border-t border-border">
             <Button
               type="button" variant="outline"
               onClick={goBack} disabled={currentStep === 1}

@@ -123,7 +123,7 @@ export default function RoleSelectPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="space-y-3 text-center">
-          <div className="relative mx-auto h-2 w-48 overflow-hidden rounded-full bg-muted/60">
+          <div className="relative mx-auto h-2 w-48 overflow-hidden rounded-full bg-muted">
             <div className="absolute inset-0 translate-x-[-100%] motion-safe:animate-shimmer bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
           </div>
           <p className="text-sm text-muted-foreground motion-safe:animate-pulse">Verifying session…</p>
@@ -148,7 +148,7 @@ export default function RoleSelectPage() {
         transition={{ duration: 0.4 }}
         className="mb-10 text-center"
       >
-        <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1 text-xs font-medium text-foreground shadow-e-1 backdrop-blur">
+        <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-foreground shadow-e-1 backdrop-blur">
           <span className="h-2 w-2 rounded-full bg-success-fill" aria-hidden />
           Welcome to Ascenda
         </p>
@@ -181,7 +181,7 @@ export default function RoleSelectPage() {
                 // hue (primary vs the deleted `feature`), which spent colour on a
                 // two-item category; the icon and the label already do that job, and
                 // the only real state on these cards is SELECTED.
-                'hover:border-primary/60 hover:ring-1 hover:ring-primary/20',
+                'hover:border-primary/60 hover:ring-1 hover:ring-primary/10',
                 isSelected && 'border-primary/60 ring-1 ring-primary/30',
                 isOther && 'opacity-40'
               )}

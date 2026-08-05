@@ -81,7 +81,7 @@ export function AscendiAside({
     >
       <span
         aria-hidden
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/15"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10"
       >
         <AscendiMark size={26} />
       </span>

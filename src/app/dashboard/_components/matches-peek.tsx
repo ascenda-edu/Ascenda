@@ -33,7 +33,7 @@ export async function MatchesPeek({ profileId }: { profileId: string }) {
       action={matches.length > 0 ? { label: `All ${matches.length} matches`, href: '/matches' } : undefined}
     >
       {matchError ? (
-        <div className="space-y-2 rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
+        <div className="space-y-2 rounded-2xl border border-dashed border-border bg-muted p-6 text-sm text-muted-foreground">
           <p className="text-base font-semibold text-foreground">Can&apos;t pull your matches right now</p>
           <p>Something&apos;s off on our side. Refresh in a moment and you should be back in business.</p>
         </div>
@@ -76,7 +76,7 @@ export async function MatchesPeek({ profileId }: { profileId: string }) {
           ) : null}
         </div>
       ) : (
-        <div className="flex h-full flex-col items-start justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted/30 p-6">
+        <div className="flex h-full flex-col items-start justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted p-6">
           <p className="text-base font-semibold text-foreground">Tell us a bit more, then we&apos;ll find your matches</p>
           <p className="text-sm text-muted-foreground">Finish your profile and add a country or two — we&apos;ll do the matching.</p>
           <div className="flex flex-wrap gap-2">
@@ -98,7 +98,7 @@ export function MatchesPeekSkeleton() {
     <HubCard eyebrow="Matches" title="Finding your matches…" icon={Target}>
       <div className="grid gap-4 sm:grid-cols-2" aria-busy="true" aria-label="Loading matches">
         {[0, 1].map((index) => (
-          <div key={index} className="h-48 animate-pulse rounded-2xl border border-border bg-muted/40" />
+          <div key={index} className="h-48 animate-pulse rounded-2xl border border-border bg-muted" />
         ))}
       </div>
     </HubCard>

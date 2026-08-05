@@ -145,7 +145,7 @@ export const ImportPanel = () => {
         <label
           htmlFor="csv-upload"
           className={cn(
-            'flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-muted/60 p-6 text-center transition-colors',
+            'flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-muted p-6 text-center transition-colors',
             'peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background',
             isParsing || isSyncing
               ? 'cursor-not-allowed opacity-50'
@@ -167,8 +167,8 @@ export const ImportPanel = () => {
       {(isParsing || isSyncing) && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground" aria-hidden>
           <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-          <span className="h-2 w-2 animate-pulse rounded-full bg-primary/70" />
-          <span className="h-2 w-2 animate-pulse rounded-full bg-primary/50" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-primary/60" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-primary/30" />
         </div>
       )}
       {error ? (

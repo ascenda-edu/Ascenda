@@ -544,7 +544,7 @@ export function IntelligentSearchBar({
                                                                 )}
                                                                 {item.location && <span className="text-xs text-muted-foreground">{item.location}</span>}
                                                             </div>
-                                                            <span className="rounded-full border border-primary/15 bg-primary/8 px-2 py-0.5 text-label text-foreground">Recent</span>
+                                                            <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-label text-foreground">Recent</span>
                                                         </button>
                                                     </li>
                                                 ))}
@@ -568,8 +568,8 @@ export function IntelligentSearchBar({
                                                             onMouseEnter={() => setActiveIndex(flatIndex)}
                                                             onClick={() => handleSelect(item)}
                                                             className={cn(
-                                                                "flex w-full flex-col rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-left text-sm transition hover:border-foreground/60 hover:bg-muted",
-                                                                activeIndex === flatIndex && "border-foreground/60 bg-muted"
+                                                                "flex w-full flex-col rounded-xl border border-border bg-muted px-3 py-2 text-left text-sm transition hover:border-foreground/60 hover:bg-muted",
+                                                                activeIndex === flatIndex && "border-foreground/60 bg-primary/10"
                                                             )}
                                                         >
                                                             <span className="font-semibold text-foreground">{item.name}</span>
@@ -584,7 +584,7 @@ export function IntelligentSearchBar({
                                                                 used to take two DIFFERENT tones; that spent colour on a
                                                                 two-item category, and the word in the tag already tells
                                                                 the two lists apart. */}
-                                                            <span className="eyebrow mt-1 inline-flex w-fit rounded-full border border-primary/15 bg-primary/8 px-2 py-0.5 text-foreground">Program</span>
+                                                            <span className="eyebrow mt-1 inline-flex w-fit rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-foreground">Program</span>
                                                         </button>
                                                     );
                                                 })}
@@ -601,13 +601,13 @@ export function IntelligentSearchBar({
                                                             onMouseEnter={() => setActiveIndex(flatIndex)}
                                                             onClick={() => handleSelect(item)}
                                                             className={cn(
-                                                                "flex w-full flex-col rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-left text-sm transition hover:border-foreground/60 hover:bg-muted",
-                                                                activeIndex === flatIndex && "border-foreground/60 bg-muted"
+                                                                "flex w-full flex-col rounded-xl border border-border bg-muted px-3 py-2 text-left text-sm transition hover:border-foreground/60 hover:bg-muted",
+                                                                activeIndex === flatIndex && "border-foreground/60 bg-primary/10"
                                                             )}
                                                         >
                                                             <span className="font-semibold text-foreground">{item.name}</span>
                                                             {item.location && <span className="text-label text-muted-foreground">{item.location}</span>}
-                                                            <span className="eyebrow mt-1 inline-flex w-fit rounded-full border border-primary/15 bg-primary/8 px-2 py-0.5 text-foreground">University</span>
+                                                            <span className="eyebrow mt-1 inline-flex w-fit rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-foreground">University</span>
                                                         </button>
                                                     );
                                                 })}

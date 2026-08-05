@@ -15,11 +15,11 @@ import { STAGE_COLORS, STAGE_ORDER } from '@/lib/counsellor/stage-colors';
 // it used to be rose. These are the five categorical series slots (see
 // _components/chart-palette.ts): the tint carries identity, the label wears ink.
 const PLATFORM_COLORS: Record<string, string> = {
-  UCAS: 'bg-series-1/20 text-foreground',
-  'Common App': 'bg-series-2/20 text-foreground',
-  Direct: 'bg-series-3/20 text-foreground',
-  Coalition: 'bg-series-4/20 text-foreground',
-  OUAC: 'bg-series-5/20 text-foreground',
+  UCAS: 'bg-series-1/10 text-foreground',
+  'Common App': 'bg-series-2/10 text-foreground',
+  Direct: 'bg-series-3/10 text-foreground',
+  Coalition: 'bg-series-4/10 text-foreground',
+  OUAC: 'bg-series-5/10 text-foreground',
 };
 
 // An unrecognised platform is still a platform, so it gets a tint from the same
@@ -138,7 +138,7 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
             key={p}
             onClick={() => setFilterPlatform(filterPlatform === p ? null : p)}
             aria-pressed={filterPlatform === p}
-            className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', filterPlatform === p ? 'bg-primary text-primary-foreground' : 'bg-muted/50 text-muted-foreground hover:bg-muted')}
+            className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', filterPlatform === p ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground hover:bg-muted')}
           >{p}</button>
         ))}
       </div>
@@ -163,7 +163,7 @@ export function ApplicationOverview({ apps }: { apps: EnrichedApplication[] }) {
                     <motion.div key={studentId} variants={cardFade}>
                       <Link
                         href={`/counsellor/students/${studentId}`}
-                        className={cn('block surface-subcard p-3 border-l-4 transition-colors hover:bg-muted/30 group', cfg.borderLeft)}
+                        className={cn('block surface-subcard p-3 border-l-4 transition-colors hover:bg-muted group', cfg.borderLeft)}
                       >
                         <div className="flex items-start justify-between">
                           <div className="min-w-0 flex-1">

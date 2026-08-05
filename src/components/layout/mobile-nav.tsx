@@ -142,7 +142,7 @@ export const MobileNav = () => {
                           'flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition',
                           active
                             ? 'bg-primary text-primary-foreground shadow-e-1'
-                            : 'text-muted-foreground hover:text-foreground active:bg-muted/60'
+                            : 'text-muted-foreground hover:text-foreground active:bg-muted'
                         )}
                       >
                         <Icon className="h-4 w-4 shrink-0" aria-hidden />
@@ -159,7 +159,7 @@ export const MobileNav = () => {
               onClick={handleSignOut}
               className={cn(
                 'flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition',
-                overflowItems.length > 0 && 'mt-1 border-t border-border/40 pt-2.5',
+                overflowItems.length > 0 && 'mt-1 border-t border-border pt-2.5',
                 confirmSignOut
                   ? 'text-destructive'
                   : 'text-muted-foreground hover:text-destructive active:bg-destructive/10'
@@ -187,7 +187,7 @@ export const MobileNav = () => {
                   'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition',
                   active
                     ? 'bg-primary text-primary-foreground shadow-e-1'
-                    : 'hover:text-foreground active:bg-muted/60'
+                    : 'hover:text-foreground active:bg-muted'
                 )}
               >
                 <Icon className="h-5 w-5 shrink-0" aria-hidden />
@@ -211,7 +211,7 @@ export const MobileNav = () => {
               'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition',
               moreOpen || overflowActive
                 ? 'bg-primary text-primary-foreground shadow-e-1'
-                : 'hover:text-foreground active:bg-muted/60'
+                : 'hover:text-foreground active:bg-muted'
             )}
           >
             <MoreHorizontal className="h-5 w-5 shrink-0" aria-hidden />

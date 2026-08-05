@@ -18,7 +18,7 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
       {/* Programme type */}
       <div className="space-y-2">
         <p className="eyebrow">Programme Type</p>
-        <div className="flex h-6 overflow-hidden rounded-xl border border-border/50">
+        <div className="flex h-6 overflow-hidden rounded-xl border border-border">
           <button
             className="flex h-full items-center justify-center bg-primary-ink text-label font-bold text-primary-foreground transition-[width,background-color,filter] duration-700 hover:bg-primary-ink/90 hover:brightness-110"
             style={{ width: `${ibPct}%` }}
@@ -62,12 +62,12 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
             <button
               key={label}
               onClick={() => onNavigateField?.(key)}
-              className="flex w-full items-center gap-2 rounded-lg hover:bg-muted/40 transition px-1 py-0.5 group"
+              className="flex w-full items-center gap-2 rounded-lg hover:bg-muted transition px-1 py-0.5 group"
               title={`View ${label} students`}
             >
-              <div className="h-5 flex-1 overflow-hidden rounded-lg bg-muted/50">
+              <div className="h-5 flex-1 overflow-hidden rounded-lg bg-border">
                 <div
-                  className="h-full rounded-lg bg-primary/60 transition-[width,background-color] duration-700 group-hover:bg-primary/80 group-focus-within:bg-primary/80"
+                  className="h-full rounded-lg bg-primary/60 transition-[width,background-color] duration-700 group-hover:bg-primary group-focus-within:bg-primary"
                   style={{ width: `${(count / maxField) * 100}%` }}
                 />
               </div>

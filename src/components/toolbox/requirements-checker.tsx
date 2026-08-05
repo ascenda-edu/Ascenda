@@ -11,7 +11,7 @@ const STATUS_CONFIG: Record<RequirementStatus, { icon: typeof CheckCircle2; colo
   'complete': { icon: CheckCircle2, color: 'text-success', bg: 'bg-success-subtle', label: 'Complete', ring: 'stroke-success' },
   'in-progress': { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', label: 'In progress', ring: 'stroke-muted-foreground' },
   'missing': { icon: AlertTriangle, color: 'text-danger', bg: 'bg-danger-subtle', label: 'Missing', ring: 'stroke-danger' },
-  'not-required': { icon: Minus, color: 'text-muted-foreground', bg: 'bg-muted/30', label: 'N/A', ring: 'stroke-muted-foreground' },
+  'not-required': { icon: Minus, color: 'text-muted-foreground', bg: 'bg-border', label: 'N/A', ring: 'stroke-muted-foreground' },
 };
 
 const STATUS_CYCLE: RequirementStatus[] = ['missing', 'in-progress', 'complete', 'not-required'];
@@ -97,7 +97,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
         {/* Big progress ring */}
         <div className="relative h-28 w-28 shrink-0">
           <svg className="h-28 w-28 -rotate-90" viewBox="0 0 80 80">
-            <circle cx="40" cy="40" r="36" fill="none" stroke="currentColor" strokeWidth="5" className="text-muted/20" />
+            <circle cx="40" cy="40" r="36" fill="none" stroke="currentColor" strokeWidth="5" className="text-muted" />
             <motion.circle
               cx="40" cy="40" r="36" fill="none" strokeWidth="5" strokeLinecap="round"
               className={cn(avgProgress >= 80 ? 'stroke-success' : avgProgress >= 50 ? 'stroke-warning' : 'stroke-danger')}
@@ -128,7 +128,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
             {modified && (
               <button
                 onClick={resetMatrix}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+                className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
                 <RotateCcw className="h-3 w-3" /> Reset
               </button>
@@ -143,7 +143,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                   <span className="text-label font-medium text-muted-foreground">{CATEGORY_LABELS[category]}</span>
                   <span className="text-label font-semibold text-foreground">{rate}%</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <motion.div
                     className={cn('h-full rounded-full', rate >= 80 ? 'bg-success-fill' : rate >= 50 ? 'bg-warning-fill' : 'bg-danger-fill')}
                     initial={{ width: 0 }}
@@ -158,7 +158,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
       </div>
 
       {/* Interactive note */}
-      <p className="text-label text-muted-foreground/70 italic">Click any status icon to cycle through: Missing → In Progress → Complete → N/A. Your changes are saved automatically.</p>
+      <p className="text-label text-muted-foreground italic">Click any status icon to cycle through: Missing → In Progress → Complete → N/A. Your changes are saved automatically.</p>
 
       {/* Desktop: interactive table */}
       <div className="hidden md:block overflow-x-auto">
@@ -174,7 +174,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
           </thead>
           <tbody>
             {matrix.map((row) => (
-              <tr key={row.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors group">
+              <tr key={row.id} className="border-b border-border hover:bg-muted transition-colors group">
                 <td className="py-3 pr-4">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{row.flagEmoji}</span>
@@ -208,7 +208,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                     {/* Mini ring */}
                     <div className="relative h-9 w-9">
                       <svg className="h-9 w-9 -rotate-90" viewBox="0 0 36 36">
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-muted/20" />
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-muted" />
                         <motion.circle
                           cx="18" cy="18" r="14" fill="none" strokeWidth="2.5" strokeLinecap="round"
                           className={cn(row.progress >= 80 ? 'stroke-success' : row.progress >= 50 ? 'stroke-warning' : 'stroke-danger')}
@@ -262,7 +262,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                       {/* Mini ring */}
                       <div className="relative h-10 w-10">
                         <svg className="h-10 w-10 -rotate-90" viewBox="0 0 36 36">
-                          <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-muted/20" />
+                          <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-muted" />
                           <motion.circle
                             cx="18" cy="18" r="14" fill="none" strokeWidth="2.5" strokeLinecap="round"
                             className={cn(row.progress >= 80 ? 'stroke-success' : row.progress >= 50 ? 'stroke-warning' : 'stroke-danger')}
@@ -307,7 +307,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                 <AnimatePresence>
                   {isExpanded && (
                     <motion.div id={`req-panel-${row.id}`} initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                      <div className="px-4 pb-4 space-y-2 border-t border-border/50 pt-3">
+                      <div className="px-4 pb-4 space-y-2 border-t border-border pt-3">
                         {row.cells.map((cell) => {
                           const cfg = STATUS_CONFIG[cell.status];
                           return (

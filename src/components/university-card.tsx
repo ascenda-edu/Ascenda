@@ -35,7 +35,7 @@ const RING_STROKE: Record<string, string> = {
     strong: 'stroke-success',
     solid: 'stroke-warning',
     risk: 'stroke-danger',
-    unknown: 'stroke-muted-foreground/40',
+    unknown: 'stroke-muted-foreground',
 };
 
 const RING_TEXT: Record<string, string> = {
@@ -57,7 +57,7 @@ function FitRing({ value, tone, size = 40 }: { value: number; tone: string; size
             title={`Fit score ${value}%`}
         >
             <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
-                <circle cx="18" cy="18" r="15.5" fill="none" strokeWidth="3.5" className="stroke-border/70" />
+                <circle cx="18" cy="18" r="15.5" fill="none" strokeWidth="3.5" className="stroke-border" />
                 <circle
                     cx="18"
                     cy="18"
@@ -244,7 +244,7 @@ export function UniversityCard({
                         </div>
                     </div>
                     <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                        <span className="truncate font-medium text-foreground/75" title={name}>
+                        <span className="truncate font-medium text-foreground" title={name}>
                             {name}
                         </span>
                         {locationLine ? (
@@ -285,7 +285,7 @@ export function UniversityCard({
             >
                 {programEl}
             </h3>
-            <p className="mt-1 line-clamp-1 text-sm font-medium text-foreground/75" title={name}>
+            <p className="mt-1 line-clamp-1 text-sm font-medium text-foreground" title={name}>
                 {name}
             </p>
             {locationLine ? (
@@ -298,13 +298,13 @@ export function UniversityCard({
                     {highlights.slice(0, 3).map((highlight) => (
                         <span
                             key={highlight}
-                            className="inline-flex items-center rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-label font-medium text-foreground"
+                            className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-label font-medium text-foreground"
                         >
                             {highlight}
                         </span>
                     ))}
                     {highlights.length > 3 && (
-                        <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-label font-medium text-muted-foreground">
+                        <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-label font-medium text-muted-foreground">
                             +{highlights.length - 3}
                         </span>
                     )}
@@ -337,7 +337,7 @@ export function UniversityCard({
             {hasStats || actions ? (
                 <div className="mt-auto flex flex-col gap-4 pt-4">
                     {hasStats ? (
-                        <dl className="grid grid-cols-[auto_auto_auto] justify-between gap-x-5 border-t border-border/60 pt-3">
+                        <dl className="grid grid-cols-[auto_auto_auto] justify-between gap-x-5 border-t border-border pt-3">
                             <Stat label="Tuition" value={tuitionLabel} />
                             <Stat label="Length" value={durationLabel} />
                             <Stat label="Level" value={levelLabel} />

@@ -99,7 +99,7 @@ export function ChildSwitcher({
                 aria-selected={child.profileId === active.profileId}
                 onClick={() => select(child)}
                 className={cn(
-                  'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60',
+                  'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted',
                   child.profileId === active.profileId ? 'font-semibold text-foreground' : 'text-muted-foreground'
                 )}
               >

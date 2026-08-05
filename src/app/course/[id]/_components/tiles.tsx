@@ -161,7 +161,7 @@ export function BreakdownRow({
     <div
       className={cn(
         'flex items-center justify-between gap-4',
-        total ? 'border-t-2 border-border/60 pt-4' : 'border-b border-border/40 pb-4'
+        total ? 'border-t-2 border-border pt-4' : 'border-b border-border pb-4'
       )}
     >
       <span className={cn('font-medium text-foreground', total && 'font-semibold')}>{label}</span>

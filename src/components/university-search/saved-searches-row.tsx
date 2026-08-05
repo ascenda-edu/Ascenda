@@ -34,7 +34,7 @@ export function SavedSearchesRow() {
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.96 }}
-              className="flex items-center overflow-hidden rounded-full border border-border bg-background/60 transition hover:border-primary/50"
+              className="flex items-center overflow-hidden rounded-full border border-border bg-background transition hover:border-primary/60"
             >
               <button
                 type="button"

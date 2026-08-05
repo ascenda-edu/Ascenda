@@ -63,7 +63,7 @@ export const Sidebar = () => {
           onClick={toggle}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (⌘B)`}
-          className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
         </button>
@@ -118,7 +118,7 @@ export const Sidebar = () => {
       </nav>
 
       {!pathname.startsWith('/counsellor') && !pathname.startsWith('/parent') && !collapsed ? (
-        <div className="mt-4 space-y-3 rounded-2xl border border-primary/20 bg-primary/5 p-3 text-foreground transition-colors">
+        <div className="mt-4 space-y-3 rounded-2xl border border-primary/30 bg-primary/10 p-3 text-foreground transition-colors">
           <div className="flex items-center gap-2.5">
             <div className="relative shrink-0">
               <div

@@ -113,37 +113,37 @@ const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
   rose: {
     text: 'text-danger',
     bg: 'bg-danger-subtle',
-    border: 'border-danger/25',
-    ring: 'ring-danger/25',
+    border: 'border-danger/30',
+    ring: 'ring-danger/30',
     accent: 'border-l-danger',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-danger-subtle text-danger border border-danger/25',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-danger-subtle text-danger border border-danger/30',
     swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-danger-subtle text-danger ring-1 ring-danger/25',
+      'flex h-9 w-9 items-center justify-center rounded-2xl bg-danger-subtle text-danger ring-1 ring-danger/30',
     bar: 'bg-danger-fill'
   },
   amber: {
     text: 'text-warning',
     bg: 'bg-warning-subtle',
-    border: 'border-warning/25',
-    ring: 'ring-warning/25',
+    border: 'border-warning/30',
+    ring: 'ring-warning/30',
     accent: 'border-l-warning',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-warning-subtle text-warning border border-warning/25',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-warning-subtle text-warning border border-warning/30',
     swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-warning-subtle text-warning ring-1 ring-warning/25',
+      'flex h-9 w-9 items-center justify-center rounded-2xl bg-warning-subtle text-warning ring-1 ring-warning/30',
     bar: 'bg-warning-fill'
   },
   emerald: {
     text: 'text-success',
     bg: 'bg-success-subtle',
-    border: 'border-success/25',
-    ring: 'ring-success/25',
+    border: 'border-success/30',
+    ring: 'ring-success/30',
     accent: 'border-l-success',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-success-subtle text-success border border-success/25',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-success-subtle text-success border border-success/30',
     swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-success-subtle text-success ring-1 ring-success/25',
+      'flex h-9 w-9 items-center justify-center rounded-2xl bg-success-subtle text-success ring-1 ring-success/30',
     bar: 'bg-success-fill'
   },
   primary: {
@@ -151,11 +151,11 @@ const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
     // measures 3.58:1 as text on a dark card.
     text: 'text-primary-ink',
     bg: 'bg-primary/10',
-    border: 'border-primary/25',
-    ring: 'ring-primary/25',
+    border: 'border-primary/30',
+    ring: 'ring-primary/30',
     accent: 'border-l-primary',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-primary-ink border border-primary/25',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-primary-ink border border-primary/30',
     // No tint and no ring. A 36px filled box behind an icon is the single most
     // repeated piece of category decoration in the app, and `primary`/`neutral`
     // are exactly the tones the NOMINAL registries resolve to — so this swatch
@@ -165,7 +165,7 @@ const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
     swatch: 'flex h-9 w-9 items-center justify-center rounded-2xl text-muted-foreground',
     bar: 'bg-primary'
   },
-  // Neutral is a TONE, not an absence of one. It used to be `bg-muted/60` +
+  // Neutral is a TONE, not an absence of one. It used to be `bg-muted` +
   // `border-border`, which put a dead grey pill with a hard edge (near-black in
   // dark mode, where --border sits at 18% lightness) beside five tinted ones.
   // It now carries the same faint brand wash as `.surface-chip` in globals.css —
@@ -173,12 +173,12 @@ const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
   // which carries indigo TEXT and a stronger edge to mean "brand accent".
   neutral: {
     text: 'text-foreground',
-    bg: 'bg-primary/8',
-    border: 'border-primary/15',
-    ring: 'ring-primary/15',
+    bg: 'bg-primary/10',
+    border: 'border-primary/30',
+    ring: 'ring-primary/30',
     accent: 'border-l-primary/30',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/8 text-foreground border border-primary/15',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-foreground border border-primary/30',
     // Untinted, for the same reason as `primary` above.
     swatch: 'flex h-9 w-9 items-center justify-center rounded-2xl text-muted-foreground',
     // The BAR stays hueless, unlike the chip/swatch above. A bar is read by
@@ -187,7 +187,7 @@ const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
     // brand bar side by side were the same colour at two lightnesses, which is
     // exactly the confusion the `--series-*` ramp needs a 2px ring to avoid.
     // A pill has no neighbour to be confused with; a bar always does.
-    bar: 'bg-muted-foreground/40'
+    bar: 'bg-muted-foreground/30'
   }
 };
 

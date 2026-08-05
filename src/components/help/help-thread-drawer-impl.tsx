@@ -51,7 +51,7 @@ const formatMeetingTime = (iso: string): string =>
 // muted wash and the strike-through because that is a de-emphasis, not a tone.
 const meetingToneClass = (status: HelpMeetingStatus): string =>
   status === 'cancelled'
-    ? 'border-border/60 bg-muted/40 text-muted-foreground line-through'
+    ? 'border-border bg-muted text-muted-foreground line-through'
     : 'border-border bg-card';
 
 // ...and the tone lands here instead: the clock glyph and the one-word status
@@ -292,7 +292,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
       align="right"
     >
       <DialogContent className="flex flex-col">
-        <header className="flex items-start justify-between gap-3 border-b border-border/60 px-5 py-4">
+        <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
           <div className="min-w-0 flex-1">
             <p className="eyebrow">
               {isCounsellor
@@ -321,7 +321,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
             </DialogDescription>
           </div>
           <DialogClose
-            className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Close"
           >
             <X className="h-4 w-4" aria-hidden />
@@ -332,7 +332,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
         <div
           role="tablist"
           aria-label="Request views"
-          className="flex gap-1 border-b border-border/60 px-3 py-2 text-xs"
+          className="flex gap-1 border-b border-border px-3 py-2 text-xs"
         >
           {TAB_KEYS.map((key, index) => {
             const isActive = tab === key;
@@ -368,7 +368,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
                   'rounded-full px-3 py-1.5 transition',
                   isActive
                     ? 'bg-primary font-semibold text-primary-foreground shadow-e-1'
-                    : 'font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    : 'font-medium text-muted-foreground hover:bg-muted hover:text-foreground'
                 )}
               >
                 {label}
@@ -425,7 +425,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
 
         {/* Footer composer (Thread tab) */}
         {tab === 'thread' && request ? (
-          <div className="border-t border-border/60 bg-card/40 px-5 py-3">
+          <div className="border-t border-border bg-card px-5 py-3">
             <div className="flex items-end gap-2">
               <label htmlFor="help-drawer-reply" className="sr-only">
                 Reply message
@@ -459,9 +459,9 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
               </Button>
             </div>
             <p className="mt-1.5 px-1 text-label text-muted-foreground">
-              <kbd className="rounded border border-border/60 bg-muted/60 px-1 font-sans">Enter</kbd> to send ·{' '}
-              <kbd className="rounded border border-border/60 bg-muted/60 px-1 font-sans">Shift</kbd>+
-              <kbd className="rounded border border-border/60 bg-muted/60 px-1 font-sans">Enter</kbd> for a new line
+              <kbd className="rounded border border-border bg-muted px-1 font-sans">Enter</kbd> to send ·{' '}
+              <kbd className="rounded border border-border bg-muted px-1 font-sans">Shift</kbd>+
+              <kbd className="rounded border border-border bg-muted px-1 font-sans">Enter</kbd> for a new line
             </p>
 
             {isCounsellor ? (
@@ -484,7 +484,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
                     variant="outline"
                     onClick={handleResolve}
                     disabled={busy}
-                    className="border-success/25 text-success"
+                    className="border-success/30 text-success"
                   >
                     <Check className="mr-1 h-3 w-3" />
                     Mark resolved
@@ -604,11 +604,11 @@ function ThreadView({
           <div key={entry.id} className={cn(!groupedWithPrev && index > 0 && 'pt-2.5')}>
             {showDay ? (
               <div className="flex items-center gap-3 py-2" role="separator" aria-label={dayLabel(entry.at)}>
-                <span className="h-px flex-1 bg-border/50" />
+                <span className="h-px flex-1 bg-border" />
                 <span className="eyebrow">
                   {dayLabel(entry.at)}
                 </span>
-                <span className="h-px flex-1 bg-border/50" />
+                <span className="h-px flex-1 bg-border" />
               </div>
             ) : null}
             <div className={cn('flex items-end gap-2', isOwn ? 'flex-row-reverse' : 'flex-row')}>
@@ -639,7 +639,7 @@ function ThreadView({
                     'rounded-2xl px-3.5 py-2 text-sm leading-relaxed shadow-e-1',
                     isOwn
                       ? 'rounded-br-md bg-primary text-primary-foreground'
-                      : 'rounded-bl-md border border-border/60 bg-muted/60 text-foreground',
+                      : 'rounded-bl-md border border-border bg-muted text-foreground',
                     isPending && 'opacity-60'
                   )}
                 >
@@ -648,7 +648,7 @@ function ThreadView({
                     <p
                       className={cn(
                         'mt-1.5 inline-flex items-center gap-1 text-label uppercase tracking-[0.15em]',
-                        isOwn ? 'text-primary-foreground/70' : 'text-primary-ink'
+                        isOwn ? 'text-primary-foreground' : 'text-primary-ink'
                       )}
                     >
                       <Sparkles className="h-3 w-3" />
@@ -698,7 +698,7 @@ function NotesView({
   return (
     <div className="space-y-3">
       {isCounsellor ? (
-        <div className="rounded-2xl border border-border bg-card/40 p-3">
+        <div className="rounded-2xl border border-border bg-card p-3">
           <div className="flex items-center gap-2">
             <NotebookPen className="h-4 w-4 text-primary-ink" aria-hidden />
             <p className="text-sm font-semibold text-foreground">Private note</p>
@@ -744,7 +744,7 @@ function NotesView({
             notes.map((n) => (
               <article
                 key={n.id}
-                className="rounded-2xl border border-border/60 bg-card/40 p-3 text-sm text-foreground/90"
+                className="rounded-2xl border border-border bg-card p-3 text-sm text-foreground"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="eyebrow">
@@ -795,7 +795,7 @@ function MeetingView({
   return (
     <div className="space-y-3">
       {isCounsellor ? (
-        <div className="rounded-2xl border border-border bg-card/40 p-3">
+        <div className="rounded-2xl border border-border bg-card p-3">
           <div className="flex items-center gap-2">
             <CalendarPlus className="h-4 w-4 text-primary-ink" aria-hidden />
             <p className="text-sm font-semibold text-foreground">Propose a meeting</p>

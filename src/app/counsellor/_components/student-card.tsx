@@ -19,7 +19,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
   return (
     <>
       {text.slice(0, idx)}
-      <mark className="rounded bg-primary/20 px-0.5 text-primary-ink not-italic">{text.slice(idx, idx + query.length)}</mark>
+      <mark className="rounded bg-primary/10 px-0.5 text-primary-ink not-italic">{text.slice(idx, idx + query.length)}</mark>
       {text.slice(idx + query.length)}
     </>
   );
@@ -127,7 +127,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
         <div className="absolute right-0 top-0 flex gap-1 opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 group-focus-within:opacity-100 z-20">
           <Link
             href={`/counsellor/students/${student.id}`}
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground backdrop-blur-sm transition hover:border-primary/40 hover:text-primary-ink"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground backdrop-blur-sm transition hover:border-primary/30 hover:text-primary-ink"
           >
             <Eye className="h-3.5 w-3.5" />
           </Link>
@@ -138,7 +138,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
               lastName: student.personal.lastName
             }}
             variant={null}
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground backdrop-blur-sm transition hover:border-primary/40 hover:text-primary-ink"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground backdrop-blur-sm transition hover:border-primary/30 hover:text-primary-ink"
           >
             <Mail className="h-3.5 w-3.5" />
           </MessageStudentButton>
@@ -157,7 +157,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
             ? student.academic.ibPoints ? `IB · ${student.academic.ibPoints} pts` : 'IB'
             : student.academic.aLevelGrades ? `A-Level · ${student.academic.aLevelGrades}` : 'A-Level'}
         </span>
-        <span className="rounded-full border border-primary/15 bg-primary/8 px-3 py-0.5 text-xs text-foreground">
+        <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-0.5 text-xs text-foreground">
           {student.academic.clusters[0]?.replace(/_/g, ' ')}
         </span>
       </div>
@@ -170,7 +170,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
             {student.profile.completionPct}%
           </span>
         </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
+        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
           <div
             className={cn('h-1.5 rounded-full transition-[width]', completionColor)}
             style={{ width: `${student.profile.completionPct}%` }}
@@ -200,7 +200,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
       )}
 
       {/* Footer: next deadline */}
-      <div className="relative z-10 border-t border-border/60 pt-3">
+      <div className="relative z-10 border-t border-border pt-3">
         {nextDeadline ? (
           <div className={cn('flex items-center gap-2 text-xs', daysLeft !== null && daysLeft <= 7 ? 'text-danger' : 'text-muted-foreground')}>
             <Clock className="h-3.5 w-3.5 shrink-0" />

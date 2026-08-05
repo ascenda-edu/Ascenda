@@ -61,7 +61,7 @@ export function RequirementsPanel({ requirements }: { requirements: Requirement[
         <div className="space-y-4">
           {detailed.map((req, idx) => (
             <section key={idx} className="surface-card p-0">
-              <h3 className="border-b border-border/40 bg-muted/30 px-6 py-4 text-lg font-semibold text-foreground">
+              <h3 className="border-b border-border bg-muted px-6 py-4 text-lg font-semibold text-foreground">
                 {req.label}
               </h3>
               <div className="p-6">

@@ -14,9 +14,9 @@ type FitScoreTone = 'strong' | 'solid' | 'risk' | 'unknown';
 // does and amber exactly where "Match" does. Restating the numbers here is what
 // created the mismatch; importing them is what stops it recurring.
 const FIT_SCORE_BUCKETS: { min: number; badge: string; text: string; tone: FitScoreTone }[] = [
-  { min: TIER_THRESHOLDS.safe, badge: 'text-success ring-success/25 bg-success-subtle', text: 'text-success', tone: 'strong' },
-  { min: TIER_THRESHOLDS.match, badge: 'text-warning ring-warning/25 bg-warning-subtle', text: 'text-warning', tone: 'solid' },
-  { min: 0, badge: 'text-danger ring-danger/25 bg-danger-subtle', text: 'text-danger', tone: 'risk' }
+  { min: TIER_THRESHOLDS.safe, badge: 'text-success ring-success/30 bg-success-subtle', text: 'text-success', tone: 'strong' },
+  { min: TIER_THRESHOLDS.match, badge: 'text-warning ring-warning/30 bg-warning-subtle', text: 'text-warning', tone: 'solid' },
+  { min: 0, badge: 'text-danger ring-danger/30 bg-danger-subtle', text: 'text-danger', tone: 'risk' }
 ];
 
 export const normalizeFitScore = (score?: number | null) => {
@@ -33,7 +33,7 @@ export const getFitScoreVisuals = (score?: number | null) => {
       // No score is genuinely no status, so the text stays muted — but the surface
       // takes the app's neutral pill tint rather than `bg-muted` + a `ring-border`
       // hairline, which read as a broken badge sitting beside three tinted ones.
-      badgeClass: 'text-muted-foreground ring-primary/15 bg-primary/8',
+      badgeClass: 'text-muted-foreground ring-primary/30 bg-primary/10',
       textClass: 'text-muted-foreground',
       tone: 'unknown' as FitScoreTone
     };

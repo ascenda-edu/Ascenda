@@ -119,7 +119,7 @@ export default async function ToolboxPage() {
           {/* Next action card */}
           {nextDeadline && (
             <Link href="/toolbox/timeline" className="block surface-card hover-lift group overflow-hidden">
-              <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-primary/5 blur-2xl group-hover:bg-primary/10 transition-colors" />
+              <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-primary/10 blur-2xl group-hover:bg-primary/30 transition-colors" />
               <div className="relative z-10 flex items-center gap-4">
                 <ToolboxCountdown days={daysUntilNext ?? 0} />
                 <div className="flex-1 min-w-0">
@@ -135,7 +135,7 @@ export default async function ToolboxPage() {
                     }
                   </p>
                 </div>
-                <ArrowRight className="h-5 w-5 text-muted-foreground/30 group-hover:text-primary-ink group-hover:translate-x-1 transition-[color,transform] shrink-0" />
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary-ink group-hover:translate-x-1 transition-[color,transform] shrink-0" />
               </div>
             </Link>
           )}

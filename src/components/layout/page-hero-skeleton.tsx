@@ -61,7 +61,7 @@ export function PageHeroSkeleton({
           </div>
 
           {stats > 0 ? (
-            <div className="border-t border-border/60 pt-3 md:border-l md:border-t-0 md:pl-5 md:pt-0 md:shrink-0">
+            <div className="border-t border-border pt-3 md:border-l md:border-t-0 md:pl-5 md:pt-0 md:shrink-0">
               <div className={cn('flex gap-2', stats >= 4 ? 'flex-wrap' : 'flex-row')}>
                 {Array.from({ length: stats }).map((_, i) => (
                   // Mirrors surface-stat + the hero's !p-3 override.

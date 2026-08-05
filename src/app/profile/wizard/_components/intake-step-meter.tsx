@@ -79,7 +79,7 @@ export function IntakeStepMeter({
             onClick={() => setSheetOpen(true)}
             aria-haspopup="dialog"
             aria-expanded={sheetOpen}
-            className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-primary/25 bg-primary/8 px-4 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-4 text-xs font-semibold text-foreground transition-colors hover:border-primary/60 hover:bg-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <List className="h-3.5 w-3.5" aria-hidden />
             Steps
@@ -122,8 +122,8 @@ export function IntakeStepMeter({
                   step.current
                     ? 'bg-primary'
                     : step.done
-                      ? 'bg-primary/45'
-                      : 'bg-primary/15'
+                      ? 'bg-primary/60'
+                      : 'bg-primary/10'
                 )}
               />
             );

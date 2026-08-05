@@ -65,7 +65,7 @@ export function EmptyState({
                 // 280px-tall panel, and a tone tint that large stops being a signal
                 // and becomes the background; the tone now lives on the glyph below,
                 // which is where it is actually read.
-                "border-border/60 bg-muted/10",
+                "border-border bg-muted",
                 className
             )}
             initial={{ opacity: 0, y: 6 }}
@@ -113,7 +113,7 @@ export function EmptyState({
             {hint && (
                 <p
                     className={cn(
-                        "text-muted-foreground/60",
+                        "text-muted-foreground",
                         inline ? "mt-1 text-label" : "mt-1.5 max-w-sm text-center text-xs"
                     )}
                 >

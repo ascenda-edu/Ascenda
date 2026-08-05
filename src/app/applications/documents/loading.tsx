@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
  * INSIDE its layout, so drawing one would paint two nav rows on every load.
  */
 const DocRow = () => (
-  <div className="flex items-center gap-4 rounded-2xl border border-border/60 bg-background/60 px-5 py-4">
+  <div className="flex items-center gap-4 rounded-2xl border border-border bg-background px-5 py-4">
     <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
     <div className="min-w-0 flex-1 space-y-2">
       <Skeleton className="h-4 w-48 max-w-full" />

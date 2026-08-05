@@ -43,7 +43,7 @@ function AnimatedProgress({ value }: { value: number }) {
   }, [value]);
 
   return (
-    <div className="h-1.5 rounded-full bg-muted/60" aria-hidden>
+    <div className="h-1.5 rounded-full bg-muted" aria-hidden>
       <motion.div
         className="h-1.5 rounded-full bg-primary"
         initial={{ width: 0 }}
@@ -100,13 +100,13 @@ export const TaskList = ({ title, tasks, onToggle }: TaskListProps) => {
           {tasks.length === 0 ? (
             <motion.div
               key="empty"
-              className="rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-8 text-center"
+              className="rounded-2xl border border-dashed border-border bg-muted px-6 py-8 text-center"
               variants={taskVariant}
               initial="hidden"
               animate="show"
               exit="exit"
             >
-              <ListChecks className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
+              <ListChecks className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
               <p className="text-sm font-semibold text-foreground">Quiet for now ✨</p>
               <p className="text-xs text-muted-foreground">Add a program and we&apos;ll build your checklist.</p>
             </motion.div>
@@ -119,8 +119,8 @@ export const TaskList = ({ title, tasks, onToggle }: TaskListProps) => {
                 <motion.article
                   key={task.id}
                   className={cn(
-                    'hover-lift relative flex items-start gap-3 rounded-2xl border border-l-4 bg-card/60 px-4 py-3 text-foreground',
-                    isDone ? 'border-success/25 border-l-success opacity-80' : cn(visual.border, visual.accent)
+                    'hover-lift relative flex items-start gap-3 rounded-2xl border border-l-4 bg-card px-4 py-3 text-foreground',
+                    isDone ? 'border-success/30 border-l-success opacity-80' : cn(visual.border, visual.accent)
                   )}
                   variants={taskVariant}
                   layout

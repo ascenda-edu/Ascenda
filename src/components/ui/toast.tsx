@@ -60,9 +60,9 @@ export const useToast = () => {
 // feedback. Both tones are AA-verified in each theme, so no `dark:` variants.
 const toneClass = (variant?: ToastVariant) =>
   variant === 'success'
-    ? 'border-success/25 bg-success-subtle text-success'
+    ? 'border-success/30 bg-success-subtle text-success'
     : variant === 'error'
-      ? 'border-danger/25 bg-danger-subtle text-danger'
+      ? 'border-danger/30 bg-danger-subtle text-danger'
       : 'border-border bg-card text-foreground';
 
 const resolveDuration = (toast: Toast) => {

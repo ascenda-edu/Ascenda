@@ -41,7 +41,7 @@ export default function TasksLoading() {
                 {Array.from({ length: 3 }).map((_, i) => (
                   <li
                     key={i}
-                    className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card/60 px-4 py-3"
+                    className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3"
                   >
                     <Skeleton className="h-5 w-5 shrink-0 rounded-full" />
                     <Skeleton className="h-4 flex-1" />

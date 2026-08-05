@@ -157,7 +157,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
             exit={{ opacity: 0, height: 0 }}
             className="flex items-center gap-2 overflow-hidden"
           >
-            <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold text-primary-ink">
+            <div className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary-ink">
               <Filter className="h-3 w-3" />
               Showing {filterLabel} students
               <button
@@ -181,7 +181,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
             exit={{ opacity: 0, height: 0 }}
             className="flex items-center gap-2 overflow-hidden"
           >
-            <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold capitalize text-primary-ink">
+            <div className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-semibold capitalize text-primary-ink">
               <Filter className="h-3 w-3" />
               Field: {fieldFilter.replace(/_/g, ' ')}
               <button
@@ -222,7 +222,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
           onClick={() => setFiltersOpen((o) => !o)}
           className={cn(
             'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition',
-            filtersOpen ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-foreground hover:bg-muted/60'
+            filtersOpen ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-foreground hover:bg-muted'
           )}
         >
           <SlidersHorizontal className="h-4 w-4" />
@@ -249,7 +249,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                   aria-pressed={sortKey === key}
                   className={cn(
                     'rounded-xl px-3 py-1.5 text-left text-sm transition',
-                    sortKey === key ? 'bg-primary/10 font-semibold text-primary-ink' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    sortKey === key ? 'bg-primary/10 font-semibold text-primary-ink' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
                   {label}
@@ -269,7 +269,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                   aria-pressed={programme === val}
                   className={cn(
                     'rounded-xl px-3 py-1.5 text-left text-sm transition',
-                    programme === val ? 'bg-primary/10 font-semibold text-primary-ink' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    programme === val ? 'bg-primary/10 font-semibold text-primary-ink' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
                   {val === 'all' ? 'All' : val === 'IB' ? 'IB' : 'A-Level'}
@@ -289,7 +289,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                   aria-pressed={flagFilter === val}
                   className={cn(
                     'rounded-xl px-3 py-1.5 text-left text-sm transition',
-                    flagFilter === val ? 'bg-primary/10 font-semibold text-primary-ink' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    flagFilter === val ? 'bg-primary/10 font-semibold text-primary-ink' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
                   {val === 'all' ? 'All students' : val === 'flagged' ? 'Needs attention' : 'On track'}
@@ -323,7 +323,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
           </AnimatePresence>
         </motion.div>
       ) : (
-        <div className="rounded-4xl border border-dashed border-border bg-muted/40 p-12 text-center">
+        <div className="rounded-4xl border border-dashed border-border bg-muted p-12 text-center">
           <p className="text-base font-semibold text-foreground">No students match these filters</p>
           <p className="mt-1 text-sm text-muted-foreground">Adjust the search, programme, or status filter.</p>
           {(hasExternalFilter || query || programme !== 'all' || flagFilter !== 'all') && (
@@ -340,7 +340,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                 setFieldFilter('');
                 setSortKey('name');
               }}
-              className="mt-4 flex items-center gap-2 mx-auto rounded-full border border-primary bg-transparent px-4 py-2 text-sm font-medium text-primary-ink hover:bg-primary/8"
+              className="mt-4 flex items-center gap-2 mx-auto rounded-full border border-primary bg-transparent px-4 py-2 text-sm font-medium text-primary-ink hover:bg-primary/10"
             >
               <FilterX className="h-4 w-4" />
               Reset all filters

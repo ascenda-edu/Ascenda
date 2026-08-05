@@ -77,7 +77,7 @@ export function HelpRequestsWidget() {
           </div>
           <Link
             href="/counsellor/inbox"
-            className="flex shrink-0 items-center gap-1 rounded-full border border-primary bg-transparent px-3 py-1.5 text-xs font-semibold text-primary-ink transition hover:-translate-y-0.5 hover:bg-primary/8"
+            className="flex shrink-0 items-center gap-1 rounded-full border border-primary bg-transparent px-3 py-1.5 text-xs font-semibold text-primary-ink transition hover:-translate-y-0.5 hover:bg-primary/10"
           >
             View inbox
             <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
@@ -109,8 +109,8 @@ export function HelpRequestsWidget() {
                         // the still-open request keeps the brand tint, because that is
                         // the row that needs the counsellor to do something.
                         isAccepted
-                          ? 'border-border bg-card hover:bg-muted/40'
-                          : 'border-primary/30 bg-primary/10 hover:border-primary/50'
+                          ? 'border-border bg-card hover:bg-muted'
+                          : 'border-primary/30 bg-primary/10 hover:border-primary/60'
                       )}
                     >
                       <Sparkles
