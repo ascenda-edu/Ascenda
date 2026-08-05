@@ -138,6 +138,34 @@ const RULES = [
     msg: 'Use .text-label / .text-body-sm — the arbitrary value skips tailwind-merge (src/lib/utils.ts:26).',
   },
   {
+    id: 'quantity-as-status',
+    // The gate that would have caught the muddy /profile bar at authoring time.
+    //
+    // A percentage or a count is a QUANTITY, and a quantity may not be coloured with
+    // a status tone. `warning` means "act soon", which implies a deadline a
+    // half-finished profile does not have; and `warning-fill` is measurably olive
+    // (OKLCH hue 80 at chroma 0.126 in light, and 1.55:1 against a bg-muted track in
+    // dark, i.e. nearly invisible). Progress is the brand — see PROGRESS_FILL and
+    // PROGRESS_SEGMENT_FILL in src/lib/theme/categories.ts, and brand.md section 5.
+    //
+    // Shape matched: a NUMERIC comparison, then a tone FILL or ring stroke within a
+    // short window — i.e. `pct >= 75 ? 'bg-success-fill' : …`. Deliberately narrow:
+    //
+    //  - only `-fill` and `stroke-`, not `text-`/`-subtle`. A tone INK next to a
+    //    comparison is usually a real deadline ("Due in 2 days" in danger), which is
+    //    legitimate. Including text took this from 13 matches to 48, nearly all of
+    //    them correct code, and a rule that mostly cries wolf gets ignored.
+    //  - `multiline`, because the ternary's test and branches sit on separate lines.
+    //
+    // The surviving baseline population is the LEGITIMATE set — the essay length
+    // meter (a real limit you can exceed), the deadline urgency bars and dots, and
+    // the notification count dot. That is the ideal resting state for a ratchet:
+    // today's count is the list of earned exceptions, and anything new fails.
+    multiline: true,
+    re: /(?:>=|<=|>|<)\s*(?:0?\.\d+|\d+)[\s\S]{0,160}?\b(?:bg-(?:success|warning|danger)-fill|stroke-(?:success|warning|danger))\b/g,
+    msg: 'A quantity banded by a status tone. A percentage/count is not a status — use PROGRESS_FILL (continuous) or PROGRESS_SEGMENT_FILL (stepped) from src/lib/theme/categories.ts. Genuine deadlines and real limits are the exceptions already in the baseline.',
+  },
+  {
     id: 'dead-opacity',
     // Tailwind emits NOTHING for an opacity modifier outside the generated scale,
     // so this is a silent invisible-element bug, not a style nit. Verified against
@@ -153,6 +181,59 @@ const LEGAL_OPACITY = new Set([
 ]);
 
 // ---------------------------------------------------------------------------
+
+/**
+ * Blank every comment to spaces, preserving byte offsets and newlines.
+ *
+ * Needed by `multiline` rules, and the reason is not fastidiousness. The existing
+ * per-line scan skips a line whose trimmed start is `//`, `*` or `/*`, which covers
+ * JSDoc but NOT the continuation lines of a `{/* … *\/}` JSX comment — those start
+ * with whatever prose is on them. This codebase documents removed class strings at
+ * length (that is house style and worth keeping), so a rule reading raw source
+ * counts the documentation as violations, and every well-commented FIX raises the
+ * count and fails the ratchet. A gate that punishes explaining yourself gets
+ * switched off, so: strip first, match second.
+ *
+ * Offsets are preserved rather than the text removed, so a match index still maps to
+ * the right line number for `--report`.
+ *
+ * Heuristic limit: a regex literal containing `//` or `/*` could be misread as the
+ * start of a comment. Accepted — the alternative is a real parser, and the failure
+ * mode is a few under-counted lines in a ratchet, not a wrong build.
+ */
+function blankComments(src) {
+  const out = src.split('');
+  let i = 0;
+  const n = src.length;
+  // 'code' | 'line' | 'block' | 'sq' | 'dq' | 'tpl'
+  let state = 'code';
+  while (i < n) {
+    const c = src[i];
+    const c2 = src[i + 1];
+    if (state === 'code') {
+      if (c === '/' && c2 === '/') { state = 'line'; out[i] = out[i + 1] = ' '; i += 2; continue; }
+      if (c === '/' && c2 === '*') { state = 'block'; out[i] = out[i + 1] = ' '; i += 2; continue; }
+      if (c === "'") state = 'sq';
+      else if (c === '"') state = 'dq';
+      else if (c === '`') state = 'tpl';
+      i++; continue;
+    }
+    if (state === 'line') {
+      if (c === '\n') { state = 'code'; i++; continue; }
+      out[i] = ' '; i++; continue;
+    }
+    if (state === 'block') {
+      if (c === '*' && c2 === '/') { state = 'code'; out[i] = out[i + 1] = ' '; i += 2; continue; }
+      if (c !== '\n') out[i] = ' ';
+      i++; continue;
+    }
+    // inside a string: honour escapes, and never blank anything
+    if (c === '\\') { i += 2; continue; }
+    if ((state === 'sq' && c === "'") || (state === 'dq' && c === '"') || (state === 'tpl' && c === '`')) state = 'code';
+    i++;
+  }
+  return out.join('');
+}
 
 function walk(dir, out = []) {
   for (const entry of readdirSync(dir)) {
@@ -173,10 +254,30 @@ const found = Object.fromEntries(
 
 for (const abs of files) {
   const rel = relative(ROOT, abs).split(sep).join('/');
-  const lines = readFileSync(abs, 'utf8').split('\n');
+  const src = readFileSync(abs, 'utf8');
+  const lines = src.split('\n');
+  /** Comment-blanked copy, built lazily — only `multiline` rules need it. */
+  let code = null;
 
   for (const rule of RULES) {
     if (ALLOW[rule.id]?.includes(rel)) continue;
+
+    // A `multiline` rule matches the whole file at once, because the pattern it
+    // looks for spans lines: a ternary's test and its branches are routinely on
+    // separate lines, and the per-line scan below structurally cannot see that.
+    if (rule.multiline) {
+      code ??= blankComments(src);
+      for (const m of code.matchAll(rule.re)) {
+        if (rule.test && !rule.test(m)) continue;
+        const lineNo = code.slice(0, m.index).split('\n').length;
+        const bucket = found[rule.id];
+        bucket.count++;
+        bucket.byFile.set(rel, (bucket.byFile.get(rel) ?? 0) + 1);
+        bucket.hits.push(`${rel}:${lineNo}  ${m[0].replace(/\s+/g, ' ').slice(0, 110)}`);
+      }
+      continue;
+    }
+
     lines.forEach((line, i) => {
       const t = line.trimStart();
       // Skip line comments and JSDoc continuations — a rule name quoted in a

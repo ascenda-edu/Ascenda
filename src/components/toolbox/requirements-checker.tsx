@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Clock, AlertTriangle, Minus, ChevronDown, RotateCcw } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { stagger, cardFade } from '@/lib/motion';
-import { PROGRESS_FILL } from '@/lib/theme/categories';
 import type { RequirementRow, RequirementStatus, RequirementCategory } from '@/lib/data/student-demo-data';
 
 /* Per-requirement STATUS — a missing requirement really is a thing to go and do, so
@@ -163,14 +163,14 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                   <span className="text-label font-medium text-muted-foreground">{CATEGORY_LABELS[category]}</span>
                   <span className="text-label font-semibold text-foreground">{rate}%</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                  <motion.div
-                    className={cn('h-full rounded-full', PROGRESS_FILL)}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${rate}%` }}
-                    transition={{ duration: 0.6 }}
-                  />
-                </div>
+                {/* The Framer `initial={{ width: 0 }}` grow-in is gone with the hand-rolled
+                    markup: `<Progress>` transitions its width in CSS under `motion-safe:`, so
+                    a change in `rate` still animates, it just no longer sweeps from zero on
+                    mount. Worth the trade — these five bars each gain a real
+                    `role="progressbar"` and an accessible name, which none of them had.
+                    The label names the category, because five bars all called "Requirements
+                    met" would be indistinguishable to a screen reader. */}
+                <Progress value={rate} label={`${CATEGORY_LABELS[category]} requirements met`} className="h-1.5" />
               </div>
             ))}
           </div>
