@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 // for the chevron, the placeholder/disabled states a `<button>` needs rather
 // than the ones an `<input>` needs, and `group` for the chevron rotation.
 const selectTriggerVariants = cva(
-  'group flex w-full items-center justify-between gap-2 border border-input bg-background text-foreground shadow-e-1 transition-[border-color,box-shadow] duration-200 hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:bg-muted/40 disabled:text-muted-foreground disabled:opacity-60 disabled:shadow-none disabled:hover:border-input data-[placeholder]:text-muted-foreground/80 [&>span]:min-w-0 [&>span]:truncate [&>span]:text-left',
+  'group flex w-full items-center justify-between gap-2 border border-input bg-background text-foreground shadow-e-1 transition-[border-color,box-shadow] duration-200 hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-60 disabled:shadow-none disabled:hover:border-input data-[placeholder]:text-muted-foreground [&>span]:min-w-0 [&>span]:truncate [&>span]:text-left',
   {
     variants: {
       size: {
@@ -210,7 +210,11 @@ const SelectItem = React.forwardRef<
       // Two separable states: highlighted (pointer/keyboard cursor) is a tint,
       // selected is weight + primary-ink + the check. A solid indigo band for
       // highlight would make the two indistinguishable once one row is both.
-      'data-[highlighted]:bg-accent/15 data-[highlighted]:text-foreground',
+      // A highlighted option is SELECTION, not status — transient, user-driven,
+      // one at a time — so a tint is the right instrument here. It moves off
+      // `--accent` (a redundant second indigo, being collapsed) onto the brand at
+      // the ladder's tint rung.
+      'data-[highlighted]:bg-primary/10 data-[highlighted]:text-foreground',
       'data-[state=checked]:font-medium data-[state=checked]:text-primary-ink',
       'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
       className

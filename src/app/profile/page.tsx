@@ -183,13 +183,7 @@ export default async function ProfilePage() {
         />
       </AnimatedSection>
       <AnimatedGrid data-tour="profile-sections" className="grid gap-8 lg:grid-cols-2">
-        <AnimatedGridItem
-          className={cn(
-            'surface-card border-l-4',
-            PROFILE_SECTION_VISUAL.personal.border,
-            PROFILE_SECTION_VISUAL.personal.accent
-          )}
-        >
+        <AnimatedGridItem className="surface-card">
           <div className="relative z-10 flex items-start justify-between gap-4">
             <div className="space-y-1">
               <p className={cn('eyebrow', PROFILE_SECTION_VISUAL.personal.text)}>Personal</p>
@@ -271,13 +265,7 @@ export default async function ProfilePage() {
           </div>
         </AnimatedGridItem>
         <AnimatedGridItem className="space-y-8">
-          <div
-            className={cn(
-              'surface-card border-l-4',
-              PROFILE_SECTION_VISUAL.lifestyle.border,
-              PROFILE_SECTION_VISUAL.lifestyle.accent
-            )}
-          >
+          <div className="surface-card">
             <div className="relative z-10 flex items-start justify-between gap-4">
               <div>
                 <p className={cn('eyebrow', PROFILE_SECTION_VISUAL.lifestyle.text)}>Lifestyle</p>
@@ -318,13 +306,7 @@ export default async function ProfilePage() {
               </Button>
             </div>
           </div>
-          <div
-            className={cn(
-              'surface-card border-l-4',
-              PROFILE_SECTION_VISUAL.academics.border,
-              PROFILE_SECTION_VISUAL.academics.accent
-            )}
-          >
+          <div className="surface-card">
             <div className="relative z-10 flex items-start justify-between gap-4">
               <div>
                 <p className={cn('eyebrow', PROFILE_SECTION_VISUAL.academics.text)}>Academics</p>
@@ -389,13 +371,7 @@ export default async function ProfilePage() {
       </AnimatedGrid>
       {outcomeHints.length > 0 ? (
         <AnimatedSection delay={0.08}>
-          <div
-            className={cn(
-              'flex flex-col gap-4 rounded-2xl border border-l-4 bg-card/60 p-5 shadow-e-1 sm:flex-row sm:items-center sm:justify-between',
-              PROFILE_SECTION_VISUAL.aspirations.border,
-              PROFILE_SECTION_VISUAL.aspirations.accent
-            )}
-          >
+          <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-e-1 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <div className={PROFILE_SECTION_VISUAL.aspirations.swatch}>
                 <Compass className="h-4 w-4" />
@@ -416,8 +392,14 @@ export default async function ProfilePage() {
       ) : null}
       {completionPercent === 100 && (
         <AnimatedSection delay={0.12}>
-          <div className="rounded-4xl border border-success/25 bg-success-subtle p-8">
-            <p className="text-base font-semibold text-success">Profile complete</p>
+          {/* Neutral, deliberately. The copy is worth keeping — it tells a student
+              there is nothing left to do and where to go if they want to change
+              something — but the tone is not: `success` is for terminal positive
+              outcomes, never for "done" (brand.md §4 rule 3), and a finished section
+              is silent. This panel was the fourth thing on the screen announcing
+              100%, after the bar, the icon and the confetti. */}
+          <div className="surface-card rounded-4xl">
+            <p className="text-base font-semibold text-foreground">Profile complete</p>
             <p className="mt-2 text-sm text-muted-foreground">
               All sections are filled in. You can revisit the wizard anytime from the top of this page to update details.
             </p>

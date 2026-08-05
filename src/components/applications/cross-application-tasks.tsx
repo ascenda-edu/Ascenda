@@ -278,7 +278,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
                 'rounded-full border px-3 py-1 text-xs font-semibold capitalize transition',
                 filter === f
                   ? 'border-foreground bg-foreground text-background'
-                  : 'border-border bg-background text-muted-foreground hover:border-foreground/40 hover:text-foreground'
+                  : 'border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground'
               )}
             >
               {f} <span className="opacity-60">· {totals[f]}</span>
@@ -297,14 +297,14 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
             }}
             aria-label="New task name"
             placeholder="Add a task — press Enter"
-            className="flex-1 min-w-[200px] rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/70 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="flex-1 min-w-[200px] rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
           <input
             type="date"
             value={newDue}
             onChange={(e) => setNewDue(e.target.value)}
             aria-label="Due date (optional)"
-            className="rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
           <Select value={newAppId || ''} onValueChange={setNewAppId}>
             {/* w-auto: the trigger's base class is w-full, which in this wrap row
@@ -362,8 +362,8 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, x: 12 }}
                           className={cn(
-                            'group flex items-center gap-3 rounded-2xl border bg-card/60 px-4 py-3 transition',
-                            done ? 'border-success/25' : 'border-border'
+                            'group flex items-center gap-3 rounded-2xl border bg-card px-4 py-3 transition',
+                            done ? 'border-success/30' : 'border-border'
                           )}
                         >
                           <button
@@ -390,7 +390,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
                             {task.name}
                           </p>
                           {task.status === 'doing' ? (
-                            <span className="shrink-0 rounded-full border border-info/25 bg-info-subtle px-2.5 py-0.5 text-label font-semibold text-info">
+                            <span className="shrink-0 rounded-full border border-border bg-muted px-2.5 py-0.5 text-label font-semibold text-muted-foreground">
                               In progress
                             </span>
                           ) : null}
@@ -399,8 +399,8 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
                               className={cn(
                                 'shrink-0 rounded-full border px-2.5 py-0.5 text-label font-semibold',
                                 due.urgent
-                                  ? 'border-danger/25 bg-danger-subtle text-danger'
-                                  : 'border-border bg-muted/50 text-foreground'
+                                  ? 'border-danger/30 bg-danger-subtle text-danger'
+                                  : 'border-border bg-muted text-foreground'
                               )}
                             >
                               {due.label}
@@ -412,7 +412,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
                             aria-label={`Remove task: ${task.name}`}
                             // Hidden-until-hover only where hover exists — touch
                             // devices get the button always visible.
-                            className="rounded-full p-1.5 text-muted-foreground/60 transition hover:bg-muted/80 hover:text-foreground focus-visible:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
+                            className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
                           >
                             <XCircle className="h-3.5 w-3.5" />
                           </button>

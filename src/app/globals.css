@@ -3,8 +3,39 @@
 @tailwind utilities;
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   THE NEUTRAL is hue 232, sitting between the old cold 220-224 and the brand
-   indigo at 241, so greys read as brand-tinted rather than clinical.
+   THE NEUTRAL IS ACHROMATIC — hue 0, saturation 0, a true grey.
+
+   It used to be hue 232, deliberately tinted toward the brand so greys read as
+   "brand-tinted rather than clinical". That was the single biggest cause of the
+   app reading monotone: the brand is OKLCH hue 275 and the canvas was hue 279 at
+   chroma 0.006, four degrees apart, so the greys WERE the brand desaturated 36x.
+   With canvas and accent sharing a hue, the screen reads as one colour at five
+   strengths and the accent takes the blame for the monotony. It is a property of
+   the pair, not of the accent.
+
+   The canvas is ~94% of the screen, so this is a bigger visual change than the
+   brand hue itself. Warm paper (hue 70) and this true neutral were both rendered
+   against the new brand before the pick; see docs/colour-system-progress.md.
+
+   THE LIGHTNESS ARCHITECTURE IS UNCHANGED. Every surface keeps the exact OKLCH
+   lightness it shipped with — only the hue is removed. That is deliberate: the
+   status tones are solved against these surfaces, and dropping the card even 1.5%
+   (to a warm-paper-friendly 0.985) measured light success-fill at 2.90:1 and
+   warning-fill at 2.88:1, both under the 3:1 the verifier requires. Moving the
+   canvas hue is free; moving its lightness is not.
+
+   THE BRAND IS PERIWINKLE — OKLCH hue 275, chroma 0.215, lightness 0.58 light /
+   0.70 dark. Hue 275 is Discord's hue and 0.58 is Discord's exact lightness, the
+   floor of the range measured across the ten apps teenagers actually use (chroma
+   0.19-0.26, lightness 0.58-0.96). The old brand sat at lightness 0.48 — below
+   every app measured. Weight is what reads as corporate, not hue or saturation.
+
+   L 0.58 is not a taste call: white text on this hue clears AA only at L <= 0.58
+   (4.58:1 at 0.58, 4.20 at 0.60, 3.53 at 0.64). ONE RULE, NO EXCEPTIONS: every
+   solid brand fill in LIGHT mode carries a white label. In DARK the fill is
+   lighter (L 0.70) so the label is the near-black ink at 6.82:1 — which is what
+   finally fixes `bg-primary text-primary-foreground`, a live 3.94:1 AA failure on
+   every solid button in dark mode under the old palette.
 
    Every value in this file is verified by `node scripts/tone-solver.mjs`, which
    exits non-zero if a token drops below the contrast it is required to hold.
@@ -29,26 +60,36 @@
        white cards more, but a dimmer app is the opposite of the goal; light mode
        gets its separation from the border and from shadows, which work fine on a
        pale ground. Dark mode is where the tonal ramp has to do that work. */
-    --background: 232 28% 96.5%;
-    --foreground: 232 30% 13%;
+    --background: 0 0% 95.9%;
+    --foreground: 0 0% 10.7%;
 
     --card: 0 0% 100%;
-    --card-foreground: 232 30% 13%;
+    --card-foreground: 0 0% 10.7%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 232 30% 13%;
+    --popover-foreground: 0 0% 10.7%;
 
-    --primary: 241 65% 55%;
+    --primary: 236.8 89.5% 66.1%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 232 24% 92%;
-    --secondary-foreground: 232 30% 13%;
+    --secondary: 0 0% 90.8%;
+    --secondary-foreground: 0 0% 10.7%;
 
-    --muted: 232 24% 93.5%;
-    --muted-foreground: 232 12% 42%;
+    --muted: 0 0% 92.5%;
+    --muted-foreground: 0 0% 41.8%;
 
-    --accent: 241 75% 60%;
-    --accent-foreground: 0 0% 100%;
+    /* --accent is NOT a colour of its own any more. It used to be a second indigo
+       sitting ΔE 37 from --primary — close enough to read as a mistake rather than
+       a choice. It is now simply the brand, lighter: byte-identical to --series-5.
+
+       It survives ONLY because the live homepage still needs a two-stop gradient:
+       `from-primary to-accent` in landing-preview/preview-hero.tsx sits under
+       `bg-clip-text text-transparent`, so deleting the token would not error —
+       Tailwind emits nothing for an unknown colour — it would render the hero
+       HEADLINE INVISIBLE in production. Delete it in PR 4, once the landing
+       literals are tokenised and those four usages are rewritten. */
+    --accent: 232.8 100% 73.9%;
+    --accent-foreground: 0 0% 10.7%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
@@ -56,12 +97,14 @@
     /* --border is a decorative card edge, so the 3:1 of WCAG 1.4.11 does not
        govern it — but 1.30:1 (the old value) is simply invisible, which is most
        of why the app read as flat. 1.47:1 is where an edge starts to exist. */
-    --border: 232 20% 85.5%;
+    --border: 0 0% 83.4%;
     /* --input is deliberately much darker than --border. A decorative card edge can
        be faint, but a form-control boundary must clear 3:1 against its own field
        (WCAG 1.4.11 non-text contrast). These were identical, giving 1.30:1. */
-    --input: 232 16% 56%;
-    --ring: 241 65% 55%;
+    --input: 0 0% 55.5%;
+    /* An ALIAS of --primary, not a third number kept in step by hand. The focus
+       ring is the brand; there is no case where it should differ. */
+    --ring: 236.8 89.5% 66.1%;
 
     /* ── Tone tokens ────────────────────────────────────────────────────────
        Every value below is solved for WCAG AA and verified in both themes; see
@@ -75,17 +118,31 @@
          --{tone}-subtle     tinted surface for chips, badges and soft cards.
 
        The same split exists on the brand: --primary is the button fill and
-       --primary-ink is the text value. `text-primary` fails AA in dark mode
-       (3.58:1) and always will, because --primary is tuned to carry white button
-       text. Don't "fix" that by changing --primary; it will break every button.
+       --primary-ink is the text value. Under the OLD palette `text-primary`
+       measured 3.58:1 in dark and could not be fixed without breaking every
+       button. Periwinkle at L 0.70 happens to clear it (5.95:1 on the dark card,
+       4.61:1 on the dark popover) — but keep using --primary-ink for text anyway.
+       The margin on popover is 0.11 above the AA floor, --primary is tuned for the
+       FILL and will move again the next time a button needs it, and one token per
+       job is the reason this split exists. Don't collapse them.
 
        Semantics (mirrored from lib/theme/categories.ts, the tone system of record):
          danger  = urgent / overdue / reach      warning = todo / pending / match
-         success = done / submitted / safety     info    = in-progress / planning
-         feature = essay / session / counsellor-flavoured
+         success = done / submitted / safety
+
+       THREE tones, not five. `info` and `feature` were deleted: `info` meant
+       "in progress", which is the absence of a state, and `feature` marked a
+       CATEGORY (essay / session / counsellor) in a status hue. Anything that was
+       `info` is now neutral; anything that was `feature` is the brand.
+
+       Do not add a fourth. The test a tone has to pass is "does this ask the
+       reader to do something, or confirm they no longer need to?" — a position in
+       a sequence, a type of thing, and a section of a form all fail it.
+
        --destructive stays separate: it's for destructive *actions* (delete), red,
-       not the rose status tone. */
-    --primary-ink: 241 65% 55%;
+       not the rose status tone. And note `danger` is still the status tone for
+       error FEEDBACK (see ui/toast.tsx) — the two are not interchangeable. */
+    --primary-ink: 237.8 77.9% 61.8%;
 
     /* Each tone carries a TEXT value and a FILL value, and they are not the same
        number. Solving one value for both is what made every chart bar and progress
@@ -104,39 +161,42 @@
        at 26° while the tint stays a clean amber at 48°. Don't "correct" them into
        agreement; that reintroduces the olive.
 
-       The -subtle tints are the big change. The old set measured OKLab chroma
-       0.012–0.020 — arithmetically grey. They now run 0.044–0.084 (+146% to
-       +540%) and are BRIGHTER at the same time, because they're solved on chroma
-       at a held lightness rather than on luminance contrast. This is where the
-       app's colour actually reaches the eye: tone TEXT is capped by physics on a
-       white card, a tint isn't. */
-    --success: 156 90% 25.2%;
-    --success-fill: 156 88% 35.4%;
-    --success-foreground: 232 30% 13%;
-    --success-subtle: 156 100% 86%;
+       The -subtle tints have now been solved twice, and the second pass is the
+       one to keep. Pass one fixed a real bug: the original set measured OKLab
+       chroma 0.012–0.020, arithmetically grey. It fixed it by MAXIMISING chroma
+       under a saturation cap — which is an unbounded objective wearing a
+       seatbelt, and it returned #ffefad and #b8ffe2, a highlighter yellow and a
+       mint at 100% saturation. Red and violet physically cannot be chromatic
+       that close to white in sRGB, so they came back at 0.044. The set ran
+       0.044–0.084: a 1.9x spread across five tints that are meant to read as ONE
+       family and that appear on the same card at the same time.
 
-    --warning: 26 90% 35.6%;
-    --warning-fill: 40 88% 41.4%;
-    --warning-foreground: 232 30% 13%;
-    --warning-subtle: 48 100% 84%;
+       That spread was the defect, not the average. A tint family is judged as a
+       set, and per-tint chroma-maximising structurally cannot see the set. Tints
+       are now solved to a uniform TARGET chroma (0.050 light / 0.078 dark) set
+       near what the least chromatic hue can comfortably reach, so nothing
+       strains and nothing runs away. Spread is 1.14x light, 1.11x dark, and
+       tone-solver.mjs fails the build if it widens again.
 
-    --danger: 356 90% 41.8%;
-    --danger-fill: 348 88% 62.2%;
-    --danger-foreground: 232 30% 13%;
+       So: do NOT push a single tint up because it "looks weak" next to the
+       others — that is the loop that produced the highlighter. If a surface
+       needs more colour, use the -fill mark or the border. */
+    --success: 156 75% 27.4%;
+    --success-fill: 156 65% 40%;
+    --success-foreground: 0 0% 10.7%;
+    --success-subtle: 158 96% 91%;
+
+    --warning: 26 75% 37%;
+    --warning-fill: 40 65% 45.2%;
+    --warning-foreground: 0 0% 10.7%;
+    --warning-subtle: 47 94% 90%;
+
+    --danger: 356 75% 44.4%;
+    --danger-fill: 348 65% 62.2%;
+    --danger-foreground: 0 0% 10.7%;
     --danger-subtle: 348 100% 92.5%;
 
-    --info: 204 90% 36.2%;
-    --info-fill: 204 88% 50%;
-    --info-foreground: 232 30% 13%;
-    --info-subtle: 196 100% 88.5%;
 
-    /* feature now takes ink like the other four — its fill is lighter than it was
-       (67.6% vs 60%), because chroma-maximising had pushed the old value to an
-       electric #7847eb that needed white on it. */
-    --feature: 262 90% 46%;
-    --feature-fill: 262 88% 67.6%;
-    --feature-foreground: 232 30% 13%;
-    --feature-subtle: 262 96% 93%;
 
     /* ── Chart series: a monochrome brand ramp ──────────────────────────────
        ONE hue (the brand indigo) in five lightness steps, NOT five different
@@ -169,11 +229,22 @@
        Ordering is meaningful here (light→dark reads as small→large), so if you
        apply this to genuinely unordered categories, sort them by value first or
        you imply a ranking that isn't there. */
-    --series-1: 241 65% 30%;
-    --series-2: 241 65% 42%;
-    --series-3: 241 65% 55%;
-    --series-4: 241 65% 64%;
-    --series-5: 241 65% 72%;
+    /* Periwinkle held at chroma, walked in lightness, chroma eased at the two ends
+       so the extremes do not go grey. The pale end is SOLVED, not chosen: the outer
+       step walks inward until it clears 3:1 on the card.
+
+       --series-3 is deliberately NOT pinned to --primary any more (they used to be
+       byte-identical). Pinning the middle step to the brand forces the ramp
+       symmetric about it, and that measurably costs legibility: minimum adjacent
+       step 1.32:1 → 1.21:1, span L 0.275 → 0.190. The 1.3-1.5:1 adjacent spacing
+       noted below is a stated property of this ramp, so the ramp keeps its range
+       and gives up a cosmetic coincidence. --ring IS aliased to the brand; a focus
+       ring genuinely is the brand, whereas a chart ramp has its own job. */
+    --series-1: 241.3 55.6% 42.3%;
+    --series-2: 241.1 60.2% 52.8%;
+    --series-3: 238.1 75.7% 61.1%;
+    --series-4: 236.1 100% 69.2%;
+    --series-5: 232.8 100% 73.9%;
 
     /* ── Shadow colour ───────────────────────────────────────────────────────
        The elevation ladder (shadow-e-1…e-4 in tailwind.config.ts) used to hard-code
@@ -182,10 +253,15 @@
        stays in the config, and it stays expressed as hsl(var(--shadow) / <alpha>)
        rather than as one opaque var for the whole shadow. That matters: Tailwind
        derives `--tw-shadow-colored` by substituting the colour out of the shadow
-       value, and it cannot do that to a var it can't parse. Three call sites
-       compose `shadow-primary/20` on top of `shadow-e-2` (ui/button.tsx,
-       chat/chatbot-widget.tsx, toolbox/chances-calculator.tsx) and would silently
-       lose their tint.
+       value, and it cannot do that to a var it can't parse, so a tinted shadow
+       composed on one of these would silently lose its tint.
+
+       Nothing relies on that now. The three call sites that used to compose
+       `shadow-primary/20` on `shadow-e-2` — ui/button.tsx, chat/chatbot-widget.tsx,
+       toolbox/chances-calculator.tsx — no longer tint their shadows at all: a
+       coloured shadow is a chromatic fill wearing a blur, and depth is already
+       carried achromatically by this ladder. The per-layer form is kept regardless,
+       because it costs nothing and preserves the substitution.
 
        --shadow-boost multiplies every alpha in the ladder, so dark mode can be
        ~7x heavier without duplicating eight alpha values per theme.
@@ -196,7 +272,7 @@
        that value's luminance, i.e. it would have quietly made light mode flatter
        while claiming to fix it. 232 45% 12% is a shade darker than the original,
        at the new neutral hue. */
-    --shadow: 232 45% 12%;
+    --shadow: 0 0% 8%;
     --shadow-boost: 1;
 
     --radius: 0.625rem;
@@ -231,47 +307,64 @@
 
        Saturation also drops (32% → 20% on the canvas): at 6% lightness and 32%
        saturation the background wasn't neutral, it was inky navy. */
-    --background: 232 20% 9.5%;
-    --foreground: 232 15% 94%;
+    --background: 0 0% 8.3%;
+    --foreground: 0 0% 93.4%;
 
-    --card: 232 17% 14%;
-    --card-foreground: 232 15% 94%;
+    --card: 0 0% 12.5%;
+    --card-foreground: 0 0% 93.4%;
 
     /* No longer an alias of --card. This is the top rung of the ramp. */
-    --popover: 232 14% 21.5%;
-    --popover-foreground: 232 15% 94%;
+    --popover: 0 0% 19.7%;
+    --popover-foreground: 0 0% 93.4%;
 
-    --primary: 241 68% 64%;
-    --primary-foreground: 232 30% 10%;
+    --primary: 232 100% 75.7%;
+    --primary-foreground: 0 0% 6.9%;
 
-    --secondary: 232 15% 18%;
-    --secondary-foreground: 232 15% 94%;
+    /* ⚠ --secondary IS BYTE-IDENTICAL TO --muted IN THIS THEME, and 1.04:1 away
+       from it in light. It has been that way since the UI uplift; it is recorded
+       here because it is a silent trap. `bg-secondary` CANNOT be used to separate
+       two states that would otherwise both be `bg-muted` — it measures 1.00:1
+       against it in dark, so the "fix" renders identically and reads as working.
+       PR 3 hit this twice and two agents caught it independently.
 
-    --muted: 232 15% 18%;
-    --muted-foreground: 232 11% 66%;
+       For a neutral separator use `bg-border` (1.24:1 light, 1.30:1 dark against
+       muted) — it is the best available; `bg-card` is only 1.18/1.14. For a
+       selection or highlight use `bg-primary/10`, because selection is
+       brand-eligible. Giving --secondary its own step in the ramp would be the
+       real fix, but it moves every `bg-secondary` in the app and needs its own
+       visual pass. */
+    --secondary: 0 0% 16.3%;
+    --secondary-foreground: 0 0% 93.4%;
 
-    --accent: 241 75% 68%;
-    --accent-foreground: 232 30% 10%;
+    --muted: 0 0% 16.3%;
+    --muted-foreground: 0 0% 70%;
+
+    /* The brand, lighter — byte-identical to --series-2. See the light block. */
+    --accent: 229.5 100% 85.4%;
+    --accent-foreground: 0 0% 6.9%;
 
     --destructive: 0 62% 40%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 232 13% 28%; /* 1.61:1 on a card — was 1.27:1, i.e. absent */
-    --input: 232 12% 45%;  /* 3.01:1 vs the field background — was 1.26:1 */
-    --ring: 241 68% 64%;
+    --border: 0 0% 23.4%; /* 1.55:1 on a card — a card edge that exists */
+    --input: 0 0% 41.5%;  /* 3.04:1 vs the field background (WCAG 1.4.11) */
+    /* An ALIAS of --primary — see the light block. */
+    --ring: 232 100% 75.7%;
 
     /* Dark tone values are LIGHTER than light-mode's and flip the foreground to ink.
        That's required, not stylistic: a dark fill on a dark card can't clear 3:1.
 
        Verified ratios (text on card / fg on fill / text on own subtle):
-         success  8.87 / 9.36 / 4.82      warning  7.89 / 8.33 / 4.51
-         danger   6.95 / 7.34 / 4.50      info     7.72 / 8.15 / 4.51
-         feature  6.17 / 6.51 / 4.51      primary-ink 6.00 on card, 4.72 on popover
+         success  8.38 / 8.85 / 4.55      warning  7.90 / 8.34 / 4.52
+         danger   5.91 / 6.24 / 4.52      info     7.73 / 8.16 / 4.51
+         feature  5.76 / 6.08 / 4.56      primary-ink 6.00 on card, 4.72 on popover
 
-       Saturation is capped at 80% here, and at 62% for the tints. That is not a
+       Saturation is capped at 65% here, and at 62% for the tints. That is not a
        stylistic preference: a saturated accent on a dark ground halates, and
-       chroma-maximising without a ceiling returns a neon #00ff88. The old values
-       ran 84-92% saturation.
+       chroma-maximising without a ceiling returns a neon #00ff88. The values
+       before this pass ran 80% (and 84-92% before that); at 80% the tone TEXT
+       colours were still landing on #18da8c and #f28a9f, which is spring-green
+       and bubblegum, not "green" and "red".
 
        --primary stays a FILL value (white text on it is correct). It was only ever
        broken as text — which is what --primary-ink is for. `text-primary` measured
@@ -282,48 +375,49 @@
        hardest surface it can land on, not just on the card. At 69% it measured
        4.39:1 on the new popover. scripts/tone-solver.mjs caught that; it would
        have shipped otherwise. */
-    --primary-ink: 241 72% 75.5%;
+    --primary-ink: 232.2 100% 75.2%;
 
     /* In dark mode text and fill coincide, so -fill mirrors the tone value. Kept as
        an explicit declaration rather than an alias so both themes read the same way.
 
-       The -subtle tints moved from a flat 40% saturation at 16% lightness — which
-       on the OLD near-black card measured 1.01-1.31:1 and on the new, lighter card
-       would have been invisible outright — to ~62% saturation around 20-34%
-       lightness. Chroma roughly doubles (0.034-0.061 → 0.070-0.165). */
-    --success: 156 80% 47.4%;
-    --success-fill: 156 80% 47.4%;
-    --success-foreground: 232 30% 13%;
+       The -subtle tints have been solved twice here too. They started at a flat
+       40% saturation / 16% lightness (1.01-1.31:1 on the old near-black card —
+       invisible on the current lighter one), then went to ~62% saturation, which
+       gave chroma 0.070-0.165. That top figure is --feature-subtle, and 0.165 is
+       2.4x --warning-subtle: an electric #36218c violet block sitting next to a
+       muted olive one, both nominally "the same kind of tint".
+
+       They are now solved to a uniform 0.078 target instead of per-tint maxima.
+       Only danger and feature actually moved — 62%→43% and 62%→35% saturation —
+       because they were the two runaways; the other three were already at or
+       near the target and are untouched. Saturation is no longer the knob that
+       governs a tint, the chroma target is; the 62% cap remains only as a
+       backstop. */
+    --success: 156 65% 50%;
+    --success-fill: 156 65% 50%;
+    --success-foreground: 0 0% 10.7%;
     --success-subtle: 156 61% 20.5%;
 
-    --warning: 38 80% 56.8%;
-    --warning-fill: 38 80% 56.8%;
-    --warning-foreground: 232 30% 13%;
+    --warning: 38 65% 61%;
+    --warning-fill: 38 65% 61%;
+    --warning-foreground: 0 0% 10.7%;
     --warning-subtle: 48 62% 20%;
 
-    --danger: 348 80% 74.6%;
-    --danger-fill: 348 80% 74.6%;
-    --danger-foreground: 232 30% 13%;
-    --danger-subtle: 356 62% 29%;
+    --danger: 348 65% 69%;
+    --danger-fill: 348 65% 69%;
+    --danger-foreground: 0 0% 10.7%;
+    --danger-subtle: 353 43% 24%;
 
-    --info: 196 80% 60%;
-    --info-fill: 196 80% 60%;
-    --info-foreground: 232 30% 13%;
-    --info-subtle: 204 62% 25.5%;
 
-    --feature: 262 80% 75%;
-    --feature-fill: 262 80% 75%;
-    --feature-foreground: 232 30% 13%;
-    --feature-subtle: 252 62% 34%;
 
     /* The ramp runs the other way on a dark card, and lives in a compressed upper
        band (60–90% rather than 30–79%) because anything below ~58% lightness
        drops under 3:1 against a near-black surface and reads as a hole. */
-    --series-1: 241 65% 90%;
-    --series-2: 241 65% 82%;
-    --series-3: 241 65% 74%;
-    --series-4: 241 65% 66%;
-    --series-5: 241 65% 63%;
+    --series-1: 228.5 100% 93.3%;
+    --series-2: 229.5 100% 85.4%;
+    --series-3: 231.2 100% 78%;
+    --series-4: 234.5 100% 71.1%;
+    --series-5: 235.7 62.4% 58.6%;
 
     /* Near-black, because a slate shadow on a dark card does nothing. The ramp
        above now carries most of the elevation and this carries the rest, so the
@@ -332,7 +426,7 @@
        fully opaque black at 60px blur, and e-3 and e-4 stop being distinguishable
        because both top out. 4.5 keeps the heaviest layer at 0.72 so the whole
        ladder stays ordered. */
-    --shadow: 232 45% 2%;
+    --shadow: 0 0% 1%;
     --shadow-boost: 4.5;
   }
 }
@@ -358,7 +452,7 @@
   }
 
   ::selection {
-    @apply bg-primary/20 text-foreground;
+    @apply bg-primary/30 text-foreground;
   }
 
   /* Custom scrollbar */
@@ -372,7 +466,7 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-border/60 rounded-full;
+    @apply bg-border rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
@@ -434,8 +528,14 @@
 
 
 @layer utilities {
+  /* Was `from-primary to-accent`. `--accent` is a second indigo sitting ΔE 37
+     from `--primary` — close enough to read as a mistake, far enough to see —
+     and it is being collapsed. `--primary-ink` is the honest partner: identical
+     to `--primary` in light (so the gradient is a flat brand wash there, which
+     is what it looked like anyway) and genuinely lighter in dark, where the
+     gradient actually reads. */
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-ink;
   }
 
   .scrollbar-thin::-webkit-scrollbar {
@@ -490,7 +590,7 @@
   }
 
   .helper-text {
-    @apply text-sm text-muted-foreground/90 leading-relaxed;
+    @apply text-sm text-muted-foreground leading-relaxed;
   }
 
   /* THE app-wide horizontal gutter. The fixed navbar and the shell row both
@@ -514,12 +614,12 @@
   }
 
   .surface-subcard {
-    @apply rounded-xl border border-border bg-background p-5 transition-colors dark:border-white/10 dark:bg-muted/30;
+    @apply rounded-xl border border-border bg-background p-5 transition-colors dark:border-white/10 dark:bg-muted;
   }
 
   /* THE neutral pill — a pill with no status meaning.
      "No status" is not the same as "no design". This used to be `border-border
-     bg-muted/50`, i.e. dead grey with a hard edge, which in dark mode meant a
+     bg-muted`, i.e. dead grey with a hard edge, which in dark mode meant a
      near-black border (--border is 18% lightness there) around a grey blob. Next
      to the five tone pills it read as unstyled rather than as deliberate, and it
      is the single most-repeated pill in the app (course tags, subject lists,
@@ -535,7 +635,7 @@
      a UI control, so the 3:1 non-text rule that governs `border-input` on form
      fields and buttons does not apply to the edge here. */
   .surface-chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-xs font-medium text-foreground transition-colors;
+    @apply inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-foreground transition-colors;
   }
 
   .surface-toolbar {
@@ -550,12 +650,69 @@
     @apply relative overflow-hidden rounded-xl border border-border bg-card p-4 sm:p-5 shadow-e-1 transition-[border-color,background-color] duration-200 dark:border-white/10 dark:bg-card;
   }
 
+  /* Touch height, and it is load-bearing: this one class is the geometry for the
+     SectionNav item AND every TabsTrigger, so it is the second-most-used tap target
+     in the app — and, sitting at the top of the screen, the one furthest from the
+     thumb. It measured 34px in both bands (mobile: py-2 = 16 + 12px line + 2px
+     border; sm+: py-1.5 = 12 + 20px line + 2px), well under the 44px floor.
+
+     py-3.5/sm:py-3 lands both bands on 46px rather than exactly 44. That is
+     deliberate: `.form-input` and `SelectTrigger` are already 46px and already pass,
+     so 46 is this app's established touch height and matching it keeps one number in
+     play instead of two. Padding rather than `min-h-11` because these consumers do
+     not all set a display mode, and adding `inline-flex` here would change the
+     layout of every call site. */
   .nav-pill {
-    @apply relative rounded-lg border border-transparent px-3 py-2 sm:py-1.5 text-xs sm:text-sm font-medium text-muted-foreground transition-[color,background-color,border-color,box-shadow] duration-200 hover:bg-muted/60 hover:text-foreground;
+    @apply relative rounded-lg border border-transparent px-3 py-3.5 sm:py-3 text-xs sm:text-sm font-medium text-muted-foreground transition-[color,background-color,border-color,box-shadow] duration-200 hover:bg-muted hover:text-foreground;
   }
 
+  /* The active tab used to be a SOLID brand fill. It was the only solid
+     `--primary` surface in the persistent frame, which meant every screen opened
+     with part of its colour budget already spent on chrome — and chrome is not a
+     state. Active is now carried by ink plus weight, with the 2px rule supplied
+     by the call site (section-nav's `layoutId` element, so the indicator still
+     slides between tabs; it slides a rule instead of a pill).
+
+     No background at all: `.nav-pill` already owns `hover:bg-muted`, and a
+     resting background here would fight it. */
   .nav-pill-active {
-    @apply border-primary/20 bg-primary text-primary-foreground shadow-e-1;
+    @apply border-transparent font-semibold text-primary-ink;
+  }
+
+  /* ── The action strip ─────────────────────────────────────────────────────
+     Colour marks the ONE card that wants work, and it marks it at the smallest
+     area that still reads: a 4px edge plus a tinted footer band. Not the card
+     surface — a tinted card says "this whole thing is a state", which is how
+     five completed sections ended up shouting louder than the one unfinished
+     one.
+
+     `border-l-4` is a named Tailwind step on purpose. `border-l-[3px]` would be
+     an arbitrary value, and `lint:tokens` ratchets `arbitrary-geometry` — it may
+     only go down. */
+  /* THE RAIL IS THE BRAND, NOT `warning`. This was a semantic error, not a taste
+     one: `warning` means "act soon", which implies a deadline. An unfinished
+     profile section has no deadline — it is simply the next thing to do, which
+     makes it a PRIMARY ACTION, and that is the brand's job.
+
+     Gold was also doing two jobs on one screen: this rail AND "Due Fri" two cards
+     below, which genuinely is dated. Same colour, two meanings — the exact
+     ambiguity the three-tone system exists to prevent. The profile screen now
+     carries one hue; gold and red stay in "Next up", where items really are dated. */
+  .surface-card--action {
+    @apply border-l-4 border-l-primary;
+  }
+
+  /* A small tinted zone at the foot of the card, INSET rather than bled to the
+     edges. The first version cancelled the parent's padding with `-mx-6 -mb-6`,
+     which silently assumed `.surface-card`'s `p-6 sm:p-7` — and the cards that
+     need this most are `.surface-subcard` at `p-5` and the profile step cards at
+     `px-4 py-4`, where those margins overhang. Staying inside the padding box
+     makes the class work at any card padding, which is what a shared class has
+     to do. */
+  /* Brand, matching the rail above. `text-primary-ink` and not `text-primary`:
+     --primary is the FILL value and does not clear 4.5:1 as text on a light card. */
+  .surface-action-strip {
+    @apply mt-4 flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary-ink;
   }
 
   .page-soft-bg {

@@ -21,37 +21,37 @@ export interface HubFocusItem {
 const TONE = {
   rose: {
     chip: 'bg-danger-subtle text-danger',
-    heroBg: 'border-danger/25 bg-danger/3',
+    heroBg: 'border-danger/30 bg-danger/10',
     accent: 'border-l-danger',
     dot: 'bg-danger-fill'
   },
   amber: {
     chip: 'bg-warning-subtle text-warning',
-    heroBg: 'border-warning/25 bg-warning/3',
+    heroBg: 'border-warning/30 bg-warning/10',
     accent: 'border-l-warning',
     dot: 'bg-warning-fill'
   },
   emerald: {
     chip: 'bg-success-subtle text-success',
-    heroBg: 'border-success/25 bg-success/3',
+    heroBg: 'border-success/30 bg-success/10',
     accent: 'border-l-success',
     dot: 'bg-success-fill'
   },
   sky: {
-    chip: 'bg-info-subtle text-info',
-    heroBg: 'border-info/25 bg-info/3',
-    accent: 'border-l-info',
-    dot: 'bg-info-fill'
+    chip: 'bg-muted text-muted-foreground',
+    heroBg: 'border-border bg-muted-foreground/10',
+    accent: 'border-l-border',
+    dot: 'bg-muted-foreground'
   },
   violet: {
-    chip: 'bg-feature-subtle text-feature',
-    heroBg: 'border-feature/25 bg-feature/3',
-    accent: 'border-l-feature',
-    dot: 'bg-feature-fill'
+    chip: 'bg-primary/10 text-primary-ink',
+    heroBg: 'border-primary/30 bg-primary/10',
+    accent: 'border-l-primary/60',
+    dot: 'bg-primary'
   },
   primary: {
     chip: 'bg-primary/10 text-primary-ink',
-    heroBg: 'border-primary/30 bg-primary/3',
+    heroBg: 'border-primary/30 bg-primary/10',
     accent: 'border-l-primary/60',
     dot: 'bg-primary'
   }
@@ -89,7 +89,7 @@ export function NextUpCard({ items }: { items: HubFocusItem[] }) {
                 <span className={cn('h-1.5 w-1.5 rounded-full', TONE[hero.tone].dot)} aria-hidden />
                 {hero.label}
               </span>
-              <p className="mt-2 text-lg font-semibold leading-snug text-foreground sm:text-xl">{hero.title}</p>
+              <p className="mt-2 font-heading text-lg font-semibold leading-snug text-foreground sm:text-xl">{hero.title}</p>
               <p className="mt-1 text-sm text-muted-foreground">{hero.detail}</p>
             </div>
             <span
@@ -107,9 +107,9 @@ export function NextUpCard({ items }: { items: HubFocusItem[] }) {
               <li key={item.id}>
                 <Link
                   href={item.href}
-                  className="hover-lift group flex items-center gap-3 rounded-xl border border-border/70 bg-background/60 p-3 hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="hover-lift group flex items-center gap-3 rounded-xl border border-border bg-background p-3 hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-label font-bold text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary-ink">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted text-label font-bold text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary-ink">
                     {index + 2}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -122,7 +122,7 @@ export function NextUpCard({ items }: { items: HubFocusItem[] }) {
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">{item.detail}</p>
                   </div>
                   <ArrowRight
-                    className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-primary-ink/60"
+                    className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-primary-ink"
                     aria-hidden
                   />
                 </Link>

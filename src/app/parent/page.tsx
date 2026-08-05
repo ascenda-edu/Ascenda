@@ -123,7 +123,7 @@ export default async function ParentOverviewPage() {
           <div className="surface-card h-full">
             <div className="relative z-10">
               <p className="eyebrow">Pipeline</p>
-              <p className="mb-4 text-lg font-semibold text-foreground">Where the applications stand</p>
+              <p className="mb-4 font-heading text-lg font-semibold text-foreground">Where the applications stand</p>
               <ul className="space-y-3">
                 {overview.pipeline.map((stage) => (
                   <li key={stage.key} className="space-y-1">
@@ -131,7 +131,7 @@ export default async function ParentOverviewPage() {
                       <span className="text-muted-foreground">{stage.label}</span>
                       <span className="font-semibold text-foreground">{stage.count}</span>
                     </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                       <div
                         className={cn('h-full rounded-full', pipelineBar(stage.key))}
                         style={{ width: `${(stage.count / pipelineMax) * 100}%` }}
@@ -154,7 +154,7 @@ export default async function ParentOverviewPage() {
           <div className="surface-card h-full">
             <div className="relative z-10">
               <p className="eyebrow">Timeline</p>
-              <p className="mb-4 text-lg font-semibold text-foreground">Upcoming deadlines</p>
+              <p className="mb-4 font-heading text-lg font-semibold text-foreground">Upcoming deadlines</p>
               {overview.upcomingDeadlines.length > 0 ? (
                 <ul className="space-y-3">
                   {overview.upcomingDeadlines.slice(0, 3).map((deadline) => (
@@ -198,9 +198,9 @@ export default async function ParentOverviewPage() {
           <div className="surface-card h-full">
             <div className="relative z-10">
               <p className="eyebrow">Counsellor</p>
-              <p className="mb-4 text-lg font-semibold text-foreground">Latest update</p>
+              <p className="mb-4 font-heading text-lg font-semibold text-foreground">Latest update</p>
               {overview.latestCounsellorNote ? (
-                <blockquote className="rounded-xl border border-feature/25 bg-feature-subtle p-3 text-sm text-foreground">
+                <blockquote className="rounded-xl border border-primary/30 bg-primary/10 p-3 text-sm text-foreground">
                   <p className="line-clamp-4">{overview.latestCounsellorNote.body}</p>
                   <footer className="mt-2 text-xs text-muted-foreground">
                     {formatRelativeTime(overview.latestCounsellorNote.date)}
@@ -228,7 +228,7 @@ export default async function ParentOverviewPage() {
           <div className="surface-card h-full">
             <div className="relative z-10">
               <p className="eyebrow">Profile</p>
-              <p className="mb-1 text-lg font-semibold text-foreground">
+              <p className="mb-1 font-heading text-lg font-semibold text-foreground">
                 {child.firstName}&apos;s profile is {overview.completionPercent}% complete
               </p>
               <p className="mb-4 text-xs text-muted-foreground">
@@ -241,8 +241,8 @@ export default async function ParentOverviewPage() {
                     className={cn(
                       'flex items-center gap-2 rounded-xl border px-3 py-2 text-sm',
                       step.done
-                        ? 'border-success/25 bg-success-subtle text-foreground'
-                        : 'border-border bg-muted/20 text-muted-foreground'
+                        ? 'border-border bg-card text-foreground'
+                        : 'border-border bg-muted text-muted-foreground'
                     )}
                   >
                     {step.done ? (
@@ -263,14 +263,14 @@ export default async function ParentOverviewPage() {
           <div className="surface-card h-full">
             <div className="relative z-10">
               <p className="eyebrow">Tasks</p>
-              <p className="mb-4 text-lg font-semibold text-foreground">Workload at a glance</p>
+              <p className="mb-4 font-heading text-lg font-semibold text-foreground">Workload at a glance</p>
               <div className="grid grid-cols-3 gap-3">
                 {[
                   {
                     label: 'Open',
                     value: overview.openTasks,
                     icon: ClipboardCheck,
-                    tone: 'bg-info-subtle text-info',
+                    tone: 'bg-muted text-muted-foreground',
                   },
                   {
                     label: 'This week',

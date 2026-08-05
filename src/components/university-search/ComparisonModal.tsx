@@ -213,7 +213,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
             <DialogContent className="max-w-6xl overflow-hidden p-0 sm:rounded-4xl">
                 <div className="flex h-[85vh] flex-col bg-background">
                     {/* Header */}
-                    <div className="relative border-b border-border/60 bg-card/80 px-6 py-5 backdrop-blur-xl">
+                    <div className="relative border-b border-border bg-card/80 px-6 py-5 backdrop-blur-xl">
                         <span
                             className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"
                             aria-hidden
@@ -235,7 +235,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                 {isMultiple && (
                                     <button
                                         onClick={() => setHighlightDiffs((v) => !v)}
-                                        className="flex items-center gap-2.5 rounded-full border border-border bg-background px-3.5 py-1.5 text-xs font-semibold text-foreground transition hover:border-primary/50 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                        className="flex items-center gap-2.5 rounded-full border border-border bg-background px-3.5 py-1.5 text-xs font-semibold text-foreground transition hover:border-primary/60 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                         role="switch"
                                         aria-checked={highlightDiffs}
                                     >
@@ -266,8 +266,8 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                     <div className="flex-1 overflow-auto">
                         {isEmpty ? (
                             <div className="flex h-full items-center justify-center p-8">
-                                <div className="flex max-w-md flex-col items-center gap-4 rounded-4xl border border-dashed border-border/70 bg-card/60 p-10 text-center">
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary-ink ring-1 ring-primary/20">
+                                <div className="flex max-w-md flex-col items-center gap-4 rounded-4xl border border-dashed border-border bg-card p-10 text-center">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-muted-foreground">
                                         <LayoutGrid className="h-5 w-5" />
                                     </div>
                                     <div className="space-y-1">
@@ -313,7 +313,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                                         {row.label}
                                                     </div>
                                                     {row.hint && (
-                                                        <span className="pl-5 text-label font-normal text-muted-foreground/70">
+                                                        <span className="pl-5 text-label font-normal text-muted-foreground">
                                                             {row.hint}
                                                         </span>
                                                     )}
@@ -324,10 +324,10 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                                         <div
                                                             key={`${uni.id}-${row.id}`}
                                                             className={cn(
-                                                                'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-colors',
-                                                                isBest
-                                                                    ? 'border-success/25 bg-success-subtle'
-                                                                    : 'border-border/60 bg-card/60',
+                                                                // Neutral surface in both states: the "Best" chip below is
+                                                                // the signal, and a tinted cell repeated down every row of a
+                                                                // comparison grid stops reading as one.
+                                                                'flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 transition-colors',
                                                                 identical && !isBest && 'opacity-60'
                                                             )}
                                                         >
@@ -352,14 +352,14 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                     {universities.map((uni) => (
                                         <div
                                             key={`highlights-${uni.id}`}
-                                            className="rounded-2xl border border-border/60 bg-card/60 p-3"
+                                            className="rounded-2xl border border-border bg-card p-3"
                                         >
                                             {uni.highlights.length > 0 ? (
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {uni.highlights.slice(0, 4).map((h) => (
                                                         <span
                                                             key={h}
-                                                            className="inline-flex items-center rounded-full border border-primary/15 bg-primary/8 px-2.5 py-0.5 text-label font-medium text-foreground"
+                                                            className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-label font-medium text-foreground"
                                                         >
                                                             {h}
                                                         </span>
@@ -376,7 +376,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                     </div>
 
                     {!isEmpty && (
-                        <div className="border-t border-border/60 bg-card/80 px-6 py-4 backdrop-blur-xl">
+                        <div className="border-t border-border bg-card/80 px-6 py-4 backdrop-blur-xl">
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <p className="text-sm text-muted-foreground">
                                     Open a course page to dig into requirements and outcomes.
@@ -411,7 +411,16 @@ function ProgramHeaderCard({ uni, onRemove }: { uni: ProgramSearchResult; onRemo
             />
             <button
                 onClick={onRemove}
-                className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/70 text-muted-foreground opacity-0 backdrop-blur-sm transition-[opacity,color,background-color,border-color] hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 group-hover:opacity-100"
+                /* This X is the ONLY way to drop a university from the
+                   comparison, and it used to be `opacity-0` +
+                   `group-hover:opacity-100` — a hover-only control, i.e. one
+                   that does not exist on a touch device, so the comparison set
+                   was un-editable on a phone. `[@media(hover:hover)]` scopes the
+                   hide-then-reveal to pointers that can hover; touch gets it
+                   permanently. The `focus-visible:opacity-100` below is a
+                   2-selector rule and still outranks the single-class
+                   media-gated `opacity-0`, so keyboard reach is unchanged. */
+                className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background/70 text-muted-foreground backdrop-blur-sm transition-[opacity,color,background-color,border-color] hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
                 aria-label={`Remove ${uni.universityName}`}
             >
                 <X className="h-3.5 w-3.5" />
@@ -424,7 +433,7 @@ function ProgramHeaderCard({ uni, onRemove }: { uni: ProgramSearchResult; onRemo
                 <div className="text-right">
                     <p className="eyebrow">{uni.location}</p>
                     {uni.tier ? (
-                        <p className="mt-1 text-xs font-semibold text-foreground/80">{uni.tier} tier</p>
+                        <p className="mt-1 text-xs font-semibold text-foreground">{uni.tier} tier</p>
                     ) : null}
                 </div>
             </div>

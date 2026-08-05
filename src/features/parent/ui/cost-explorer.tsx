@@ -212,7 +212,7 @@ export function CostExplorer({
                 </dl>
 
                 {total !== null ? (
-                  <div className="mt-3 rounded-xl border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                  <div className="mt-3 rounded-xl border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
                     Est. yearly total{' '}
                     <span className="font-semibold text-foreground">{formatHomeOnly(total, currency)}</span>
                     {' '}(tuition + housing)

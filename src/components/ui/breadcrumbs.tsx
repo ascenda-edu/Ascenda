@@ -38,7 +38,7 @@ export const Breadcrumbs = ({ items, className, homeHref = '/dashboard' }: Bread
 
                 return (
                     <Fragment key={item.label + index}>
-                        <ChevronRight className="mx-1 h-4 w-4 text-muted-foreground/50" />
+                        <ChevronRight className="mx-1 h-4 w-4 text-muted-foreground" />
                         {item.href && !isLast ? (
                             <Link
                                 href={item.href}

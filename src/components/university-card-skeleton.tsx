@@ -47,7 +47,7 @@ export const UniversityCardSkeleton = ({ variant = 'default' }: { variant?: 'def
       <Skeleton className="mt-1.5 h-3 w-28 rounded-lg" />
 
       {/* Footer: 3-column stat strip */}
-      <div className="mt-auto border-t border-border/60 pt-3">
+      <div className="mt-auto border-t border-border pt-3">
         <div className="grid grid-cols-[auto_auto_auto] justify-between gap-x-5">
           {[0, 1, 2].map((i) => (
             <div key={i} className="space-y-1.5">

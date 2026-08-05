@@ -87,7 +87,7 @@ export const ApplicationFunnel = ({ funnel, totalStudents, activeStage, onSelect
               </div>
             </div>
             <div className={cn(
-              "h-7 overflow-hidden rounded-xl border border-border/50 bg-muted/40 transition-shadow",
+              "h-7 overflow-hidden rounded-xl border border-border bg-muted transition-shadow",
               isSelected && active
             )}>
               <div

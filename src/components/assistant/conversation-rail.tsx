@@ -128,7 +128,7 @@ export function ConversationRail({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search conversations…"
-            className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-3 text-xs transition-[border-color,box-shadow] hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-3 text-xs transition-[border-color,box-shadow] hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           />
         </div>
       </div>
@@ -156,7 +156,7 @@ export function ConversationRail({
                     transition={{ duration: 0.16 }}
                     className={cn(
                       'group relative rounded-xl border px-2.5 py-2 transition',
-                      isActive ? 'border-primary/30 bg-primary/5' : 'border-transparent hover:bg-muted/50'
+                      isActive ? 'border-primary/30 bg-primary/10' : 'border-transparent hover:bg-muted'
                     )}
                   >
                     {isRenaming ? (
@@ -174,7 +174,7 @@ export function ConversationRail({
                           }
                         }}
                         aria-label="Conversation title"
-                        className="w-full rounded-lg border border-primary/40 bg-background px-2 py-1 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        className="w-full rounded-lg border border-primary/30 bg-background px-2 py-1 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                       />
                     ) : (
                       <button
@@ -206,12 +206,27 @@ export function ConversationRail({
                       </button>
                     )}
 
-                    {/* Hover actions */}
+                    {/* Row actions — pin / rename / delete.
+                        Was hidden behind a bare `opacity-0` + `group-hover`,
+                        which on a touch device means "does not exist": there is
+                        no hover pointer, and the `focus-within` escape hatch
+                        needs a Tab key. `[@media(hover:hover)]` scopes the
+                        hide-then-reveal to pointers that can hover, so touch
+                        sees the cluster permanently. `focus-within` is
+                        `.x:focus-within` (2 selectors) and still outranks the
+                        single-class media-gated `opacity-0`, so keyboard reach
+                        is unchanged. Gap was `gap-0.5` — 2px between three 24px
+                        controls, one of which deletes the conversation. */}
                     {!isRenaming && (
                       <div
                         className={cn(
-                          'absolute right-1.5 top-1.5 flex items-center gap-0.5 rounded-full bg-card/80 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100 focus-within:opacity-100',
-                          isConfirmingDelete && 'opacity-100'
+                          'absolute right-1.5 top-1.5 flex items-center gap-2 rounded-full bg-card/80 backdrop-blur transition-opacity focus-within:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100',
+                          // The variant is repeated deliberately: without a base
+                          // `opacity-0` for tailwind-merge to collapse against, a
+                          // plain `opacity-100` ties on specificity with
+                          // `[@media(hover:hover)]:opacity-0` and loses on source
+                          // order, which would re-hide the "Delete?" confirmation.
+                          isConfirmingDelete && 'opacity-100 [@media(hover:hover)]:opacity-100'
                         )}
                       >
                         <button
@@ -339,7 +354,7 @@ function ActionHistoryItem({ row }: { row: ChatMessageRow }) {
       {href ? (
         <Link
           href={href}
-          className="flex items-start gap-2 rounded-xl px-2 py-1.5 transition-colors hover:bg-muted/60"
+          className="flex items-start gap-2 rounded-xl px-2 py-1.5 transition-colors hover:bg-muted"
         >
           {inner}
         </Link>

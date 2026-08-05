@@ -20,7 +20,7 @@ export const ThemeToggle = ({ compact = false, className }: ThemeToggleProps) =>
         size="icon"
         variant="ghost"
         className={cn(
-          'h-9 w-9 rounded-full border border-border/60 bg-card/80 text-foreground shadow-e-1 transition-colors hover:border-primary/40 hover:bg-muted/60',
+          'h-9 w-9 rounded-full border border-border bg-card text-foreground shadow-e-1 transition-colors hover:border-primary/30 hover:bg-muted',
           className
         )}
         onClick={toggleMode}
@@ -39,11 +39,14 @@ export const ThemeToggle = ({ compact = false, className }: ThemeToggleProps) =>
   return (
     <div
       className={cn(
-        'flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-2 shadow-e-1',
+        'flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 shadow-e-1',
         className
       )}
     >
-      <div className="inline-flex items-center gap-1 rounded-full bg-background/60 p-1">
+      {/* gap-2, was gap-1: three ~36px segments 4px apart is inside the mis-tap
+          band on touch, and System/Light/Dark are mutually exclusive so a
+          mis-tap is always wrong rather than merely extra. */}
+      <div className="inline-flex items-center gap-2 rounded-full bg-background p-1">
         <Button
           type="button"
           size="sm"

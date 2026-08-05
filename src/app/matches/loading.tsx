@@ -15,7 +15,7 @@ import { UniversityCardSkeleton } from '@/components/university-card-skeleton';
  * toolbar row entirely, so the whole results column shifted up on load.
  */
 const TierBlock = ({ count = 3 }: { count?: number }) => (
-  <div className="surface-stage space-y-5 border-l-4 border-l-border">
+  <div className="surface-stage space-y-5">
     <div className="flex flex-col gap-3 border-b border-border pb-4">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">

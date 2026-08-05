@@ -19,41 +19,27 @@ import { useSupabase } from '@/hooks/useSupabase';
 import { insertHelpRequest } from '@/lib/demo/help-request-client';
 import { DEMO_COUNSELLOR } from '@/lib/demo/counsellor';
 
-// Tone tokens (see globals.css) — each is AA-verified in both themes, so no
-// `dark:` variants are needed.
-type TopicTone = 'info' | 'feature' | 'danger' | 'success';
-const TOPIC_TONE: Record<TopicTone, { swatch: string; activeBorder: string; text: string; chip: string }> = {
-  info: {
-    swatch: 'flex h-9 w-9 items-center justify-center rounded-xl bg-info-subtle text-info ring-1 ring-info/25',
-    activeBorder: 'border-info/30 bg-info/5',
-    text: 'text-info',
-    chip: 'bg-info-subtle text-info border border-info/25'
-  },
-  feature: {
-    swatch: 'flex h-9 w-9 items-center justify-center rounded-xl bg-feature-subtle text-feature ring-1 ring-feature/25',
-    activeBorder: 'border-feature/30 bg-feature/5',
-    text: 'text-feature',
-    chip: 'bg-feature-subtle text-feature border border-feature/25'
-  },
-  danger: {
-    swatch: 'flex h-9 w-9 items-center justify-center rounded-xl bg-danger-subtle text-danger ring-1 ring-danger/25',
-    activeBorder: 'border-danger/30 bg-danger/5',
-    text: 'text-danger',
-    chip: 'bg-danger-subtle text-danger border border-danger/25'
-  },
-  success: {
-    swatch: 'flex h-9 w-9 items-center justify-center rounded-xl bg-success-subtle text-success ring-1 ring-success/25',
-    activeBorder: 'border-success/30 bg-success/5',
-    text: 'text-success',
-    chip: 'bg-success-subtle text-success border border-success/25'
-  }
+/**
+ * ONE visual for all four topics. This was a four-hue Record — info / feature /
+ * danger / success, one per topic — which is a nominal set wearing the status
+ * palette: "Interview prep" was rendered in the overdue red purely because it
+ * was third in the list. The icons already tell the four apart.
+ *
+ * The only real state on this control is SELECTED, and that is what the brand
+ * accent below marks. Tone tokens are AA-verified in both themes (globals.css),
+ * so no `dark:` variants are needed.
+ */
+const TOPIC_VISUAL = {
+  swatch: 'flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground',
+  activeBorder: 'border-primary/30 bg-primary/10',
+  text: 'text-primary-ink'
 };
 
-const TOPICS: { id: string; label: string; icon: LucideIcon; tone: TopicTone }[] = [
-  { id: 'university-choice', label: 'University choice', icon: Users, tone: 'info' },
-  { id: 'applications', label: 'Applications & essays', icon: MessageSquare, tone: 'feature' },
-  { id: 'interview-prep', label: 'Interview prep', icon: Video, tone: 'danger' },
-  { id: 'general', label: 'General check-in', icon: CalendarPlus, tone: 'success' }
+const TOPICS: { id: string; label: string; icon: LucideIcon }[] = [
+  { id: 'university-choice', label: 'University choice', icon: Users },
+  { id: 'applications', label: 'Applications & essays', icon: MessageSquare },
+  { id: 'interview-prep', label: 'Interview prep', icon: Video },
+  { id: 'general', label: 'General check-in', icon: CalendarPlus }
 ];
 
 const TIMES = ['09:00', '11:00', '13:00', '15:00', '17:00'];
@@ -164,11 +150,11 @@ export default function AppointmentPage() {
         />
         <div className="surface-card mt-6">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-success-subtle text-success ring-1 ring-success/25">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-success-subtle text-success ring-1 ring-success/30">
               <Check className="h-5 w-5" />
             </div>
             <div className="space-y-2">
-              <p className="text-base font-semibold text-foreground">Got it — {DEMO_COUNSELLOR.firstName} has your request</p>
+              <p className="font-heading text-base font-semibold text-foreground">Got it — {DEMO_COUNSELLOR.firstName} has your request</p>
               <p className="text-sm text-muted-foreground">
                 We&apos;ve sent your preferred time to {DEMO_COUNSELLOR.firstName}. Her reply will appear in your{' '}
                 <Link href="/inbox" className="font-semibold text-primary-ink hover:underline">
@@ -176,7 +162,7 @@ export default function AppointmentPage() {
                 </Link>{' '}
                 — watch for the confirmation there.
               </p>
-              <div className="rounded-xl bg-muted/40 p-4 text-sm text-foreground">
+              <div className="rounded-xl bg-muted p-4 text-sm text-foreground">
                 <p className="eyebrow">Notes shared with your counsellor</p>
                 <p className="mt-1">{notes || '— No additional notes —'}</p>
               </div>
@@ -212,7 +198,6 @@ export default function AppointmentPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             {TOPICS.map((option) => {
               const Icon = option.icon;
-              const tone = TOPIC_TONE[option.tone];
               const active = topic === option.id;
               return (
                 <button
@@ -223,14 +208,14 @@ export default function AppointmentPage() {
                   className={cn(
                     'flex items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                     active
-                      ? cn(tone.activeBorder, 'text-foreground')
-                      : 'border-border bg-background text-muted-foreground hover:border-border/80 hover:text-foreground'
+                      ? cn(TOPIC_VISUAL.activeBorder, 'text-foreground')
+                      : 'border-border bg-background text-muted-foreground hover:text-foreground'
                   )}
                 >
-                  <div className={tone.swatch}>
+                  <div className={TOPIC_VISUAL.swatch}>
                     <Icon className="h-4 w-4" />
                   </div>
-                  <span className={cn(active && tone.text)}>{option.label}</span>
+                  <span className={cn(active && TOPIC_VISUAL.text)}>{option.label}</span>
                 </button>
               );
             })}
@@ -289,7 +274,7 @@ export default function AppointmentPage() {
                       'inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition',
                       active
                         ? 'border-primary/30 bg-primary text-primary-foreground'
-                        : 'border-border bg-background text-muted-foreground hover:border-border/80 hover:text-foreground'
+                        : 'border-border bg-background text-muted-foreground hover:text-foreground'
                     )}
                   >
                     <Clock className="h-3 w-3" aria-hidden />

@@ -184,7 +184,7 @@ export function FitShot({ p, scrub }: ShotProps) {
                             strokeDashoffset={scrub ? dashOffset : RING_CIRC * (1 - FIT_SCORE / 100)}
                         />
                     </svg>
-                    <div className="absolute inset-0 grid place-content-center text-center font-heading" aria-hidden>
+                    <div className="absolute inset-0 grid place-content-center text-center" aria-hidden>
                         <span className="text-[1.9375rem] font-bold leading-none tabular-nums text-foreground">
                             {score}
                         </span>
@@ -309,7 +309,7 @@ export function PlanShot({ p, scrub }: ShotProps) {
                     <div
                         key={stageDef.label}
                         className={cn(
-                            'grid place-content-center whitespace-nowrap px-2 font-heading text-[0.6875rem] font-semibold tabular-nums transition-[flex-grow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
+                            'grid place-content-center whitespace-nowrap px-2 text-[0.6875rem] font-semibold tabular-nums transition-[flex-grow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
                             stageDef.fill,
                         )}
                         style={{ flexGrow: counts[i] }}
@@ -342,7 +342,7 @@ export function PlanShot({ p, scrub }: ShotProps) {
                         card's job is to show a piece of work CROSSING the pipeline —
                         the status line says that on its own. The two named items live
                         in the task rows below. */}
-                    <span className="font-heading text-xs font-semibold leading-snug text-foreground">
+                    <span className="text-xs font-semibold leading-snug text-foreground">
                         TU Delft
                     </span>
                     <span

@@ -509,7 +509,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
       {/* ── Search panel ── */}
       <section className="surface-card space-y-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-info-subtle text-info ring-1 ring-info/25">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground">
             <Search className="h-4 w-4" />
           </div>
           <div>
@@ -575,7 +575,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
               className="rounded-4xl"
             />
           ) : (
-            <ul className="divide-y divide-border/60">
+            <ul className="divide-y divide-border">
               <AnimatePresence initial={false}>
                 {results.map((r) => {
                   const inDeck = selectedDeck?.cards.some((c) => c.programId === r.programId) ?? false;
@@ -601,8 +601,8 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                         className={cn(
                           'flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition hover:-translate-y-0.5',
                           inDeck
-                            ? 'cursor-default border-success/25 bg-success-subtle text-success'
-                            : 'border-border bg-background/60 text-foreground hover:border-primary/50'
+                            ? 'cursor-default border-success/30 bg-success-subtle text-success'
+                            : 'border-border bg-background text-foreground hover:border-primary/60'
                         )}
                       >
                         {inDeck ? 'In deck' : (<><Plus className="h-3.5 w-3.5" /> Add</>)}
@@ -622,7 +622,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
         <section className="surface-card space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-feature-subtle text-feature ring-1 ring-feature/25">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground">
                 <Layers className="h-4 w-4" />
               </div>
               <div>
@@ -633,7 +633,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
             <button
               type="button"
               onClick={() => setCreateOpen((v) => !v)}
-              className="flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1.5 text-xs font-semibold transition hover:-translate-y-0.5 hover:border-primary/50"
+              className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold transition hover:-translate-y-0.5 hover:border-primary/60"
             >
               <Plus className="h-3.5 w-3.5" /> New deck
             </button>
@@ -647,7 +647,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden"
               >
-                <div className="space-y-3 rounded-3xl border border-border/60 bg-muted/30 p-4">
+                <div className="space-y-3 rounded-3xl border border-border bg-muted p-4">
                   <input
                     value={newDeckName}
                     onChange={(e) => setNewDeckName(e.target.value)}
@@ -665,7 +665,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                         onClick={() => setNewDeckEmoji(emoji)}
                         className={cn(
                           'flex h-8 w-8 items-center justify-center rounded-full text-base transition',
-                          newDeckEmoji === emoji ? 'bg-primary/20 ring-2 ring-primary/40' : 'hover:bg-muted'
+                          newDeckEmoji === emoji ? 'bg-primary/10 ring-2 ring-primary/30' : 'hover:bg-muted'
                         )}
                       >
                         {emoji}
@@ -697,8 +697,8 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                   className={cn(
                     'flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition',
                     deck.id === selectedDeckId
-                      ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/20'
-                      : 'border-border/60 bg-background/40 hover:border-border'
+                      ? 'border-primary/60 bg-primary/10 ring-1 ring-primary/30'
+                      : 'border-border bg-background hover:border-border'
                   )}
                 >
                   <span className="text-xl">{deck.theme.emoji ?? '🗡️'}</span>
@@ -756,7 +756,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                         initial={{ opacity: 0, y: 4 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                        className="overflow-hidden rounded-2xl border border-border/60 bg-background/40 p-3"
+                        className="overflow-hidden rounded-2xl border border-border bg-background p-3"
                       >
                         <div className="flex items-start gap-2">
                           <div className="min-w-0 flex-1">
@@ -766,11 +766,22 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                               {card.country ? ` · ${card.country}` : ''}
                             </p>
                           </div>
+                          {/* 14px glyph + p-1 = a 22x22 target, a hair under the
+                              WCAG 2.5.8 (AA) 24px floor, so the hit box grows via
+                              an inset ::after rather than by resizing the glyph.
+                              -inset-3 is 22 + 2*12 = 46 nominal; the card needs
+                              `overflow-hidden` for its exit height animation and
+                              this button sits flush against the top-right corner
+                              of the p-3 padding box, so the top and right 12px are
+                              clipped and the box lands at ~34x34 in practice —
+                              still comfortably over the AA floor, and the clipped
+                              area was outside the card where it would have
+                              overlapped nothing anyway. */}
                           <button
                             type="button"
                             onClick={() => removeCard(selectedDeck.id, card)}
                             aria-label={`Remove ${card.university} from deck`}
-                            className="rounded-full p-1 text-muted-foreground transition hover:bg-danger-subtle hover:text-danger"
+                            className='relative rounded-full p-1 text-muted-foreground transition after:absolute after:-inset-3 after:content-[""] hover:bg-danger-subtle hover:text-danger'
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -830,7 +841,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
             )}
 
             {/* Assignees */}
-            <div className="space-y-2 border-t border-border/60 pt-4">
+            <div className="space-y-2 border-t border-border pt-4">
               <div className="flex items-center justify-between">
                 <p className="eyebrow flex items-center gap-1.5">
                   <Users className="h-3.5 w-3.5" /> On this quest
@@ -839,7 +850,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                   type="button"
                   onClick={() => setAssignOpen(true)}
                   disabled={selectedDeck.cards.length === 0}
-                  className="flex items-center gap-1.5 rounded-full bg-feature-fill px-3.5 py-1.5 text-xs font-semibold text-feature-foreground transition hover:-translate-y-0.5 hover:bg-feature-fill/90 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-full bg-primary-ink px-3.5 py-1.5 text-xs font-semibold text-primary-foreground transition hover:-translate-y-0.5 hover:bg-primary-ink/90 disabled:opacity-50"
                 >
                   <Send className="h-3 w-3" /> Assign to students
                 </button>
@@ -851,14 +862,25 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                   {selectedDeck.assignees.map((a) => (
                     <span
                       key={a.assignmentId}
-                      className="flex items-center gap-1.5 rounded-full border border-feature/25 bg-feature-subtle py-1 pl-2.5 pr-1.5 text-xs font-medium text-feature"
+                      className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 py-1 pl-2.5 pr-1.5 text-xs font-medium text-primary-ink"
                     >
                       {a.flag} {a.name}
+                      {/* 12px glyph + p-0.5 = a 16x16 target, under the WCAG 2.5.8
+                          (AA) 24px floor. The ::after is asymmetric on purpose:
+                          these chips wrap in a `gap-1.5` flex, so a symmetric 44px
+                          box would reach 9px past a 26px chip and start overlapping
+                          the unassign button of the chip in the row above or below —
+                          two adjacent targets for the same destructive action is a
+                          worse outcome than a slightly shorter one. 44 wide
+                          (16 + 2*14, inside the chip's own padding) x 28 tall
+                          (16 + 2*6, which stops 1px past the chip edge and 5px
+                          short of the next row's box). No overflow-hidden ancestor
+                          here, so nothing is clipped. */}
                       <button
                         type="button"
                         onClick={() => unassign(selectedDeck.id, a.assignmentId)}
                         aria-label={`Unassign ${a.name}`}
-                        className="rounded-full p-0.5 transition hover:bg-feature/20"
+                        className='relative rounded-full p-0.5 transition after:absolute after:-inset-x-3.5 after:-inset-y-1.5 after:content-[""] hover:bg-primary/30'
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -903,12 +925,12 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
               <ul className="max-h-64 space-y-1 overflow-y-auto">
                 {assignableRoster.map((s) => (
                   <li key={s.id}>
-                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl px-3 py-2 transition hover:bg-muted/60">
+                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl px-3 py-2 transition hover:bg-muted">
                       <input
                         type="checkbox"
                         checked={assignSelection.has(s.id)}
                         onChange={() => toggleAssign(s.id)}
-                        className="h-4 w-4 rounded border-border accent-feature"
+                        className="h-4 w-4 rounded border-border accent-primary"
                       />
                       <span className="text-base">{s.flag}</span>
                       <span className="flex-1 text-sm font-medium text-foreground">{s.name}</span>
@@ -935,7 +957,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
               type="button"
               onClick={assignDeck}
               disabled={assignSelection.size === 0 || isAssigning}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-feature-fill px-4 py-2.5 text-sm font-semibold text-feature-foreground transition hover:-translate-y-0.5 hover:bg-feature-fill/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-primary-ink px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:-translate-y-0.5 hover:bg-primary-ink/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
             >
               {isAssigning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               Send quest to {assignSelection.size || 'selected'} student{assignSelection.size === 1 ? '' : 's'}
@@ -964,7 +986,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                 type="button"
                 onClick={closeDelete}
                 disabled={isDeletingDeck}
-                className="rounded-full border border-primary bg-transparent px-4 py-2 text-sm font-medium text-primary-ink transition hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+                className="rounded-full border border-primary bg-transparent px-4 py-2 text-sm font-medium text-primary-ink transition hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
               >
                 Cancel
               </button>

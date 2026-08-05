@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { CHART_ACCENT } from './chart-palette';
+import { CHART_ACCENT, chartPaletteAt } from './chart-palette';
 import type { CohortStats } from './types';
 
 // ─── Programme Split ──────────────────────────────────────────────────────────
@@ -21,7 +21,7 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
     <div className="space-y-4">
       {/* No overflow-hidden here: it would clip the hover tooltips out of existence.
           Each segment rounds its own outer corner instead, so the pill shape survives. */}
-      <div className="flex h-10 rounded-2xl border border-border/50">
+      <div className="flex h-10 rounded-2xl border border-border">
         {/* Steps 1 and 4 of the ramp, not 1 and 2 — adjacent steps are only 1.32:1
             apart. The `ring-2 ring-inset ring-card` on the second segment is the 2px surface gap
             that a monochrome stack depends on to stay readable; without it the two
@@ -65,7 +65,7 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
             identity, the number wears ink. */}
         <button
           onClick={() => onSelect?.('IB')}
-          className="hover-lift cursor-pointer rounded-2xl border border-series-1/25 bg-series-1/10 px-5 py-4 text-center"
+          className="hover-lift cursor-pointer rounded-2xl border border-series-1/30 bg-series-1/10 px-5 py-4 text-center"
         >
           <p className="text-2xl font-bold tabular-nums text-foreground">{breakdown.ib}</p>
           <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
@@ -75,7 +75,7 @@ export const ProgrammeSplit = ({ breakdown, onSelect }: ProgrammeSplitProps) => 
         </button>
         <button
           onClick={() => onSelect?.('A_LEVEL')}
-          className="hover-lift cursor-pointer rounded-2xl border border-series-4/25 bg-series-4/10 px-5 py-4 text-center"
+          className="hover-lift cursor-pointer rounded-2xl border border-series-4/30 bg-series-4/10 px-5 py-4 text-center"
         >
           <p className="text-2xl font-bold tabular-nums text-foreground">{breakdown.aLevel}</p>
           <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
@@ -108,13 +108,13 @@ export const IbDistribution = ({ buckets, onSelect }: IbDistributionProps) => {
             onClick={() => count > 0 && onSelect?.({ label, min, max })}
             className={cn(
               'group flex w-full items-center gap-3 rounded-xl px-1 py-0.5 transition',
-              count > 0 ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default opacity-60'
+              count > 0 ? 'cursor-pointer hover:bg-muted' : 'cursor-default opacity-60'
             )}
           >
             <span className="w-16 shrink-0 text-right text-xs font-semibold text-muted-foreground">{label}</span>
             {/* The fill carries its own rounded-xl, so clipping here is redundant —
                 and it used to swallow the hover tooltip. */}
-            <div className="flex-1 rounded-xl bg-muted/50">
+            <div className="flex-1 rounded-xl bg-border">
               <div
                 className={cn(
                   'group relative h-7 rounded-xl bg-primary transition-[width,background-color] duration-700',
@@ -162,11 +162,11 @@ export const FieldChart = ({ fields, onSelect }: FieldChartProps) => {
             onClick={() => count > 0 && onSelect?.({ key, label })}
             className={cn(
               'group flex w-full items-center gap-3 rounded-xl px-1 py-0.5 transition',
-              count > 0 ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default opacity-60'
+              count > 0 ? 'cursor-pointer hover:bg-muted' : 'cursor-default opacity-60'
             )}
           >
             <span className="w-28 shrink-0 truncate text-right text-xs text-muted-foreground">{label}</span>
-            <div className="flex-1 rounded-xl bg-muted/50">
+            <div className="flex-1 rounded-xl bg-border">
               <div
                 className={cn(
                   'group relative h-7 rounded-xl transition-[width,background-color] duration-700',
@@ -198,21 +198,22 @@ interface FullFunnelProps {
 }
 
 // Tone mapping mirrors APPLICATION_STATUS_VISUAL / STAGE_COLORS exactly, so the
-// funnel, the kanban and the drill-down can't disagree about a stage: planning=info,
-// inProgress=warning, submitted=success, decision=feature. It previously used grey
-// for planning and info for inProgress, which meant clicking the blue "In Progress"
-// bar opened a drill-down with an amber accent one click later — and clicking the
-// GREY "Planning" bar opened a blue-accented drill-down (that half survived the
-// first pass and was fixed only after driving all four bars).
+// funnel, the kanban and the drill-down can't disagree about a stage. Only the two
+// stages that ask something of someone keep a hue: inProgress=warning,
+// submitted=success. `planning` and `decision` are waiting states, so they are
+// neutral — the bar's own label is what identifies it, and a hue that just marks a
+// position in a sequence is telling the reader something they can already read.
 //
-// `textOnFill` is the tone's own -foreground, NOT `text-foreground`. This is the one
-// chart that still prints its value inside the mark, and near-white ink on a bright
-// fill measured 1.43:1 on "Submitted" in dark mode — the value was invisible.
+// `textOnFill` is ink chosen for the fill it sits on, NOT `text-foreground`. This is
+// the one chart that still prints its value inside the mark, and near-white ink on a
+// bright fill measured 1.43:1 on "Submitted" in dark mode — the value was invisible.
+// The neutral bars use `text-background` because `--muted-foreground` is dark in
+// light mode and light in dark mode, so `background` is the token that flips with it.
 const FUNNEL_STAGES = [
-  { key: 'planning' as const, label: 'Planning', color: 'bg-info-fill', hoverColor: 'hover:bg-info-fill/85', textColor: 'text-info', textOnFill: 'text-info-foreground' },
+  { key: 'planning' as const, label: 'Planning', color: 'bg-muted-foreground', hoverColor: 'hover:bg-muted-foreground/85', textColor: 'text-muted-foreground', textOnFill: 'text-background' },
   { key: 'inProgress' as const, label: 'In Progress', color: 'bg-warning-fill', hoverColor: 'hover:bg-warning-fill/85', textColor: 'text-warning', textOnFill: 'text-warning-foreground' },
   { key: 'submitted' as const, label: 'Submitted', color: 'bg-success-fill', hoverColor: 'hover:bg-success-fill/85', textColor: 'text-success', textOnFill: 'text-success-foreground' },
-  { key: 'decision' as const, label: 'Decision Received', color: 'bg-feature-fill', hoverColor: 'hover:bg-feature-fill/85', textColor: 'text-feature', textOnFill: 'text-feature-foreground' },
+  { key: 'decision' as const, label: 'Decision Received', color: 'bg-muted-foreground', hoverColor: 'hover:bg-muted-foreground/85', textColor: 'text-muted-foreground', textOnFill: 'text-background' },
   // enrolled = primary, matching APPLICATION_STATUS_VISUAL.enrolled. The terminal
   // stage of the funnel wears the brand accent rather than a sixth status hue.
   { key: 'enrolled' as const, label: 'Enrolled', color: 'bg-primary', hoverColor: 'hover:bg-primary/85', textColor: 'text-primary-ink', textOnFill: 'text-primary-foreground' }
@@ -262,8 +263,8 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-label font-semibold transition',
             compareYoY
-              ? 'border-feature/40 bg-feature-subtle text-feature'
-              : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:bg-muted/60 hover:text-foreground'
+              ? 'border-primary/60 bg-primary/10 text-primary-ink'
+              : 'border-border text-muted-foreground hover:border-primary/30 hover:bg-muted hover:text-foreground'
           )}
         >
           Compare to last year
@@ -284,7 +285,7 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
               onClick={() => count > 0 && onSelect?.(key, label)}
               className={cn(
                 'group block w-full space-y-1.5 rounded-xl px-1 py-1 transition',
-                count > 0 ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default'
+                count > 0 ? 'cursor-pointer hover:bg-muted' : 'cursor-default'
               )}
             >
               <div className="flex items-center justify-between text-xs">
@@ -333,16 +334,19 @@ export const MatchTierSummary = ({ tiers, onSelect }: MatchTierSummaryProps) => 
 
   const tierList = [
     // reach/match/safety is a status scale, matching TIER_VISUAL in lib/theme/categories.
-    { key: 'reach' as const, label: 'Reach', count: tiers.reach, color: 'bg-danger-fill', hoverColor: 'hover:bg-danger-fill/85', card: 'border-danger/25 bg-danger-subtle', hoverCard: 'hover-lift', text: 'text-danger' },
-    { key: 'match' as const, label: 'Match', count: tiers.match, color: 'bg-warning-fill', hoverColor: 'hover:bg-warning-fill/85', card: 'border-warning/25 bg-warning-subtle', hoverCard: 'hover-lift', text: 'text-warning' },
-    { key: 'safe' as const, label: 'Safe', count: tiers.safe, color: 'bg-success-fill', hoverColor: 'hover:bg-success-fill/85', card: 'border-success/25 bg-success-subtle', hoverCard: 'hover-lift', text: 'text-success' }
+    // The three tally CARDS below are plain surfaces, though — a tinted block is too
+    // much surface for a tier that the stacked bar above has already coloured. The
+    // tone stays on the count, which is the thing being read.
+    { key: 'reach' as const, label: 'Reach', count: tiers.reach, color: 'bg-danger-fill', hoverColor: 'hover:bg-danger-fill/85', card: 'border-border bg-card', hoverCard: 'hover-lift', text: 'text-danger' },
+    { key: 'match' as const, label: 'Match', count: tiers.match, color: 'bg-warning-fill', hoverColor: 'hover:bg-warning-fill/85', card: 'border-border bg-card', hoverCard: 'hover-lift', text: 'text-warning' },
+    { key: 'safe' as const, label: 'Safe', count: tiers.safe, color: 'bg-success-fill', hoverColor: 'hover:bg-success-fill/85', card: 'border-border bg-card', hoverCard: 'hover-lift', text: 'text-success' }
   ];
 
   return (
     <div className="space-y-4">
       {/* Stacked bar */}
       {/* See ProgrammeSplit: no overflow-hidden, or the tooltips get clipped away. */}
-      <div className="flex h-10 rounded-2xl border border-border/50">
+      <div className="flex h-10 rounded-2xl border border-border">
         {tierList.map(({ key, label, count, color, hoverColor }) => {
           const pct = (count / total) * 100;
           return pct > 0 ? (
@@ -390,23 +394,39 @@ interface CompletionBreakdownProps {
 }
 
 export const CompletionBreakdown = ({ students, onSelect }: CompletionBreakdownProps) => {
-  // Completion bands are a STATUS scale, not categorical data, so they use the tone
-  // tokens rather than chart series colours. (They were emerald/sky/amber/red-500 —
-  // note `red`, where the rest of the app used `rose`, one of the drifts that made
-  // status colour untunable.)
+  /* These four buckets are ORDINAL SLOTS on a quantity, not statuses — so they walk
+     the monochrome `--series-*` ramp, not the tone tokens.
+
+     The comment that used to sit here asserted the opposite ("completion bands are a
+     STATUS scale"), and that premise is the bug: a percentage is a quantity, and
+     `warning` means "act soon", which implies a deadline a half-finished profile has
+     none of. `bg-warning-fill` is also measurably olive (OKLCH hue 80° at chroma
+     0.126 in light; 1.55:1 against the track in dark). The old scale was additionally
+     non-monotone in chroma — coloured, then `bg-muted-foreground` grey, then coloured
+     again — so the middle of the range was the dullest part of it.
+
+     The ramp index runs by COMPLETION MAGNITUDE, not by position in this array: the
+     array prints 100% first (most-complete at the top reads better), so indexing it
+     as written would inverse the encoding. `<50%` takes step 1, `100%` step 4.
+     ⚠ Keep this in step with `RAMP_INDEX_BY_BUCKET` in `../_analytics-client.tsx` —
+     the accent on the drill-down panel is meant to be the colour of the bar the
+     counsellor just clicked, and these are two hand-synced copies of one mapping. */
   const buckets = [
-    { label: '100%', count: students.filter((s) => s.pct === 100).length, color: 'bg-success-fill', hoverColor: 'hover:bg-success-fill/85', tooltip: 'Fully complete', min: 100, max: 100 },
-    { label: '75–99%', count: students.filter((s) => s.pct >= 75 && s.pct < 100).length, color: 'bg-info-fill', hoverColor: 'hover:bg-info-fill/85', tooltip: 'Almost complete', min: 75, max: 99 },
-    { label: '50–74%', count: students.filter((s) => s.pct >= 50 && s.pct < 75).length, color: 'bg-warning-fill', hoverColor: 'hover:bg-warning-fill/85', tooltip: 'Partially complete', min: 50, max: 74 },
-    { label: '<50%', count: students.filter((s) => s.pct < 50).length, color: 'bg-danger-fill', hoverColor: 'hover:bg-danger-fill/85', tooltip: 'Needs attention', min: 0, max: 49 }
-  ];
+    { label: '100%', count: students.filter((s) => s.pct === 100).length, ramp: 3, tooltip: 'Fully complete', min: 100, max: 100 },
+    { label: '75–99%', count: students.filter((s) => s.pct >= 75 && s.pct < 100).length, ramp: 2, tooltip: 'Almost complete', min: 75, max: 99 },
+    { label: '50–74%', count: students.filter((s) => s.pct >= 50 && s.pct < 75).length, ramp: 1, tooltip: 'Partially complete', min: 50, max: 74 },
+    { label: '<50%', count: students.filter((s) => s.pct < 50).length, ramp: 0, tooltip: 'Needs attention', min: 0, max: 49 }
+  ].map((b) => ({ ...b, color: chartPaletteAt(b.ramp).bar, hoverColor: chartPaletteAt(b.ramp).barHover }));
   const max = Math.max(...buckets.map((b) => b.count), 1);
   const avg = Math.round(students.reduce((a, s) => a + s.pct, 0) / (students.length || 1));
 
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <span className="text-sm font-bold text-primary">{avg}% avg</span>
+        {/* text-primary-ink, not text-primary: --primary is the FILL value. It
+            happens to clear AA on a white card (4.58:1) but measures 3.88:1 on
+            bg-muted, so a later surface change here would silently break it. */}
+        <span className="text-sm font-bold text-primary-ink">{avg}% avg</span>
       </div>
       <div className="space-y-2.5">
         {buckets.map(({ label, count, color, hoverColor, tooltip, min, max: bucketMax }) => (
@@ -415,11 +435,11 @@ export const CompletionBreakdown = ({ students, onSelect }: CompletionBreakdownP
             onClick={() => count > 0 && onSelect?.({ label, min, max: bucketMax })}
             className={cn(
               'group flex w-full items-center gap-3 rounded-xl px-1 py-0.5 transition',
-              count > 0 ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default opacity-60'
+              count > 0 ? 'cursor-pointer hover:bg-muted' : 'cursor-default opacity-60'
             )}
           >
             <span className="w-14 shrink-0 text-right text-xs font-semibold text-muted-foreground">{label}</span>
-            <div className="flex-1 rounded-xl bg-muted/50">
+            <div className="flex-1 rounded-xl bg-border">
               <div
                 className={cn(
                   'group relative h-7 rounded-xl transition-[width,background-color] duration-700',

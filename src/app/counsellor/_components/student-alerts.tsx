@@ -11,13 +11,16 @@ interface StudentAlertsProps {
   students: CounsellorStudent[];
 }
 
-const FLAG_CONFIG: Record<StudentFlag, { label: string; icon: typeof AlertTriangle; color: string; bg: string }> = {
-  profile_incomplete: { label: 'Profile incomplete', icon: UserX, color: 'text-warning', bg: 'bg-warning-subtle' },
-  deadline_urgent: { label: 'Deadline in ≤5 days', icon: Clock, color: 'text-danger', bg: 'bg-danger-subtle' },
-  no_matches: { label: 'No matches yet', icon: TrendingDown, color: 'text-info', bg: 'bg-info-subtle' },
+// No `bg` any more: the tint used to fill an icon bubble on every row, which is the
+// same colour said twice — the flag LABEL underneath already carries the tone, and
+// that is the part being read.
+const FLAG_CONFIG: Record<StudentFlag, { label: string; icon: typeof AlertTriangle; color: string }> = {
+  profile_incomplete: { label: 'Profile incomplete', icon: UserX, color: 'text-warning' },
+  deadline_urgent: { label: 'Deadline in ≤5 days', icon: Clock, color: 'text-danger' },
+  no_matches: { label: 'No matches yet', icon: TrendingDown, color: 'text-muted-foreground' },
   // `stalled` was the app's only orange; it is the same "needs a nudge" state as an
   // incomplete profile, so it wears `warning` too.
-  stalled: { label: 'Stalled — no recent activity', icon: AlertTriangle, color: 'text-warning', bg: 'bg-warning-subtle' }
+  stalled: { label: 'Stalled — no recent activity', icon: AlertTriangle, color: 'text-warning' }
 };
 
 export const StudentAlerts = ({ students }: StudentAlertsProps) => {
@@ -36,8 +39,8 @@ export const StudentAlerts = ({ students }: StudentAlertsProps) => {
   if (flagged.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
-        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-success-subtle">
-          <AlertTriangle className="h-5 w-5 text-success" />
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full">
+          <AlertTriangle className="h-5 w-5 text-muted-foreground" />
         </div>
         <p className="text-sm font-semibold text-foreground">All students on track</p>
         <p className="text-xs text-muted-foreground">No attention flags at this time.</p>
@@ -69,8 +72,8 @@ export const StudentAlerts = ({ students }: StudentAlertsProps) => {
           className={cn(
             'flex items-center gap-1.5 rounded-full border px-3 py-1 text-label font-medium transition hover:-translate-y-0.5',
             manageOpen
-              ? 'border-primary/40 bg-primary/10 text-primary-ink'
-              : 'border-border/60 bg-background/60 text-muted-foreground hover:text-foreground'
+              ? 'border-primary/30 bg-primary/10 text-primary-ink'
+              : 'border-border bg-background text-muted-foreground hover:text-foreground'
           )}
         >
           <Settings2 className="h-3 w-3" />
@@ -89,7 +92,7 @@ export const StudentAlerts = ({ students }: StudentAlertsProps) => {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="rounded-2xl border border-border/60 bg-muted/30 p-3 space-y-1.5">
+            <div className="rounded-2xl border border-border bg-muted p-3 space-y-1.5">
               <p className="eyebrow px-1 pb-0.5">
                 Flagged students
               </p>
@@ -101,7 +104,7 @@ export const StudentAlerts = ({ students }: StudentAlertsProps) => {
                     key={student.id}
                     className={cn(
                       'flex items-center gap-2 rounded-xl px-2 py-1.5 transition',
-                      isHidden ? 'opacity-40' : 'bg-background/60'
+                      isHidden ? 'opacity-40' : 'bg-background'
                     )}
                   >
                     <span className="text-sm">{student.personal.flagEmoji}</span>
@@ -115,8 +118,8 @@ export const StudentAlerts = ({ students }: StudentAlertsProps) => {
                       className={cn(
                         'flex h-6 w-6 items-center justify-center rounded-lg border transition',
                         isPinned
-                          ? 'border-primary/40 bg-primary/10 text-primary-ink'
-                          : 'border-border/60 text-muted-foreground hover:text-primary-ink hover:border-primary/40'
+                          ? 'border-primary/30 bg-primary/10 text-primary-ink'
+                          : 'border-border text-muted-foreground hover:text-primary-ink hover:border-primary/30'
                       )}
                     >
                       {isPinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
@@ -127,8 +130,8 @@ export const StudentAlerts = ({ students }: StudentAlertsProps) => {
                       className={cn(
                         'flex h-6 w-6 items-center justify-center rounded-lg border transition',
                         isHidden
-                          ? 'border-success/25 bg-success-subtle text-success'
-                          : 'border-border/60 text-muted-foreground hover:text-destructive hover:border-destructive/40'
+                          ? 'border-success/30 bg-success-subtle text-success'
+                          : 'border-border text-muted-foreground hover:text-destructive hover:border-destructive/30'
                       )}
                     >
                       {isHidden ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
@@ -168,13 +171,13 @@ export const StudentAlerts = ({ students }: StudentAlertsProps) => {
                 <Link
                   href={`/counsellor/students/${student.id}`}
                   className={cn(
-                    'flex items-center gap-3 rounded-2xl border border-border/60 bg-background/60 px-4 py-3 transition hover:bg-muted/40 hover:shadow-e-1',
-                    isPinned && 'border-primary/20 bg-primary/5'
+                    'flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3 transition hover:bg-muted/60 hover:shadow-e-1',
+                    isPinned && 'border-primary/30 bg-primary/10'
                   )}
                 >
-                  {isPinned && <Pin className="h-3 w-3 shrink-0 text-primary-ink/50" />}
-                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${cfg.bg}`}>
-                    <Icon className={`h-4 w-4 ${cfg.color}`} />
+                  {isPinned && <Pin className="h-3 w-3 shrink-0 text-primary-ink" />}
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-foreground">

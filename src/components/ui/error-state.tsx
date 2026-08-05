@@ -58,11 +58,11 @@ export function ErrorState({
     <div
       role="alert"
       className={cn(
-        'flex min-h-[60vh] flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-muted/10 p-8 text-center text-foreground',
+        'flex min-h-[60vh] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted p-8 text-center text-foreground',
         className
       )}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-danger-subtle ring-1 ring-danger/25">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-danger-subtle ring-1 ring-danger/30">
         <AlertTriangle className="h-5 w-5 text-danger" aria-hidden />
       </div>
       {scope ? <p className="eyebrow mt-5">{scope}</p> : null}

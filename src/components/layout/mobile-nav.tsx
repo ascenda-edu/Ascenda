@@ -126,8 +126,14 @@ export const MobileNav = () => {
             aria-label="More destinations"
             className="absolute bottom-full left-0 right-0 mb-2 rounded-2xl border border-border/50 bg-card/95 p-2 shadow-e-4 backdrop-blur-xl dark:border-white/10 dark:bg-muted/40"
           >
+            {/* The list below is gap-2, was gap-1. This panel holds the
+                destinations that did not fit the bar — 6 of 10 for a counsellor
+                — so it is the main way those pages are reached on a phone, and
+                36px rows 4px apart make a mis-tap a navigation to the wrong
+                section. (Comment lives out here: a JSX comment cannot be a
+                sibling inside a `&&` branch.) */}
             {overflowItems.length > 0 && (
-              <ul className="grid grid-cols-2 gap-1">
+              <ul className="grid grid-cols-2 gap-2">
                 {overflowItems.map((item) => {
                   const Icon = item.icon;
                   const active = isNavActive(item, pathname);
@@ -142,7 +148,7 @@ export const MobileNav = () => {
                           'flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition',
                           active
                             ? 'bg-primary text-primary-foreground shadow-e-1'
-                            : 'text-muted-foreground hover:text-foreground active:bg-muted/60'
+                            : 'text-muted-foreground hover:text-foreground active:bg-muted'
                         )}
                       >
                         <Icon className="h-4 w-4 shrink-0" aria-hidden />
@@ -159,7 +165,10 @@ export const MobileNav = () => {
               onClick={handleSignOut}
               className={cn(
                 'flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition',
-                overflowItems.length > 0 && 'mt-1 border-t border-border/40 pt-2.5',
+                // mt-2, was mt-1: the 4px above this button was the only gap
+                // between the last nav row's hit box and Sign out — the one
+                // irreversible item in the panel.
+                overflowItems.length > 0 && 'mt-2 border-t border-border pt-2.5',
                 confirmSignOut
                   ? 'text-destructive'
                   : 'text-muted-foreground hover:text-destructive active:bg-destructive/10'
@@ -187,7 +196,7 @@ export const MobileNav = () => {
                   'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition',
                   active
                     ? 'bg-primary text-primary-foreground shadow-e-1'
-                    : 'hover:text-foreground active:bg-muted/60'
+                    : 'hover:text-foreground active:bg-muted'
                 )}
               >
                 <Icon className="h-5 w-5 shrink-0" aria-hidden />
@@ -211,7 +220,7 @@ export const MobileNav = () => {
               'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition',
               moreOpen || overflowActive
                 ? 'bg-primary text-primary-foreground shadow-e-1'
-                : 'hover:text-foreground active:bg-muted/60'
+                : 'hover:text-foreground active:bg-muted'
             )}
           >
             <MoreHorizontal className="h-5 w-5 shrink-0" aria-hidden />

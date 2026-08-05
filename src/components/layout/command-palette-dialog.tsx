@@ -308,7 +308,7 @@ export function CommandPaletteDialog({ open, onOpenChange: setOpen }: CommandPal
                           <span
                             className={cn(
                               'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
-                              isActive ? 'bg-primary/15 text-primary-ink' : 'bg-muted text-muted-foreground'
+                              isActive ? 'bg-primary/10 text-primary-ink' : 'bg-muted/60 text-muted-foreground'
                             )}
                           >
                             <Icon className="h-3.5 w-3.5" aria-hidden />
@@ -334,7 +334,7 @@ export function CommandPaletteDialog({ open, onOpenChange: setOpen }: CommandPal
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-border bg-muted/30 px-4 py-2 text-label text-muted-foreground">
+        <div className="flex items-center justify-between gap-3 border-t border-border bg-muted px-4 py-2 text-label text-muted-foreground">
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-1">
               <kbd className="rounded border border-border bg-background px-1 py-0.5 font-mono">↑↓</kbd>

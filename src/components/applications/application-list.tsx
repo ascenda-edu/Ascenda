@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Sparkles, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { TIER_VISUAL } from '@/lib/theme/categories';
+import { PROGRESS_FILL, TIER_VISUAL } from '@/lib/theme/categories';
 import { HelpRequestModal, type HelpRequestModalApp } from './help-request-modal';
 
 export interface ApplicationRow {
@@ -98,8 +98,8 @@ export function ApplicationList({ rows }: Props) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: index * 0.03 }}
               className={cn(
-                'rounded-2xl border bg-card/60 px-4 py-3 transition',
-                isClosed ? 'border-border/40 opacity-80' : 'hover-lift border-border/60 hover:border-primary/40'
+                'rounded-2xl border bg-card px-4 py-3 transition',
+                isClosed ? 'border-border opacity-80' : 'hover-lift border-border hover:border-primary/30'
               )}
             >
               <div className="flex items-center gap-4">
@@ -147,7 +147,7 @@ export function ApplicationList({ rows }: Props) {
                         tasksRemaining: row.tasksOpen
                       })
                     }
-                    className="shrink-0 border-feature/25 bg-feature-subtle text-feature transition hover:bg-feature/15"
+                    className="shrink-0 border-primary/30 bg-primary/10 text-primary-ink transition hover:border-primary/60"
                   >
                     <Sparkles className="mr-1.5 h-3.5 w-3.5" aria-hidden />
                     Need help
@@ -157,12 +157,30 @@ export function ApplicationList({ rows }: Props) {
 
               {!isClosed && row.tasksTotal > 0 ? (
                 <div className="mt-2.5 flex items-center gap-3">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted/60">
+                  {/* "N of M tasks open" is a QUANTITY, so the length is the encoding and the
+                      fill is one brand colour at every value (brand.md §5, Data: "Progress bar
+                      — level 5 — Brand").
+
+                      Both this bar and the one in features/parent/ui/progress-board.tsx used to
+                      carry a byte-identical copy-pasted ternary:
+
+                        progress >= 75 ? 'bg-success-fill'
+                          : progress >= 40 ? 'bg-muted-foreground'
+                          : 'bg-warning-fill'
+
+                      which was wrong three ways. It was non-monotone in chroma — coloured, then
+                      grey, then coloured — so the bar went LESS colourful through the middle of
+                      its own range and more at both ends. It banded on a scheme that skipped
+                      `danger` entirely, so its bottom band was amber where classifyCompletion's
+                      is rose: two vocabularies for one idea. And it read a count as a status,
+                      where `warning` promises a deadline that a half-done task list does not have.
+
+                      Both sites now import PROGRESS_FILL instead of restating it, so the two
+                      cannot drift apart again. `transition-[background-color]` went with it —
+                      there is no longer a colour to transition. */}
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                     <div
-                      className={cn(
-                        'h-full rounded-full transition-[width,background-color]',
-                        progress >= 75 ? 'bg-success-fill' : progress >= 40 ? 'bg-info-fill' : 'bg-warning-fill'
-                      )}
+                      className={cn('h-full rounded-full transition-[width]', PROGRESS_FILL)}
                       style={{ width: `${progress}%` }}
                     />
                   </div>

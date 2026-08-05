@@ -42,7 +42,7 @@ export const renderRichText = (text?: string | null, options?: { forceBullets?: 
   return (
     <div className="space-y-3">
       {intro.map((para, idx) => (
-        <p key={`intro-${idx}`} className="text-foreground/85 leading-relaxed">
+        <p key={`intro-${idx}`} className="text-foreground leading-relaxed">
           {emphasize(para)}
         </p>
       ))}
@@ -50,8 +50,8 @@ export const renderRichText = (text?: string | null, options?: { forceBullets?: 
         <ul className="space-y-3 not-prose">
           {finalBullets.map((item, idx) => (
             <li key={`bullet-${idx}`} className="flex items-start gap-3">
-              <span className="mt-2.5 block h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" aria-hidden />
-              <span className="text-foreground/85 leading-relaxed">{emphasize(item)}</span>
+              <span className="mt-2.5 block h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" aria-hidden />
+              <span className="text-foreground leading-relaxed">{emphasize(item)}</span>
             </li>
           ))}
         </ul>

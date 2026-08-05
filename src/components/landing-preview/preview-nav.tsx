@@ -311,7 +311,7 @@ export function PreviewNav() {
                                     onClick={jumpToLaunch}
                                     aria-label="Jump to sign-up"
                                     className={cn(
-                                        'hidden shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 font-heading text-xs font-semibold tracking-[0.07em] tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:inline-flex',
+                                        'hidden shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold tracking-[0.07em] tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:inline-flex',
                                         overBand
                                             ? launched
                                                 ? 'border-emerald-400/50 text-emerald-400'

@@ -115,7 +115,7 @@ export const NavDropdown = ({ label, items }: NavDropdownProps) => {
                   'flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
                   active
                     ? 'bg-primary/10 text-foreground'
-                    : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground'
+                    : 'text-muted-foreground hover:bg-foreground/10 hover:text-foreground'
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" aria-hidden />

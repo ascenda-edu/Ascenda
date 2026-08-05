@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast';
 import { useSupabase } from '@/hooks/useSupabase';
 import { insertHelpRequest } from '@/lib/demo/help-request-client';
+import { PROGRESS_FILL } from '@/lib/theme/categories';
 import { parseLocalDate } from '@/lib/utils/dates';
 import type { RecLetterRequest, RecLetterStatus } from '@/lib/data/student-demo-data';
 
@@ -43,16 +44,16 @@ const STATUS_INDEX: Record<RecLetterStatus, number> = {
 const STATUS_COLORS: Record<RecLetterStatus, string> = {
   draft: 'text-muted-foreground',
   requested: 'text-warning',
-  writing: 'text-info',
-  signed: 'text-feature',
+  writing: 'text-muted-foreground',
+  signed: 'text-primary-ink',
   uploaded: 'text-success'
 };
 
 const STATUS_BG: Record<RecLetterStatus, string> = {
-  draft: 'bg-muted/60',
+  draft: 'bg-muted',
   requested: 'bg-warning-subtle',
-  writing: 'bg-info-subtle',
-  signed: 'bg-feature-subtle',
+  writing: 'bg-muted',
+  signed: 'bg-primary/10',
   uploaded: 'bg-success-subtle'
 };
 
@@ -178,11 +179,20 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
             <span className="font-semibold text-foreground">{completedCount}</span> of{' '}
             <span className="font-semibold text-foreground">{letters.length}</span> letters received
           </p>
-          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted/60">
+          {/* Brand, not green. This bar was unconditionally `bg-success-fill`, which
+              claimed a terminal positive outcome for a running count: at 1 of 4 letters
+              received it drew a short green bar, reading as "good" about a state that is
+              mostly outstanding work. brand.md §4 rule 3 reserves `success` for genuine
+              outcomes — an offer, not a tally — and §5 puts a progress bar on the brand.
+              The per-letter STATUS_COLORS below are a real status ladder and keep their
+              tones; this bar is the sum of them, which is a quantity. */}
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
             <motion.div
-              className="h-2 rounded-full bg-success-fill"
+              className={cn('h-2 rounded-full', PROGRESS_FILL)}
               initial={{ width: 0 }}
-              animate={{ width: `${(completedCount / letters.length) * 100}%` }}
+              // Guard the empty case: `0 / 0` is NaN, which renders as `width: "NaN%"`
+              // and silently drops the declaration. Pre-existing, found while retoning.
+              animate={{ width: `${letters.length ? (completedCount / letters.length) * 100 : 0}%` }}
               transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
             />
           </div>
@@ -219,10 +229,10 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
                     'shrink-0 rounded-full border px-3 py-1 text-xs font-semibold',
                     STATUS_BG[letter.status],
                     STATUS_COLORS[letter.status],
-                    letter.status === 'uploaded' ? 'border-success/25' :
-                    letter.status === 'signed' ? 'border-feature/25' :
-                    letter.status === 'writing' ? 'border-info/25' :
-                    letter.status === 'requested' ? 'border-warning/25' :
+                    letter.status === 'uploaded' ? 'border-success/30' :
+                    letter.status === 'signed' ? 'border-primary/30' :
+                    letter.status === 'writing' ? 'border-border' :
+                    letter.status === 'requested' ? 'border-warning/30' :
                     'border-border'
                   )}
                 >
@@ -244,8 +254,8 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
                           'flex h-8 w-8 items-center justify-center rounded-full border text-xs transition-[color,background-color,border-color,box-shadow]',
                           isComplete
                             ? cn('border-transparent', STATUS_BG[letter.status], STATUS_COLORS[letter.status])
-                            : 'border-border/60 text-muted-foreground/40',
-                          isCurrent && 'ring-2 ring-primary/20'
+                            : 'border-border text-muted-foreground',
+                          isCurrent && 'ring-2 ring-primary/30'
                         )}
                       >
                         <StepIcon className="h-3.5 w-3.5" />
@@ -254,7 +264,7 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
                         <div
                           className={cn(
                             'h-px flex-1',
-                            i < currentIdx ? 'bg-success/40' : 'bg-border/40'
+                            i < currentIdx ? 'bg-success/30' : 'bg-border/60'
                           )}
                         />
                       )}
@@ -279,9 +289,9 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
 
               {/* Remind affordance — ask the counsellor to chase the recommender. */}
               {(letter.status === 'requested' || letter.status === 'writing') ? (
-                <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
+                <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
                   {reminders[letter.id] ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-info/25 bg-info-subtle px-3 py-1 text-label font-semibold text-info">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-label font-semibold text-muted-foreground">
                       <Send className="h-3 w-3" aria-hidden />
                       Counsellor notified · {formatReminderAge(reminders[letter.id])}
                     </span>
@@ -290,7 +300,7 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
                       type="button"
                       onClick={() => handleRemind(letter)}
                       disabled={busy === letter.id}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1 text-label font-semibold text-muted-foreground transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted/60 hover:text-foreground disabled:cursor-wait disabled:opacity-60"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-label font-semibold text-muted-foreground transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted hover:text-foreground disabled:cursor-wait disabled:opacity-60"
                     >
                       <Send className="h-3 w-3" aria-hidden />
                       {busy === letter.id ? 'Sending…' : `Ask your counsellor to chase ${letter.teacherName.split(' ')[0]}`}

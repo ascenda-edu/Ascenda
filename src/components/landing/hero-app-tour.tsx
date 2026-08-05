@@ -106,7 +106,7 @@ function ChancesPanel({ onInteract }: { onInteract: () => void }) {
                     <label htmlFor="hero-ib-slider" className="text-[0.8125rem] font-semibold text-foreground">
                         What if I score…
                     </label>
-                    <p className="font-heading text-xl font-bold leading-none text-primary tabular-nums">
+                    <p className="text-xl font-bold leading-none text-primary tabular-nums">
                         {score} <span className="text-[0.625rem] font-semibold text-muted-foreground">IB pts</span>
                     </p>
                 </div>
@@ -127,8 +127,15 @@ function ChancesPanel({ onInteract }: { onInteract: () => void }) {
                         // It used to be bg-card, which is white on light but a near-black
                         // slab on dark — a black circle on a black card, so the control
                         // read as a bare track with nothing to grab.
-                        '[&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-[3px] [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110 dark:[&::-webkit-slider-thumb]:bg-slate-100',
-                        '[&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-[3px] [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:shadow-md dark:[&::-moz-range-thumb]:bg-slate-100',
+                        //
+                        // 24px, not the 20px it was: a native range thumb is a UA
+                        // pseudo-element, so it cannot carry the inset ::after the rest
+                        // of the app uses to grow a small hit box, and enlarging the knob
+                        // is the only way to clear the WCAG 2.5.8 (AA) 24px floor. Sized
+                        // to the floor, not to the house 44px guideline — this is the
+                        // hero, and a 44px knob on a 6px track reads as a bug.
+                        '[&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-[3px] [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110 dark:[&::-webkit-slider-thumb]:bg-slate-100',
+                        '[&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-[3px] [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:shadow-md dark:[&::-moz-range-thumb]:bg-slate-100',
                     )}
                     style={{
                         // The unfilled half is muted-foreground at 25%, not --muted: on dark

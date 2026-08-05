@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { UniversityCardSkeleton } from '@/components/university-card-skeleton';
 
 export const StatsCardSkeleton = () => (
-  <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-card/60 p-6">
+  <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6">
     <div className="flex items-center justify-between">
       <Skeleton className="h-3 w-20" />
       <Skeleton className="h-10 w-10 rounded-xl" />
@@ -46,7 +46,7 @@ export const DeadlinesSkeleton = () => (
         <Skeleton className="h-3 w-16" />
         <Skeleton className="h-6 w-44" />
       </div>
-      <div className="relative pl-4 border-l-2 border-border/30 space-y-3">
+      <div className="relative pl-4 border-l-2 border-border space-y-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="relative ml-4 surface-subcard p-4">
             <Skeleton className="absolute -left-[calc(1rem+9px)] top-5 h-2.5 w-2.5 rounded-full" />

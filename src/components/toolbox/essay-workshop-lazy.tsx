@@ -13,7 +13,7 @@ export const EssayWorkshopLazy = dynamic(
     loading: () => (
       <div className="fixed inset-0 z-50 flex flex-col bg-background text-foreground" aria-busy="true">
         {/* Header */}
-        <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border/60 bg-card/80 px-4">
+        <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border bg-card px-4">
           <Skeleton className="h-6 w-6 rounded-md" />
           <Skeleton className="h-4 w-36" />
           <div className="flex-1" />
@@ -22,14 +22,14 @@ export const EssayWorkshopLazy = dynamic(
         </div>
         {/* Body: blocks · editor · AI */}
         <div className="flex min-h-0 flex-1">
-          <aside className="hidden w-64 shrink-0 flex-col gap-3 border-r border-border/50 bg-card/50 p-3 lg:flex xl:w-72">
+          <aside className="hidden w-64 shrink-0 flex-col gap-3 border-r border-border bg-card p-3 lg:flex xl:w-72">
             <Skeleton className="h-8 w-full rounded-lg" />
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-10 w-full rounded-lg" />
             ))}
           </aside>
           <main className="flex min-w-0 flex-1 flex-col">
-            <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/50 px-4">
+            <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-4">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-6 w-6 rounded-md" />
               ))}
@@ -45,7 +45,7 @@ export const EssayWorkshopLazy = dynamic(
               <Skeleton className="h-4 w-3/4" />
             </div>
           </main>
-          <aside className="hidden w-72 shrink-0 flex-col gap-4 border-l border-border/50 bg-card/50 p-4 lg:flex">
+          <aside className="hidden w-72 shrink-0 flex-col gap-4 border-l border-border bg-card p-4 lg:flex">
             <Skeleton className="h-8 w-40 rounded-lg" />
             <Skeleton className="h-24 w-full rounded-xl" />
             <Skeleton className="h-24 w-full rounded-xl" />

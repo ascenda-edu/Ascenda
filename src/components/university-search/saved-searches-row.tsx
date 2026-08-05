@@ -18,7 +18,7 @@ export function SavedSearchesRow() {
   return (
     <section className="surface-card space-y-3" aria-label="Saved searches">
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-success-subtle text-success ring-1 ring-success/25">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground">
           <Bookmark className="h-4 w-4" />
         </div>
         <div>
@@ -34,7 +34,7 @@ export function SavedSearchesRow() {
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.96 }}
-              className="flex items-center overflow-hidden rounded-full border border-border bg-background/60 transition hover:border-primary/50"
+              className="flex items-center overflow-hidden rounded-full border border-border bg-background transition hover:border-primary/60"
             >
               <button
                 type="button"

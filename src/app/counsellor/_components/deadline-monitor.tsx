@@ -30,11 +30,19 @@ const TYPE_LABELS: Record<string, string> = {
   interview: 'Interview'
 };
 
+/* Deadline TYPE is a category — what kind of thing this is — not an urgency. It had
+   `scholarship` on the warning tone and `interview` on success, which meant a
+   scholarship deadline six months out looked like something due on Friday and an
+   interview looked like a completed task. Urgency is carried separately, by the
+   urgency badge and the day count, and that is the only place a status hue belongs.
+   Early decision keeps a brand tint because it is the one type that is genuinely
+   distinguished by being binding; everything else is neutral, with the LABEL doing
+   the work of telling them apart. */
 const TYPE_COLORS: Record<string, string> = {
-  early_decision: 'border-feature/25 bg-feature-subtle text-feature',
-  regular: 'border-info/25 bg-info-subtle text-info',
-  scholarship: 'border-warning/25 bg-warning-subtle text-warning',
-  interview: 'border-success/25 bg-success-subtle text-success'
+  early_decision: 'border-primary/30 bg-primary/10 text-primary-ink',
+  regular: 'border-border bg-muted text-muted-foreground',
+  scholarship: 'border-border bg-muted text-muted-foreground',
+  interview: 'border-border bg-muted text-muted-foreground'
 };
 
 type UrgencyGroup = 'overdue' | 'this-week' | 'this-month' | 'future';
@@ -50,16 +58,18 @@ function getUrgency(days: number): UrgencyGroup {
 // Colours come from DEADLINE_VISUAL (the urgency tone system of record); the icons
 // stay local because this monitor's set differs from the shared one.
 //
-// `future` reads DEADLINE_VISUAL.later, NOT .unknown. Those are different states:
-// `unknown` means "we have no date" (neutral is right), `later` means "more than a
-// month out" (success — it's genuinely not a worry yet). Pointing `future` at
-// `unknown` was a mis-mapping, and it left the whole Upcoming group — header, dot
-// and count — rendering grey, which is why it looked unstyled next to the other three.
+// `future` reads DEADLINE_VISUAL.later, NOT .unknown — they are different states, and
+// pointing `future` at `unknown` was a mis-mapping. Both are neutral now, but the two
+// mean different things and must keep reading from their own entries.
+//
+// Only the two groups that ask for action today keep a hue: Overdue and This Week.
+// "This Month" and "Upcoming" are neutral, because the group header already says how
+// far out they are and a colour there was restating the words underneath it.
 const URGENCY_CONFIG: Record<UrgencyGroup, { label: string; icon: typeof AlertTriangle; headerColor: string; dotColor: string; countChip: string }> = {
   overdue: { label: 'Overdue', icon: AlertTriangle, headerColor: DEADLINE_VISUAL.overdue.text, dotColor: DEADLINE_VISUAL.overdue.bar, countChip: 'bg-danger-subtle text-danger' },
   'this-week': { label: 'This Week', icon: Clock, headerColor: DEADLINE_VISUAL['this-week'].text, dotColor: DEADLINE_VISUAL['this-week'].bar, countChip: 'bg-warning-subtle text-warning' },
-  'this-month': { label: 'This Month', icon: CalendarDays, headerColor: DEADLINE_VISUAL['this-month'].text, dotColor: DEADLINE_VISUAL['this-month'].bar, countChip: 'bg-info-subtle text-info' },
-  future: { label: 'Upcoming', icon: CalendarDays, headerColor: DEADLINE_VISUAL.later.text, dotColor: DEADLINE_VISUAL.later.bar, countChip: 'bg-success-subtle text-success' }
+  'this-month': { label: 'This Month', icon: CalendarDays, headerColor: DEADLINE_VISUAL['this-month'].text, dotColor: DEADLINE_VISUAL['this-month'].bar, countChip: 'bg-muted text-muted-foreground' },
+  future: { label: 'Upcoming', icon: CalendarDays, headerColor: DEADLINE_VISUAL.later.text, dotColor: DEADLINE_VISUAL.later.bar, countChip: 'bg-muted text-muted-foreground' }
 };
 
 function formatDate(iso: string) {
@@ -67,15 +77,15 @@ function formatDate(iso: string) {
 }
 
 function urgencyBadge(days: number) {
-  if (days < 0) return { text: `${Math.abs(days)}d overdue`, cls: 'text-danger bg-danger-subtle border-danger/25' };
-  if (days === 0) return { text: 'Due today', cls: 'text-danger bg-danger-subtle border-danger/25' };
-  if (days <= 3) return { text: `${days}d left`, cls: 'text-danger bg-danger-subtle border-danger/25' };
-  if (days <= 7) return { text: `${days}d left`, cls: 'text-warning bg-warning-subtle border-warning/25' };
-  // Beyond a week still has an urgency BAND — grey said "no information" about a
-  // pill whose whole job is to say how much runway is left. These two match
-  // DEADLINE_VISUAL's `this-month` (info) and `later` (success).
-  if (days <= 30) return { text: `${days}d`, cls: 'text-info bg-info-subtle border-info/25' };
-  return { text: `${days}d`, cls: 'text-success bg-success-subtle border-success/25' };
+  if (days < 0) return { text: `${Math.abs(days)}d overdue`, cls: 'text-danger bg-danger-subtle border-danger/30' };
+  if (days === 0) return { text: 'Due today', cls: 'text-danger bg-danger-subtle border-danger/30' };
+  if (days <= 3) return { text: `${days}d left`, cls: 'text-danger bg-danger-subtle border-danger/30' };
+  if (days <= 7) return { text: `${days}d left`, cls: 'text-warning bg-warning-subtle border-warning/30' };
+  // Beyond a week there is nothing to do today, so the pill goes quiet: the number
+  // in it already says how much runway is left, and a hue on top of that number was
+  // saying it twice. These two match DEADLINE_VISUAL's `this-month` and `later`,
+  // both of which are neutral.
+  return { text: `${days}d`, cls: 'text-muted-foreground bg-muted border-border' };
 }
 
 export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
@@ -142,7 +152,7 @@ export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
 
       {/* Groups */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border bg-muted/40 py-16 text-center">
+        <div className="flex flex-col items-center justify-center rounded-4xl border border-dashed border-border bg-muted py-16 text-center">
           <CheckCircle2 className="mb-3 h-8 w-8 text-success" />
           <p className="font-semibold text-foreground">No deadlines match your filters</p>
           <p className="mt-1 text-sm text-muted-foreground">Try adjusting your filter criteria.</p>
@@ -178,12 +188,12 @@ export const DeadlineMonitor = ({ deadlines }: DeadlineMonitorProps) => {
                 <div className="space-y-2">
                   {items.map((d) => {
                     const badge = urgencyBadge(d.daysUntil);
-                    const typeCfg = TYPE_COLORS[d.type] ?? 'border-border bg-muted/40 text-muted-foreground';
+                    const typeCfg = TYPE_COLORS[d.type] ?? 'border-border bg-muted text-muted-foreground';
                     return (
                       <Link
                         key={d.id}
                         href={`/counsellor/students/${d.studentId}`}
-                        className="flex flex-col gap-2 rounded-2xl border border-border/60 bg-background/60 px-4 py-3 transition hover:bg-muted/40 sm:flex-row sm:items-center sm:gap-4"
+                        className="flex flex-col gap-2 rounded-2xl border border-border bg-background px-4 py-3 transition hover:bg-muted sm:flex-row sm:items-center sm:gap-4"
                       >
                         {/* Days badge */}
                         <span className={cn('flex h-8 w-16 shrink-0 items-center justify-center rounded-xl border text-xs font-bold', badge.cls)}>

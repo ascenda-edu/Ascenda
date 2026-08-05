@@ -50,25 +50,39 @@ const NAV_INDICATOR_TRANSITION = { duration: DURATION.fast, ease: EASE } as cons
 export const NAV_PILL =
     'relative inline-flex items-center rounded-full px-3 py-1 border border-transparent transition-[color,background-color,border-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
-/** Active pill, minus the fill: border and ink only. */
-export const NAV_PILL_ACTIVE = 'border-primary text-primary-foreground';
+/**
+ * Active pill, minus the indicator: ink and weight only.
+ *
+ * Was `border-primary text-primary-foreground` — a foreground colour, because the
+ * label used to sit on a solid fill. There is no fill now, so it takes the brand
+ * TEXT value. `text-primary` would be wrong: that token is tuned to carry white
+ * button text and measures 3.58:1 as text on a dark card.
+ */
+export const NAV_PILL_ACTIVE = 'border-transparent font-semibold text-primary-ink';
 
 /** Inactive pill hover. */
-export const NAV_PILL_IDLE = 'hover:bg-foreground/5 hover:text-foreground';
+export const NAV_PILL_IDLE = 'hover:bg-foreground/10 hover:text-foreground';
 
 /**
- * The sliding fill. Rendered only for the active pill; framer hands its box over
- * to whichever pill claims the same `layoutId` next.
+ * The sliding indicator. Rendered only for the active pill; framer hands its box
+ * over to whichever pill claims the same `layoutId` next.
  *
- * It is a SIBLING of the label, and an absolutely-positioned sibling paints
- * above a statically-positioned one whatever the DOM order — so every label in
- * here carries `relative z-raised` or the fill covers its own text.
+ * It is a 2px RULE, not a fill. The solid `bg-primary` pill this replaces was the
+ * single largest chromatic surface in the persistent frame — every screen opened
+ * with part of its colour budget already spent on chrome, and chrome is not a
+ * state. Keeping the `layoutId` means the slide is preserved: it slides a rule.
+ *
+ * Being 2px at the bottom edge it no longer overlaps the label, so the
+ * `relative z-raised` stacking guard the labels used to need — an absolutely
+ * positioned sibling paints above a static one whatever the DOM order — is no
+ * longer required. `inset-x-2` insets it inside the pill's own `px-3` so the rule
+ * reads as belonging to the word rather than to the padding box.
  */
 export const NavIndicator = ({ layoutId }: { layoutId: string }) => (
     <motion.span
         layoutId={layoutId}
         transition={NAV_INDICATOR_TRANSITION}
-        className="absolute inset-0 rounded-full bg-primary shadow-e-1"
+        className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-primary-ink"
         aria-hidden
     />
 );

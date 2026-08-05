@@ -75,17 +75,21 @@ export function SectionCard({
 export type MetricTone = 'primary' | 'info' | 'success' | 'warning' | 'danger' | 'feature' | 'neutral';
 
 /**
- * Tone tints. All five semantic tones plus `primary`; no palette literals.
- * The tint is a 5% wash (decorative), so the label carries the tone in ink too
- * — the wash alone does not survive a greyscale read.
+ * Tone tints. The tint is a 5% wash (decorative), so the label carries the tone in
+ * ink too — the wash alone does not survive a greyscale read.
+ *
+ * `info` and `feature` are no longer tones of their own: `info` was a category
+ * colour wearing a status name, so it resolves to neutral, and `feature` resolves to
+ * the brand. Both keys stay in the map, because they are part of the `MetricTone`
+ * prop vocabulary that call sites pass — they simply no longer buy a distinct hue.
  */
 const METRIC_TONE: Record<MetricTone, { wash: string; label: string }> = {
   primary: { wash: 'from-primary/5 to-transparent', label: 'text-primary-ink' },
-  info: { wash: 'from-info/5 to-transparent', label: 'text-info' },
+  info: { wash: 'from-muted/5 to-transparent', label: 'text-muted-foreground' },
   success: { wash: 'from-success/5 to-transparent', label: 'text-success' },
   warning: { wash: 'from-warning/5 to-transparent', label: 'text-warning' },
   danger: { wash: 'from-danger/5 to-transparent', label: 'text-danger' },
-  feature: { wash: 'from-feature/5 to-transparent', label: 'text-feature' },
+  feature: { wash: 'from-primary/5 to-transparent', label: 'text-primary-ink' },
   neutral: { wash: 'from-muted/30 to-transparent', label: '' }
 };
 
@@ -157,7 +161,7 @@ export function BreakdownRow({
     <div
       className={cn(
         'flex items-center justify-between gap-4',
-        total ? 'border-t-2 border-border/60 pt-4' : 'border-b border-border/40 pb-4'
+        total ? 'border-t-2 border-border pt-4' : 'border-b border-border pb-4'
       )}
     >
       <span className={cn('font-medium text-foreground', total && 'font-semibold')}>{label}</span>

@@ -36,7 +36,7 @@ const toMessage = (value: unknown, fallback: string): string => {
 };
 
 const ACTIONS: { key: Action; label: string; icon: typeof Sparkles; description: string; color: string }[] = [
-  { key: 'feedback', label: 'Get Feedback', icon: MessageSquare, description: 'AI reviews your draft with specific rewrites', color: 'text-feature bg-feature-subtle' },
+  { key: 'feedback', label: 'Get Feedback', icon: MessageSquare, description: 'AI reviews your draft with specific rewrites', color: 'text-primary-ink bg-primary/10' },
   { key: 'outline', label: 'Suggest Outline', icon: ListTree, description: 'Generate essay structure from your blocks', color: 'text-success bg-success-subtle' },
 ];
 
@@ -209,8 +209,8 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
           <Sparkles className="h-3 w-3 text-primary-ink" />
         </div>
         <span>AI Essay Assistant</span>
-        <span className="text-label font-bold text-primary-ink/80 bg-primary/5 px-1.5 py-0.5 rounded-full">LIVE</span>
-        <ChevronDown className={cn('h-3 w-3 text-primary-ink/80 ml-auto transition-transform', isOpen && 'rotate-180')} />
+        <span className="text-label font-bold text-primary-ink bg-primary/10 px-1.5 py-0.5 rounded-full">LIVE</span>
+        <ChevronDown className={cn('h-3 w-3 text-primary-ink ml-auto transition-transform', isOpen && 'rotate-180')} />
       </button>
 
       <AnimatePresence>
@@ -223,7 +223,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
           >
             <div className="space-y-3">
               {/* Status indicator */}
-              <div className="rounded-lg bg-muted/30 px-3 py-2 text-label text-muted-foreground space-y-0.5">
+              <div className="rounded-lg bg-muted px-3 py-2 text-label text-muted-foreground space-y-0.5">
                 <p>
                   <span className="font-semibold text-foreground">{essayWordCount}</span> words in editor
                   {essayWordCount < 5 && ' — start writing to enable feedback'}
@@ -248,10 +248,10 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
                     }}
                     disabled={disabled}
                     className={cn(
-                      'w-full text-left rounded-xl border border-border/50 p-3 transition-colors group',
+                      'w-full text-left rounded-xl border border-border p-3 transition-colors group',
                       disabled
                         ? 'opacity-40 cursor-not-allowed'
-                        : 'hover:border-primary/20 hover:bg-muted/20',
+                        : 'hover:border-primary/30 hover:bg-muted',
                       activeAction === key && result && 'border-primary/30 bg-primary/[0.03]'
                     )}
                   >
@@ -283,13 +283,13 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
                 <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-xl border border-danger/25 bg-danger-subtle p-3 space-y-2"
+                  className="rounded-xl border border-border bg-card p-3 space-y-2"
                 >
                   <p className="text-xs text-danger">{error}</p>
                   {activeAction && (
                     <button
                       onClick={() => startAction(activeAction)}
-                      className="flex items-center gap-1 text-label font-medium text-danger hover:text-danger/80 transition-colors"
+                      className="flex items-center gap-1 text-label font-medium text-danger transition-colors hover:underline"
                     >
                       <RefreshCw className="h-3 w-3" /> Retry
                     </button>
@@ -317,7 +317,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
                       {done && !loading && activeAction && (
                         <button
                           onClick={() => startAction(activeAction)}
-                          className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-label font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+                          className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-label font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                           title="Run again"
                         >
                           <RefreshCw className="h-3 w-3" />
@@ -326,7 +326,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
                       )}
                       <button
                         onClick={handleCopy}
-                        className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-label font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+                        className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-label font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                       >
                         {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
                         {copied ? 'Copied' : 'Copy'}
@@ -334,7 +334,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
                       {activeAction === 'outline' && onInsertText && (
                         <button
                           onClick={handleInsert}
-                          className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-0.5 text-label font-medium text-primary-ink hover:bg-primary/20 transition-colors"
+                          className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-0.5 text-label font-medium text-primary-ink transition-colors hover:ring-1 hover:ring-primary/30"
                         >
                           <Wand2 className="h-3 w-3" />
                           Insert
@@ -344,7 +344,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
                   </div>
                   <div
                     ref={resultRef}
-                    className="max-h-[60vh] overflow-y-auto rounded-xl border border-border/50 bg-card p-4 scrollbar-thin"
+                    className="max-h-[60vh] overflow-y-auto rounded-xl border border-border bg-card p-4 scrollbar-thin"
                   >
                     {/* react-markdown escapes raw HTML — model output built from
                         student-controlled essay text must never hit innerHTML. */}

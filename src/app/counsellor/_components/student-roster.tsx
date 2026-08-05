@@ -157,12 +157,21 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
             exit={{ opacity: 0, height: 0 }}
             className="flex items-center gap-2 overflow-hidden"
           >
-            <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold text-primary-ink">
+            <div className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary-ink">
               <Filter className="h-3 w-3" />
               Showing {filterLabel} students
+              {/* 12px glyph + p-0.5 = a 16x16 target, under the WCAG 2.5.8 (AA)
+                  24px floor. The inset ::after grows the hit box without moving
+                  the glyph — but the ::after CANNOT be symmetric here: the
+                  animating parent needs `overflow-hidden` for its height
+                  transition, so anything taller than the ~30px chip gets clipped
+                  and the extra target area would silently not exist. So the box
+                  grows to 44 on the drag-free horizontal axis (16 + 2*14, which
+                  still fits inside the chip's px-4) and to exactly the 24px AA
+                  floor vertically (16 + 2*4, inside the chip's py-1.5). */}
               <button
                 onClick={onClearExternalFilter}
-                className="ml-1 rounded-full p-0.5 hover:bg-primary/10"
+                className='relative ml-1 rounded-full p-0.5 after:absolute after:-inset-x-3.5 after:-inset-y-1 after:content-[""] hover:bg-primary/10'
                 title="Clear dashboard filter"
                 aria-label="Clear filters"
               >
@@ -181,12 +190,15 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
             exit={{ opacity: 0, height: 0 }}
             className="flex items-center gap-2 overflow-hidden"
           >
-            <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold capitalize text-primary-ink">
+            <div className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-semibold capitalize text-primary-ink">
               <Filter className="h-3 w-3" />
               Field: {fieldFilter.replace(/_/g, ' ')}
+              {/* Same 16x16 target and the same overflow-hidden parent as the
+                  dashboard-filter chip above — see that comment for why the
+                  ::after is asymmetric. */}
               <button
                 onClick={() => setFieldFilter('')}
-                className="ml-1 rounded-full p-0.5 hover:bg-primary/10"
+                className='relative ml-1 rounded-full p-0.5 after:absolute after:-inset-x-3.5 after:-inset-y-1 after:content-[""] hover:bg-primary/10'
                 title="Clear field filter"
                 aria-label="Clear field filter"
               >
@@ -222,7 +234,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
           onClick={() => setFiltersOpen((o) => !o)}
           className={cn(
             'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition',
-            filtersOpen ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-foreground hover:bg-muted/60'
+            filtersOpen ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-foreground hover:bg-muted'
           )}
         >
           <SlidersHorizontal className="h-4 w-4" />
@@ -249,7 +261,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                   aria-pressed={sortKey === key}
                   className={cn(
                     'rounded-xl px-3 py-1.5 text-left text-sm transition',
-                    sortKey === key ? 'bg-primary/10 font-semibold text-primary-ink' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    sortKey === key ? 'bg-primary/10 font-semibold text-primary-ink' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
                   {label}
@@ -269,7 +281,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                   aria-pressed={programme === val}
                   className={cn(
                     'rounded-xl px-3 py-1.5 text-left text-sm transition',
-                    programme === val ? 'bg-primary/10 font-semibold text-primary-ink' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    programme === val ? 'bg-primary/10 font-semibold text-primary-ink' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
                   {val === 'all' ? 'All' : val === 'IB' ? 'IB' : 'A-Level'}
@@ -289,7 +301,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                   aria-pressed={flagFilter === val}
                   className={cn(
                     'rounded-xl px-3 py-1.5 text-left text-sm transition',
-                    flagFilter === val ? 'bg-primary/10 font-semibold text-primary-ink' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    flagFilter === val ? 'bg-primary/10 font-semibold text-primary-ink' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
                   {val === 'all' ? 'All students' : val === 'flagged' ? 'Needs attention' : 'On track'}
@@ -323,8 +335,8 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
           </AnimatePresence>
         </motion.div>
       ) : (
-        <div className="rounded-4xl border border-dashed border-border bg-muted/40 p-12 text-center">
-          <p className="text-base font-semibold text-foreground">No students match these filters</p>
+        <div className="rounded-4xl border border-dashed border-border bg-muted p-12 text-center">
+          <p className="font-heading text-base font-semibold text-foreground">No students match these filters</p>
           <p className="mt-1 text-sm text-muted-foreground">Adjust the search, programme, or status filter.</p>
           {(hasExternalFilter || query || programme !== 'all' || flagFilter !== 'all') && (
             <button
@@ -340,7 +352,7 @@ export const StudentRoster = ({ students, externalFilter, onClearExternalFilter,
                 setFieldFilter('');
                 setSortKey('name');
               }}
-              className="mt-4 flex items-center gap-2 mx-auto rounded-full border border-primary bg-transparent px-4 py-2 text-sm font-medium text-primary-ink hover:bg-primary/8"
+              className="mt-4 flex items-center gap-2 mx-auto rounded-full border border-primary bg-transparent px-4 py-2 text-sm font-medium text-primary-ink hover:bg-primary/10"
             >
               <FilterX className="h-4 w-4" />
               Reset all filters

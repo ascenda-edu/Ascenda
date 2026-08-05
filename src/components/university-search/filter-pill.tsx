@@ -50,7 +50,7 @@ export const FilterPill = ({ label, active = false, onClick, onRemove }: FilterP
           // Keep the 24px visual but expand the pointer/touch hit area to ≥44px
           // via an inset ::after so small chips stay comfortably tappable.
           'relative ml-1 inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors after:absolute after:-inset-2.5 after:content-[""] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 cursor-pointer',
-          active ? 'hover:bg-primary-foreground/20' : 'hover:bg-muted'
+          active ? 'hover:bg-primary-foreground/30' : 'hover:bg-muted'
         )}
       >
         <X className="h-3.5 w-3.5" aria-hidden />

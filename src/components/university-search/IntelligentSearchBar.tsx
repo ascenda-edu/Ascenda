@@ -423,9 +423,17 @@ export function IntelligentSearchBar({
                         type="button"
                         onClick={() => onChange('')}
                         aria-label="Clear search"
+                        // The X stays 20px (default) / 12px (compact) — both under the
+                        // 24px WCAG 2.5.8 floor — so the hit box is grown with an inset
+                        // ::after instead of by resizing the glyph: 20 + 2*12 and
+                        // 12 + 2*16 both land on 44. Nothing on this row is clipped
+                        // (the wrapper is `relative flex`, and the only
+                        // overflow-hidden here is the suggestions dropdown, a sibling).
                         className={cn(
-                            "rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                            variant === 'default' ? "" : "absolute right-3 top-1/2 -translate-y-1/2"
+                            'relative rounded-full text-muted-foreground after:absolute after:content-[""] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                            variant === 'default'
+                                ? "after:-inset-3"
+                                : "absolute right-3 top-1/2 -translate-y-1/2 after:-inset-4"
                         )}
                     >
                         <X className={cn(variant === 'default' ? "h-5 w-5" : "h-3 w-3")} aria-hidden />
@@ -544,7 +552,7 @@ export function IntelligentSearchBar({
                                                                 )}
                                                                 {item.location && <span className="text-xs text-muted-foreground">{item.location}</span>}
                                                             </div>
-                                                            <span className="rounded-full border border-primary/15 bg-primary/8 px-2 py-0.5 text-label text-foreground">Recent</span>
+                                                            <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-label text-foreground">Recent</span>
                                                         </button>
                                                     </li>
                                                 ))}
@@ -568,8 +576,8 @@ export function IntelligentSearchBar({
                                                             onMouseEnter={() => setActiveIndex(flatIndex)}
                                                             onClick={() => handleSelect(item)}
                                                             className={cn(
-                                                                "flex w-full flex-col rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-left text-sm transition hover:border-foreground/60 hover:bg-muted",
-                                                                activeIndex === flatIndex && "border-foreground/60 bg-muted"
+                                                                "flex w-full flex-col rounded-xl border border-border bg-muted px-3 py-2 text-left text-sm transition hover:border-foreground/60 hover:bg-muted",
+                                                                activeIndex === flatIndex && "border-foreground/60 bg-primary/10"
                                                             )}
                                                         >
                                                             <span className="font-semibold text-foreground">{item.name}</span>
@@ -578,10 +586,13 @@ export function IntelligentSearchBar({
                                                             )}
                                                             {item.location && <span className="text-label text-muted-foreground">{item.location}</span>}
                                                             {/* Kind tag. `bg-background` on a `bg-muted/40` row was a grey
-                                                                block on grey that said nothing; programme and university
-                                                                now take distinct tones so the tag is what tells the two
-                                                                lists apart at a glance. */}
-                                                            <span className="eyebrow mt-1 inline-flex w-fit rounded-full border border-feature/25 bg-feature-subtle px-2 py-0.5 text-feature">Program</span>
+                                                                block on grey that said nothing, so this carries the faint
+                                                                brand wash the rest of the app's neutral chips use (same
+                                                                recipe as the "Recent" tag above). Programme and university
+                                                                used to take two DIFFERENT tones; that spent colour on a
+                                                                two-item category, and the word in the tag already tells
+                                                                the two lists apart. */}
+                                                            <span className="eyebrow mt-1 inline-flex w-fit rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-foreground">Program</span>
                                                         </button>
                                                     );
                                                 })}
@@ -598,13 +609,13 @@ export function IntelligentSearchBar({
                                                             onMouseEnter={() => setActiveIndex(flatIndex)}
                                                             onClick={() => handleSelect(item)}
                                                             className={cn(
-                                                                "flex w-full flex-col rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-left text-sm transition hover:border-foreground/60 hover:bg-muted",
-                                                                activeIndex === flatIndex && "border-foreground/60 bg-muted"
+                                                                "flex w-full flex-col rounded-xl border border-border bg-muted px-3 py-2 text-left text-sm transition hover:border-foreground/60 hover:bg-muted",
+                                                                activeIndex === flatIndex && "border-foreground/60 bg-primary/10"
                                                             )}
                                                         >
                                                             <span className="font-semibold text-foreground">{item.name}</span>
                                                             {item.location && <span className="text-label text-muted-foreground">{item.location}</span>}
-                                                            <span className="eyebrow mt-1 inline-flex w-fit rounded-full border border-info/25 bg-info-subtle px-2 py-0.5 text-info">University</span>
+                                                            <span className="eyebrow mt-1 inline-flex w-fit rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-foreground">University</span>
                                                         </button>
                                                     );
                                                 })}

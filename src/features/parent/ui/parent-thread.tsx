@@ -135,7 +135,7 @@ export function ParentThreadPanel({
         {messages.length === 0 ? (
           <div className="flex h-full min-h-[280px] items-center justify-center text-center text-sm text-muted-foreground">
             <div className="space-y-2">
-              <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground/40" aria-hidden />
+              <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground/30" aria-hidden />
               <p>No messages yet — say hello, or start from a template below.</p>
             </div>
           </div>
@@ -154,11 +154,11 @@ export function ParentThreadPanel({
                 >
                   <p>{msg.content}</p>
                   <div className={cn('mt-1 flex items-center gap-1', isParent ? 'justify-end' : 'justify-start')}>
-                    <span className={cn('text-label', isParent ? 'text-primary-foreground/60' : 'text-muted-foreground')}>
+                    <span className={cn('text-label', isParent ? 'text-primary-foreground' : 'text-muted-foreground')}>
                       {fullDateFormatter.format(new Date(msg.date))}
                     </span>
                     {isParent && msg.read ? (
-                      <CheckCheck className="h-3 w-3 text-primary-foreground/60" aria-hidden />
+                      <CheckCheck className="h-3 w-3 text-primary-foreground" aria-hidden />
                     ) : null}
                   </div>
                 </div>
@@ -170,13 +170,13 @@ export function ParentThreadPanel({
       </div>
 
       {/* Quick templates */}
-      <div className="flex flex-wrap gap-2 border-t border-border/50 px-4 py-2">
+      <div className="flex flex-wrap gap-2 border-t border-border px-4 py-2">
         {TEMPLATES.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => applyTemplate(t)}
-            className="rounded-full bg-muted/50 px-3 py-1 text-label font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="rounded-full bg-muted px-3 py-1 text-label font-medium text-muted-foreground transition-colors hover:bg-border hover:text-foreground"
           >
             {t.label}
           </button>
@@ -202,7 +202,7 @@ export function ParentThreadPanel({
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !isSending) handleSend();
           }}
-          className="flex-1 rounded-xl border border-border bg-background px-4 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring"
+          className="flex-1 rounded-xl border border-border bg-background px-4 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
         <button
           type="button"

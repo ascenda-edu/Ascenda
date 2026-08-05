@@ -2,7 +2,7 @@
 
 Scope: `src/components/landing-preview/` (where the live landing page's own components live — the folder keeps its build-time name), this directory (`src/components/landing/`, now shared sections and widget mocks only) and `src/app/page.tsx`. These rules bias the public marketing/hero page toward a premium agency feel — editorial typography, scroll-triggered motion, restraint over decoration. Target: looks like a $2k+ client site, not a template.
 
-These are design rules layered on top of the root CLAUDE.md — project conventions (Framer Motion, Outfit/Inter fonts, existing card/button patterns, `@/*` alias) still apply.
+These are design rules layered on top of the root CLAUDE.md — project conventions (Framer Motion, Schibsted Grotesk / Inter fonts, existing card/button patterns, `@/*` alias) still apply.
 
 ## Hero section
 
@@ -43,7 +43,11 @@ Patterns to reach for: word-by-word headline reveal on first paint, parallax on 
 
 ## Typography
 
-Project fonts stay: **Outfit** for headings (`font-heading`), **Inter** for body. Never load extra weights when 2 will do; max 3 fonts on a page.
+Project fonts: **Schibsted Grotesk** for headings (`font-heading`), **Inter** for body. Never load extra
+weights when 2 will do; max 3 fonts on a page. The heading face was Outfit until Aug 2026 — see
+[docs/brand.md](../../../docs/brand.md) §9 for why it was replaced and for the two rules that decide which
+face a given element gets (**words vs figures**, and the **16px floor**). Both rules bite hardest here:
+this directory holds most of the app's stat-number mocks, and every one of them is Inter.
 
 Sizes:
 - Display headline: 72–96px desktop, 40–48px mobile — never below 40px on desktop.

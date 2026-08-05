@@ -39,7 +39,7 @@ export default function ProfileLoading() {
 
       {/* Two-column section cards */}
       <div className="grid gap-8 lg:grid-cols-2">
-        <div className="surface-card space-y-4 border-l-4 border-l-border">
+        <div className="surface-card space-y-4">
           <Skeleton className="h-3 w-16" />
           <Skeleton className="h-6 w-48" />
           <Skeleton className="h-4 w-40" />
@@ -50,7 +50,7 @@ export default function ProfileLoading() {
           </div>
         </div>
         <div className="space-y-8">
-          <div className="surface-card space-y-3 border-l-4 border-l-border">
+          <div className="surface-card space-y-3">
             <Skeleton className="h-3 w-20" />
             <Skeleton className="h-5 w-32" />
             <div className="grid gap-3 sm:grid-cols-2">
@@ -59,7 +59,7 @@ export default function ProfileLoading() {
               ))}
             </div>
           </div>
-          <div className="surface-card space-y-3 border-l-4 border-l-border">
+          <div className="surface-card space-y-3">
             <Skeleton className="h-3 w-24" />
             <Skeleton className="h-5 w-40" />
             <div className="grid gap-3 sm:grid-cols-2">

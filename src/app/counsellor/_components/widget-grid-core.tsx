@@ -306,7 +306,7 @@ export function WidgetGridCore<Id extends string, Sizes extends object>({
           {onCreateWidget && (
             <button
               onClick={onCreateWidget}
-              className="flex items-center gap-2 rounded-full border border-dashed border-primary/50 bg-primary/5 px-4 py-2 text-sm font-medium text-primary-ink hover-lift hover:bg-primary/10"
+              className="flex items-center gap-2 rounded-full border border-dashed border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary-ink hover-lift hover:border-primary/60"
             >
               <Plus className="h-4 w-4" />
               New widget
@@ -318,7 +318,7 @@ export function WidgetGridCore<Id extends string, Sizes extends object>({
               'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover-lift',
               panelOpen
                 ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-border bg-background text-foreground hover:bg-muted/60'
+                : 'border-border bg-background text-foreground hover:bg-muted'
             )}
           >
             <SlidersHorizontal className="h-4 w-4" />
@@ -345,7 +345,7 @@ export function WidgetGridCore<Id extends string, Sizes extends object>({
               <button
                 onClick={() => setPanelOpen(false)}
                 aria-label={`Close ${noun} panel`}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-border hover:bg-muted/60"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-border hover:bg-muted"
               >
                 <X className="h-4 w-4 text-muted-foreground" />
               </button>
@@ -361,11 +361,11 @@ export function WidgetGridCore<Id extends string, Sizes extends object>({
                     className={cn(
                       'flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-0.5',
                       active
-                        ? 'border-primary/40 bg-primary/10 text-foreground shadow-e-1'
-                        : 'border-border/60 bg-background/60 text-muted-foreground hover:bg-muted/40'
+                        ? 'border-primary/30 bg-primary/10 text-foreground shadow-e-1'
+                        : 'border-border bg-background text-muted-foreground hover:bg-muted'
                     )}
                   >
-                    <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', active ? 'bg-primary/20' : 'bg-muted/50')}>
+                    <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', active ? 'bg-primary/30' : 'bg-muted')}>
                       <Icon className={cn('h-4 w-4', active ? 'text-primary-ink' : 'text-muted-foreground')} />
                     </div>
                     <div className="min-w-0">
@@ -388,11 +388,11 @@ export function WidgetGridCore<Id extends string, Sizes extends object>({
                       className={cn(
                         'flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-0.5',
                         active
-                          ? 'border-primary/40 bg-primary/10 text-foreground shadow-e-1'
-                          : 'border-border/60 bg-background/60 text-muted-foreground hover:bg-muted/40'
+                          ? 'border-primary/30 bg-primary/10 text-foreground shadow-e-1'
+                          : 'border-border bg-background text-muted-foreground hover:bg-muted'
                       )}
                     >
-                      <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', active ? 'bg-primary/20' : 'bg-muted/50')}>
+                      <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', active ? 'bg-primary/30' : 'bg-muted')}>
                         <Sparkles className={cn('h-4 w-4', active ? 'text-primary-ink' : 'text-muted-foreground')} />
                       </div>
                       <div className="min-w-0">
@@ -405,11 +405,21 @@ export function WidgetGridCore<Id extends string, Sizes extends object>({
                       )} />
                     </button>
                     {onDeleteCustomWidget && (
+                      // 20x20 fails the WCAG 2.5.8 (AA) 24px floor, so the hit box
+                      // grows via an inset ::after. Deliberately -inset-1 (4px per
+                      // side -> 28x28) rather than the -inset-3 that would reach the
+                      // house 44px guideline: this badge is positioned OVER the
+                      // corner of its own toggle button, and the cells sit in a
+                      // `gap-2` grid, so it is 8px from the next cell's toggle. At
+                      // 44px it would put a 26x26 region of an unconfirmed,
+                      // irreversible delete on top of a benign toggle and reach 10px
+                      // into the neighbouring cell's. 28px clears AA and adds only
+                      // 4px of encroachment over the state it already overlaps.
                       <button
                         onClick={() => onDeleteCustomWidget(entry.id)}
                         aria-label={`Delete ${entry.label} ${noun}`}
                         title={`Delete custom ${noun}`}
-                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-e-1 transition hover:border-destructive/40 hover:text-destructive"
+                        className='absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-e-1 transition after:absolute after:-inset-1 after:content-[""] hover:border-destructive/30 hover:text-destructive'
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
@@ -420,9 +430,9 @@ export function WidgetGridCore<Id extends string, Sizes extends object>({
               {onCreateWidget && (
                 <button
                   onClick={onCreateWidget}
-                  className="flex items-center gap-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 px-4 py-3 text-left text-primary-ink transition hover:-translate-y-0.5 hover:bg-primary/10"
+                  className="flex items-center gap-3 rounded-2xl border border-dashed border-primary/30 bg-primary/10 px-4 py-3 text-left text-primary-ink transition hover:-translate-y-0.5 hover:border-primary/60"
                 >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/20">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/30">
                     <Plus className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
@@ -498,13 +508,13 @@ export function WidgetShell<Id extends string>({
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <div
-            className="flex h-8 w-8 cursor-grab items-center justify-center rounded-xl bg-muted/50 active:cursor-grabbing"
+            className="flex h-8 w-8 cursor-grab items-center justify-center rounded-xl bg-muted active:cursor-grabbing"
             title="Drag to reorder"
           >
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10">
-            <Icon className="h-4 w-4 text-primary-ink" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl">
+            <Icon className="h-4 w-4 text-muted-foreground" />
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">{title}</p>
@@ -518,7 +528,7 @@ export function WidgetShell<Id extends string>({
                 onClick={() => dragHandlers.onMove(id, -1)}
                 disabled={index === 0}
                 aria-label={`Move ${title} ${noun} up`}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
                 title={`Move ${noun} up`}
               >
                 <ArrowUp className="h-3.5 w-3.5" />
@@ -527,7 +537,7 @@ export function WidgetShell<Id extends string>({
                 onClick={() => dragHandlers.onMove(id, 1)}
                 disabled={index >= dragHandlers.count - 1}
                 aria-label={`Move ${title} ${noun} down`}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
                 title={`Move ${noun} down`}
               >
                 <ArrowDown className="h-3.5 w-3.5" />
@@ -538,7 +548,7 @@ export function WidgetShell<Id extends string>({
             <button
               onClick={() => onToggleSize(id)}
               aria-label={size === 'wide' ? `Shrink ${title} ${noun}` : `Expand ${title} ${noun}`}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground"
               title={size === 'wide' ? `Shrink ${noun}` : `Expand ${noun} to full width`}
             >
               {size === 'wide'
@@ -550,7 +560,7 @@ export function WidgetShell<Id extends string>({
           <button
             onClick={() => onRemove(id)}
             aria-label={`Remove ${title} ${noun}`}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
             title={`Remove ${noun}`}
           >
             <X className="h-3.5 w-3.5" />

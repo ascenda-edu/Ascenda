@@ -122,7 +122,7 @@ export function CustomWidgetBuilder({ open, onOpenChange, students, onCreate }: 
                     'rounded-full border px-3.5 py-1.5 text-xs font-semibold transition',
                     source === meta.key
                       ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-border bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                      : 'border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
                   {meta.label}
@@ -143,7 +143,7 @@ export function CustomWidgetBuilder({ open, onOpenChange, students, onCreate }: 
                     'rounded-full border px-3.5 py-1.5 text-xs font-semibold transition',
                     dimension === dim.key
                       ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-border bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                      : 'border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
                   {dim.label}
@@ -166,11 +166,11 @@ export function CustomWidgetBuilder({ open, onOpenChange, students, onCreate }: 
                     className={cn(
                       'flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-0.5',
                       active
-                        ? 'border-primary/40 bg-primary/10 text-foreground shadow-e-1'
-                        : 'border-border/60 bg-background/60 text-muted-foreground hover:bg-muted/40'
+                        ? 'border-primary/30 bg-primary/10 text-foreground shadow-e-1'
+                        : 'border-border bg-background text-muted-foreground hover:bg-muted'
                     )}
                   >
-                    <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', active ? 'bg-primary/20' : 'bg-muted/50')}>
+                    <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', active ? 'bg-primary/30' : 'bg-muted')}>
                       <Icon className={cn('h-4 w-4', active ? 'text-primary-ink' : 'text-muted-foreground')} />
                     </div>
                     <div className="min-w-0">
@@ -201,10 +201,10 @@ export function CustomWidgetBuilder({ open, onOpenChange, students, onCreate }: 
 
           <div className="space-y-2">
             <p className="text-xs font-semibold text-foreground">Live preview</p>
-            <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+            <div className="rounded-2xl border border-border bg-muted p-4">
               <div className="mb-3 flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-primary/10">
-                  <Sparkles className="h-3.5 w-3.5 text-primary-ink" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-xl">
+                  <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
                 <p className="truncate text-sm font-semibold text-foreground">
                   {title.trim() || suggestCustomWidgetTitle(source, dimension)}
@@ -216,7 +216,7 @@ export function CustomWidgetBuilder({ open, onOpenChange, students, onCreate }: 
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 border-t border-border bg-muted/30 px-7 py-4">
+        <div className="flex items-center justify-end gap-2 border-t border-border bg-muted px-7 py-4">
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

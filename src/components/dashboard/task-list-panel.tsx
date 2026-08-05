@@ -93,7 +93,7 @@ export const TaskListPanel = ({ title, tasks }: TaskListPanelProps) => {
             role="status"
             aria-live="polite"
           >
-            <div className="flex items-center gap-2 rounded-full border border-success/25 bg-success-subtle px-4 py-2 text-sm font-semibold text-success shadow-e-3">
+            <div className="flex items-center gap-2 rounded-full border border-success/30 bg-success-subtle px-4 py-2 text-sm font-semibold text-success shadow-e-3">
               <Sparkles className="h-4 w-4" aria-hidden />
               {celebration.message}
             </div>

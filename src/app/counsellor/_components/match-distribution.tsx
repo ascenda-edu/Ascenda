@@ -23,7 +23,7 @@ export const MatchDistribution = ({ tiers, activeTier, onSelectTier, onNavigateT
   return (
     <div className="space-y-4">
       {/* Stacked bar */}
-      <div className="flex h-8 overflow-hidden rounded-2xl border border-border/50">
+      <div className="flex h-8 overflow-hidden rounded-2xl border border-border">
         {TIERS.map(({ key, color }) => {
           const pct = (tiers[key] / total) * 100;
           const isSelected = activeTier === key;
@@ -63,7 +63,7 @@ export const MatchDistribution = ({ tiers, activeTier, onSelectTier, onNavigateT
               className={cn(
                 "relative rounded-2xl border transition-[transform,background-color,border-color,box-shadow,opacity,filter]",
                 onSelectTier && "hover:scale-[1.02]",
-                isSelected ? "border-primary bg-primary/5 shadow-e-1" : "border-border/50",
+                isSelected ? "border-primary bg-primary/10 shadow-e-1" : "border-border",
                 light,
                 isAnythingSelected && !isSelected && "opacity-40 grayscale-[0.5]"
               )}

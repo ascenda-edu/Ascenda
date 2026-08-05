@@ -10,8 +10,8 @@ import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
 import type { CohortStats } from '@/lib/counsellor/data';
 import { STAGE_COLORS, FUNNEL_STAGE_TO_STATUS, type FunnelStage } from '@/lib/counsellor/stage-colors';
-import { COMPLETION_VISUAL, TIER_VISUAL } from '@/lib/theme/categories';
-import { CHART_ACCENT, CHART_SERIES } from './_components/chart-palette';
+import { TIER_VISUAL } from '@/lib/theme/categories';
+import { CHART_ACCENT, CHART_SERIES, chartPaletteAt } from './_components/chart-palette';
 import {
   ProgrammeSplit,
   IbDistribution,
@@ -121,9 +121,9 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         student: s,
         detail: s.academic.subjects.slice(0, 3).join(', '),
         badge: programme === 'IB' && s.academic.ibPoints
-          ? { label: `${s.academic.ibPoints} pts`, color: 'bg-feature-subtle text-feature' }
+          ? { label: `${s.academic.ibPoints} pts`, color: 'bg-primary/10 text-primary-ink' }
           : s.academic.aLevelGrades
-            ? { label: s.academic.aLevelGrades, color: 'bg-info-subtle text-info' }
+            ? { label: s.academic.aLevelGrades, color: 'bg-muted text-muted-foreground' }
             : undefined
       }))
     });
@@ -170,7 +170,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
       items: group.map((s) => ({
         student: s,
         detail: s.academic.careerAspiration,
-        badge: { label: s.academic.programmeType === 'IB' ? 'IB' : 'A-Level', color: s.academic.programmeType === 'IB' ? 'bg-feature-subtle text-feature' : 'bg-info-subtle text-info' }
+        badge: { label: s.academic.programmeType === 'IB' ? 'IB' : 'A-Level', color: s.academic.programmeType === 'IB' ? 'bg-primary/10 text-primary-ink' : 'bg-muted text-muted-foreground' }
       }))
     });
   };
@@ -184,7 +184,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         items.push({
           student: s,
           detail: matchingApps.map((a) => `${a.university} — ${a.program}`).join(' · '),
-          badge: { label: `${matchingApps.length} app${matchingApps.length !== 1 ? 's' : ''}`, color: 'bg-info-subtle text-info' }
+          badge: { label: `${matchingApps.length} app${matchingApps.length !== 1 ? 's' : ''}`, color: 'bg-muted text-muted-foreground' }
         });
       }
     });
@@ -237,25 +237,40 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
 
   const handleCompletionSelect = (bucket: { label: string; min: number; max: number }) => {
     const group = students.filter((s) => s.profile.completionPct >= bucket.min && s.profile.completionPct <= bucket.max);
-    // Completion bands are COMPLETION_VISUAL's (full / high / mid / low) rather
-    // than a second copy of the same four colours.
-    const colorMap: Record<string, string> = {
-      '100%': COMPLETION_VISUAL.full.bar,
-      '75–99%': COMPLETION_VISUAL.high.bar,
-      '50–74%': COMPLETION_VISUAL.mid.bar,
-      '<50%': COMPLETION_VISUAL.low.bar
+    // Four ORDINAL slots on one axis (how much of a profile is filled in), which
+    // is precisely what the monochrome series ramp is for — so this walks
+    // `chartPaletteAt` like every other segmented mark in the analytics, instead
+    // of spending four status hues on a quantity. It used to read the bands out of
+    // COMPLETION_VISUAL, which was the right instinct (one source for the
+    // thresholds) applied to the wrong table: those bands no longer carry a hue at
+    // all, so all four buckets would now come back brand-or-grey and the ordering
+    // would vanish.
+    //
+    // Index by COMPLETION MAGNITUDE, not by the bucket's position in the list the
+    // chart happens to print (which runs 100% → <50%, i.e. backwards). chart-palette
+    // is explicit that ramp order is meaningful — light→dark reads small→large — so
+    // `<50%` takes step 1 and `100%` step 4. Keep this in step with the bar colours
+    // in `CompletionBreakdown` (_components/analytics-charts.tsx); the accent bar on
+    // this panel is meant to be the same colour as the bar the user just clicked.
+    const RAMP_INDEX_BY_BUCKET: Record<string, number> = {
+      '<50%': 0,
+      '50–74%': 1,
+      '75–99%': 2,
+      '100%': 3
     };
-    const badgeColorMap: Record<string, string> = {
-      '100%': `${COMPLETION_VISUAL.full.bg} ${COMPLETION_VISUAL.full.text}`,
-      '75–99%': `${COMPLETION_VISUAL.high.bg} ${COMPLETION_VISUAL.high.text}`,
-      '50–74%': `${COMPLETION_VISUAL.mid.bg} ${COMPLETION_VISUAL.mid.text}`,
-      '<50%': `${COMPLETION_VISUAL.low.bg} ${COMPLETION_VISUAL.low.text}`
-    };
+    const rampIndex = RAMP_INDEX_BY_BUCKET[bucket.label];
+    const accent = rampIndex === undefined ? CHART_ACCENT : chartPaletteAt(rampIndex);
+    // The badge is NOT tinted per bucket. `CHART_SERIES` sets `text` to
+    // `text-foreground` on every step deliberately: no ramp step clears 4.5:1 as
+    // text across these surfaces (`text-series-4` measures 4.11:1 in light and
+    // fails outright), so the ramp lives on marks and never on type. And there is
+    // nothing left for a tint to say here — the panel title is already
+    // "<50% Complete" and the badge prints the student's own percentage.
     const avgPct = group.length ? Math.round(group.reduce((a, s) => a + s.profile.completionPct, 0) / group.length) : 0;
     setDrilldown({
       title: `${bucket.label} Complete`,
       subtitle: `${group.length} student${group.length !== 1 ? 's' : ''} in this completion range`,
-      accentColor: colorMap[bucket.label] ?? 'bg-primary',
+      accentColor: accent.bar,
       summaryStats: [
         { label: 'students', value: String(group.length) },
         { label: 'avg completion', value: `${avgPct}%` },
@@ -263,7 +278,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
       items: group.map((s) => ({
         student: s,
         detail: `Missing: ${['personal', 'academic', 'subjects', 'lifestyle'].filter((step) => !s.profile.stepsComplete.includes(step as any)).join(', ') || 'None'}`,
-        badge: { label: `${s.profile.completionPct}%`, color: badgeColorMap[bucket.label] ?? 'bg-primary/10 text-primary-ink' }
+        badge: { label: `${s.profile.completionPct}%`, color: 'bg-primary/10 text-primary-ink' }
       }))
     });
   };
@@ -275,11 +290,16 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         setDrilldown({
           title: 'Profile Gaps',
           subtitle: `${group.length} student${group.length !== 1 ? 's' : ''} with incomplete profiles`,
-          accentColor: 'bg-warning-fill',
+          // Brand, not `warning-fill`. This is a COUNT of students whose profile
+          // isn't finished — a quantity, and one with no date attached, so "act
+          // soon" is a promise the panel can't keep. The per-student badge is a
+          // percentage for the same reason. (`deadlines_week` below keeps `danger`:
+          // that one genuinely is dated.)
+          accentColor: 'bg-primary',
           items: group.map((s) => ({
             student: s,
             detail: `${s.profile.completionPct}% complete — missing: ${['personal', 'academic', 'subjects', 'lifestyle'].filter((step) => !s.profile.stepsComplete.includes(step as any)).join(', ') || 'flags only'}`,
-            badge: { label: `${s.profile.completionPct}%`, color: 'bg-warning-subtle text-warning' }
+            badge: { label: `${s.profile.completionPct}%`, color: 'bg-primary/10 text-primary-ink' }
           }))
         });
         break;
@@ -289,13 +309,13 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         setDrilldown({
           title: 'UK-Bound Students',
           subtitle: `${group.length} student${group.length !== 1 ? 's' : ''} targeting the United Kingdom`,
-          accentColor: 'bg-feature-fill',
+          accentColor: 'bg-primary',
           items: group.map((s) => {
             const ukMatches = s.matches.filter((m) => m.country === 'UK');
             return {
               student: s,
               detail: ukMatches.map((m) => m.university).join(', '),
-              badge: { label: `${ukMatches.length} UK`, color: 'bg-feature-subtle text-feature' }
+              badge: { label: `${ukMatches.length} UK`, color: 'bg-primary/10 text-primary-ink' }
             };
           })
         });
@@ -370,7 +390,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         setDrilldown({
           title: 'Safe-Tier Coverage',
           subtitle: `${withSafe.length} of ${students.length} students have a Safe option`,
-          accentColor: 'bg-info-fill',
+          accentColor: 'bg-muted-foreground',
           items: all.map((s) => {
             const hasSafe = s.matches.some((m) => m.tier === 'Safe');
             const safeMatches = s.matches.filter((m) => m.tier === 'Safe');
@@ -549,26 +569,32 @@ function InsightsContent({
   totalReachMatches: number;
   safeCoverageCount: number;
 }) {
+  // Six tinted cards in a row cancelled each other out: when every tile is a
+  // coloured block, none of them is the one to look at. The cards are now plain
+  // surfaces and the tone survives where it is actually read — on the number.
   const insights = [
     {
       key: 'profile_gaps',
       label: 'Profile gaps',
       value: `${stats.flagged} student${stats.flagged !== 1 ? 's' : ''}`,
       detail: 'have incomplete profiles affecting match quality',
-      color: 'text-warning',
-      bg: 'bg-warning-subtle',
-      border: 'border-warning/25',
-      hoverBorder: 'hover:border-warning/50'
+      // Was `text-warning`, which had to change with the drill-down it opens: the
+      // tile and the panel are the same fact, and this one is a headcount of
+      // unfinished profiles — a quantity with no deadline behind it.
+      color: 'text-primary-ink',
+      bg: 'bg-card',
+      border: 'border-border',
+      hoverBorder: 'hover:border-muted-foreground'
     },
     {
       key: 'top_destination',
       label: 'Top destination',
       value: 'United Kingdom',
       detail: 'is the #1 preferred study destination across the cohort',
-      color: 'text-feature',
-      bg: 'bg-feature-subtle',
-      border: 'border-feature/25',
-      hoverBorder: 'hover:border-feature/50'
+      color: 'text-primary-ink',
+      bg: 'bg-card',
+      border: 'border-border',
+      hoverBorder: 'hover:border-muted-foreground'
     },
     {
       key: 'submission_rate',
@@ -576,9 +602,9 @@ function InsightsContent({
       value: `${Math.round((totalSubmittedApps / (totalApps || 1)) * 100)}%`,
       detail: 'of all applications have been submitted',
       color: 'text-success',
-      bg: 'bg-success-subtle',
-      border: 'border-success/25',
-      hoverBorder: 'hover:border-success/50'
+      bg: 'bg-card',
+      border: 'border-border',
+      hoverBorder: 'hover:border-muted-foreground'
     },
     {
       key: 'deadlines_week',
@@ -586,9 +612,9 @@ function InsightsContent({
       value: String(stats.deadlinesThisWeek),
       detail: `deadline${stats.deadlinesThisWeek !== 1 ? 's' : ''} require immediate attention`,
       color: 'text-danger',
-      bg: 'bg-danger-subtle',
-      border: 'border-danger/25',
-      hoverBorder: 'hover:border-danger/50'
+      bg: 'bg-card',
+      border: 'border-border',
+      hoverBorder: 'hover:border-muted-foreground'
     },
     {
       key: 'reach_apps',
@@ -596,19 +622,19 @@ function InsightsContent({
       value: `${totalReachMatches}`,
       detail: 'Reach-tier matches across cohort — worth monitoring closely',
       color: TIER_VISUAL.reach.text,
-      bg: TIER_VISUAL.reach.bg,
-      border: TIER_VISUAL.reach.border,
-      hoverBorder: 'hover:border-danger/50'
+      bg: 'bg-card',
+      border: 'border-border',
+      hoverBorder: 'hover:border-muted-foreground'
     },
     {
       key: 'safe_coverage',
       label: 'Safe coverage',
       value: `${safeCoverageCount} / ${stats.total}`,
       detail: 'students have at least one Safe-tier option',
-      color: 'text-info',
-      bg: 'bg-info-subtle',
-      border: 'border-info/25',
-      hoverBorder: 'hover:border-info/50'
+      color: 'text-muted-foreground',
+      bg: 'bg-card',
+      border: 'border-border',
+      hoverBorder: 'hover:border-muted-foreground'
     }
   ];
 

@@ -125,7 +125,7 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
         * way out should not require scrolling back to the top — and because the
         * rail's `lg:top-20` and the mobile meter's `top-14` are both measured from
         * a bar that stays put. */}
-      <header className="sticky top-0 z-nav shrink-0 border-b border-border/60 bg-card/80 backdrop-blur-sm">
+      <header className="sticky top-0 z-nav shrink-0 border-b border-border bg-card/80 backdrop-blur-sm">
         <div className="shell-gutter mx-auto flex h-14 w-full max-w-[120rem] items-center gap-3">
           {/* The breadcrumb's actual job, said plainly. Saving is per-step and
             * already flushed on blur, so leaving is safe and the label can promise
@@ -138,7 +138,7 @@ export default async function ProfileWizardPage(props: ProfileWizardPageProps) {
             Exit setup
           </Link>
 
-          <span aria-hidden className="h-4 w-px shrink-0 bg-primary/20" />
+          <span aria-hidden className="h-4 w-px shrink-0 bg-primary/30" />
 
           <p className="flex min-w-0 items-center gap-2">
             <span className="eyebrow hidden shrink-0 sm:inline">Setup</span>

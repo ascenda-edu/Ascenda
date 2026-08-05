@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { MessageSquare, Flag, RefreshCw, Pin, PinOff, EyeOff, Eye, Settings2, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
-import { NOTE_VISUAL } from '@/lib/theme/categories';
 
 interface ActivityItem {
   id: string;
@@ -21,12 +20,15 @@ interface ActivityFeedProps {
   activity: ActivityItem[];
 }
 
-// Colours from NOTE_VISUAL (the note/signal tone system of record); the icons stay
-// local because this feed uses RefreshCw for updates rather than the shared arrow.
+// No colour here any more. Activity TYPE is a category — the glyph names it — so the
+// tinted bubble each row used to carry was decoration, and three of them repeated
+// down a scrolling feed drowned out the parts of this dashboard that do mean "act".
+// The icons stay local because this feed uses RefreshCw for updates rather than the
+// shared arrow.
 const TYPE_CONFIG = {
-  session: { icon: MessageSquare, color: NOTE_VISUAL.session.text, bg: NOTE_VISUAL.session.bg, label: 'Session' },
-  flag: { icon: Flag, color: NOTE_VISUAL.flag.text, bg: NOTE_VISUAL.flag.bg, label: 'Flag' },
-  update: { icon: RefreshCw, color: NOTE_VISUAL.update.text, bg: NOTE_VISUAL.update.bg, label: 'Update' }
+  session: { icon: MessageSquare, label: 'Session' },
+  flag: { icon: Flag, label: 'Flag' },
+  update: { icon: RefreshCw, label: 'Update' }
 };
 
 function formatRelative(iso: string) {
@@ -98,8 +100,8 @@ export const ActivityFeed = ({ activity }: ActivityFeedProps) => {
           className={cn(
             'flex items-center gap-1.5 rounded-full border px-3 py-1 text-label font-medium transition hover:-translate-y-0.5',
             manageOpen
-              ? 'border-primary/40 bg-primary/10 text-primary-ink'
-              : 'border-border/60 bg-background/60 text-muted-foreground hover:text-foreground'
+              ? 'border-primary/30 bg-primary/10 text-primary-ink'
+              : 'border-border bg-background text-muted-foreground hover:text-foreground'
           )}
         >
           <Settings2 className="h-3 w-3" />
@@ -118,7 +120,7 @@ export const ActivityFeed = ({ activity }: ActivityFeedProps) => {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="rounded-2xl border border-border/60 bg-muted/30 p-3 space-y-1.5">
+            <div className="rounded-2xl border border-border bg-muted p-3 space-y-1.5">
               <p className="eyebrow px-1 pb-0.5">
                 Students in feed
               </p>
@@ -130,7 +132,7 @@ export const ActivityFeed = ({ activity }: ActivityFeedProps) => {
                     key={id}
                     className={cn(
                       'flex items-center gap-2 rounded-xl px-2 py-1.5 transition',
-                      isHidden ? 'opacity-40' : 'bg-background/60'
+                      isHidden ? 'opacity-40' : 'bg-background'
                     )}
                   >
                     <span className="text-sm">{flag}</span>
@@ -141,8 +143,8 @@ export const ActivityFeed = ({ activity }: ActivityFeedProps) => {
                       className={cn(
                         'flex h-6 w-6 items-center justify-center rounded-lg border transition',
                         isPinned
-                          ? 'border-primary/40 bg-primary/10 text-primary-ink'
-                          : 'border-border/60 text-muted-foreground hover:text-primary-ink hover:border-primary/40'
+                          ? 'border-primary/30 bg-primary/10 text-primary-ink'
+                          : 'border-border text-muted-foreground hover:text-primary-ink hover:border-primary/30'
                       )}
                     >
                       {isPinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
@@ -153,8 +155,8 @@ export const ActivityFeed = ({ activity }: ActivityFeedProps) => {
                       className={cn(
                         'flex h-6 w-6 items-center justify-center rounded-lg border transition',
                         isHidden
-                          ? 'border-success/25 bg-success-subtle text-success'
-                          : 'border-border/60 text-muted-foreground hover:text-destructive hover:border-destructive/40'
+                          ? 'border-success/30 bg-success-subtle text-success'
+                          : 'border-border text-muted-foreground hover:text-destructive hover:border-destructive/30'
                       )}
                     >
                       {isHidden ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
@@ -191,13 +193,13 @@ export const ActivityFeed = ({ activity }: ActivityFeedProps) => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.97 }}
                 transition={{ duration: 0.18 }}
-                className={cn('flex gap-3', isPinned && 'rounded-xl bg-primary/5 px-2 py-1 -mx-2')}
+                className={cn('flex gap-3', isPinned && 'rounded-xl bg-primary/10 px-2 py-1 -mx-2')}
               >
                 {isPinned && (
-                  <Pin className="mt-1 h-3 w-3 shrink-0 text-primary-ink/50" />
+                  <Pin className="mt-1 h-3 w-3 shrink-0 text-primary-ink" />
                 )}
-                <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl ${cfg.bg}`}>
-                  <Icon className={`h-3.5 w-3.5 ${cfg.color}`} />
+                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl">
+                  <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
                 <div className="min-w-0 flex-1 space-y-0.5">
                   <div className="flex items-center justify-between gap-2">

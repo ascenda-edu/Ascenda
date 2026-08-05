@@ -1,15 +1,26 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import { Outfit, Inter } from 'next/font/google';
+import { Schibsted_Grotesk, Inter } from 'next/font/google';
 import '@/app/globals.css';
 import { Providers } from './providers';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme/theme-provider';
 import { ThemeScript } from '@/components/theme/theme-script';
 
-const outfit = Outfit({
+/* The heading face. Was Outfit, which was measurably costing hierarchy rather than
+   adding personality: at a shared font-size Outfit's x-height is 11.5% shorter than
+   Inter's and its lowercase 6.9% narrower, so an 18px `h3` card title — the app's most
+   common heading — rendered with only a +6.1% lowercase step over the 15px Inter body
+   beneath it. Inter semibold at the same 18px gives +20%, i.e. the second font was a net
+   NEGATIVE at the size it is used most. Schibsted Grotesk measures +15.8% at Inter's own
+   width, so headings gain presence without a single card reflowing.
+
+   The variable is `--font-heading`, not `--font-schibsted`, deliberately: the previous
+   name meant a face change had to be find-and-replaced across the Tailwind config and the
+   prose block. Bind to the ROLE, not the face. */
+const heading = Schibsted_Grotesk({
   subsets: ['latin'],
-  variable: '--font-outfit',
+  variable: '--font-heading',
   display: 'swap',
   adjustFontFallback: true,
 });
@@ -24,12 +35,14 @@ const inter = Inter({
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  // The resolved `--background` token (globals.css): light 232 28% 96.5%, dark
-  // 232 20% 9.5%. Keep in step with THEME_COLOR in components/theme/theme-provider.tsx,
-  // which overwrites this meta tag on the client once a preference is resolved.
+  // The resolved `--background` token (globals.css): light 0 0% 95.9%, dark
+  // 0 0% 8.3%. A meta tag cannot read a CSS var, so this is a hand-synced copy —
+  // one of FOUR (globals.css, scripts/tone-solver.mjs, here, and THEME_COLOR in
+  // components/theme/theme-provider.tsx, which overwrites this tag on the client
+  // once a preference is resolved). Change one, change all four.
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f4f4f9' },
-    { media: '(prefers-color-scheme: dark)', color: '#13151d' }
+    { media: '(prefers-color-scheme: light)', color: '#f4f4f4' },
+    { media: '(prefers-color-scheme: dark)', color: '#151515' }
   ]
 };
 
@@ -68,7 +81,7 @@ export default function RootLayout({
       </head>
       <body className={cn(
         "min-h-screen bg-background font-sans antialiased",
-        outfit.variable,
+        heading.variable,
         inter.variable
       )}>
         {/* `fixed`, not `absolute`: anchored to the document, focusing the skip

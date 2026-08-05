@@ -33,11 +33,10 @@ export function PipelineCard({ stages }: { stages: PipelineStage[] }) {
       eyebrow="Pipeline"
       title="Applications"
       icon={ClipboardCheck}
-      iconClassName="bg-info-subtle text-info ring-info/25"
       action={total > 0 ? { label: 'Open board', href: '/applications' } : undefined}
     >
       {total === 0 ? (
-        <div className="flex h-full flex-col items-start justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted/30 p-5">
+        <div className="flex h-full flex-col items-start justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted p-5">
           <p className="text-sm font-semibold text-foreground">No applications tracked yet</p>
           <p className="text-xs text-muted-foreground">
             Track a programme and the board keeps deadlines, tasks and documents in one place.
@@ -48,7 +47,7 @@ export function PipelineCard({ stages }: { stages: PipelineStage[] }) {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full bg-muted/50" aria-hidden>
+          <div className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full bg-muted" aria-hidden>
             {active.map((stage) => (
               <div
                 key={stage.key}
@@ -63,7 +62,7 @@ export function PipelineCard({ stages }: { stages: PipelineStage[] }) {
                 <Link
                   href="/applications"
                   className={cn(
-                    'group flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    'group flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                     stage.count === 0 && 'opacity-45'
                   )}
                 >

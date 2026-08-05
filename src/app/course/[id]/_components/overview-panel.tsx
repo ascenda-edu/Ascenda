@@ -33,10 +33,10 @@ const CrossLinkCard = ({
   <button
     type="button"
     onClick={onNavigate}
-    className="surface-card hover-lift group block w-full text-left hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    className="surface-card hover-lift group block w-full text-left hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
   >
     <span className="mb-4 flex items-center justify-between gap-2">
-      <span className="flex items-center gap-2 text-lg font-semibold text-foreground">
+      <span className="flex items-center gap-2 font-heading text-lg font-semibold text-foreground">
         <Icon className="h-5 w-5 text-primary-ink" aria-hidden />
         {title}
       </span>
@@ -70,7 +70,7 @@ export function OverviewPanel({ course, costs, hasOutcomes, onNavigate }: Overvi
       ) : null}
 
       {course.careerOutcomesOverview ? (
-        <SectionCard title="Career snapshot" icon={GraduationCap} iconClassName="text-success">
+        <SectionCard title="Career snapshot" icon={GraduationCap}>
           <RichText text={course.careerOutcomesOverview} />
         </SectionCard>
       ) : null}
@@ -117,7 +117,7 @@ export function OverviewPanel({ course, costs, hasOutcomes, onNavigate }: Overvi
       ) : null}
 
       {hasCareerStats ? (
-        <SectionCard title="Career Prospects" icon={GraduationCap} iconClassName="text-success">
+        <SectionCard title="Career Prospects" icon={GraduationCap}>
           <div className="grid gap-4 sm:grid-cols-3">
             {course.graduateEmploymentRate ? (
               <FactTile
@@ -146,7 +146,7 @@ export function OverviewPanel({ course, costs, hasOutcomes, onNavigate }: Overvi
       ) : null}
 
       {hasCostDetails ? (
-        <SectionCard title="Costs & Living" icon={Wallet} iconClassName="text-warning">
+        <SectionCard title="Costs & Living" icon={Wallet}>
           <div className="grid gap-4 sm:grid-cols-3">
             {formattedCostTuition ? (
               <FactTile

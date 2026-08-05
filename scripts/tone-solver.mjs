@@ -64,65 +64,72 @@ const T = (h, s, l) => `${h} ${s}% ${l}%`;
    Mirrors src/app/globals.css. If you change a value there, change it here and
    re-run; the verifier below is the thing that stops a "small tweak" from
    quietly dropping a chip under AA. */
-const NEUTRAL = 232; // between the old cold 220-224 and the brand indigo 241
+/* THE NEUTRAL IS ACHROMATIC. It was hue 232 — tinted toward the brand — which is
+   what made the app read monotone: canvas and accent four OKLCH degrees apart, so
+   the greys were the brand desaturated 36x. Only the HUE moved; every surface keeps
+   the OKLCH lightness it shipped with, because the status tones are solved against
+   these surfaces and dropping the card 1.5% put two fills under 3:1.
+
+   THE BRAND IS PERIWINKLE — OKLCH hue 275, chroma 0.215, L 0.58 light / 0.70 dark. */
 
 export const TOKENS = {
   light: {
-    background: T(NEUTRAL, 28, 96.5),
-    foreground: T(NEUTRAL, 30, 13),
+    background: '0 0% 95.9%',
+    foreground: '0 0% 10.7%',
     card: '0 0% 100%',
     popover: '0 0% 100%',
-    secondary: T(NEUTRAL, 24, 92),
-    muted: T(NEUTRAL, 24, 93.5),
-    mutedForeground: T(NEUTRAL, 12, 42),
-    border: T(NEUTRAL, 20, 85.5),
-    input: T(NEUTRAL, 16, 56),
-    primary: T(241, 65, 55),
-    primaryInk: T(241, 65, 55),
-    // series-4/5 were 67%/79%; 79% measured 2.24:1 against a white card, so the
-    // "every step clears 3:1" claim in globals.css was already false. 72% is the
-    // ceiling for this hue. Steps 1-3 untouched, so series-3 still equals --primary.
-    series: ['241 65% 30%', '241 65% 42%', '241 65% 55%', '241 65% 64%', '241 65% 72%'],
+    secondary: '0 0% 90.8%',
+    muted: '0 0% 92.5%',
+    mutedForeground: '0 0% 41.8%',
+    border: '0 0% 83.4%',
+    input: '0 0% 55.5%',
+    primary: '236.8 89.5% 66.1%',
+    // White, and that is the ONE RULE for light mode: at hue 275 white clears AA
+    // only at L <= 0.58, so every solid brand fill carries a white label.
+    primaryForeground: '0 0% 100%',
+    primaryInk: '237.8 77.9% 61.8%',
+    // --series-3 is no longer pinned to --primary; pinning cost the ramp its range
+    // (min adjacent step 1.32:1 -> 1.21:1). See the note in globals.css.
+    series: ['241.3 55.6% 42.3%', '241.1 60.2% 52.8%', '238.1 75.7% 61.1%',
+             '236.1 100% 69.2%', '232.8 100% 73.9%'],
     tones: {
-      success: { text: '156 90% 25.2%', fill: '156 88% 35.4%', subtle: '156 100% 86%',   fg: T(NEUTRAL, 30, 13) },
-      warning: { text: '26 90% 35.6%',  fill: '40 88% 41.4%',  subtle: '48 100% 84%',    fg: T(NEUTRAL, 30, 13) },
-      danger:  { text: '356 90% 41.8%', fill: '348 88% 62.2%', subtle: '348 100% 92.5%', fg: T(NEUTRAL, 30, 13) },
-      info:    { text: '204 90% 36.2%', fill: '204 88% 50%',   subtle: '196 100% 88.5%', fg: T(NEUTRAL, 30, 13) },
-      feature: { text: '262 90% 46%',   fill: '262 88% 67.6%', subtle: '262 96% 93%',    fg: T(NEUTRAL, 30, 13) }
+      success: { text: '156 75% 27.4%', fill: '156 65% 40%',   subtle: '158 96% 91%',    fg: '0 0% 10.7%' },
+      warning: { text: '26 75% 37%',    fill: '40 65% 45.2%',  subtle: '47 94% 90%',     fg: '0 0% 10.7%' },
+      danger:  { text: '356 75% 44.4%', fill: '348 65% 62.2%', subtle: '348 100% 92.5%', fg: '0 0% 10.7%' }
     }
   },
   dark: {
-    background: T(NEUTRAL, 20, 9.5),
-    foreground: T(NEUTRAL, 15, 94),
-    card: T(NEUTRAL, 17, 14),
-    popover: T(NEUTRAL, 14, 21.5),
-    secondary: T(NEUTRAL, 15, 18),
-    muted: T(NEUTRAL, 15, 18),
-    mutedForeground: T(NEUTRAL, 11, 66),
-    border: T(NEUTRAL, 13, 28),
-    input: T(NEUTRAL, 12, 45),
-    primary: T(241, 68, 64),
-    // series-5 is 63%, not 60%: the card moved from 10% to 14% lightness, so the
-    // ramp's darkest step lost contrast against it and fell under the 3:1 that
-    // keeps a stacked segment from reading as a hole.
-    series: ['241 65% 90%', '241 65% 82%', '241 65% 74%', '241 65% 66%', '241 65% 63%'],
-    // 75.5%, not 69% as before: this change introduces a LIGHTER elevated
-    // surface (--popover at 21.5%), and primary-ink has to clear 4.5:1 on the
-    // hardest surface it can land on, not just on the card. 74.5% is the exact
-    // floor; the extra point is margin so a half-point surface tweak later
-    // doesn't silently drop it under AA.
-    primaryInk: T(241, 72, 75.5),
+    background: '0 0% 8.3%',
+    foreground: '0 0% 93.4%',
+    card: '0 0% 12.5%',
+    popover: '0 0% 19.7%',
+    secondary: '0 0% 16.3%',
+    muted: '0 0% 16.3%',
+    // 70%, not the solved floor of 60.1%: WCAG 2 overstates contrast at the dark
+    // end, and at the floor this measured APCA Lc 45 against a Lc 60 body-text
+    // requirement. The lift takes it to Lc 57 / WCAG 6.62:1 and still leaves a
+    // clear step down from --foreground at 93.4%.
+    mutedForeground: '0 0% 70%',
+    border: '0 0% 23.4%',
+    input: '0 0% 41.5%',
+    primary: '232 100% 75.7%',
+    // NOT white. The dark fill is LIGHTER (L 0.70), so the label is the near-black
+    // ink at 6.82:1. Under the old palette this pair measured 3.94:1 — a live AA
+    // failure on every solid button in dark mode, and the check below could not see
+    // it because it only ever tested white, and short-circuited in dark.
+    primaryForeground: '0 0% 6.9%',
+    primaryInk: '232.2 100% 75.2%',
+    series: ['228.5 100% 93.3%', '229.5 100% 85.4%', '231.2 100% 78%',
+             '234.5 100% 71.1%', '235.7 62.4% 58.6%'],
     tones: {
-      success: { text: '156 80% 47.4%', fill: '156 80% 47.4%', subtle: '156 61% 20.5%', fg: T(NEUTRAL, 30, 13) },
-      warning: { text: '38 80% 56.8%',  fill: '38 80% 56.8%',  subtle: '48 62% 20%',    fg: T(NEUTRAL, 30, 13) },
-      danger:  { text: '348 80% 74.6%', fill: '348 80% 74.6%', subtle: '356 62% 29%',   fg: T(NEUTRAL, 30, 13) },
-      info:    { text: '196 80% 60%',   fill: '196 80% 60%',   subtle: '204 62% 25.5%', fg: T(NEUTRAL, 30, 13) },
-      feature: { text: '262 80% 75%',   fill: '262 80% 75%',   subtle: '252 62% 34%',   fg: T(NEUTRAL, 30, 13) }
+      success: { text: '156 65% 50%',   fill: '156 65% 50%',   subtle: '156 61% 20.5%', fg: '0 0% 10.7%' },
+      warning: { text: '38 65% 61%',    fill: '38 65% 61%',    subtle: '48 62% 20%',    fg: '0 0% 10.7%' },
+      danger:  { text: '348 65% 69%',   fill: '348 65% 69%',   subtle: '353 43% 24%',   fg: '0 0% 10.7%' }
     }
   }
 };
 
-const TONE_NAMES = ['success', 'warning', 'danger', 'info', 'feature'];
+const TONE_NAMES = ['success', 'warning', 'danger'];
 
 // ── verify ──────────────────────────────────────────────────────────────────
 function verify() {
@@ -152,9 +159,14 @@ function verify() {
     // primary-ink is the indigo that must be legible as TEXT on neutral surfaces
     for (const [n, s] of neutralSurfaces)
       check(cr(P(t.primaryInk), s) >= 4.5, `${mode} primary-ink on ${n}`, `${cr(P(t.primaryInk), s).toFixed(2)}:1`);
-    // white button text on the primary FILL
-    check(cr([255, 255, 255], P(t.primary)) >= 4.5 || mode === 'dark',
-      `${mode} white on primary fill`, `${cr([255, 255, 255], P(t.primary)).toFixed(2)}:1`);
+    /* The button label on the primary FILL — the ACTUAL --primary-foreground, in
+       BOTH modes. This check used to hard-code white and then short-circuit with
+       `|| mode === 'dark'`, so the dark pair was never measured at all. That is
+       precisely how `bg-primary text-primary-foreground` shipped at 3.94:1 in dark
+       mode: the palette was wrong AND the verifier was structurally unable to see
+       it, while reporting success. Never write a gate that exempts a mode. */
+    check(cr(P(t.primaryForeground), P(t.primary)) >= 4.5, `${mode} primary-foreground on primary fill`,
+      `${cr(P(t.primaryForeground), P(t.primary)).toFixed(2)}:1`);
 
     // the surface ramp has to actually step
     const ramp = [['card/bg', card, bg], ['popover/card', pop, card], ['border/card', P(t.border), card]];
@@ -169,6 +181,7 @@ function verify() {
     }
 
     // tones
+    const tintChromas = [];
     for (const name of TONE_NAMES) {
       const tone = t.tones[name];
       const text = P(tone.text), fill = P(tone.fill), tint = P(tone.subtle), fg = P(tone.fg);
@@ -179,8 +192,19 @@ function verify() {
       check(cr(fg, fill) >= 4.5, `${mode} ${name}-foreground on fill`, `${cr(fg, fill).toFixed(2)}:1`);
       const tc = ok(tint).C;
       check(tc >= 0.04, `${mode} ${name}-subtle is actually tinted`, `chroma ${tc.toFixed(3)} — under 0.04 reads as grey`);
+      // Trap 3: the five tints share a card, so they are judged as a family. A
+      // tint that runs away from the others is the "neon" complaint, even when
+      // it passes every contrast gate on its own.
+      check(Math.abs(tc - TINT_C[mode]) <= TINT_C_TOL, `${mode} ${name}-subtle matches the tint family`,
+        `chroma ${tc.toFixed(3)} vs target ${TINT_C[mode]} (±${TINT_C_TOL}) — this tint reads louder or duller than its siblings`);
+      tintChromas.push(tc);
       console.log(`  ${name.padEnd(8)} text ${hex(text)} ${cr(text, card).toFixed(2)}:1 · fill ${hex(fill)} ${cr(fill, card).toFixed(2)}:1 · tint ${hex(tint)} C=${tc.toFixed(3)} L*=${(ok(tint).L * 100).toFixed(1)} · text/tint ${cr(text, tint).toFixed(2)}:1`);
     }
+
+    const spread = Math.max(...tintChromas) - Math.min(...tintChromas);
+    check(spread <= TINT_C_TOL * 2, `${mode} tint family spread`,
+      `${spread.toFixed(3)} — loudest tint is ${(Math.max(...tintChromas) / Math.min(...tintChromas)).toFixed(2)}x the quietest`);
+    console.log(`  tint spread ${spread.toFixed(3)} (target ${TINT_C[mode]} ±${TINT_C_TOL})`);
 
     // Chart series: every step must clear 3:1 on its own card or a stacked
     // segment reads as a hole. Adjacent steps sit 1.3-1.5:1 apart, which is as
@@ -199,19 +223,39 @@ function verify() {
 const WINDOW = {
   success: { tint: [156, 166], text: [156, 166] },
   warning: { tint: [40, 48], text: [26, 38] },
-  danger: { tint: [348, 356], text: [348, 356] },
-  info: { tint: [196, 204], text: [196, 204] },
-  feature: { tint: [252, 262], text: [254, 262] }
+  danger: { tint: [348, 356], text: [348, 356] }
 };
 // Unbounded chroma-maximising returns #ff0011 and a neon #00ff88 — trap 2's
 // mirror image. Dark is capped hardest: saturated accents halate on a dark ground.
-const CAP = { light: { text: 90, tint: 100, fill: 88 }, dark: { text: 80, tint: 62, fill: 80 } };
+const CAP = { light: { text: 75, tint: 100, fill: 65 }, dark: { text: 65, tint: 62, fill: 65 } };
+
+/* ── TRAP 3: an even tint family beats a chromatic one ────────────────────────
+   Trap 2 says don't solve a tint on luminance, because that rewards dull. The
+   correction over-shot: the tint search below used to MAXIMISE chroma under a
+   saturation cap, which is an unbounded objective wearing a seatbelt. It
+   returned #ffefad and #b8ffe2 — a highlighter yellow and a mint at 100%
+   saturation — while red and violet, which physically cannot be chromatic that
+   close to white in sRGB, came back at 0.044. So the set ran 0.044-0.084: near
+   2x spread across five tints that are meant to read as ONE family, all sitting
+   on the same card at the same time.
+
+   That spread is the actual defect. A tint family is judged as a set, not one
+   tint at a time, and per-tint chroma-maximising cannot see the set. Tints are
+   therefore solved to a TARGET chroma, uniform across the five tones — the
+   number below is set near what the LEAST chromatic hue (danger, then info) can
+   comfortably reach, so no tone has to strain and none runs away.
+
+   Raising these re-introduces the highlighter. If you want more colour on a
+   surface, add it with the -fill mark or the border, not by pushing the tint. */
+const TINT_C = { light: 0.050, dark: 0.078 };
+// How far a tone may sit from TINT_C before the verifier calls the family uneven.
+const TINT_C_TOL = 0.012;
 // A tint must stay a LIGHT surface (in dark, a deep one) or it becomes a fill.
 // Red and violet cannot be very chromatic this high in sRGB, so they get a
 // slightly lower floor rather than a worse colour.
 const TINT_L = {
-  light: { success: .945, warning: .945, danger: .915, info: .925, feature: .915 },
-  dark: { success: .355, warning: .355, danger: .340, info: .345, feature: .340 }
+  light: { success: .945, warning: .945, danger: .915 },
+  dark: { success: .355, warning: .355, danger: .340 }
 };
 
 const softestThenMostChromatic = (cands, slack) => {
@@ -227,13 +271,22 @@ function solve(name, mode) {
   const dark = mode === 'dark';
   const W = WINDOW[name], floor = TINT_L[mode][name], cap = CAP[mode];
 
+  // Solved to TINT_C, not to max chroma — see trap 3. Ties (and hues that can't
+  // reach the target at all, i.e. danger and feature in light mode) fall back to
+  // the closest achievable, so the family stays as even as sRGB permits.
+  const target = TINT_C[mode];
   let tint = null;
   for (let hue = W.tint[0]; hue <= W.tint[1]; hue++)
-    for (let S = 40; S <= cap.tint; S++)
+    for (let S = 20; S <= cap.tint; S++)
       for (let L = (dark ? 150 : 840); L <= (dark ? 340 : 975); L += 5) {
         const rgb = hsl2rgb(hue, S, L / 10), o = ok(rgb);
         if (dark ? (o.L < floor - .045 || o.L > floor + .045) : o.L < floor) continue;
-        if (!tint || o.C > tint.C) tint = { hue, S, l: L / 10, rgb, ...o };
+        const cost = Math.abs(o.C - target);
+        // Tie-break toward the lighter surface in light mode (a tint must not
+        // creep down into fill territory) and toward the floor in dark.
+        if (!tint || cost < tint.cost - 1e-6 ||
+            (Math.abs(cost - tint.cost) <= 1e-6 && (dark ? o.L < tint.L : o.L > tint.L)))
+          tint = { hue, S, l: L / 10, rgb, cost, ...o };
       }
 
   const textCands = [];

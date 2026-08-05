@@ -20,12 +20,13 @@ interface InboxListProps {
   profileId: string;
 }
 
-// Tone tokens (globals.css): info = open/in-flight, warning = pending work,
-// success = done. AA-verified in both themes, so no `dark:` variants.
+// Tone tokens (globals.css): warning = pending work, success = done. "Open" is
+// deliberately neutral — nothing is owed yet. AA-verified in both themes, so no
+// `dark:` variants.
 const STATUS_PILL: Record<HelpRequest['status'], { label: string; tone: string }> = {
-  open: { label: 'Open', tone: 'border-info/25 bg-info-subtle text-info' },
-  accepted: { label: 'In progress', tone: 'border-warning/25 bg-warning-subtle text-warning' },
-  resolved: { label: 'Resolved', tone: 'border-success/25 bg-success-subtle text-success' }
+  open: { label: 'Open', tone: 'border-border bg-muted text-muted-foreground' },
+  accepted: { label: 'In progress', tone: 'border-warning/30 bg-warning-subtle text-warning' },
+  resolved: { label: 'Resolved', tone: 'border-success/30 bg-success-subtle text-success' }
 };
 
 export function InboxList({ profileId }: InboxListProps) {
@@ -161,7 +162,7 @@ export function InboxList({ profileId }: InboxListProps) {
     return (
       <div className="space-y-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="h-20 animate-pulse rounded-2xl bg-muted/40" />
+          <div key={i} className="h-20 animate-pulse rounded-2xl bg-muted" />
         ))}
       </div>
     );
@@ -201,14 +202,14 @@ export function InboxList({ profileId }: InboxListProps) {
             className={cn(
               'group flex w-full items-start gap-4 rounded-2xl border px-5 py-4 text-left transition',
               isUnread
-                ? 'border-primary/30 bg-primary/5 hover:bg-primary/10'
-                : 'border-border bg-card hover:bg-muted/40'
+                ? 'border-primary/30 bg-primary/10 hover:border-primary/60'
+                : 'border-border bg-card hover:bg-muted'
             )}
           >
             <div
               className={cn(
                 'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
-                isUnread ? 'bg-primary/15 text-primary-ink' : 'bg-muted text-muted-foreground'
+                isUnread ? 'bg-primary/10 text-primary-ink' : 'bg-border text-muted-foreground'
               )}
             >
               <MessageSquare className="h-4 w-4" />
@@ -227,7 +228,7 @@ export function InboxList({ profileId }: InboxListProps) {
               <p className="line-clamp-2 text-xs text-muted-foreground">{req.body}</p>
               <div className="flex items-center gap-2 pt-0.5">
                 <span className="text-label text-muted-foreground">{initiatorLabel(req)}</span>
-                <span className="text-label text-muted-foreground/60">·</span>
+                <span className="text-label text-muted-foreground">·</span>
                 <span className={cn('rounded-full border px-2 py-0.5 text-label font-semibold', status.tone)}>
                   {status.label}
                 </span>

@@ -38,18 +38,23 @@ const badgeVariants = cva(
         // --border is 18% lightness, so the edge read as black. Kept identical to
         // `TONE.neutral.chip` in lib/theme/categories.ts and to `.surface-chip`
         // in globals.css: those three are the same pill and must move together.
-        neutral: 'border-primary/15 bg-primary/8 text-foreground',
-        success: 'border-success/25 bg-success-subtle text-success',
-        warning: 'border-warning/25 bg-warning-subtle text-warning',
-        danger: 'border-danger/25 bg-danger-subtle text-danger',
-        info: 'border-info/25 bg-info-subtle text-info',
-        feature: 'border-feature/25 bg-feature-subtle text-feature',
+        neutral: 'border-primary/30 bg-primary/10 text-foreground',
+        success: 'border-success/30 bg-success-subtle text-success',
+        warning: 'border-warning/30 bg-warning-subtle text-warning',
+        danger: 'border-danger/30 bg-danger-subtle text-danger',
+        // `info` and `feature` variants used to live here. Neither had a single
+        // call site, and both tones are gone: `info` meant "in progress", which
+        // is the absence of a state, and `feature` was a category. Use `neutral`
+        // for the first and `primary` for the second.
         // primary-ink, not primary: --primary is tuned to carry white button
         // text and only measures 3.58:1 as text on a dark card.
-        primary: 'border-primary/25 bg-primary/10 text-primary-ink',
-        // Same tinted edge as `neutral`, but no fill — for a pill that has to sit
-        // on an already-tinted surface without adding a second wash.
-        outline: 'border-primary/20 bg-transparent text-foreground',
+        primary: 'border-primary/60 bg-primary/10 text-primary-ink',
+        // The quiet variant, so it takes the NEUTRAL border token rather than a
+        // brand one — that is what makes it "outline" and not "brand, hollow",
+        // and it is the only thing separating it from `neutral` now that both
+        // sit at the same rung. No fill, so it can still sit on an
+        // already-tinted surface without adding a second wash.
+        outline: 'border-border bg-transparent text-foreground',
         /**
          * Geometry only — no border/fill/text colour of its own.
          *

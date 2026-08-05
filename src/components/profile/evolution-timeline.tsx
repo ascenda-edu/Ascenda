@@ -25,17 +25,20 @@ const itemFade = {
 
 // ─── Category config ─────────────────────────────────────────────────────────
 
-const CATEGORY_CONFIG: Record<EvolutionCategory, { icon: typeof Compass; color: string; border: string }> = {
-  interest: { icon: Compass, color: 'text-info', border: 'border-l-info' },
-  goal: { icon: Target, color: 'text-feature', border: 'border-l-feature' },
-  achievement: { icon: Trophy, color: 'text-success', border: 'border-l-success' },
-  milestone: { icon: Flag, color: 'text-warning', border: 'border-l-warning' },
-  counsellor_note: { icon: MessageSquare, color: 'text-feature', border: 'border-l-feature' }
+// No `border` any more: each category used to paint a coloured left rail on its
+// card, which spent five hues on a nominal set. The dot glyph beside it already
+// names the category.
+const CATEGORY_CONFIG: Record<EvolutionCategory, { icon: typeof Compass; color: string }> = {
+  interest: { icon: Compass, color: 'text-muted-foreground' },
+  goal: { icon: Target, color: 'text-primary-ink' },
+  achievement: { icon: Trophy, color: 'text-success' },
+  milestone: { icon: Flag, color: 'text-warning' },
+  counsellor_note: { icon: MessageSquare, color: 'text-primary-ink' }
 };
 
 const SOURCE_LABEL: Record<EvolutionSource, { label: string; className: string }> = {
-  student: { label: 'Student', className: 'bg-info-subtle text-info' },
-  counsellor: { label: 'Counsellor', className: 'bg-feature-subtle text-feature' },
+  student: { label: 'Student', className: 'bg-muted text-muted-foreground' },
+  counsellor: { label: 'Counsellor', className: 'bg-primary/10 text-primary-ink' },
   system: { label: 'System', className: 'bg-muted text-muted-foreground' }
 };
 
@@ -75,7 +78,7 @@ export function EvolutionTimeline({ entries, studentName }: EvolutionTimelinePro
         viewport={{ once: true, margin: '-40px' }}
       >
         {/* Timeline spine */}
-        <div className="absolute left-[19px] top-2 bottom-2 w-px bg-border/60" />
+        <div className="absolute left-[19px] top-2 bottom-2 w-px bg-border" />
 
         <div className="space-y-3">
           {sorted.map((entry) => {
@@ -91,14 +94,14 @@ export function EvolutionTimeline({ entries, studentName }: EvolutionTimelinePro
                 </div>
 
                 {/* Card */}
-                <div className={`flex-1 surface-subcard border-l-[3px] ${cfg.border} p-4 rounded-2xl`}>
+                <div className="flex-1 surface-subcard p-4 rounded-2xl">
                   <div className="flex items-start justify-between gap-3 mb-1">
                     <h4 className="text-sm font-semibold leading-snug">{entry.title}</h4>
                     <time className="shrink-0 text-label uppercase tracking-[0.1em] text-muted-foreground font-medium">
                       {formatDate(entry.date)}
                     </time>
                   </div>
-                  <p className="text-[0.8125rem] text-muted-foreground/90 leading-relaxed mb-2">
+                  <p className="text-[0.8125rem] text-muted-foreground leading-relaxed mb-2">
                     {entry.description}
                   </p>
                   <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-label font-semibold ${src.className}`}>

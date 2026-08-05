@@ -121,7 +121,7 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
             <TabsTrigger key={tab.id} value={tab.id}>
               {tab.label}
               {count > 0 && (
-                <span className="ml-1.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-label font-bold text-primary-ink">
+                <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-label font-bold text-primary-ink">
                   {count}
                 </span>
               )}
@@ -230,7 +230,7 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
             {student.lifestyle.interests.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {student.lifestyle.interests.map((i) => (
-                  <span key={i} className="rounded-full border border-primary/15 bg-primary/8 px-2.5 py-0.5 text-xs text-foreground">
+                  <span key={i} className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs text-foreground">
                     {i}
                   </span>
                 ))}
@@ -279,7 +279,7 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
             <p className="font-semibold text-foreground">Subjects</p>
             <div className="flex flex-wrap gap-1.5">
               {student.academic.subjects.map((s) => (
-                <span key={s} className="rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-xs font-medium text-foreground">
+                <span key={s} className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-foreground">
                   {s}
                 </span>
               ))}
@@ -292,7 +292,7 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
             {student.academic.admissionsTests.length > 0 ? (
               <div className="space-y-2">
                 {student.academic.admissionsTests.map((t) => (
-                  <div key={t.type} className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/60 px-4 py-3 text-sm">
+                  <div key={t.type} className="flex items-center justify-between rounded-2xl border border-border bg-background px-4 py-3 text-sm">
                     <div className="flex items-center gap-2">
                       {t.status === 'taken' ? (
                         <CheckCircle2 className="h-4 w-4 text-success" />
@@ -362,7 +362,7 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
                       {tierMatches.map((m, i) => (
                         <div
                           key={`${m.university}-${m.program}-${i}`}
-                          className="flex items-center gap-4 rounded-2xl border border-border/60 bg-background/60 px-5 py-4"
+                          className="flex items-center gap-4 rounded-2xl border border-border bg-background px-5 py-4"
                         >
                           <div className="flex-1 space-y-0.5">
                             <p className="font-semibold text-foreground">{m.university}</p>
@@ -370,7 +370,7 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
                           </div>
                           <div className="text-right">
                             <p className={cn('text-xl font-bold tabular-nums', tc.text)}>{m.score}</p>
-                            <div className="mt-1 h-1 w-16 overflow-hidden rounded-full bg-muted/60">
+                            <div className="mt-1 h-1 w-16 overflow-hidden rounded-full bg-muted">
                               <div
                                 className={cn('h-1 rounded-full bg-current', tc.text)}
                                 style={{ width: `${m.score}%` }}
@@ -386,8 +386,8 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
                 );
               })}
               {matches.length === 0 && (
-                <div className="rounded-4xl border border-dashed border-border bg-muted/40 p-12 text-center">
-                  <BookOpen className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+                <div className="rounded-4xl border border-dashed border-border bg-muted p-12 text-center">
+                  <BookOpen className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
                   <p className="font-semibold text-foreground">No matches generated</p>
                   <p className="mt-1 text-sm text-muted-foreground">Complete the student profile to generate matches.</p>
                 </div>
@@ -406,7 +406,7 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
                 return (
                   <div
                     key={i}
-                    className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-background/60 px-5 py-4 sm:flex-row sm:items-center sm:gap-4"
+                    className="flex flex-col gap-3 rounded-2xl border border-border bg-background px-5 py-4 sm:flex-row sm:items-center sm:gap-4"
                   >
                     <div className="flex-1 space-y-0.5">
                       <p className="font-semibold text-foreground">{app.university}</p>
@@ -426,8 +426,8 @@ export const StudentDetailTabs = ({ student, evolution }: StudentDetailTabsProps
               })}
             </div>
           ) : (
-            <div className="rounded-4xl border border-dashed border-border bg-muted/40 p-12 text-center">
-              <FileText className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+            <div className="rounded-4xl border border-dashed border-border bg-muted p-12 text-center">
+              <FileText className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
               <p className="font-semibold text-foreground">No applications yet</p>
               <p className="mt-1 text-sm text-muted-foreground">This student hasn&apos;t started any applications.</p>
             </div>

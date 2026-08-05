@@ -72,11 +72,15 @@ const VERDICT_COPY: Record<Verdict, { headline: string; detail: string; tone: 'g
   }
 };
 
+// The verdict panel is a CARD, so it does not take a tint: a whole tinted block is
+// more surface than a one-line verdict earns, and it competed with the composition
+// bar underneath — the part that actually shows the imbalance. The tone survives on
+// the icon and the headline, which is where it is read.
 const TONE_STYLES = {
-  good: { card: 'border-success/25 bg-success-subtle', icon: 'text-success', headline: 'text-success' },
-  warn: { card: 'border-warning/25 bg-warning-subtle', icon: 'text-warning', headline: 'text-warning' },
-  crit: { card: 'border-danger/25 bg-danger-subtle', icon: 'text-danger', headline: 'text-danger' },
-  info: { card: 'border-info/25 bg-info-subtle', icon: 'text-info', headline: 'text-info' }
+  good: { card: 'border-border bg-card', icon: 'text-success', headline: 'text-success' },
+  warn: { card: 'border-border bg-card', icon: 'text-warning', headline: 'text-warning' },
+  crit: { card: 'border-border bg-card', icon: 'text-danger', headline: 'text-danger' },
+  info: { card: 'border-border bg-card', icon: 'text-muted-foreground', headline: 'text-muted-foreground' }
 } as const;
 
 // Tier segments are TIER_VISUAL's; `untracked` is genuinely neutral (no tier has
@@ -85,7 +89,7 @@ const SEGMENTS: { key: keyof Composition; label: MatchTier | 'Other'; bar: strin
   { key: 'reach', label: 'Reach', bar: TIER_VISUAL.reach.bar, pill: `${TIER_VISUAL.reach.border} ${TIER_VISUAL.reach.bg} ${TIER_VISUAL.reach.text}` },
   { key: 'match', label: 'Match', bar: TIER_VISUAL.match.bar, pill: `${TIER_VISUAL.match.border} ${TIER_VISUAL.match.bg} ${TIER_VISUAL.match.text}` },
   { key: 'safe', label: 'Safe', bar: TIER_VISUAL.safety.bar, pill: `${TIER_VISUAL.safety.border} ${TIER_VISUAL.safety.bg} ${TIER_VISUAL.safety.text}` },
-  { key: 'untracked', label: 'Other', bar: 'bg-muted-foreground/40', pill: 'border-border bg-muted/60 text-muted-foreground' }
+  { key: 'untracked', label: 'Other', bar: 'bg-muted-foreground/30', pill: 'border-border bg-muted text-muted-foreground' }
 ];
 
 export const PortfolioBalance = ({ student }: PortfolioBalanceProps) => {
@@ -102,7 +106,7 @@ export const PortfolioBalance = ({ student }: PortfolioBalanceProps) => {
     <div className={cn('rounded-3xl border p-5 sm:p-6', tone.card)}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className={cn('mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background/80', tone.icon)}>
+          <div className={cn('mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background', tone.icon)}>
             <Icon className="h-4 w-4" />
           </div>
           <div className="space-y-1">
@@ -126,7 +130,7 @@ export const PortfolioBalance = ({ student }: PortfolioBalanceProps) => {
 
       {/* Composition bar */}
       <div className="mt-5 space-y-2">
-        <div className="flex h-2 overflow-hidden rounded-full bg-muted/60">
+        <div className="flex h-2 overflow-hidden rounded-full bg-muted">
           {SEGMENTS.map(({ key, bar }) => {
             const value = composition[key] as number;
             if (value === 0) return null;

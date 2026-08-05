@@ -66,14 +66,14 @@ export function MessageContent({
               <Link
                 href={href}
                 onClick={onLinkClick}
-                className="inline-flex items-center gap-0.5 text-primary-ink underline underline-offset-2 hover:text-primary-ink/80"
+                className="inline-flex items-center gap-0.5 text-primary-ink underline underline-offset-2 hover:decoration-2"
               >
                 {children}
               </Link>
             );
           }
           return (
-            <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary-ink underline underline-offset-2 hover:text-primary-ink/80">
+            <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary-ink underline underline-offset-2 hover:decoration-2">
               {children}
             </a>
           );
@@ -156,7 +156,7 @@ function LegacyActionCard({
 
   if (state === 'sent') {
     return (
-      <div className="flex items-center gap-2 rounded-xl border border-success/25 bg-success-subtle px-3 py-2.5 text-xs font-medium text-success">
+      <div className="flex items-center gap-2 rounded-xl border border-success/30 bg-success-subtle px-3 py-2.5 text-xs font-medium text-success">
         <CheckCircle2 className="h-4 w-4 shrink-0" />
         Sent to your counsellor
       </div>
@@ -164,7 +164,7 @@ function LegacyActionCard({
   }
   if (state === 'cancelled') {
     return (
-      <div className="rounded-xl border border-border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
+      <div className="rounded-xl border border-border bg-muted px-3 py-2.5 text-xs text-muted-foreground">
         Draft discarded
       </div>
     );
@@ -191,7 +191,7 @@ function LegacyActionCard({
   };
 
   return (
-    <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
+    <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/10 p-3">
       <p className="text-xs font-semibold text-foreground">{title}</p>
       {action.kind === 'help_request' && (
         <input
@@ -199,7 +199,7 @@ function LegacyActionCard({
           onChange={(e) => setSubject(e.target.value)}
           disabled={sending}
           aria-label="Subject"
-          className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs text-foreground transition-[border-color,box-shadow] hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+          className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs text-foreground transition-[border-color,box-shadow] hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
         />
       )}
       <textarea
@@ -208,7 +208,7 @@ function LegacyActionCard({
         disabled={sending}
         rows={3}
         aria-label="Message body"
-        className="w-full resize-none rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs leading-relaxed text-foreground transition-[border-color,box-shadow] hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+        className="w-full resize-none rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs leading-relaxed text-foreground transition-[border-color,box-shadow] hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
       />
       {failed && (
         <p className="text-label text-danger">
@@ -227,7 +227,7 @@ function LegacyActionCard({
         <button
           onClick={onCancel}
           disabled={sending}
-          className="rounded-full border border-primary/25 px-3 py-1.5 text-label font-medium text-muted-foreground transition-colors hover:bg-primary/8 hover:text-foreground disabled:opacity-50"
+          className="rounded-full border border-primary/30 px-3 py-1.5 text-label font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-foreground disabled:opacity-50"
         >
           Cancel
         </button>
@@ -277,7 +277,7 @@ function ToolActionCard({
 
   if (state === 'sent') {
     return (
-      <div className="rounded-xl border border-success/25 bg-success-subtle px-3 py-2.5 text-xs font-medium text-success">
+      <div className="rounded-xl border border-success/30 bg-success-subtle px-3 py-2.5 text-xs font-medium text-success">
         <div className="flex items-start gap-2">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
           <div className="min-w-0 flex-1">
@@ -289,7 +289,7 @@ function ToolActionCard({
   }
   if (state === 'cancelled') {
     return (
-      <div className="rounded-xl border border-border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
+      <div className="rounded-xl border border-border bg-muted px-3 py-2.5 text-xs text-muted-foreground">
         Draft discarded
       </div>
     );
@@ -314,10 +314,10 @@ function ToolActionCard({
   };
 
   const controlClass =
-    'w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs text-foreground transition-[border-color,box-shadow] hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50';
+    'w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs text-foreground transition-[border-color,box-shadow] hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50';
 
   return (
-    <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
+    <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/10 p-3">
       <div>
         <p className="text-xs font-semibold text-foreground">{action.title}</p>
         {action.summary && (
@@ -399,7 +399,7 @@ function ToolActionCard({
         <button
           onClick={onCancel}
           disabled={sending}
-          className="rounded-full border border-primary/25 px-3 py-1.5 text-label font-medium text-muted-foreground transition-colors hover:bg-primary/8 hover:text-foreground disabled:opacity-50"
+          className="rounded-full border border-primary/30 px-3 py-1.5 text-label font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-foreground disabled:opacity-50"
         >
           Cancel
         </button>
@@ -438,7 +438,7 @@ function AutoResizeTextareaField({
       }}
       disabled={disabled}
       rows={3}
-      className="w-full resize-none rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs leading-relaxed text-foreground transition-[border-color,box-shadow] hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+      className="w-full resize-none rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs leading-relaxed text-foreground transition-[border-color,box-shadow] hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
     />
   );
 }

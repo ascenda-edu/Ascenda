@@ -13,20 +13,18 @@ const ROLES = [
     label: 'Student',
     description: 'Track applications, explore universities, and manage your admissions journey.',
     icon: GraduationCap,
-    accent: 'info',
     href: '/dashboard',
     badge: 'Applicant workspace',
-    badgeColor: 'bg-info-subtle text-info'
+    badgeColor: 'bg-primary/10 text-primary-ink'
   },
   {
     id: 'counsellor',
     label: 'Counsellor',
     description: 'Monitor your cohort, track student progress, and manage deadlines at scale.',
     icon: Briefcase,
-    accent: 'feature',
     href: '/counsellor',
     badge: 'Professional dashboard',
-    badgeColor: 'bg-feature-subtle text-feature'
+    badgeColor: 'bg-primary/10 text-primary-ink'
   }
 ] as const;
 
@@ -125,7 +123,7 @@ export default function RoleSelectPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="space-y-3 text-center">
-          <div className="relative mx-auto h-2 w-48 overflow-hidden rounded-full bg-muted/60">
+          <div className="relative mx-auto h-2 w-48 overflow-hidden rounded-full bg-muted">
             <div className="absolute inset-0 translate-x-[-100%] motion-safe:animate-shimmer bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
           </div>
           <p className="text-sm text-muted-foreground motion-safe:animate-pulse">Verifying session…</p>
@@ -150,7 +148,7 @@ export default function RoleSelectPage() {
         transition={{ duration: 0.4 }}
         className="mb-10 text-center"
       >
-        <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1 text-xs font-medium text-foreground shadow-e-1 backdrop-blur">
+        <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-foreground shadow-e-1 backdrop-blur">
           <span className="h-2 w-2 rounded-full bg-success-fill" aria-hidden />
           Welcome to Ascenda
         </p>
@@ -179,20 +177,16 @@ export default function RoleSelectPage() {
               className={cn(
                 'group relative flex flex-col items-start gap-4 rounded-2xl border bg-card/80 p-6 text-left shadow-e-1 backdrop-blur',
                 'hover-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                role.accent === 'feature'
-                  ? 'hover:border-feature/60 hover:ring-1 hover:ring-feature/20'
-                  : 'hover:border-info/60 hover:ring-1 hover:ring-info/20',
-                isSelected && role.accent === 'feature' && 'border-feature/60 ring-1 ring-feature/30',
-                isSelected && role.accent === 'info' && 'border-info/60 ring-1 ring-info/30',
+                // Both roles now share the brand accent. They used to be told apart by
+                // hue (primary vs the deleted `feature`), which spent colour on a
+                // two-item category; the icon and the label already do that job, and
+                // the only real state on these cards is SELECTED.
+                'hover:border-primary/60 hover:ring-1 hover:ring-primary/10',
+                isSelected && 'border-primary/60 ring-1 ring-primary/30',
                 isOther && 'opacity-40'
               )}
             >
-              <div
-                className={cn(
-                  'flex h-11 w-11 items-center justify-center rounded-2xl',
-                  role.accent === 'feature' ? 'bg-feature-subtle text-feature' : 'bg-info-subtle text-info'
-                )}
-              >
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl text-muted-foreground">
                 <Icon className="h-5 w-5" aria-hidden />
               </div>
 
@@ -200,16 +194,11 @@ export default function RoleSelectPage() {
                 <span className={cn('inline-block rounded-full px-2 py-0.5 text-label font-semibold uppercase tracking-widest', role.badgeColor)}>
                   {role.badge}
                 </span>
-                <p className="text-lg font-semibold leading-tight text-foreground">{role.label}</p>
+                <p className="font-heading text-lg font-semibold leading-tight text-foreground">{role.label}</p>
                 <p className="text-sm text-muted-foreground">{role.description}</p>
               </div>
 
-              <span
-                className={cn(
-                  'flex items-center gap-1 text-sm font-medium transition-colors',
-                  role.accent === 'feature' ? 'text-feature' : 'text-info'
-                )}
-              >
+              <span className="flex items-center gap-1 text-sm font-medium text-primary-ink transition-colors">
                 {isSelected && loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />

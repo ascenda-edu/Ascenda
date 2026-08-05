@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  ArrowRight,
   Award,
   BookOpen,
   Briefcase,
@@ -53,14 +54,19 @@ import { parseLocalDate } from '@/lib/utils/dates';
  *   - swatch: a single-line className for icon-in-box (h-9 w-9 rounded-2xl)
  */
 
-export type CategoryTone =
-  | 'rose'
-  | 'amber'
-  | 'emerald'
-  | 'sky'
-  | 'violet'
-  | 'primary'
-  | 'neutral';
+/**
+ * `sky` (info) and `violet` (feature) are gone. Five status hues could all land on
+ * one card, and the reader cannot hold five meanings — so the set is now the three
+ * that answer "does this need me?": rose (act now), amber (act soon), emerald
+ * (done, terminal). `info` was never a state, it was "in progress", which is the
+ * absence of a state; `feature` was a *category* wearing a status hue.
+ *
+ * Anything that used to be `sky` is neutral, and anything that used to be
+ * `violet` is the brand. Do not re-add either: the union is the enforcement, and
+ * every registry below is indexed without a cast so a missing member is a compile
+ * error rather than an `undefined.text` crash.
+ */
+export type CategoryTone = 'rose' | 'amber' | 'emerald' | 'primary' | 'neutral';
 
 export interface CategoryVisual {
   tone: CategoryTone;
@@ -108,78 +114,59 @@ const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
   rose: {
     text: 'text-danger',
     bg: 'bg-danger-subtle',
-    border: 'border-danger/25',
-    ring: 'ring-danger/25',
+    border: 'border-danger/30',
+    ring: 'ring-danger/30',
     accent: 'border-l-danger',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-danger-subtle text-danger border border-danger/25',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-danger-subtle text-danger border border-danger/30',
     swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-danger-subtle text-danger ring-1 ring-danger/25',
+      'flex h-9 w-9 items-center justify-center rounded-2xl bg-danger-subtle text-danger ring-1 ring-danger/30',
     bar: 'bg-danger-fill'
   },
   amber: {
     text: 'text-warning',
     bg: 'bg-warning-subtle',
-    border: 'border-warning/25',
-    ring: 'ring-warning/25',
+    border: 'border-warning/30',
+    ring: 'ring-warning/30',
     accent: 'border-l-warning',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-warning-subtle text-warning border border-warning/25',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-warning-subtle text-warning border border-warning/30',
     swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-warning-subtle text-warning ring-1 ring-warning/25',
+      'flex h-9 w-9 items-center justify-center rounded-2xl bg-warning-subtle text-warning ring-1 ring-warning/30',
     bar: 'bg-warning-fill'
   },
   emerald: {
     text: 'text-success',
     bg: 'bg-success-subtle',
-    border: 'border-success/25',
-    ring: 'ring-success/25',
+    border: 'border-success/30',
+    ring: 'ring-success/30',
     accent: 'border-l-success',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-success-subtle text-success border border-success/25',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-success-subtle text-success border border-success/30',
     swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-success-subtle text-success ring-1 ring-success/25',
+      'flex h-9 w-9 items-center justify-center rounded-2xl bg-success-subtle text-success ring-1 ring-success/30',
     bar: 'bg-success-fill'
-  },
-  sky: {
-    text: 'text-info',
-    bg: 'bg-info-subtle',
-    border: 'border-info/25',
-    ring: 'ring-info/25',
-    accent: 'border-l-info',
-    chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-info-subtle text-info border border-info/25',
-    swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-info-subtle text-info ring-1 ring-info/25',
-    bar: 'bg-info-fill'
-  },
-  violet: {
-    text: 'text-feature',
-    bg: 'bg-feature-subtle',
-    border: 'border-feature/25',
-    ring: 'ring-feature/25',
-    accent: 'border-l-feature',
-    chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-feature-subtle text-feature border border-feature/25',
-    swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-feature-subtle text-feature ring-1 ring-feature/25',
-    bar: 'bg-feature-fill'
   },
   primary: {
     // primary-ink, not primary: --primary is tuned to carry white button text and
     // measures 3.58:1 as text on a dark card.
     text: 'text-primary-ink',
     bg: 'bg-primary/10',
-    border: 'border-primary/25',
-    ring: 'ring-primary/25',
+    border: 'border-primary/30',
+    ring: 'ring-primary/30',
     accent: 'border-l-primary',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-primary-ink border border-primary/25',
-    swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary-ink ring-1 ring-primary/25',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-primary-ink border border-primary/30',
+    // No tint and no ring. A 36px filled box behind an icon is the single most
+    // repeated piece of category decoration in the app, and `primary`/`neutral`
+    // are exactly the tones the NOMINAL registries resolve to — so this swatch
+    // was a brand-tinted plate saying "this is a section", which the section's
+    // own heading already says. The ordinal tones (rose/amber/emerald) keep
+    // their tinted swatch: there the tint is a state, not a label.
+    swatch: 'flex h-9 w-9 items-center justify-center rounded-2xl text-muted-foreground',
     bar: 'bg-primary'
   },
-  // Neutral is a TONE, not an absence of one. It used to be `bg-muted/60` +
+  // Neutral is a TONE, not an absence of one. It used to be `bg-muted` +
   // `border-border`, which put a dead grey pill with a hard edge (near-black in
   // dark mode, where --border sits at 18% lightness) beside five tinted ones.
   // It now carries the same faint brand wash as `.surface-chip` in globals.css —
@@ -187,21 +174,21 @@ const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
   // which carries indigo TEXT and a stronger edge to mean "brand accent".
   neutral: {
     text: 'text-foreground',
-    bg: 'bg-primary/8',
-    border: 'border-primary/15',
-    ring: 'ring-primary/15',
+    bg: 'bg-primary/10',
+    border: 'border-primary/30',
+    ring: 'ring-primary/30',
     accent: 'border-l-primary/30',
     chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/8 text-foreground border border-primary/15',
-    swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/8 text-foreground ring-1 ring-primary/15',
+      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-foreground border border-primary/30',
+    // Untinted, for the same reason as `primary` above.
+    swatch: 'flex h-9 w-9 items-center justify-center rounded-2xl text-muted-foreground',
     // The BAR stays hueless, unlike the chip/swatch above. A bar is read by
     // comparison against its neighbours, and `bg-primary/30` differs from the
     // `primary` tone's own `bg-primary` only in alpha — so a neutral bar and a
     // brand bar side by side were the same colour at two lightnesses, which is
     // exactly the confusion the `--series-*` ramp needs a 2px ring to avoid.
     // A pill has no neighbour to be confused with; a bar always does.
-    bar: 'bg-muted-foreground/40'
+    bar: 'bg-muted-foreground/30'
   }
 };
 
@@ -211,13 +198,46 @@ const make = (tone: CategoryTone, icon: LucideIcon): CategoryVisual => ({
   ...TONE[tone]
 });
 
+/* ─── WHICH REGISTRIES GET A HUE, AND WHY ────────────────────────────────────
+ * The five status hues are a scarce resource. Spending one on a registry that
+ * doesn't need it doesn't just waste it — it actively lies, because the reader
+ * has already learned that rose means urgent.
+ *
+ * The test is ORDINAL vs NOMINAL:
+ *
+ *   ORDINAL — the values are ranked, and the rank is the point. reach/match/
+ *     safety, overdue/pending/received, the completion bands. Hue is doing real
+ *     work here: it says "this one is worse than that one" pre-attentively, and
+ *     it keeps its hue.
+ *
+ *   NOMINAL — the values are just names with no order. Profile sections, task
+ *     types, scholarship categories, toolbox tools. Hue encodes nothing; it is
+ *     an arbitrary ID. These get ONE tone (`primary`, or `neutral` for an
+ *     explicit "unspecified" bucket).
+ *
+ * Nominal registries lose nothing by going monochrome, because every entry
+ * already carries its own lucide `icon` — the icon is the type signal, the hue
+ * was never carrying that load. What they gain is that a page stops showing
+ * four unrelated colours to say "these are four sections of a form", and the
+ * hues that ARE left mean something when they appear.
+ *
+ * This is the same argument that already sent the chart palette monochrome (see
+ * --series-* in globals.css): a multi-hue categorical palette was rejected as
+ * too loud beside an indigo brand. Icon swatches simply hadn't had it applied.
+ *
+ * So: before giving a new registry five colours, ask whether its values are
+ * RANKED. If they aren't, it gets one.
+ * ────────────────────────────────────────────────────────────────────────── */
+
 /* ─── Application priority / status ─────────────────────────────────── */
 
 export type ApplicationPriority = 'high' | 'medium' | 'watch';
 export const PRIORITY_VISUAL: Record<ApplicationPriority, CategoryVisual> = {
   high: make('rose', AlertTriangle),
   medium: make('amber', Target),
-  watch: make('sky', Compass)
+  // `watch` is the LOWEST priority — "keep an eye on". A hue here competed with
+  // the two above it for attention while asking for nothing.
+  watch: make('neutral', Compass)
 };
 export const PRIORITY_LABEL: Record<ApplicationPriority, string> = {
   high: 'High priority',
@@ -242,11 +262,23 @@ export type ApplicationStatusTone =
   | 'submitted'
   | 'decision'
   | 'enrolled';
+/* The five stages are ordinal, but only two of them ask anything of the student,
+   and those are the only two that keep a hue:
+
+     planning     nothing to do yet          → neutral
+     in_progress  being worked on now        → amber, act soon
+     submitted    your part is done          → emerald, terminal
+     decision     waiting on the university  → neutral (waiting is not a task)
+     enrolled     terminal state of the app  → the brand
+
+   `decision` was violet and `planning` was sky. Both were marking a *position in
+   a sequence*, which the stage label already does, so the hue was spent telling
+   the reader something they could already read. */
 export const APPLICATION_STATUS_VISUAL: Record<ApplicationStatusTone, CategoryVisual> = {
-  planning: make('sky', Compass),
+  planning: make('neutral', Compass),
   in_progress: make('amber', Timer),
   submitted: make('emerald', CheckCircle2),
-  decision: make('violet', Award),
+  decision: make('neutral', Award),
   enrolled: make('primary', GraduationCap)
 };
 
@@ -302,12 +334,19 @@ export const DOC_STATUS_VISUAL: Record<DocStatus, CategoryVisual> = {
 
 /* ─── Task / requirement type ───────────────────────────────────────── */
 
+/**
+ * NOMINAL — what KIND of task, not how urgent it is. Urgency is a separate axis
+ * and is carried by DEADLINE_VISUAL, which is why `interview: rose` was actively
+ * misleading: it painted every interview task in the overdue colour regardless
+ * of when it was due, and sat next to a genuinely-overdue rose chip driven by
+ * the deadline. Type is the icon's job.
+ */
 export type TaskType = 'essay' | 'reference' | 'test' | 'interview' | 'document' | 'general';
 export const TASK_VISUAL: Record<TaskType, CategoryVisual> = {
-  essay: make('violet', PenLine),
-  reference: make('sky', Mail),
-  test: make('amber', ClipboardCheck),
-  interview: make('rose', Calendar),
+  essay: make('primary', PenLine),
+  reference: make('primary', Mail),
+  test: make('primary', ClipboardCheck),
+  interview: make('primary', Calendar),
   document: make('primary', FileText),
   general: make('neutral', ListChecks)
 };
@@ -329,8 +368,10 @@ export type DeadlineUrgency = 'overdue' | 'this-week' | 'this-month' | 'later' |
 export const DEADLINE_VISUAL: Record<DeadlineUrgency, CategoryVisual> = {
   overdue: make('rose', AlertTriangle),
   'this-week': make('amber', CalendarClock),
-  'this-month': make('sky', Calendar),
-  later: make('emerald', Calendar),
+  // A month out is not something to do today. It was sky; the DATE carries the
+  // distance, so the hue was duplicating the text beside it.
+  'this-month': make('neutral', Calendar),
+  later: make('neutral', Calendar),
   unknown: make('neutral', Calendar)
 };
 
@@ -352,36 +393,126 @@ export const classifyDeadlineUrgency = (
 
 /* ─── Profile section ───────────────────────────────────────────────── */
 
+/**
+ * NOMINAL — four sections of one form. These were sky/violet/amber/emerald,
+ * which put four unrelated colours on /profile to convey nothing except "there
+ * are four of these"; `lifestyle` was amber, i.e. the todo/pending colour, on a
+ * section that has no pending state. The icons (UserCircle / GraduationCap /
+ * Heart / Target) already distinguish them.
+ */
 export type ProfileSection = 'personal' | 'academics' | 'lifestyle' | 'aspirations';
 export const PROFILE_SECTION_VISUAL: Record<ProfileSection, CategoryVisual> = {
-  personal: make('sky', UserCircle),
-  academics: make('violet', GraduationCap),
-  lifestyle: make('amber', Heart),
-  aspirations: make('emerald', Target)
+  personal: make('primary', UserCircle),
+  academics: make('primary', GraduationCap),
+  lifestyle: make('primary', Heart),
+  aspirations: make('primary', Target)
 };
 
-/* ─── Profile completion banding ────────────────────────────────────── */
+/* ─── Progress and completion — a QUANTITY, never a status ───────────── */
+
+/**
+ * Fills for a SEGMENTED progress bar, walking `--series-1…5`.
+ *
+ * Use this when the work has a known, small number of discrete steps — a profile
+ * with five sections, a wizard with five screens. The segment count then tells the
+ * truth about the data, where a continuous bar springing to 60% implies a precision
+ * that does not exist.
+ *
+ * ⚠ A segmented bar is the ONLY legal place for the full ramp. `--series-5`
+ * measures 2.57:1 (light) and 2.70:1 (dark) against a `bg-muted` track — under the
+ * 3:1 a non-text mark needs. It clears 3:1 against the CARD, which is what it sits
+ * on once the 2px card-coloured gap between segments is there. So a continuous bar
+ * cannot walk this ramp; it would fail for its whole first band, in both themes.
+ */
+export const PROGRESS_SEGMENT_FILL = [
+  'bg-series-1',
+  'bg-series-2',
+  'bg-series-3',
+  'bg-series-4',
+  'bg-series-5'
+] as const;
+
+/**
+ * The gap between segments — the thing that actually separates adjacent ramp steps,
+ * since 1.32–1.48:1 of lightness between them does not.
+ *
+ * `gap-0.5`, not `gap-[2px]`: 0.125rem resolves to exactly 2px at the 16px root, and
+ * it is a named scale step, so it does not add an `arbitrary-geometry` hit — that
+ * rule is a ratchet whose count may only fall. Being rem-based it also participates
+ * in the fluid root scaling (`globals.css` grows the root to 1.125rem on very wide
+ * viewports), which a hard 2px would not.
+ */
+export const PROGRESS_SEGMENT_GAP = 'gap-0.5';
+
+/** An unfilled segment, and the track behind a continuous bar. */
+export const PROGRESS_TRACK = 'bg-muted';
+
+/**
+ * Fill for a CONTINUOUS progress bar — upload progress, a percentage with no step
+ * structure. One solid brand fill; the length is the encoding.
+ *
+ * `brand.md` §5: "Progress bar — level 5 — Brand. Green only at a genuine terminal
+ * outcome." Do not band this by value. A colour that changes with the quantity
+ * reads as a status change, which is the error this section exists to undo.
+ */
+export const PROGRESS_FILL = 'bg-primary';
 
 export type CompletionBand = 'none' | 'low' | 'mid' | 'high' | 'full';
+
+/**
+ * Icon + chip treatment for a completion band. **Brand and neutral only.**
+ *
+ * This used to map the bands onto `rose` / `amber` / `amber` / `emerald`, and that
+ * was wrong twice over:
+ *
+ *  1. **A percentage is a quantity, not a status.** `warning` means "act soon",
+ *     which implies a deadline; a half-finished profile has none — it is simply the
+ *     next thing to do, which makes it a primary action and therefore the brand's
+ *     job. The card's own comment used to defend the old behaviour as "so a profile
+ *     at 20% still reads as urgent at a glance", which is the error stated out loud.
+ *     Note that `classifyProgress` below already argued the opposite case for its
+ *     own callers — the bug was found once and fixed only locally.
+ *  2. **`warning-fill` is olive.** It measures OKLCH L 0.673 / C 0.126 / hue 80° in
+ *     light — yellow turning green at little over half the brand's chroma — and in
+ *     dark it is L 0.396 at 1.55:1 against the track, i.e. very nearly invisible.
+ *     A dark yellow is olive at every saturation; see `brand.md` §4.
+ *     Do NOT "fix" this by darkening or brightening gold.
+ *
+ * `full` is deliberately NEUTRAL, not green. `brand.md` §4 rule 3: `success` is for
+ * terminal positive outcomes, never for "done". A finished section needs nothing
+ * from the reader, so it goes silent. The celebratory spike belongs on the
+ * *transition* to complete, not on the resting state — see `ProfileProgressCard`.
+ *
+ * ⚠ **Do NOT use `.bar` from this table.** It is inherited from `CategoryVisual`'s
+ * shape and it is a trap here: because `full` resolves to `neutral`
+ * (`bg-muted-foreground/30`) while `low`/`mid`/`high` resolve to `primary`
+ * (`bg-primary`), banding a bar through this table draws a **100% bar in the faintest
+ * grey and a 99% bar in full brand** — the bar gets paler the closer the student gets
+ * to done. That is worse than the olive it replaced. A bar is not a chip: use
+ * `PROGRESS_FILL` (continuous) or `PROGRESS_SEGMENT_FILL` (stepped) above, and let
+ * this table drive only the ICON and the chip's `bg`/`text`/`border`, where "silent
+ * at 100%" is the correct reading.
+ */
 export const COMPLETION_VISUAL: Record<CompletionBand, CategoryVisual> = {
   // "Nothing started" is not "failing". Only reachable via `classifyProgress`,
   // never via `classifyCompletion` — see both below.
   none: make('neutral', Circle),
-  low: make('rose', AlertTriangle),
-  mid: make('amber', Target),
-  high: make('sky', TrendingUp),
-  full: make('emerald', CheckCircle2)
+  // low/mid/high are one meaning — "unfinished, keep going" — at three degrees, and
+  // the percentage beside them already carries the degree. So they share a tone and
+  // differ only by icon. An arrow says GO where a clock said HURRY.
+  low: make('primary', ArrowRight),
+  mid: make('primary', ArrowRight),
+  high: make('primary', TrendingUp),
+  full: make('neutral', CheckCircle2)
 };
 
 /**
  * Band a COMPLETION percentage — how much of a fixed, known set of work is done.
  *
- * 0% lands in `low` (rose) deliberately, and that is not an oversight: every
- * caller of this function measures something the user is expected to finish, so
- * "0% of your profile" and "0% of this student's profile" are genuinely the
- * worst state, not a neutral one. The counsellor roster
- * (`_components/student-card.tsx`) and the cohort chart (`_analytics-client.tsx`,
- * whose lowest bucket is literally labelled `<50%`) both depend on that.
+ * The bands still exist because they drive the ICON and give ordinal buckets a
+ * stable name. They no longer drive a status colour: every band from `low` to
+ * `high` is the brand, and `full` is silent. If you want the bar itself, use
+ * `PROGRESS_SEGMENT_FILL` (stepped work) or `PROGRESS_FILL` (continuous).
  *
  * If you are banding a counter that can legitimately be empty — a task list with
  * no tasks, a quest deck nobody has opened — you want `classifyProgress`.
@@ -416,44 +547,58 @@ export const classifyProgress = (completed: number, total: number): CompletionBa
 
 /* ─── Scholarship category ──────────────────────────────────────────── */
 
+/**
+ * NOMINAL — six unranked categories, and the worst offender of the set: a grid
+ * of scholarship cards rendered as six different colours, one of them rose, on a
+ * page where nothing is urgent. Icons carry the category.
+ */
 export type ScholarshipCategory = 'Merit' | 'Regional' | 'STEM' | 'Need' | 'Sports' | 'General';
 export const SCHOLARSHIP_VISUAL: Record<ScholarshipCategory, CategoryVisual> = {
-  Merit: make('violet', Award),
-  Regional: make('sky', MapPin),
-  STEM: make('emerald', Briefcase),
-  Need: make('amber', Heart),
-  Sports: make('rose', Target),
+  Merit: make('primary', Award),
+  Regional: make('primary', MapPin),
+  STEM: make('primary', Briefcase),
+  Need: make('primary', Heart),
+  Sports: make('primary', Target),
   General: make('neutral', Sparkles)
 };
 
 /* ─── Toolbox tools ─────────────────────────────────────────────────── */
 
+/** NOMINAL — five tools, no ranking. `hub` was already `primary`; the rest join it. */
 export type ToolboxTool = 'essay' | 'chances' | 'requirements' | 'timeline' | 'hub';
 export const TOOL_VISUAL: Record<ToolboxTool, CategoryVisual> = {
-  essay: make('violet', PenLine),
-  chances: make('amber', Target),
-  requirements: make('sky', ClipboardList),
-  timeline: make('rose', CalendarClock),
+  essay: make('primary', PenLine),
+  chances: make('primary', Target),
+  requirements: make('primary', ClipboardList),
+  timeline: make('primary', CalendarClock),
   hub: make('primary', Sparkles)
 };
 
 /* ─── Update / signal types (Updates feed on applications) ─────────── */
 
+/** NOMINAL — where an update came from, not how bad it is. */
 export type SignalType = 'deadline' | 'scholarship' | 'portal' | 'task';
 export const SIGNAL_VISUAL: Record<SignalType, CategoryVisual> = {
-  deadline: make('rose', CalendarClock),
-  scholarship: make('emerald', Award),
-  portal: make('sky', BookOpen),
-  task: make('amber', ListChecks)
+  deadline: make('primary', CalendarClock),
+  scholarship: make('primary', Award),
+  portal: make('primary', BookOpen),
+  task: make('primary', ListChecks)
 };
 
 /* ─── Note types (faculty parity) ───────────────────────────────────── */
 
+/**
+ * MIXED, and deliberately so — this is what the ordinal/nominal split buys you.
+ * `flag` genuinely means "a human marked this for attention", so it keeps amber.
+ * `session` and `update` are just note kinds and go quiet. The result is that a
+ * flag now actually stands out in the activity feed, which it could not do when
+ * all three rows were equally coloured.
+ */
 export type NoteType = 'session' | 'flag' | 'update';
 export const NOTE_VISUAL: Record<NoteType, CategoryVisual> = {
-  session: make('violet', MessageSquare),
+  session: make('primary', MessageSquare),
   flag: make('amber', Flag),
-  update: make('sky', TrendingUp)
+  update: make('neutral', TrendingUp)
 };
 
 /* ─── Re-export icons used as default fallbacks ─────────────────────── */

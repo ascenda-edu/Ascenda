@@ -453,9 +453,9 @@ export function ProductTour({ steps, onDismiss, onComplete, signOff }: ProductTo
                 screen. Change one and change both. */}
             <div
               ref={avatarRef}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
             >
-              <Bot className="h-4 w-4 text-primary-ink" aria-hidden />
+              <Bot className="h-4 w-4 text-muted-foreground" aria-hidden />
             </div>
 
             <div className="min-w-0 flex-1">
@@ -473,7 +473,7 @@ export function ProductTour({ steps, onDismiss, onComplete, signOff }: ProductTo
               <button
                 type="button"
                 onClick={onDismiss}
-                className="-mr-1 -mt-1 rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="-mr-1 -mt-1 rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label="Close the tour"
               >
                 <X className="h-4 w-4" aria-hidden />

@@ -19,7 +19,7 @@ import type { UniversityHit } from '@/lib/chat/widgets';
 // neutral pill's edge would add more noise than structure. The faint brand wash is
 // the same one `.surface-chip` carries, so it still reads as part of the set.
 const StatChip = ({ children }: { children: React.ReactNode }) => (
-  <span className="inline-flex items-center rounded-full bg-primary/8 px-2 py-0.5 text-label font-medium text-foreground">
+  <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-label font-medium text-foreground">
     {children}
   </span>
 );
@@ -54,7 +54,7 @@ function UniversityCard({ item, mode }: { item: UniversityHit; mode: ChatMode })
 
   const programs = item.programs.slice(0, 3);
   const rowShared =
-    'flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-2 py-1.5';
+    'flex items-center gap-2 rounded-lg border border-border bg-muted px-2 py-1.5';
 
   return (
     <div className="rounded-xl border border-border bg-background p-2.5">

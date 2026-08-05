@@ -89,7 +89,7 @@ export const Navbar = () => {
                 className={cn('rounded-full object-contain transition')}
               />
             </div>
-            <span className="navbar-brand text-base sm:text-lg transition-colors">Ascenda</span>
+            <span className="navbar-brand font-heading text-base sm:text-lg transition-colors">Ascenda</span>
           </Link>
           <nav className="hidden items-center gap-5 text-xs font-medium text-muted-foreground md:flex">
             {navEntries.map((entry) =>
@@ -104,7 +104,7 @@ export const Navbar = () => {
                 // Assistant is a cross-cutting tool, not a journey step — it
                 // anchors the right edge behind a divider on every portal.
                 <div key={entry.item.href} className="flex items-center gap-5">
-                  <span className="h-4 w-px rounded-full bg-border dark:bg-white/15" aria-hidden />
+                  <span className="h-4 w-px rounded-full bg-border" aria-hidden />
                   <NavLink item={entry.item} />
                 </div>
               ) : (
@@ -124,7 +124,7 @@ export const Navbar = () => {
                 onClick={handleSignOut}
                 onBlur={() => setConfirmSignOut(false)}
                 autoFocus
-                className="gap-1.5 rounded-full bg-destructive/10 text-xs text-destructive hover:bg-destructive/20 hover:text-destructive"
+                className="gap-1.5 rounded-full bg-destructive/10 text-xs text-destructive hover:ring-1 hover:ring-destructive/30 hover:text-destructive"
                 title="Confirm sign out"
                 aria-label="Confirm sign out"
               >

@@ -8,7 +8,22 @@ interface HubCardProps {
   eyebrow: string;
   title: string;
   icon: LucideIcon;
-  /** Tint classes for the icon swatch, e.g. 'bg-info-subtle text-info ring-info/25'. */
+  /**
+   * Tint classes for the icon swatch. LEAVE THIS UNSET unless the swatch is
+   * reporting a STATE — the default is a plain neutral glyph, and that is the
+   * right answer for almost every cell.
+   *
+   * It was set on most of them once (deadlines amber, tasks emerald, pipeline
+   * sky) and that is what made the dashboard read as a colour chart: the header
+   * hue was fixed per card, so it described the card's POSITION, not its state,
+   * while the rows inside each card were already colouring themselves by real
+   * urgency. Two colour languages, one of them noise, and the noisy one wrapped
+   * the signal.
+   *
+   * The surviving use is profile-progress-card, whose swatch flips to the
+   * success tone once there is nothing left to finish. `ring-1` is on the base
+   * class, so anything passed here only needs to name the ring COLOUR.
+   */
   iconClassName?: string;
   action?: { label: string; href: string };
   children: ReactNode;
@@ -28,7 +43,7 @@ export function HubCard({ eyebrow, title, icon: Icon, iconClassName, action, chi
             <div
               className={cn(
                 'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1',
-                iconClassName ?? 'bg-primary/10 text-primary-ink ring-primary/15'
+                iconClassName ?? 'text-muted-foreground ring-border'
               )}
             >
               <Icon className="h-4 w-4" aria-hidden />

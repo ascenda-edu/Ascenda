@@ -29,10 +29,10 @@ const isSafeHref = (href?: string | null): href is string =>
 // Semantic Badge variants, not class bundles — the pill geometry now lives in
 // exactly one place (ui/badge.tsx) and this table says only what the tone MEANS.
 const KIND_TONE: Record<string, BadgeVariant> = {
-  help_request: 'feature',
+  help_request: 'primary',
   help_accepted: 'success',
   deck_assignment: 'warning',
-  default: 'info'
+  default: 'neutral'
 };
 
 const formatRelative = (iso: string): string => {
@@ -178,7 +178,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
         aria-expanded={open}
         aria-controls={open ? 'notification-bell-panel' : undefined}
         title="Notifications"
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Bell className="h-4 w-4" aria-hidden />
         {unreadCount > 0 ? (
@@ -202,7 +202,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
             transition={{ duration: 0.14 }}
             className="absolute right-0 top-[calc(100%+8px)] z-panel w-80 overflow-hidden rounded-2xl border border-border bg-card text-foreground shadow-e-4 outline-none backdrop-blur-lg sm:w-96"
           >
-            <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <div>
                 <p className="text-sm font-semibold">Notifications</p>
                 <p className="text-label text-muted-foreground">
@@ -213,7 +213,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
                 <button
                   type="button"
                   onClick={handleMarkAllRead}
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-label font-medium text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-label font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
                 >
                   <CheckCheck className="h-3 w-3" />
                   Mark all read
@@ -231,15 +231,15 @@ export const NotificationBell = ({ className }: { className?: string }) => {
                   className="m-3"
                 />
               ) : (
-                <ul className="divide-y divide-border/60">
+                <ul className="divide-y divide-border">
                   {items.map((notif) => {
                     const tone = KIND_TONE[notif.kind] ?? KIND_TONE.default;
                     const unread = !notif.read_at;
                     const content = (
                       <div
                         className={cn(
-                          'group flex gap-3 px-4 py-3 transition hover:bg-muted/40',
-                          unread ? 'bg-muted/20' : null
+                          'group flex gap-3 px-4 py-3 transition hover:bg-muted',
+                          unread ? 'bg-primary/10' : null
                         )}
                       >
                         <span
@@ -267,7 +267,7 @@ export const NotificationBell = ({ className }: { className?: string }) => {
                           {notif.body ? (
                             <p className="mt-0.5 truncate text-xs text-muted-foreground">{notif.body}</p>
                           ) : null}
-                          <p className="mt-1 text-label uppercase tracking-[0.2em] text-muted-foreground/70">
+                          <p className="mt-1 text-label uppercase tracking-[0.2em] text-muted-foreground">
                             {formatRelative(notif.created_at)}
                           </p>
                         </div>

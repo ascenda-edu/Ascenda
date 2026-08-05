@@ -60,7 +60,7 @@ const CrestMark = ({ course }: { course: CourseView }) =>
       <Image src={course.logoUrl} alt="" fill className="object-contain" sizes="40px" />
     </span>
   ) : (
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary-ink">
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground">
       <GraduationCap className="h-5 w-5" aria-hidden />
     </span>
   );
@@ -144,7 +144,7 @@ export function CourseQuickFacts({ course }: { course: CourseView }) {
         const Icon = fact.icon;
         return (
           <li key={fact.label} className="surface-stat flex items-start gap-3 p-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary-ink ring-1 ring-primary/20">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground">
               <Icon className="h-4 w-4" aria-hidden />
             </span>
             <div className="min-w-0 flex-1">

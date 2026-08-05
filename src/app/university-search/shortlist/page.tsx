@@ -18,9 +18,9 @@ import { classifyFitTier, TIER_VISUAL, TIER_LABEL, type FitTier } from '@/lib/th
 import { getFitScoreVisuals } from '@/lib/theme/fit-score';
 
 const stageTone = {
-  Researching: 'bg-warning-subtle text-warning border-warning/25',
-  Shortlisted: 'bg-info-subtle text-info border-info/25',
-  Active: 'bg-success-subtle text-success border-success/25'
+  Researching: 'bg-warning-subtle text-warning border-warning/30',
+  Shortlisted: 'bg-muted text-muted-foreground border-border',
+  Active: 'bg-success-subtle text-success border-success/30'
 };
 
 const classifyFit = classifyFitTier;
@@ -107,7 +107,7 @@ export default function UniversitySearchShortlistPage() {
         />
 
         <div className="grid gap-4 md:grid-cols-4">
-          <Card className="border-dashed border-border/70">
+          <Card className="border-dashed border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <span className="eyebrow">Shortlisted</span>
               <Sparkles className="h-5 w-5 text-warning" aria-hidden />
@@ -117,7 +117,7 @@ export default function UniversitySearchShortlistPage() {
               <p className="text-xs text-muted-foreground">Saved from search</p>
             </CardContent>
           </Card>
-          <Card className="border-dashed border-border/70">
+          <Card className="border-dashed border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <span className="eyebrow">Reach / Match / Safe</span>
               <Target className="h-5 w-5 text-success" aria-hidden />
@@ -129,7 +129,7 @@ export default function UniversitySearchShortlistPage() {
               <p className="text-xs text-muted-foreground">Banding across saved programs</p>
             </CardContent>
           </Card>
-          <Card className="border-dashed border-border/70">
+          <Card className="border-dashed border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <span className="eyebrow">Avg fit</span>
               <Target className="h-5 w-5 text-success" aria-hidden />
@@ -139,10 +139,10 @@ export default function UniversitySearchShortlistPage() {
               <p className="text-xs text-muted-foreground">Across shortlisted programs</p>
             </CardContent>
           </Card>
-          <Card className="border-dashed border-border/70">
+          <Card className="border-dashed border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <span className="eyebrow">Next steps</span>
-              <Clock className="h-5 w-5 text-feature" aria-hidden />
+              <Clock className="h-5 w-5 text-primary-ink" aria-hidden />
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-semibold text-foreground">
@@ -187,10 +187,9 @@ export default function UniversitySearchShortlistPage() {
               return (
                 <Card
                   key={item.id}
-                  className={cn(
-                    'border border-l-4 bg-card hover-lift',
-                    visual ? cn(visual.border, visual.accent) : 'border-l-border'
-                  )}
+                  // No fit-tier rail: the tier is a category, and the swatch and
+                  // label below already name it.
+                  className="border border-border bg-card hover-lift"
                 >
                   <CardHeader className="space-y-2">
                     <div className="flex items-start justify-between gap-3">
@@ -232,7 +231,7 @@ export default function UniversitySearchShortlistPage() {
                           {TIER_LABEL[tier]}
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-xs font-medium text-muted-foreground">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-muted-foreground">
                           Fit TBD
                         </span>
                       )}
@@ -254,7 +253,7 @@ export default function UniversitySearchShortlistPage() {
                   </CardHeader>
 
                   <CardContent className="space-y-3 pt-0">
-                    <div className="rounded-2xl bg-muted/60 p-4">
+                    <div className="rounded-2xl bg-muted p-4">
                       <p className="eyebrow">Next action</p>
                       <p className="mt-1 text-sm text-foreground">{item.nextAction ?? 'Add a next action to keep momentum.'}</p>
                     </div>

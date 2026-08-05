@@ -95,13 +95,17 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
 
         {decks.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-3">
-            <StatCard label="Quests cleared" value={`${totals.cleared}/${totals.quests}`} icon={CheckCircle2} tone="text-success" />
-            <StatCard label="Active decks" value={String(totals.decks)} icon={Scroll} tone="text-feature" />
+            {/* `text-primary-ink`, not `text-success`: "3/5 cleared" is a COUNT, and
+                `success` is reserved for terminal positive outcomes (brand.md §4 rule 3).
+                A partly-cleared deck is not an outcome at all — it is a quantity, so it
+                gets the register's level-2 treatment for one emphasised figure. */}
+            <StatCard label="Quests cleared" value={`${totals.cleared}/${totals.quests}`} icon={CheckCircle2} tone="text-primary-ink" />
+            <StatCard label="Active decks" value={String(totals.decks)} icon={Scroll} tone="text-primary-ink" />
             <StatCard
               label="Progress"
               value={totals.quests ? `${Math.round((totals.cleared / totals.quests) * 100)}%` : '—'}
               icon={Swords}
-              tone="text-info"
+              tone="text-muted-foreground"
             />
           </div>
         )}
@@ -159,7 +163,7 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
                         key={quest.programId}
                         className={cn(
                           'border hover-lift',
-                          isStarted && 'border-success/25 bg-success/3'
+                          isStarted && 'border-success/30 bg-success/10'
                         )}
                       >
                         <CardHeader className="space-y-2 pb-3">
@@ -168,7 +172,7 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
                               <p className="eyebrow">
                                 {quest.country || 'Location TBC'}
                               </p>
-                              <p className="truncate text-base font-semibold text-foreground" title={quest.university}>
+                              <p className="truncate font-heading text-base font-semibold text-foreground" title={quest.university}>
                                 {quest.university}
                               </p>
                               <p className="truncate text-sm text-muted-foreground" title={quest.courseName}>
@@ -189,7 +193,7 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
                               {rarity.label}
                             </span>
                             {isStarted && (
-                              <span className="inline-flex items-center gap-1 rounded-full border border-success/25 bg-success-subtle px-2.5 py-0.5 text-label font-semibold text-success">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success-subtle px-2.5 py-0.5 text-label font-semibold text-success">
                                 <CheckCircle2 className="h-3 w-3" aria-hidden /> Cleared
                               </span>
                             )}
@@ -198,7 +202,7 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
 
                         <CardContent className="space-y-3 pt-0">
                           {quest.note && (
-                            <div className="rounded-xl bg-muted/50 p-3 text-sm text-foreground">
+                            <div className="rounded-xl bg-muted p-3 text-sm text-foreground">
                               <span className="mr-1 font-semibold text-muted-foreground">Counsellor:</span>
                               {quest.note}
                             </div>
@@ -215,7 +219,7 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
                               className={cn(
                                 'gap-1.5',
                                 isShortlisted &&
-                                  'bg-success-subtle text-success hover:bg-success/20'
+                                  'bg-success-subtle text-success'
                               )}
                               disabled={isShortlisted}
                               onClick={() => saveToShortlist(quest.programId, quest.courseName, quest.university, quest.country)}
@@ -259,7 +263,7 @@ function StatCard({
   tone: string;
 }) {
   return (
-    <Card className="border-dashed border-border/70">
+    <Card className="border-dashed border-border">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <span className="eyebrow">{label}</span>
         <Icon className={cn('h-5 w-5', tone)} aria-hidden />

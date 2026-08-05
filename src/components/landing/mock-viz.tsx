@@ -442,7 +442,7 @@ export function TierTiles({ counts }: { counts: { safety: number; match: number;
         <div className="grid grid-cols-3 gap-2">
             {(['safety', 'match', 'reach'] as const).map((tier) => (
                 <div key={tier} className="rounded-xl border border-border bg-card px-2 py-1.5 text-center dark:border-white/10">
-                    <p className={cn('font-heading text-lg font-bold leading-tight tabular-nums', TIER_TILE_STYLES[tier].cls)}>
+                    <p className={cn('text-lg font-bold leading-tight tabular-nums', TIER_TILE_STYLES[tier].cls)}>
                         {counts[tier]}
                     </p>
                     <p className={cn('text-[0.5625rem] font-bold uppercase tracking-[0.1em]', TIER_TILE_STYLES[tier].cls)}>

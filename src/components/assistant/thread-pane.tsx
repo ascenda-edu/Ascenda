@@ -113,7 +113,7 @@ export function ThreadPane({
     <div className="flex h-[calc(100vh-220px)] min-h-[480px] flex-col overflow-hidden rounded-3xl border border-border bg-card">
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-        <p className="truncate font-heading text-sm font-semibold text-foreground">{title}</p>
+        <p className="truncate text-sm font-semibold text-foreground">{title}</p>
       </div>
 
       {/* Messages */}
@@ -144,10 +144,10 @@ export function ThreadPane({
                     className={cn(
                       'max-w-[85%] break-words rounded-2xl px-3.5 py-2.5 text-body-sm leading-relaxed',
                       msg.error
-                        ? 'border border-danger/25 bg-danger-subtle text-danger'
+                        ? 'border border-danger/30 bg-danger-subtle text-danger'
                         : msg.role === 'user'
                           ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted/60 text-foreground'
+                          : 'bg-muted text-foreground'
                     )}
                   >
                     {msg.error ? (
@@ -156,7 +156,7 @@ export function ThreadPane({
                         <button
                           onClick={onRetry}
                           disabled={isStreaming}
-                          className="inline-flex items-center gap-1 rounded-full border border-danger/25 px-2.5 py-1 text-label font-semibold text-danger transition hover:bg-danger-subtle disabled:opacity-50"
+                          className="inline-flex items-center gap-1 rounded-full border border-danger/30 px-2.5 py-1 text-label font-semibold text-danger transition hover:bg-danger-subtle disabled:opacity-50"
                         >
                           <RotateCcw className="h-3 w-3" />
                           Retry
@@ -213,9 +213,11 @@ export function ThreadPane({
                     </div>
                   )}
 
-                  {/* Thumbs feedback */}
+                  {/* Thumbs feedback. gap-2, not gap-0.5: these are two 24×24
+                      controls with OPPOSITE meanings, and 2px apart a fat finger
+                      rates the answer backwards. */}
                   {showFeedback && (
-                    <div className="mt-1 flex items-center gap-0.5">
+                    <div className="mt-1 flex items-center gap-2">
                       <button
                         onClick={() => onRate(msg.id, 1)}
                         aria-label="Good answer"
@@ -224,7 +226,7 @@ export function ThreadPane({
                           'flex h-6 w-6 items-center justify-center rounded-full transition-colors',
                           msg.rating === 1
                             ? 'text-success'
-                            : 'text-muted-foreground/60 hover:bg-muted hover:text-foreground'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                         )}
                       >
                         <ThumbsUp className="h-3 w-3" />
@@ -237,7 +239,7 @@ export function ThreadPane({
                           'flex h-6 w-6 items-center justify-center rounded-full transition-colors',
                           msg.rating === -1
                             ? 'text-danger'
-                            : 'text-muted-foreground/60 hover:bg-muted hover:text-foreground'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                         )}
                       >
                         <ThumbsDown className="h-3 w-3" />
@@ -253,7 +255,7 @@ export function ThreadPane({
               <div className="flex justify-end">
                 <button
                   onClick={onResend}
-                  className="inline-flex items-center gap-1 rounded-full border border-primary/25 px-2.5 py-1 text-label font-medium text-muted-foreground transition-colors hover:bg-primary/8 hover:text-foreground"
+                  className="inline-flex items-center gap-1 rounded-full border border-primary/30 px-2.5 py-1 text-label font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-foreground"
                 >
                   <RotateCcw className="h-3 w-3" />
                   No reply recorded — resend

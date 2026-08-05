@@ -40,21 +40,32 @@ const formatMeetingTime = (iso: string): string =>
     minute: '2-digit'
   });
 
-// Deliberately NOT a Badge variant: this tints a card surface, not a pill. The
-// tone values are the same five semantic tokens, but the geometry
-// (`rounded-2xl` card vs `rounded-full` chip) is not, and forcing badgeVariants
-// here would ship `inline-flex whitespace-nowrap` onto a multi-line article.
-const meetingToneClass = (status: HelpMeetingStatus): string => {
+// Deliberately NOT a Badge variant: this is a card, not a pill. The geometry
+// (`rounded-2xl` card vs `rounded-full` chip) is not a badge's, and forcing
+// badgeVariants here would ship `inline-flex whitespace-nowrap` onto a
+// multi-line article.
+//
+// The SURFACE is neutral in every state. It used to be tinted per status, which
+// made a meeting card a full-width block of colour carrying its title, its time
+// and its buttons — a tone tint cannot be a card surface. `cancelled` keeps the
+// muted wash and the strike-through because that is a de-emphasis, not a tone.
+const meetingToneClass = (status: HelpMeetingStatus): string =>
+  status === 'cancelled'
+    ? 'border-border bg-muted text-muted-foreground line-through'
+    : 'border-border bg-card';
+
+// ...and the tone lands here instead: the clock glyph and the one-word status
+// label under the time, which are the two places it is actually read.
+const meetingAccentClass = (status: HelpMeetingStatus): string => {
   switch (status) {
     case 'confirmed':
-      return 'border-success/25 bg-success-subtle text-success';
-    case 'cancelled':
-      return 'border-border/60 bg-muted/40 text-muted-foreground line-through';
+      return 'text-success';
     case 'completed':
-      return 'border-feature/25 bg-feature-subtle text-feature';
+      return 'text-primary-ink';
+    case 'cancelled':
     case 'proposed':
-      // Awaiting a decision — the same "in progress" tone the rest of the app uses.
-      return 'border-info/25 bg-info-subtle text-info';
+      // Proposed is awaiting a decision, which is the absence of a state.
+      return 'text-muted-foreground';
   }
 };
 
@@ -281,7 +292,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
       align="right"
     >
       <DialogContent className="flex flex-col">
-        <header className="flex items-start justify-between gap-3 border-b border-border/60 px-5 py-4">
+        <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
           <div className="min-w-0 flex-1">
             <p className="eyebrow">
               {isCounsellor
@@ -310,7 +321,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
             </DialogDescription>
           </div>
           <DialogClose
-            className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Close"
           >
             <X className="h-4 w-4" aria-hidden />
@@ -321,7 +332,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
         <div
           role="tablist"
           aria-label="Request views"
-          className="flex gap-1 border-b border-border/60 px-3 py-2 text-xs"
+          className="flex gap-1 border-b border-border px-3 py-2 text-xs"
         >
           {TAB_KEYS.map((key, index) => {
             const isActive = tab === key;
@@ -357,7 +368,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
                   'rounded-full px-3 py-1.5 transition',
                   isActive
                     ? 'bg-primary font-semibold text-primary-foreground shadow-e-1'
-                    : 'font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    : 'font-medium text-muted-foreground hover:bg-muted hover:text-foreground'
                 )}
               >
                 {label}
@@ -414,7 +425,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
 
         {/* Footer composer (Thread tab) */}
         {tab === 'thread' && request ? (
-          <div className="border-t border-border/60 bg-card/40 px-5 py-3">
+          <div className="border-t border-border bg-card px-5 py-3">
             <div className="flex items-end gap-2">
               <label htmlFor="help-drawer-reply" className="sr-only">
                 Reply message
@@ -448,9 +459,9 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
               </Button>
             </div>
             <p className="mt-1.5 px-1 text-label text-muted-foreground">
-              <kbd className="rounded border border-border/60 bg-muted/60 px-1 font-sans">Enter</kbd> to send ·{' '}
-              <kbd className="rounded border border-border/60 bg-muted/60 px-1 font-sans">Shift</kbd>+
-              <kbd className="rounded border border-border/60 bg-muted/60 px-1 font-sans">Enter</kbd> for a new line
+              <kbd className="rounded border border-border bg-muted px-1 font-sans">Enter</kbd> to send ·{' '}
+              <kbd className="rounded border border-border bg-muted px-1 font-sans">Shift</kbd>+
+              <kbd className="rounded border border-border bg-muted px-1 font-sans">Enter</kbd> for a new line
             </p>
 
             {isCounsellor ? (
@@ -461,7 +472,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
                     variant="outline"
                     onClick={handleAccept}
                     disabled={busy}
-                    className="border-feature/25 text-feature"
+                    className="border-primary/30 text-primary-ink"
                   >
                     <Check className="mr-1 h-3 w-3" />
                     Accept request
@@ -473,7 +484,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
                     variant="outline"
                     onClick={handleResolve}
                     disabled={busy}
-                    className="border-success/25 text-success"
+                    className="border-success/30 text-success"
                   >
                     <Check className="mr-1 h-3 w-3" />
                     Mark resolved
@@ -593,26 +604,26 @@ function ThreadView({
           <div key={entry.id} className={cn(!groupedWithPrev && index > 0 && 'pt-2.5')}>
             {showDay ? (
               <div className="flex items-center gap-3 py-2" role="separator" aria-label={dayLabel(entry.at)}>
-                <span className="h-px flex-1 bg-border/50" />
+                <span className="h-px flex-1 bg-border" />
                 <span className="eyebrow">
                   {dayLabel(entry.at)}
                 </span>
-                <span className="h-px flex-1 bg-border/50" />
+                <span className="h-px flex-1 bg-border" />
               </div>
             ) : null}
             <div className={cn('flex items-end gap-2', isOwn ? 'flex-row-reverse' : 'flex-row')}>
-              {/* Avatar sits on the other side only, and only at the start of a run. */}
+              {/* Avatar sits on the other side only, and only at the start of a run.
+                  One identity treatment for both roles: this was success for a
+                  counsellor and `feature` for a student, which spent two hues on who
+                  is speaking — and "done-green" on a counsellor was the status
+                  palette used for its colour rather than its meaning. It keeps a
+                  brand tint because it holds INITIALS. */}
               {!isOwn ? (
                 groupedWithPrev ? (
                   <span className="w-7 shrink-0" aria-hidden />
                 ) : (
                   <span
-                    className={cn(
-                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-label font-semibold',
-                      entry.role === 'counsellor'
-                        ? 'bg-success-subtle text-success'
-                        : 'bg-feature-subtle text-feature'
-                    )}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-label font-semibold text-primary-ink"
                     aria-hidden
                   >
                     {getInitials(name)}
@@ -628,7 +639,7 @@ function ThreadView({
                     'rounded-2xl px-3.5 py-2 text-sm leading-relaxed shadow-e-1',
                     isOwn
                       ? 'rounded-br-md bg-primary text-primary-foreground'
-                      : 'rounded-bl-md border border-border/60 bg-muted/60 text-foreground',
+                      : 'rounded-bl-md border border-border bg-muted text-foreground',
                     isPending && 'opacity-60'
                   )}
                 >
@@ -637,7 +648,7 @@ function ThreadView({
                     <p
                       className={cn(
                         'mt-1.5 inline-flex items-center gap-1 text-label uppercase tracking-[0.15em]',
-                        isOwn ? 'text-primary-foreground/70' : 'text-feature'
+                        isOwn ? 'text-primary-foreground' : 'text-primary-ink'
                       )}
                     >
                       <Sparkles className="h-3 w-3" />
@@ -687,7 +698,7 @@ function NotesView({
   return (
     <div className="space-y-3">
       {isCounsellor ? (
-        <div className="rounded-2xl border border-border bg-card/40 p-3">
+        <div className="rounded-2xl border border-border bg-card p-3">
           <div className="flex items-center gap-2">
             <NotebookPen className="h-4 w-4 text-primary-ink" aria-hidden />
             <p className="text-sm font-semibold text-foreground">Private note</p>
@@ -733,7 +744,7 @@ function NotesView({
             notes.map((n) => (
               <article
                 key={n.id}
-                className="rounded-2xl border border-border/60 bg-card/40 p-3 text-sm text-foreground/90"
+                className="rounded-2xl border border-border bg-card p-3 text-sm text-foreground"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="eyebrow">
@@ -784,7 +795,7 @@ function MeetingView({
   return (
     <div className="space-y-3">
       {isCounsellor ? (
-        <div className="rounded-2xl border border-border bg-card/40 p-3">
+        <div className="rounded-2xl border border-border bg-card p-3">
           <div className="flex items-center gap-2">
             <CalendarPlus className="h-4 w-4 text-primary-ink" aria-hidden />
             <p className="text-sm font-semibold text-foreground">Propose a meeting</p>
@@ -876,14 +887,14 @@ function MeetingView({
                 key={m.id}
                 className={cn('flex items-start gap-3 rounded-2xl border p-3', meetingToneClass(m.status))}
               >
-                <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <Clock className={cn('mt-0.5 h-4 w-4 shrink-0', meetingAccentClass(m.status))} aria-hidden />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold">{m.title}</p>
                   <p className="text-xs">
                     {formatMeetingTime(m.scheduled_for)} · {m.duration_minutes} min
                     {m.location ? ` · ${m.location}` : null}
                   </p>
-                  <p className="mt-0.5 text-label uppercase tracking-[0.2em]">{m.status}</p>
+                  <p className={cn('mt-0.5 text-label uppercase tracking-[0.2em]', meetingAccentClass(m.status))}>{m.status}</p>
                   {actions.length ? (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {actions.map((action) => (

@@ -42,8 +42,8 @@ const URGENCY_BADGE: Partial<Record<ReturnType<typeof classifyDeadlineUrgency>, 
 export const DeadlineTimeline = ({ items }: DeadlineTimelineProps) => {
   if (items.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8 text-center space-y-3">
-        <CalendarClock className="h-8 w-8 mx-auto text-muted-foreground/40" />
+      <div className="rounded-2xl border border-dashed border-border bg-muted p-8 text-center space-y-3">
+        <CalendarClock className="h-8 w-8 mx-auto text-muted-foreground" />
         <p className="text-sm font-semibold text-foreground">No upcoming deadlines yet</p>
         <p className="text-xs text-muted-foreground">Track programs you plan to apply to.</p>
       </div>

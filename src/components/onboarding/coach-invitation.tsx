@@ -131,11 +131,11 @@ export function CoachInvitation({
           aria-label="Ascendi can show you around"
         >
           <div className="flex items-start gap-2.5">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
-              <Bot className="h-4 w-4 text-primary-ink" aria-hidden />
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+              <Bot className="h-4 w-4 text-muted-foreground" aria-hidden />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="font-heading text-sm font-semibold leading-tight text-foreground">
+              <p className="text-sm font-semibold leading-tight text-foreground">
                 Want a quick look around?
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
@@ -145,7 +145,7 @@ export function CoachInvitation({
             <button
               type="button"
               onClick={onDecline}
-              className="-mr-1 -mt-1 rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="-mr-1 -mt-1 rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="No thanks"
             >
               <X className="h-3.5 w-3.5" aria-hidden />
@@ -166,7 +166,7 @@ export function CoachInvitation({
             <button
               type="button"
               onClick={onDecline}
-              className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Not now
             </button>

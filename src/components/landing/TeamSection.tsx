@@ -67,7 +67,15 @@ export function TeamSection() {
                         transition={{ duration: DURATION.base, ease: EASE }}
                     >
                         <div className="relative">
-                        <RoleBadge icon={Users} label="Counsellors" className="border-feature/30 text-feature" />
+                        {/* Brand, not `feature`. `feature` and `info` were DELETED from
+                            tailwind.config.ts in 4d54604 (five tones on one card is four too
+                            many), and Tailwind emits NOTHING for a colour it cannot resolve —
+                            no error, no warning, just a pill with no hue on the public
+                            homepage. The config's own note prescribes the replacement: the
+                            brand where `feature` was, `muted` where `info` was.
+                            `text-primary-ink` and not `text-primary`, because --primary is
+                            tuned to carry white button text and measures 3.58:1 as text. */}
+                        <RoleBadge icon={Users} label="Counsellors" className="border-primary/30 text-primary-ink" />
                         <AppFrame route="/counsellor">
                             <div className="flex items-center gap-4 sm:gap-5">
                                 <div className="shrink-0 text-center">
@@ -146,14 +154,14 @@ export function TeamSection() {
                             {/* Same pill language as RoleBadge: the node is a third role on
                                 this grid, so it gets named like one — an AI agent, not a
                                 nameless mascot between two screenshots. */}
-                            <span className="inline-flex items-center gap-1 rounded-full border border-feature/30 bg-card px-2.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-[0.08em] text-feature shadow-sm">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-card px-2.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-[0.08em] text-primary-ink shadow-sm">
                                 <Sparkles className="h-3 w-3" aria-hidden />
                                 AI agent
                             </span>
                             {/* Capped width so the one-liner wraps instead of widening the
                                 middle column and squeezing both surfaces. */}
                             <div className="max-w-[8.5rem] text-center">
-                                <p className="font-heading text-sm font-semibold text-foreground">Ascendi</p>
+                                <p className="text-sm font-semibold text-foreground">Ascendi</p>
                                 <p className="text-xs leading-snug text-muted-foreground">
                                     Answers questions and keeps everyone on the same page
                                 </p>
@@ -172,7 +180,11 @@ export function TeamSection() {
                         transition={{ duration: DURATION.base, delay: 0.1, ease: EASE }}
                     >
                         <div className="relative">
-                        <RoleBadge icon={Heart} label="Parents" className="border-info/30 text-info" />
+                        {/* `muted` where `info` was — see the note on the Counsellors badge.
+                            Quieter than its opposite number on purpose: the middle node and
+                            the counsellor card already carry the brand, and this directory's
+                            own rule is one accent per composition, never two competing. */}
+                        <RoleBadge icon={Heart} label="Parents" className="border-muted-foreground/30 text-muted-foreground" />
                         <AppFrame route="/parent">
                             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                                 <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-muted-foreground">
@@ -216,7 +228,7 @@ export function TeamSection() {
                             </div>
                             <div className="mt-3 flex items-baseline justify-between px-1 text-[0.8125rem] text-muted-foreground">
                                 <span>Est. total · 2-year programme</span>
-                                <span className="font-heading text-lg font-bold tabular-nums text-foreground">€56,700</span>
+                                <span className="text-lg font-bold tabular-nums text-foreground">€56,700</span>
                             </div>
                         </AppFrame>
                         </div>

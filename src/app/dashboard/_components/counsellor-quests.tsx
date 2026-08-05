@@ -27,12 +27,12 @@ export async function CounsellorQuests({ profileId }: { profileId: string }) {
         eyebrow="From your counsellor"
         title={`Quest log · ${clearedCount}/${questCount} cleared`}
         icon={Scroll}
-        iconClassName="bg-feature-subtle text-feature ring-feature/25"
+        iconClassName="text-muted-foreground"
         action={{ label: 'Open quest log', href: '/university-search/quests' }}
       >
         <div className="grid gap-4 md:grid-cols-2">
           {questDecks.map((deck) => (
-            <div key={deck.deckId} className="rounded-2xl border border-border/60 bg-background/40 p-4">
+            <div key={deck.deckId} className="rounded-2xl border border-border bg-background p-4">
               <div className="mb-1 flex items-center gap-2">
                 <span className="text-lg" aria-hidden>{deck.theme.emoji ?? '🗡️'}</span>
                 <p className="text-sm font-semibold text-foreground">{deck.deckName}</p>

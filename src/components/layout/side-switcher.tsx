@@ -9,24 +9,31 @@ import { SESSION_ROLE_KEY, useRole } from '@/lib/auth/role-context';
 
 type Mode = 'student' | 'counsellor' | 'parent';
 
+// One neutral treatment for all three. These carried info / feature / success —
+// three hues over three portals, which is a nominal set wearing the status
+// palette: "Parent view" was rendered in the done-green purely because it was
+// third. Nothing here has succeeded or is pending; the icon and the label tell
+// the three apart.
+const MODE_ACCENT = 'text-muted-foreground hover:bg-muted';
+
 const MODES: Record<Mode, { path: string; label: string; icon: LucideIcon; accent: string }> = {
   student: {
     path: '/dashboard',
     label: 'Student view',
     icon: GraduationCap,
-    accent: 'text-info hover:bg-info-subtle',
+    accent: MODE_ACCENT,
   },
   counsellor: {
     path: '/counsellor',
     label: 'Faculty view',
     icon: Briefcase,
-    accent: 'text-feature hover:bg-feature-subtle',
+    accent: MODE_ACCENT,
   },
   parent: {
     path: '/parent',
     label: 'Parent view',
     icon: HeartHandshake,
-    accent: 'text-success hover:bg-success-subtle',
+    accent: MODE_ACCENT,
   },
 };
 

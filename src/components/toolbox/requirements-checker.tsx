@@ -5,13 +5,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Clock, AlertTriangle, Minus, ChevronDown, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { stagger, cardFade } from '@/lib/motion';
+import { PROGRESS_FILL } from '@/lib/theme/categories';
 import type { RequirementRow, RequirementStatus, RequirementCategory } from '@/lib/data/student-demo-data';
 
-const STATUS_CONFIG: Record<RequirementStatus, { icon: typeof CheckCircle2; color: string; bg: string; label: string; ring: string }> = {
-  'complete': { icon: CheckCircle2, color: 'text-success', bg: 'bg-success-subtle', label: 'Complete', ring: 'stroke-success' },
-  'in-progress': { icon: Clock, color: 'text-info', bg: 'bg-info-subtle', label: 'In progress', ring: 'stroke-info' },
-  'missing': { icon: AlertTriangle, color: 'text-danger', bg: 'bg-danger-subtle', label: 'Missing', ring: 'stroke-danger' },
-  'not-required': { icon: Minus, color: 'text-muted-foreground', bg: 'bg-muted/30', label: 'N/A', ring: 'stroke-muted-foreground' },
+/* Per-requirement STATUS — a missing requirement really is a thing to go and do, so
+   these tones are earned. Do not confuse this with the aggregate: the rings and
+   category bars that summarise these cells are a QUANTITY and are brand (see below).
+
+   The `ring` property was deleted rather than left unused. It was dead — nothing read
+   it — and it held `stroke-success`/`stroke-danger`, i.e. exactly the per-status ring
+   colours the aggregate rings deliberately no longer use. Left in place it was a
+   loaded gun: the obvious thing for a future reader to re-wire when "restoring" the
+   coloured rings, which would reintroduce a status tone on a percentage. */
+const STATUS_CONFIG: Record<RequirementStatus, { icon: typeof CheckCircle2; color: string; bg: string; label: string }> = {
+  'complete': { icon: CheckCircle2, color: 'text-success', bg: 'bg-success-subtle', label: 'Complete' },
+  'in-progress': { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', label: 'In progress' },
+  'missing': { icon: AlertTriangle, color: 'text-danger', bg: 'bg-danger-subtle', label: 'Missing' },
+  'not-required': { icon: Minus, color: 'text-muted-foreground', bg: 'bg-border', label: 'N/A' },
 };
 
 const STATUS_CYCLE: RequirementStatus[] = ['missing', 'in-progress', 'complete', 'not-required'];
@@ -94,13 +104,23 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
     <div className="space-y-6">
       {/* Overall progress ring + stats */}
       <div className="flex flex-col sm:flex-row items-center gap-6 surface-subcard p-5 rounded-2xl">
-        {/* Big progress ring */}
+        {/* Big progress ring.
+
+            Every percentage on this screen — this ring, the five category bars below,
+            and the per-university rings in both the table and the mobile cards — used to
+            run the same `>= 80 ? success : >= 50 ? warning : danger` ternary. That made
+            the readiness matrix a field of red and olive for any student who had not
+            finished, which is every student before the last week: `warning` promises a
+            deadline and `danger` promises an overdue one, and neither exists here. The
+            per-CELL status below is a different axis and keeps its tones (see
+            STATUS_CONFIG) — a missing requirement IS a thing to go and do. The
+            aggregate of those cells is just a number. */}
         <div className="relative h-28 w-28 shrink-0">
           <svg className="h-28 w-28 -rotate-90" viewBox="0 0 80 80">
-            <circle cx="40" cy="40" r="36" fill="none" stroke="currentColor" strokeWidth="5" className="text-muted/20" />
+            <circle cx="40" cy="40" r="36" fill="none" strokeWidth="5" className="stroke-muted" />
             <motion.circle
               cx="40" cy="40" r="36" fill="none" strokeWidth="5" strokeLinecap="round"
-              className={cn(avgProgress >= 80 ? 'stroke-success' : avgProgress >= 50 ? 'stroke-warning' : 'stroke-danger')}
+              className="stroke-primary"
               initial={{ strokeDasharray: `0 ${circumference}` }}
               animate={{ strokeDasharray: `${(avgProgress / 100) * circumference} ${circumference}` }}
               transition={{ duration: 1, ease: 'easeOut' }}
@@ -111,7 +131,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
               key={avgProgress}
               initial={{ scale: 1.3, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className={cn('text-2xl font-bold', avgProgress >= 80 ? 'text-success' : avgProgress >= 50 ? 'text-warning' : 'text-danger')}
+              className="text-2xl font-bold text-foreground"
             >
               {avgProgress}%
             </motion.span>
@@ -128,7 +148,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
             {modified && (
               <button
                 onClick={resetMatrix}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+                className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
                 <RotateCcw className="h-3 w-3" /> Reset
               </button>
@@ -143,9 +163,9 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                   <span className="text-label font-medium text-muted-foreground">{CATEGORY_LABELS[category]}</span>
                   <span className="text-label font-semibold text-foreground">{rate}%</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <motion.div
-                    className={cn('h-full rounded-full', rate >= 80 ? 'bg-success-fill' : rate >= 50 ? 'bg-warning-fill' : 'bg-danger-fill')}
+                    className={cn('h-full rounded-full', PROGRESS_FILL)}
                     initial={{ width: 0 }}
                     animate={{ width: `${rate}%` }}
                     transition={{ duration: 0.6 }}
@@ -158,7 +178,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
       </div>
 
       {/* Interactive note */}
-      <p className="text-label text-muted-foreground/70 italic">Click any status icon to cycle through: Missing → In Progress → Complete → N/A. Your changes are saved automatically.</p>
+      <p className="text-label text-muted-foreground italic">Click any status icon to cycle through: Missing → In Progress → Complete → N/A. Your changes are saved automatically.</p>
 
       {/* Desktop: interactive table */}
       <div className="hidden md:block overflow-x-auto">
@@ -174,7 +194,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
           </thead>
           <tbody>
             {matrix.map((row) => (
-              <tr key={row.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors group">
+              <tr key={row.id} className="border-b border-border hover:bg-muted transition-colors group">
                 <td className="py-3 pr-4">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{row.flagEmoji}</span>
@@ -208,18 +228,15 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                     {/* Mini ring */}
                     <div className="relative h-9 w-9">
                       <svg className="h-9 w-9 -rotate-90" viewBox="0 0 36 36">
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-muted/20" />
+                        <circle cx="18" cy="18" r="14" fill="none" strokeWidth="2.5" className="stroke-muted" />
                         <motion.circle
                           cx="18" cy="18" r="14" fill="none" strokeWidth="2.5" strokeLinecap="round"
-                          className={cn(row.progress >= 80 ? 'stroke-success' : row.progress >= 50 ? 'stroke-warning' : 'stroke-danger')}
+                          className="stroke-primary"
                           animate={{ strokeDasharray: `${(row.progress / 100) * 2 * Math.PI * 14} ${2 * Math.PI * 14}` }}
                           transition={{ duration: 0.5 }}
                         />
                       </svg>
-                      <span className={cn(
-                        'absolute inset-0 flex items-center justify-center text-label font-bold',
-                        row.progress >= 80 ? 'text-success' : row.progress >= 50 ? 'text-warning' : 'text-danger'
-                      )}>
+                      <span className="absolute inset-0 flex items-center justify-center text-label font-bold text-foreground">
                         {row.progress}
                       </span>
                     </div>
@@ -262,18 +279,15 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                       {/* Mini ring */}
                       <div className="relative h-10 w-10">
                         <svg className="h-10 w-10 -rotate-90" viewBox="0 0 36 36">
-                          <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-muted/20" />
+                          <circle cx="18" cy="18" r="14" fill="none" strokeWidth="2.5" className="stroke-muted" />
                           <motion.circle
                             cx="18" cy="18" r="14" fill="none" strokeWidth="2.5" strokeLinecap="round"
-                            className={cn(row.progress >= 80 ? 'stroke-success' : row.progress >= 50 ? 'stroke-warning' : 'stroke-danger')}
+                            className="stroke-primary"
                             animate={{ strokeDasharray: `${(row.progress / 100) * 2 * Math.PI * 14} ${2 * Math.PI * 14}` }}
                             transition={{ duration: 0.5 }}
                           />
                         </svg>
-                        <span className={cn(
-                          'absolute inset-0 flex items-center justify-center text-label font-bold',
-                          row.progress >= 80 ? 'text-success' : row.progress >= 50 ? 'text-warning' : 'text-danger'
-                        )}>
+                        <span className="absolute inset-0 flex items-center justify-center text-label font-bold text-foreground">
                           {row.progress}%
                         </span>
                       </div>
@@ -307,7 +321,7 @@ export function RequirementsChecker({ matrix: initialMatrix }: RequirementsCheck
                 <AnimatePresence>
                   {isExpanded && (
                     <motion.div id={`req-panel-${row.id}`} initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                      <div className="px-4 pb-4 space-y-2 border-t border-border/50 pt-3">
+                      <div className="px-4 pb-4 space-y-2 border-t border-border pt-3">
                         {row.cells.map((cell) => {
                           const cfg = STATUS_CONFIG[cell.status];
                           return (

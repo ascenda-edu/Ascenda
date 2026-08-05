@@ -160,26 +160,30 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background text-foreground">
       {/* Mobile notice — essay workshop is desktop-optimised */}
-      <div className="flex items-center justify-center gap-2 bg-warning-subtle border-b border-warning/25 px-4 py-2 text-xs font-medium text-warning lg:hidden">
+      <div className="flex items-center justify-center gap-2 bg-warning-subtle border-b border-warning/30 px-4 py-2 text-xs font-medium text-warning lg:hidden">
         <FileText className="h-3.5 w-3.5 shrink-0" />
         Essay Workshop works best on a larger screen. You can still read and edit below.
       </div>
       {/* ── Top chrome ──────────────────────────────────────────────────────── */}
-      <header className="flex items-center gap-3 border-b border-border/60 px-4 h-12 shrink-0 bg-card/80 backdrop-blur-sm">
+      <header className="flex items-center gap-3 border-b border-border px-4 h-12 shrink-0 bg-card/80 backdrop-blur-sm">
         <Link href="/toolbox" className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" />
           <span className="text-xs font-medium hidden sm:inline">Toolbox</span>
         </Link>
 
-        <div className="w-px h-5 bg-border/50" />
+        <div className="w-px h-5 bg-border" />
 
         <div className="flex items-center gap-1">
           <PenTool className="h-4 w-4 text-primary-ink" />
           <span className="text-sm font-semibold text-foreground">Essay Workshop</span>
         </div>
 
-        {/* Platform switcher */}
-        <div className="flex gap-0.5 bg-muted/40 p-0.5 rounded-lg ml-4">
+        {/* Platform switcher. Was gap-0.5 p-0.5 — four ~24.5px-tall pills 2px
+            apart, which is a mis-tap generator on touch since picking the wrong
+            platform silently swaps the word/character limit. p-1 goes up with
+            the gap so the outer pills are not 2px from the container edge while
+            the inner ones sit 8px apart. */}
+        <div className="flex gap-2 bg-muted p-1 rounded-lg ml-4">
           {PLATFORMS.map((p) => (
             <button
               key={p}
@@ -192,14 +196,14 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
           ))}
         </div>
 
-        <span className="text-label text-muted-foreground/60 hidden md:inline">{limit.tip}</span>
+        <span className="text-label text-muted-foreground hidden md:inline">{limit.tip}</span>
 
         <div className="ml-auto flex items-center gap-3">
           {/* Progress */}
           <div className="flex items-center gap-2">
             <div className="relative h-7 w-7">
               <svg className="h-7 w-7 -rotate-90" viewBox="0 0 28 28">
-                <circle cx="14" cy="14" r="11" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted/20" />
+                <circle cx="14" cy="14" r="11" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted" />
                 <circle cx="14" cy="14" r="11" fill="none" strokeWidth="2" strokeLinecap="round"
                   strokeDasharray={`${Math.min(ratio, 1) * 69.12} 69.12`}
                   className={cn('transition-[stroke-dasharray,stroke] duration-500', ratio < 0.8 ? 'stroke-success' : ratio < 0.95 ? 'stroke-warning' : 'stroke-danger')}
@@ -212,7 +216,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
             <span className="text-label text-muted-foreground hidden sm:inline">{limit.unit}</span>
           </div>
 
-          <div className="w-px h-5 bg-border/50" />
+          <div className="w-px h-5 bg-border" />
 
           {/* AI toggle */}
           <button
@@ -220,7 +224,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
             aria-expanded={showAI}
             aria-label={showAI ? 'Hide AI panel' : 'Show AI panel'}
             className={cn('flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
-              showAI ? 'bg-primary/10 text-primary-ink' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50')}
+              showAI ? 'bg-primary/10 text-primary-ink' : 'text-muted-foreground hover:text-foreground hover:bg-muted/60')}
           >
             {showAI ? <PanelRightClose className="h-3.5 w-3.5" /> : <PanelRightOpen className="h-3.5 w-3.5" />}
             <Sparkles className="h-3 w-3" />
@@ -233,9 +237,9 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
       <div className="flex-1 flex min-h-0">
 
         {/* ── LEFT SIDEBAR ─────────────────────────────────────────────────── */}
-        <aside className="w-64 xl:w-72 border-r border-border/50 flex flex-col bg-card/50 shrink-0 hidden lg:flex">
+        <aside className="w-64 xl:w-72 border-r border-border flex flex-col bg-card shrink-0 hidden lg:flex">
           {/* Tab switcher */}
-          <div className="flex border-b border-border/50">
+          <div className="flex border-b border-border">
             <button onClick={() => setLeftTab('blocks')} className={cn('flex-1 px-3 py-2.5 text-label font-semibold transition-colors', leftTab === 'blocks' ? 'text-foreground border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground')}>
               Blocks ({blocks.length})
             </button>
@@ -258,8 +262,8 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
                       <button onClick={() => toggleCat(cat)} className="flex items-center gap-1.5 w-full text-left mb-1 group">
                         <div className={cn('flex h-5 w-5 items-center justify-center rounded-md', cfg.bg)}><CatIcon className={cn('h-3 w-3', cfg.color)} /></div>
                         <span className={cn('text-label font-semibold flex-1', cfg.color)}>{cfg.label}</span>
-                        <span className="text-label text-muted-foreground/50">{catBlocks.length}</span>
-                        <ChevronDown className={cn('h-3 w-3 text-muted-foreground/40 transition-transform', isCollapsed && '-rotate-90')} />
+                        <span className="text-label text-muted-foreground">{catBlocks.length}</span>
+                        <ChevronDown className={cn('h-3 w-3 text-muted-foreground transition-transform', isCollapsed && '-rotate-90')} />
                       </button>
                       <AnimatePresence initial={false}>
                         {!isCollapsed && (
@@ -273,10 +277,10 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
                                       onClick={() => toggleBlock(block.id)}
                                       onDoubleClick={() => insertBlock(block)}
                                       draggable onDragStart={() => setDraggedBlock(block.id)} onDragEnd={() => setDraggedBlock(null)}
-                                      className={cn('w-full text-left rounded-lg px-2.5 py-1.5 text-xs transition-[color,background-color,box-shadow,opacity]', isSel ? 'bg-primary/5 ring-1 ring-primary/15' : 'hover:bg-muted/40', draggedBlock === block.id && 'opacity-40 select-none')}
+                                      className={cn('w-full text-left rounded-lg px-2.5 py-1.5 text-xs transition-[color,background-color,box-shadow,opacity]', isSel ? 'bg-primary/10 ring-1 ring-primary/30' : 'hover:bg-muted/60', draggedBlock === block.id && 'opacity-40 select-none')}
                                     >
                                       <div className="flex items-center gap-1.5">
-                                        <GripVertical className="h-3 w-3 text-muted-foreground/20 opacity-0 group-hover/b:opacity-100 transition-opacity shrink-0" />
+                                        <GripVertical className="h-3 w-3 text-muted-foreground opacity-0 group-hover/b:opacity-100 transition-opacity shrink-0" />
                                         <span className="font-medium text-foreground flex-1 truncate">{block.label}</span>
                                         {isSel && <Check className="h-3 w-3 text-primary-ink shrink-0" />}
                                       </div>
@@ -299,10 +303,10 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
                 {activities.length > 0 && (
                   <div>
                     <button onClick={() => setShowActivities(!showActivities)} className="flex items-center gap-1.5 w-full text-left mb-1">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-md bg-info-subtle"><Users className="h-3 w-3 text-info" /></div>
-                      <span className="text-label font-semibold flex-1 text-info">Activities</span>
-                      <span className="text-label text-muted-foreground/50">{activities.length}</span>
-                      <ChevronDown className={cn('h-3 w-3 text-muted-foreground/40 transition-transform', !showActivities && '-rotate-90')} />
+                      <div className="flex h-5 w-5 items-center justify-center rounded-md bg-muted"><Users className="h-3 w-3 text-muted-foreground" /></div>
+                      <span className="text-label font-semibold flex-1 text-muted-foreground">Activities</span>
+                      <span className="text-label text-muted-foreground">{activities.length}</span>
+                      <ChevronDown className={cn('h-3 w-3 text-muted-foreground transition-transform', !showActivities && '-rotate-90')} />
                     </button>
                     <AnimatePresence initial={false}>
                       {showActivities && (
@@ -310,10 +314,10 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
                           <div className="space-y-0.5 pb-2">
                             {activities.map((act) => (
                               <button key={act.id} onClick={() => { if (!editor) return; editor.chain().focus().insertContent(`<p><em>[${act.name}]</em> ${act.role} at ${act.organization} — ${act.description}</p>`).run(); }}
-                                className="w-full text-left rounded-lg px-2.5 py-1.5 text-xs hover:bg-muted/40 transition-colors group/act">
+                                className="w-full text-left rounded-lg px-2.5 py-1.5 text-xs hover:bg-muted transition-colors group/act">
                                 <div className="flex items-center gap-1.5">
                                   <span className="font-medium text-foreground flex-1 truncate">{act.name}</span>
-                                  <ChevronRight className="h-3 w-3 text-muted-foreground/20 group-hover/act:text-info transition-colors shrink-0" />
+                                  <ChevronRight className="h-3 w-3 text-muted-foreground group-hover/act:text-muted-foreground transition-colors shrink-0" />
                                 </div>
                                 <p className="text-label text-muted-foreground truncate">{act.role} · {act.organization}</p>
                               </button>
@@ -330,13 +334,13 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
             {leftTab === 'prompts' && (
               <div className="space-y-2">
                 {filteredPrompts.length === 0 ? (
-                  <p className="text-label text-muted-foreground/60 py-4 text-center">No prompts for {platform} yet.</p>
+                  <p className="text-label text-muted-foreground py-4 text-center">No prompts for {platform} yet.</p>
                 ) : filteredPrompts.map((prompt) => (
                   <button key={prompt.id} onClick={() => setExpandedPrompt(expandedPrompt === prompt.id ? null : prompt.id)}
-                    className="w-full text-left rounded-xl border border-border/40 p-3 hover:bg-muted/20 transition-colors">
+                    className="w-full text-left rounded-xl border border-border p-3 hover:bg-muted transition-colors">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-medium text-foreground leading-snug">{prompt.title}</span>
-                      <ChevronDown className={cn('h-3 w-3 text-muted-foreground/40 transition-transform shrink-0', expandedPrompt === prompt.id && 'rotate-180')} />
+                      <ChevronDown className={cn('h-3 w-3 text-muted-foreground transition-transform shrink-0', expandedPrompt === prompt.id && 'rotate-180')} />
                     </div>
                     <AnimatePresence>
                       {expandedPrompt === prompt.id && (
@@ -345,7 +349,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
                           {prompt.relatedBlockIds.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-1">
                               {prompt.relatedBlockIds.map((id) => { const b = blocks.find((bl) => bl.id === id); return b ? (
-                                <button key={id} onClick={(e) => { e.stopPropagation(); insertBlock(b); }} className="rounded-full bg-primary/10 px-2 py-0.5 text-label font-semibold text-primary-ink hover:bg-primary/20 transition-colors">+ {b.label}</button>
+                                <button key={id} onClick={(e) => { e.stopPropagation(); insertBlock(b); }} className="rounded-full bg-primary/10 px-2 py-0.5 text-label font-semibold text-primary-ink hover:ring-1 hover:ring-primary/30 transition-colors">+ {b.label}</button>
                               ) : null; })}
                             </div>
                           )}
@@ -360,7 +364,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
 
           {/* Selected summary */}
           {selectedBlocks.size > 0 && (
-            <div className="p-3 border-t border-border/50 space-y-2">
+            <div className="p-3 border-t border-border space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-label font-semibold text-muted-foreground">{selectedBlocks.size} block{selectedBlocks.size > 1 ? 's' : ''} selected</p>
                 <button
@@ -372,7 +376,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
               </div>
               <div className="flex flex-wrap gap-1">
                 {blocks.filter((b) => selectedBlocks.has(b.id)).map((b) => (
-                  <button key={b.id} onClick={() => insertBlock(b)} className="rounded-full bg-primary/10 px-2 py-0.5 text-label font-semibold text-primary-ink hover:bg-primary/20 transition-colors" title="Click to insert">{b.label}</button>
+                  <button key={b.id} onClick={() => insertBlock(b)} className="rounded-full bg-primary/10 px-2 py-0.5 text-label font-semibold text-primary-ink hover:ring-1 hover:ring-primary/30 transition-colors" title="Click to insert">{b.label}</button>
                 ))}
               </div>
             </div>
@@ -381,8 +385,17 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
 
         {/* ── CENTER: Editor ───────────────────────────────────────────────── */}
         <main className="flex-1 flex flex-col min-w-0">
-          {/* Toolbar */}
-          <div className="flex items-center gap-0.5 px-4 h-10 border-b border-border/40 bg-card/30 shrink-0">
+          {/* Toolbar. gap-1.5 (6px), NOT the 8px used elsewhere in this pass:
+              this bar is genuinely dense — six 28px TBtns, two Seps and three
+              text buttons in one non-wrapping row, and the centre column can be
+              as narrow as ~376px usable (1024px viewport with both the 256px
+              blocks aside and the 360px AI panel open). At gap-2 the eleven gaps
+              add ~66px and the flex children start shrinking below their w-7,
+              distorting the icons. 6px still separates the hit boxes enough for
+              the enlarge-targets workstream to land safely. Sep dropped its
+              `mx-0.5` in the same spirit — the flex gap alone now governs
+              spacing, which is consistent and buys back 10px. */}
+          <div className="flex items-center gap-1.5 px-4 h-10 border-b border-border bg-muted shrink-0">
             <TBtn icon={Bold} active={editor?.isActive('bold') ?? false} onClick={() => editor?.chain().focus().toggleBold().run()} title="Bold" />
             <TBtn icon={Italic} active={editor?.isActive('italic') ?? false} onClick={() => editor?.chain().focus().toggleItalic().run()} title="Italic" />
             <Sep />
@@ -395,7 +408,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
             <button
               onClick={handleCopy}
               className={cn(
-                'flex items-center gap-1 rounded-md px-2 py-1 text-label font-medium transition-colors hover:bg-muted/50 hover:text-foreground',
+                'flex items-center gap-1 rounded-md px-2 py-1 text-label font-medium transition-colors hover:bg-muted hover:text-foreground',
                 copyFailed ? 'text-danger' : 'text-muted-foreground'
               )}
             >
@@ -405,7 +418,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
             <button
               onClick={handleDownload}
               disabled={!editorText.trim()}
-              className="flex items-center gap-1 rounded-md px-2 py-1 text-label font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-label font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               title="Download as .txt"
             >
               <Download className="h-3 w-3" /> Export
@@ -427,7 +440,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
           </div>
 
           {/* Bottom status + progress */}
-          <div className="shrink-0 border-t border-border/30 bg-card/50">
+          <div className="shrink-0 border-t border-border bg-border">
             <div className="flex items-center justify-between px-4 py-1.5">
               <div className="flex items-center gap-3">
                 <span className={cn('text-label font-semibold tabular-nums', ratio < 0.8 ? 'text-success' : ratio < 0.95 ? 'text-warning' : 'text-danger')}>
@@ -441,9 +454,9 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
                 {overBy === 0 && ratio >= 0.95 && <span className="text-label font-semibold text-danger motion-safe:animate-pulse">At limit</span>}
                 {ratio >= 0.8 && ratio < 0.95 && <span className="text-label text-warning">Getting close</span>}
               </div>
-              <span className="text-label text-muted-foreground/50">{limit.tip}</span>
+              <span className="text-label text-muted-foreground">{limit.tip}</span>
             </div>
-            <div className="h-0.5 bg-muted/20">
+            <div className="h-0.5 bg-muted">
               <motion.div
                 className={cn('h-full', ratio < 0.8 ? 'bg-success-fill' : ratio < 0.95 ? 'bg-warning-fill' : 'bg-danger-fill')}
                 initial={{ width: 0 }}
@@ -462,7 +475,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
               animate={{ width: 360, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="border-l border-border/50 bg-card/50 hidden lg:flex flex-col overflow-hidden shrink-0"
+              className="border-l border-border bg-card hidden lg:flex flex-col overflow-hidden shrink-0"
             >
               <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
                 <EssayAIPanel
@@ -512,10 +525,12 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
 function TBtn({ icon: Icon, active, onClick, title, disabled }: { icon: typeof Bold; active: boolean; onClick: () => void; title: string; disabled?: boolean }) {
   return (
     <button onClick={onClick} disabled={disabled} title={title} aria-label={title} aria-pressed={active}
-      className={cn('flex h-7 w-7 items-center justify-center rounded-md transition-colors', active ? 'bg-primary/10 text-primary-ink' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground', disabled && 'opacity-25 cursor-not-allowed')}>
+      className={cn('flex h-7 w-7 items-center justify-center rounded-md transition-colors', active ? 'bg-primary/10 text-primary-ink' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground', disabled && 'opacity-25 cursor-not-allowed')}>
       <Icon className="h-3.5 w-3.5" />
     </button>
   );
 }
 
-function Sep() { return <div className="w-px h-4 bg-border/40 mx-0.5" />; }
+// No `mx-0.5`: the toolbar's own `gap-1.5` supplies the spacing, so a margin here
+// would only make the separator sit unevenly against its neighbours.
+function Sep() { return <div className="w-px h-4 bg-border" />; }

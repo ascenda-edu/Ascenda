@@ -49,9 +49,9 @@ type BatchSummary = {
 function tierColor(result: string | null) {
   if (!result) return 'bg-muted text-muted-foreground';
   if (result === 'Safety') return 'bg-success-subtle text-success';
-  if (result === 'Target') return 'bg-info-subtle text-info';
+  if (result === 'Target') return 'bg-muted text-muted-foreground';
   if (result === 'Reach') return 'bg-warning-subtle text-warning';
-  if (result.startsWith('Best:')) return 'bg-feature-subtle text-feature';
+  if (result.startsWith('Best:')) return 'bg-primary/10 text-primary-ink';
   return 'bg-danger-subtle text-danger';
 }
 
@@ -59,8 +59,8 @@ function tierColor(result: string | null) {
 // danger — the band name is printed next to the colour, so no information is lost.
 function bandColor(band: string | null) {
   if (!band) return 'text-muted-foreground';
-  if (band === 'Exceptional') return 'text-feature font-semibold';
-  if (band === 'Very strong') return 'text-info font-semibold';
+  if (band === 'Exceptional') return 'text-primary-ink font-semibold';
+  if (band === 'Very strong') return 'text-muted-foreground font-semibold';
   if (band === 'Strong') return 'text-success';
   if (band === 'Solid') return 'text-warning';
   if (band === 'Borderline') return 'text-danger';
@@ -164,12 +164,12 @@ export default async function SimulationPage() {
 
             {/* Findings */}
             {batch.rows.filter(r => !r.validation_pass).length > 0 && (
-              <div className="rounded-lg bg-warning-subtle border border-warning/25 px-4 py-3">
+              <div className="rounded-lg bg-card border border-border px-4 py-3">
                 <p className="text-sm font-medium text-warning mb-1">
                   ⚠ Failures ({batch.rows.filter(r => !r.validation_pass).length}) — Algorithm calibration findings:
                 </p>
                 {batch.rows.filter(r => !r.validation_pass).map(r => (
-                  <p key={r.id} className="text-xs text-warning">
+                  <p key={r.id} className="text-xs text-muted-foreground">
                     • <strong>{r.profile_name}</strong> (IB equiv {r.student_ib_equivalent}) →{' '}
                     {r.actual_university}: result was <em>{r.algorithm_result ?? 'Not found'}</em>
                   </p>
@@ -198,7 +198,7 @@ export default async function SimulationPage() {
                 </TableHeader>
                 <TableBody>
                   {batch.rows.map(row => (
-                    <TableRow key={row.id} className={row.validation_pass ? '' : 'bg-danger/5'}>
+                    <TableRow key={row.id} className={row.validation_pass ? '' : 'bg-danger/10'}>
                       <TableCell className="font-medium text-foreground">{row.profile_name}</TableCell>
                       <TableCell className="text-muted-foreground">{row.programme_type}</TableCell>
                       <TableCell numeric className="text-foreground">{row.student_ib_equivalent ?? '—'}</TableCell>

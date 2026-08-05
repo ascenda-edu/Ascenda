@@ -89,7 +89,7 @@ const DetailItem = ({ label, value }: { label: string; value: string | number | 
 );
 
 const Metric = ({ label, value }: { label: string; value: string | number | null | undefined }) => (
-  <div className="rounded-2xl border border-border bg-muted/70 p-4 text-foreground shadow-e-1 transition-colors">
+  <div className="rounded-2xl border border-border bg-muted p-4 text-foreground shadow-e-1 transition-colors">
     <p className="eyebrow">{label}</p>
     <p className="mt-1 text-xl font-semibold text-foreground">{safeText(value)}</p>
   </div>
@@ -169,7 +169,7 @@ export const UniversityInformation = ({
 
       {error ? (
         <div className="surface-card">
-          <p className="text-xl font-semibold text-foreground">We hit a snag loading this university.</p>
+          <p className="font-heading text-xl font-semibold text-foreground">We hit a snag loading this university.</p>
           <p className="text-sm text-muted-foreground">{error}</p>
         </div>
       ) : null}
@@ -313,7 +313,7 @@ export const UniversityInformation = ({
           </Section>
 
           <Section title="Additional Fit Factors" description={universityData.fitFactors?.insights ?? 'Insights gathered from interviews.'}>
-            <div className="rounded-2xl border border-border bg-muted/70 p-5 text-sm text-muted-foreground shadow-e-1 transition-colors">
+            <div className="rounded-2xl border border-border bg-muted p-5 text-sm text-muted-foreground shadow-e-1 transition-colors">
               {safeText(universityData.fitFactors?.cityDescription)}
             </div>
           </Section>
