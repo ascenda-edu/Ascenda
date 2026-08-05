@@ -177,6 +177,39 @@ combine the two decisions and look at it. Generator: `scratchpad/build-white.mjs
 
 ---
 
+## 2b. PR 3 — the alpha ladder (commit `4d18a23`)
+
+147 files swept by four parallel agents partitioned by file, six shared files owned by the lead,
+~1000 class-value edits. Gates: typecheck 0 · lint exactly 2/2 · 2036 tests / 89 suites ·
+tone-solver 92/92 · `lint:tokens` no regressions · build green · all routes in budget.
+
+**The sweep found seven errors in the rules it was given** — every one of which passes all of the above.
+Full list in the commit message and the traps are in [brand.md](./brand.md) §7. The three worth knowing:
+
+1. **The ladder must never touch text.** `text-muted-foreground` is 1.50:1 at `/30`, 2.44:1 at `/60`,
+   2.92:1 at `/70` — every rung fails AA; only solid passes at 5.36:1.
+2. **A tint carrying ink caps at `/10`.** `text-primary-ink` on `bg-primary/N` over white: `/10` = 4.73:1
+   pass, `/20` = 4.14 fail, `/30` = 3.60 fail. The prescribed `/20 → /30` mapping *created* a failure.
+3. **Rule A itself created a hierarchy inversion.** An inactive row's `hover:bg-muted/60` sat at
+   L\* ~96 — subordinate to a `bg-primary/10` active state at L\* 95.7. Forcing it solid took it to
+   L\* 94.3, so the **inactive hover became heavier than the active row**; `bg-border` widened the gap to
+   L\* 87.2. It cannot be fixed from the neutral side, because an ink-bearing tint caps at `/10` and every
+   usable neutral is heavier. `bg-muted/60` is therefore a measured exception at 17 sites: ΔE 28 clears
+   the JND of 23, so it is visible *and* subordinate.
+
+**Two dead ends, recorded so they are not retried:** `bg-secondary` cannot separate two states (it is
+byte-identical to `--muted` in dark), and `bg-border` looks right at 1.24:1 from muted but that measures
+the wrong thing — it is the heaviest neutral in both themes.
+
+**Ruled outside the ladder rather than forced:** dimming a solid fill (`hover:bg-series-N/85`, 19 chart
+marks), and gradient stops / `inset-0` scrims, where alpha is the mechanism not a tint.
+
+⚠ **`bg-muted/60` is now load-bearing in two opposite directions** — as the hover above a transparent
+rest, and as the rest below a solid hover. A future mechanical pass reading only "surface tokens take no
+alpha except `/60`" will flatten them again. Check the sibling state first.
+
+---
+
 ## 3. Guidelines derived from the top teen apps
 
 Ten checkable rules, each with its evidence and Ascenda's current status. Artifact:
