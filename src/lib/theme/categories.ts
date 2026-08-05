@@ -211,6 +211,37 @@ const make = (tone: CategoryTone, icon: LucideIcon): CategoryVisual => ({
   ...TONE[tone]
 });
 
+/* ─── WHICH REGISTRIES GET A HUE, AND WHY ────────────────────────────────────
+ * The five status hues are a scarce resource. Spending one on a registry that
+ * doesn't need it doesn't just waste it — it actively lies, because the reader
+ * has already learned that rose means urgent.
+ *
+ * The test is ORDINAL vs NOMINAL:
+ *
+ *   ORDINAL — the values are ranked, and the rank is the point. reach/match/
+ *     safety, overdue/pending/received, the completion bands. Hue is doing real
+ *     work here: it says "this one is worse than that one" pre-attentively, and
+ *     it keeps its hue.
+ *
+ *   NOMINAL — the values are just names with no order. Profile sections, task
+ *     types, scholarship categories, toolbox tools. Hue encodes nothing; it is
+ *     an arbitrary ID. These get ONE tone (`primary`, or `neutral` for an
+ *     explicit "unspecified" bucket).
+ *
+ * Nominal registries lose nothing by going monochrome, because every entry
+ * already carries its own lucide `icon` — the icon is the type signal, the hue
+ * was never carrying that load. What they gain is that a page stops showing
+ * four unrelated colours to say "these are four sections of a form", and the
+ * hues that ARE left mean something when they appear.
+ *
+ * This is the same argument that already sent the chart palette monochrome (see
+ * --series-* in globals.css): a multi-hue categorical palette was rejected as
+ * too loud beside an indigo brand. Icon swatches simply hadn't had it applied.
+ *
+ * So: before giving a new registry five colours, ask whether its values are
+ * RANKED. If they aren't, it gets one.
+ * ────────────────────────────────────────────────────────────────────────── */
+
 /* ─── Application priority / status ─────────────────────────────────── */
 
 export type ApplicationPriority = 'high' | 'medium' | 'watch';
@@ -302,12 +333,19 @@ export const DOC_STATUS_VISUAL: Record<DocStatus, CategoryVisual> = {
 
 /* ─── Task / requirement type ───────────────────────────────────────── */
 
+/**
+ * NOMINAL — what KIND of task, not how urgent it is. Urgency is a separate axis
+ * and is carried by DEADLINE_VISUAL, which is why `interview: rose` was actively
+ * misleading: it painted every interview task in the overdue colour regardless
+ * of when it was due, and sat next to a genuinely-overdue rose chip driven by
+ * the deadline. Type is the icon's job.
+ */
 export type TaskType = 'essay' | 'reference' | 'test' | 'interview' | 'document' | 'general';
 export const TASK_VISUAL: Record<TaskType, CategoryVisual> = {
-  essay: make('violet', PenLine),
-  reference: make('sky', Mail),
-  test: make('amber', ClipboardCheck),
-  interview: make('rose', Calendar),
+  essay: make('primary', PenLine),
+  reference: make('primary', Mail),
+  test: make('primary', ClipboardCheck),
+  interview: make('primary', Calendar),
   document: make('primary', FileText),
   general: make('neutral', ListChecks)
 };
@@ -352,12 +390,19 @@ export const classifyDeadlineUrgency = (
 
 /* ─── Profile section ───────────────────────────────────────────────── */
 
+/**
+ * NOMINAL — four sections of one form. These were sky/violet/amber/emerald,
+ * which put four unrelated colours on /profile to convey nothing except "there
+ * are four of these"; `lifestyle` was amber, i.e. the todo/pending colour, on a
+ * section that has no pending state. The icons (UserCircle / GraduationCap /
+ * Heart / Target) already distinguish them.
+ */
 export type ProfileSection = 'personal' | 'academics' | 'lifestyle' | 'aspirations';
 export const PROFILE_SECTION_VISUAL: Record<ProfileSection, CategoryVisual> = {
-  personal: make('sky', UserCircle),
-  academics: make('violet', GraduationCap),
-  lifestyle: make('amber', Heart),
-  aspirations: make('emerald', Target)
+  personal: make('primary', UserCircle),
+  academics: make('primary', GraduationCap),
+  lifestyle: make('primary', Heart),
+  aspirations: make('primary', Target)
 };
 
 /* ─── Profile completion banding ────────────────────────────────────── */
@@ -416,44 +461,58 @@ export const classifyProgress = (completed: number, total: number): CompletionBa
 
 /* ─── Scholarship category ──────────────────────────────────────────── */
 
+/**
+ * NOMINAL — six unranked categories, and the worst offender of the set: a grid
+ * of scholarship cards rendered as six different colours, one of them rose, on a
+ * page where nothing is urgent. Icons carry the category.
+ */
 export type ScholarshipCategory = 'Merit' | 'Regional' | 'STEM' | 'Need' | 'Sports' | 'General';
 export const SCHOLARSHIP_VISUAL: Record<ScholarshipCategory, CategoryVisual> = {
-  Merit: make('violet', Award),
-  Regional: make('sky', MapPin),
-  STEM: make('emerald', Briefcase),
-  Need: make('amber', Heart),
-  Sports: make('rose', Target),
+  Merit: make('primary', Award),
+  Regional: make('primary', MapPin),
+  STEM: make('primary', Briefcase),
+  Need: make('primary', Heart),
+  Sports: make('primary', Target),
   General: make('neutral', Sparkles)
 };
 
 /* ─── Toolbox tools ─────────────────────────────────────────────────── */
 
+/** NOMINAL — five tools, no ranking. `hub` was already `primary`; the rest join it. */
 export type ToolboxTool = 'essay' | 'chances' | 'requirements' | 'timeline' | 'hub';
 export const TOOL_VISUAL: Record<ToolboxTool, CategoryVisual> = {
-  essay: make('violet', PenLine),
-  chances: make('amber', Target),
-  requirements: make('sky', ClipboardList),
-  timeline: make('rose', CalendarClock),
+  essay: make('primary', PenLine),
+  chances: make('primary', Target),
+  requirements: make('primary', ClipboardList),
+  timeline: make('primary', CalendarClock),
   hub: make('primary', Sparkles)
 };
 
 /* ─── Update / signal types (Updates feed on applications) ─────────── */
 
+/** NOMINAL — where an update came from, not how bad it is. */
 export type SignalType = 'deadline' | 'scholarship' | 'portal' | 'task';
 export const SIGNAL_VISUAL: Record<SignalType, CategoryVisual> = {
-  deadline: make('rose', CalendarClock),
-  scholarship: make('emerald', Award),
-  portal: make('sky', BookOpen),
-  task: make('amber', ListChecks)
+  deadline: make('primary', CalendarClock),
+  scholarship: make('primary', Award),
+  portal: make('primary', BookOpen),
+  task: make('primary', ListChecks)
 };
 
 /* ─── Note types (faculty parity) ───────────────────────────────────── */
 
+/**
+ * MIXED, and deliberately so — this is what the ordinal/nominal split buys you.
+ * `flag` genuinely means "a human marked this for attention", so it keeps amber.
+ * `session` and `update` are just note kinds and go quiet. The result is that a
+ * flag now actually stands out in the activity feed, which it could not do when
+ * all three rows were equally coloured.
+ */
 export type NoteType = 'session' | 'flag' | 'update';
 export const NOTE_VISUAL: Record<NoteType, CategoryVisual> = {
-  session: make('violet', MessageSquare),
+  session: make('primary', MessageSquare),
   flag: make('amber', Flag),
-  update: make('sky', TrendingUp)
+  update: make('neutral', TrendingUp)
 };
 
 /* ─── Re-export icons used as default fallbacks ─────────────────────── */

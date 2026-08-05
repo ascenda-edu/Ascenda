@@ -16,7 +16,6 @@ import { Chip } from '@/components/profile/wizard/chip';
 import { Combobox } from '@/components/profile/wizard/combobox';
 import { ReviewSection } from '@/components/profile/wizard/review-section';
 import { ChoiceGroup, type ChoiceOption } from '@/components/profile/wizard/choice-card';
-import { UnlocksLedger } from '@/components/profile/wizard/unlocks-ledger';
 import {
   LazyAscendiAside,
   LazyMilestoneCelebration
@@ -25,7 +24,6 @@ import {
   CLUSTER_ICONS, PROGRAMME_ICONS, TEACHING_ICONS, LOCATION_ICONS, CAMPUS_ICONS,
   iconFor, INFERRED_ICON
 } from '@/components/profile/wizard/wizard-icons';
-import { buildUnlocks } from '@/lib/profile/wizard-unlocks';
 import { suggestionFor, applySuggestion } from '@/lib/profile/wizard-suggestions';
 import {
   CLUSTER_REACTIONS, PROGRAMME_REACTIONS, ibTotalReaction,
@@ -1360,9 +1358,6 @@ export const StudentIntakeForm = ({
     speak(reaction.message, reaction.id);
   }, [ibGradesComplete, ibSubjectSum, speak]);
 
-  /** The unlocks ledger. Derived from form state only — no fetch, no scoring. */
-  const unlocks = useMemo(() => buildUnlocks(formState), [formState]);
-
   // ── The subject suggestion ──
   const suggestion = useMemo(
     () => suggestionFor(academicInput.intended_clusters, subjects, dismissedSuggestions),
@@ -1547,17 +1542,11 @@ export const StudentIntakeForm = ({
           />
         </div>
 
-        {/* ── The work, and what it buys ──
-          * A column below `xl` (work card, then the unlocks ledger under it) and a
-          * row at `xl` (work card | ledger). Nesting the two here rather than making
-          * them siblings of the rail is what lets a SINGLE ledger instance change
-          * position across breakpoints — see the note on the `<aside>` below.
-          *
-          * `min-w-0` is load-bearing in a flex row: without it the grids inside
-          * refuse to shrink and the whole page gains a horizontal scrollbar.
-          * `xl:items-start` keeps both children at content height once they sit
-          * side by side. */}
-        <div className="flex min-w-0 flex-1 flex-col gap-5 xl:flex-row xl:items-start">
+        {/* ── The work ──
+          * The only thing beside the rail. It used to share this space with an
+          * unlocks ledger ("What we can do with this so far"), which is gone — and
+          * with it the wrapper that repositioned the ledger across breakpoints.
+          * The card is now a direct sibling of the rail. */}
         <div
           ref={contentTopRef}
           /* `overflow-visible` overrides `.surface-card`'s `overflow: hidden`
@@ -1571,11 +1560,16 @@ export const StudentIntakeForm = ({
            * this card, 40 lines above. */
           /* Content height, not stretched: the row above is `flex-1` so the rail's
              dividing rule reaches the floor, but letting the work card stretch too
-             would just add empty card below the Next button. Its own wrapper handles
-             that via `xl:items-start`; here `self-start` would fight the column
-             direction below `xl` and shrink the card horizontally, so it is not used.
+             would just add empty card below the Next button. That used to be handled
+             by the ledger wrapper's `xl:items-start`; with the wrapper gone the card
+             opts out itself, and only from `lg` up — below that the row is a COLUMN,
+             where `self-start` shrinks the card horizontally instead.
+             `max-w-[78rem]` is the measure the card already had at its widest, back
+             when a 20rem ledger column sat beside it. Without a cap the form would
+             run the full 120rem frame on a wide monitor and every field pair inside
+             it would stretch to ~700px, which is not a form any more.
              `scroll-mt-20` matches the sticky 56px bar plus breathing room. */
-          className="surface-card min-w-0 flex-1 scroll-mt-20 overflow-visible rounded-3xl lg:scroll-mt-0"
+          className="surface-card min-w-0 flex-1 scroll-mt-20 overflow-visible rounded-3xl lg:max-w-[78rem] lg:self-start lg:scroll-mt-0"
         >
 
           {/* Restored-draft notice. `info` tone rather than a primary tint: this
@@ -2906,34 +2900,6 @@ export const StudentIntakeForm = ({
             )}
           </div>
 
-        </div>
-
-        {/* ── What the answers so far actually buy ──
-          * The honest replacement for the live preview reverted in `be04bab`. It
-          * makes no claim about the catalogue and never grades the student: every
-          * row is a capability that a particular answer enables, derived from form
-          * state with no fetch and no scoring engine. The last two rows depend on
-          * the OPTIONAL screens, which is what makes those visibly worth doing.
-          *
-          * Hidden on Review, where the summary below already accounts for everything
-          * and a second inventory is noise.
-          *
-          * ONE instance, repositioned by the wrapper's flex direction rather than
-          * duplicated per breakpoint: below `xl` the wrapper is a column so this sits
-          * under the work card as it always did, and at `xl` the wrapper becomes a row
-          * so this is the third column — which is what a wide monitor gets instead of
-          * dead margin. It was briefly rendered twice (`xl:hidden` here plus a
-          * `hidden xl:block` copy) and that is wrong for exactly the reason
-          * `intake-rail.tsx` documents on its `layoutId`: a Tailwind breakpoint
-          * toggles `display`, it does NOT unmount. Both copies stayed in the tree, so
-          * the heading and all six rows were announced twice to a screen reader. */}
-        {currentStep !== TOTAL_STEPS ? (
-          <aside className="xl:w-80 xl:shrink-0">
-            <div className="xl:sticky xl:top-20">
-              <UnlocksLedger entries={unlocks} />
-            </div>
-          </aside>
-        ) : null}
         </div>
       </div>
 

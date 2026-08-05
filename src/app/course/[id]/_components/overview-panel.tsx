@@ -70,7 +70,7 @@ export function OverviewPanel({ course, costs, hasOutcomes, onNavigate }: Overvi
       ) : null}
 
       {course.careerOutcomesOverview ? (
-        <SectionCard title="Career snapshot" icon={GraduationCap} iconClassName="text-success">
+        <SectionCard title="Career snapshot" icon={GraduationCap}>
           <RichText text={course.careerOutcomesOverview} />
         </SectionCard>
       ) : null}
@@ -117,7 +117,7 @@ export function OverviewPanel({ course, costs, hasOutcomes, onNavigate }: Overvi
       ) : null}
 
       {hasCareerStats ? (
-        <SectionCard title="Career Prospects" icon={GraduationCap} iconClassName="text-success">
+        <SectionCard title="Career Prospects" icon={GraduationCap}>
           <div className="grid gap-4 sm:grid-cols-3">
             {course.graduateEmploymentRate ? (
               <FactTile
@@ -146,7 +146,7 @@ export function OverviewPanel({ course, costs, hasOutcomes, onNavigate }: Overvi
       ) : null}
 
       {hasCostDetails ? (
-        <SectionCard title="Costs & Living" icon={Wallet} iconClassName="text-warning">
+        <SectionCard title="Costs & Living" icon={Wallet}>
           <div className="grid gap-4 sm:grid-cols-3">
             {formattedCostTuition ? (
               <FactTile

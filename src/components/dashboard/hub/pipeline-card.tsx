@@ -33,7 +33,6 @@ export function PipelineCard({ stages }: { stages: PipelineStage[] }) {
       eyebrow="Pipeline"
       title="Applications"
       icon={ClipboardCheck}
-      iconClassName="bg-info-subtle text-info ring-info/25"
       action={total > 0 ? { label: 'Open board', href: '/applications' } : undefined}
     >
       {total === 0 ? (

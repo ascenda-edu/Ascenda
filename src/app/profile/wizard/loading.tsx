@@ -59,8 +59,9 @@ export default function ProfileWizardLoading() {
             </div>
           </div>
 
-          {/* The work card. `rounded-3xl` and `lg:self-start`, matching the page. */}
-          <div className="surface-card min-w-0 flex-1 space-y-6 rounded-3xl lg:self-start">
+          {/* The work card. `rounded-3xl`, `lg:self-start` and the same
+            * `lg:max-w-[78rem]` measure as the page. */}
+          <div className="surface-card min-w-0 flex-1 space-y-6 rounded-3xl lg:max-w-[78rem] lg:self-start">
             <div className="space-y-2">
               <Skeleton className="h-3 w-24" />
               <Skeleton className="h-8 w-64 max-w-full" />
@@ -75,11 +76,6 @@ export default function ProfileWizardLoading() {
               <Skeleton className="h-11 w-28 rounded-full" />
               <Skeleton className="h-11 w-28 rounded-full" />
             </div>
-          </div>
-
-          {/* The unlocks column, xl and up. */}
-          <div className="hidden xl:block xl:w-80 xl:shrink-0">
-            <Skeleton className="h-64 w-full rounded-3xl" />
           </div>
         </div>
       </div>

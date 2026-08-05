@@ -84,11 +84,11 @@ export const TOKENS = {
     // ceiling for this hue. Steps 1-3 untouched, so series-3 still equals --primary.
     series: ['241 65% 30%', '241 65% 42%', '241 65% 55%', '241 65% 64%', '241 65% 72%'],
     tones: {
-      success: { text: '156 90% 25.2%', fill: '156 88% 35.4%', subtle: '156 100% 86%',   fg: T(NEUTRAL, 30, 13) },
-      warning: { text: '26 90% 35.6%',  fill: '40 88% 41.4%',  subtle: '48 100% 84%',    fg: T(NEUTRAL, 30, 13) },
-      danger:  { text: '356 90% 41.8%', fill: '348 88% 62.2%', subtle: '348 100% 92.5%', fg: T(NEUTRAL, 30, 13) },
-      info:    { text: '204 90% 36.2%', fill: '204 88% 50%',   subtle: '196 100% 88.5%', fg: T(NEUTRAL, 30, 13) },
-      feature: { text: '262 90% 46%',   fill: '262 88% 67.6%', subtle: '262 96% 93%',    fg: T(NEUTRAL, 30, 13) }
+      success: { text: '156 75% 27.4%', fill: '156 65% 40%',   subtle: '158 96% 91%',    fg: T(NEUTRAL, 30, 13) },
+      warning: { text: '26 75% 37%',    fill: '40 65% 45.2%',  subtle: '47 94% 90%',     fg: T(NEUTRAL, 30, 13) },
+      danger:  { text: '356 75% 44.4%', fill: '348 65% 62.2%', subtle: '348 100% 92.5%', fg: T(NEUTRAL, 30, 13) },
+      info:    { text: '204 75% 37.4%', fill: '204 65% 50%',   subtle: '196 100% 88.5%', fg: T(NEUTRAL, 30, 13) },
+      feature: { text: '262 75% 46%',   fill: '262 65% 65%',   subtle: '262 96% 93%',    fg: T(NEUTRAL, 30, 13) }
     }
   },
   dark: {
@@ -113,11 +113,11 @@ export const TOKENS = {
     // doesn't silently drop it under AA.
     primaryInk: T(241, 72, 75.5),
     tones: {
-      success: { text: '156 80% 47.4%', fill: '156 80% 47.4%', subtle: '156 61% 20.5%', fg: T(NEUTRAL, 30, 13) },
-      warning: { text: '38 80% 56.8%',  fill: '38 80% 56.8%',  subtle: '48 62% 20%',    fg: T(NEUTRAL, 30, 13) },
-      danger:  { text: '348 80% 74.6%', fill: '348 80% 74.6%', subtle: '356 62% 29%',   fg: T(NEUTRAL, 30, 13) },
-      info:    { text: '196 80% 60%',   fill: '196 80% 60%',   subtle: '204 62% 25.5%', fg: T(NEUTRAL, 30, 13) },
-      feature: { text: '262 80% 75%',   fill: '262 80% 75%',   subtle: '252 62% 34%',   fg: T(NEUTRAL, 30, 13) }
+      success: { text: '156 65% 50%',   fill: '156 65% 50%',   subtle: '156 61% 20.5%', fg: T(NEUTRAL, 30, 13) },
+      warning: { text: '38 65% 61%',    fill: '38 65% 61%',    subtle: '48 62% 20%',    fg: T(NEUTRAL, 30, 13) },
+      danger:  { text: '348 65% 69%',   fill: '348 65% 69%',   subtle: '353 43% 24%',   fg: T(NEUTRAL, 30, 13) },
+      info:    { text: '196 65% 63.2%', fill: '196 65% 63.2%', subtle: '204 62% 25.5%', fg: T(NEUTRAL, 30, 13) },
+      feature: { text: '262 65% 71.8%', fill: '262 65% 71.8%', subtle: '259 35% 25%',   fg: T(NEUTRAL, 30, 13) }
     }
   }
 };
@@ -169,6 +169,7 @@ function verify() {
     }
 
     // tones
+    const tintChromas = [];
     for (const name of TONE_NAMES) {
       const tone = t.tones[name];
       const text = P(tone.text), fill = P(tone.fill), tint = P(tone.subtle), fg = P(tone.fg);
@@ -179,8 +180,19 @@ function verify() {
       check(cr(fg, fill) >= 4.5, `${mode} ${name}-foreground on fill`, `${cr(fg, fill).toFixed(2)}:1`);
       const tc = ok(tint).C;
       check(tc >= 0.04, `${mode} ${name}-subtle is actually tinted`, `chroma ${tc.toFixed(3)} — under 0.04 reads as grey`);
+      // Trap 3: the five tints share a card, so they are judged as a family. A
+      // tint that runs away from the others is the "neon" complaint, even when
+      // it passes every contrast gate on its own.
+      check(Math.abs(tc - TINT_C[mode]) <= TINT_C_TOL, `${mode} ${name}-subtle matches the tint family`,
+        `chroma ${tc.toFixed(3)} vs target ${TINT_C[mode]} (±${TINT_C_TOL}) — this tint reads louder or duller than its siblings`);
+      tintChromas.push(tc);
       console.log(`  ${name.padEnd(8)} text ${hex(text)} ${cr(text, card).toFixed(2)}:1 · fill ${hex(fill)} ${cr(fill, card).toFixed(2)}:1 · tint ${hex(tint)} C=${tc.toFixed(3)} L*=${(ok(tint).L * 100).toFixed(1)} · text/tint ${cr(text, tint).toFixed(2)}:1`);
     }
+
+    const spread = Math.max(...tintChromas) - Math.min(...tintChromas);
+    check(spread <= TINT_C_TOL * 2, `${mode} tint family spread`,
+      `${spread.toFixed(3)} — loudest tint is ${(Math.max(...tintChromas) / Math.min(...tintChromas)).toFixed(2)}x the quietest`);
+    console.log(`  tint spread ${spread.toFixed(3)} (target ${TINT_C[mode]} ±${TINT_C_TOL})`);
 
     // Chart series: every step must clear 3:1 on its own card or a stacked
     // segment reads as a hole. Adjacent steps sit 1.3-1.5:1 apart, which is as
@@ -205,7 +217,29 @@ const WINDOW = {
 };
 // Unbounded chroma-maximising returns #ff0011 and a neon #00ff88 — trap 2's
 // mirror image. Dark is capped hardest: saturated accents halate on a dark ground.
-const CAP = { light: { text: 90, tint: 100, fill: 88 }, dark: { text: 80, tint: 62, fill: 80 } };
+const CAP = { light: { text: 75, tint: 100, fill: 65 }, dark: { text: 65, tint: 62, fill: 65 } };
+
+/* ── TRAP 3: an even tint family beats a chromatic one ────────────────────────
+   Trap 2 says don't solve a tint on luminance, because that rewards dull. The
+   correction over-shot: the tint search below used to MAXIMISE chroma under a
+   saturation cap, which is an unbounded objective wearing a seatbelt. It
+   returned #ffefad and #b8ffe2 — a highlighter yellow and a mint at 100%
+   saturation — while red and violet, which physically cannot be chromatic that
+   close to white in sRGB, came back at 0.044. So the set ran 0.044-0.084: near
+   2x spread across five tints that are meant to read as ONE family, all sitting
+   on the same card at the same time.
+
+   That spread is the actual defect. A tint family is judged as a set, not one
+   tint at a time, and per-tint chroma-maximising cannot see the set. Tints are
+   therefore solved to a TARGET chroma, uniform across the five tones — the
+   number below is set near what the LEAST chromatic hue (danger, then info) can
+   comfortably reach, so no tone has to strain and none runs away.
+
+   Raising these re-introduces the highlighter. If you want more colour on a
+   surface, add it with the -fill mark or the border, not by pushing the tint. */
+const TINT_C = { light: 0.050, dark: 0.078 };
+// How far a tone may sit from TINT_C before the verifier calls the family uneven.
+const TINT_C_TOL = 0.012;
 // A tint must stay a LIGHT surface (in dark, a deep one) or it becomes a fill.
 // Red and violet cannot be very chromatic this high in sRGB, so they get a
 // slightly lower floor rather than a worse colour.
@@ -227,13 +261,22 @@ function solve(name, mode) {
   const dark = mode === 'dark';
   const W = WINDOW[name], floor = TINT_L[mode][name], cap = CAP[mode];
 
+  // Solved to TINT_C, not to max chroma — see trap 3. Ties (and hues that can't
+  // reach the target at all, i.e. danger and feature in light mode) fall back to
+  // the closest achievable, so the family stays as even as sRGB permits.
+  const target = TINT_C[mode];
   let tint = null;
   for (let hue = W.tint[0]; hue <= W.tint[1]; hue++)
-    for (let S = 40; S <= cap.tint; S++)
+    for (let S = 20; S <= cap.tint; S++)
       for (let L = (dark ? 150 : 840); L <= (dark ? 340 : 975); L += 5) {
         const rgb = hsl2rgb(hue, S, L / 10), o = ok(rgb);
         if (dark ? (o.L < floor - .045 || o.L > floor + .045) : o.L < floor) continue;
-        if (!tint || o.C > tint.C) tint = { hue, S, l: L / 10, rgb, ...o };
+        const cost = Math.abs(o.C - target);
+        // Tie-break toward the lighter surface in light mode (a tint must not
+        // creep down into fill territory) and toward the floor in dark.
+        if (!tint || cost < tint.cost - 1e-6 ||
+            (Math.abs(cost - tint.cost) <= 1e-6 && (dark ? o.L < tint.L : o.L > tint.L)))
+          tint = { hue, S, l: L / 10, rgb, cost, ...o };
       }
 
   const textCands = [];

@@ -207,7 +207,7 @@ export function CostsPanel({ course, costs }: { course: CourseView; costs: Cours
       ) : null}
 
       {course.costOverview ? (
-        <SectionCard title="Cost Overview" icon={Wallet} iconClassName="text-warning">
+        <SectionCard title="Cost Overview" icon={Wallet}>
           <RichText text={course.costOverview} forceBullets />
         </SectionCard>
       ) : null}

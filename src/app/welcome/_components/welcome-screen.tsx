@@ -27,28 +27,23 @@ interface ValueProp {
   icon: LucideIcon;
   title: string;
   body: string;
-  /** Token name, not a palette literal — see the status-token rule in globals.css. */
-  tone: 'info' | 'success' | 'feature';
 }
 
 const STUDENT_VALUE: ValueProp[] = [
   {
     icon: Target,
     title: 'Matches, not a search box',
-    body: 'We score 119,000 programmes against your grades, subjects and budget, then rank the ones you can realistically get into.',
-    tone: 'info'
+    body: 'We score 119,000 programmes against your grades, subjects and budget, then rank the ones you can realistically get into.'
   },
   {
     icon: CalendarClock,
     title: 'Every deadline in one place',
-    body: 'Applications, tasks and documents track themselves once a programme is on your list. Nothing lives in a spreadsheet.',
-    tone: 'success'
+    body: 'Applications, tasks and documents track themselves once a programme is on your list. Nothing lives in a spreadsheet.'
   },
   {
     icon: Users,
     title: 'A counsellor who can see your work',
-    body: 'Ask for help from any page. Your counsellor gets the context with it, so you never re-explain where you are.',
-    tone: 'feature'
+    body: 'Ask for help from any page. Your counsellor gets the context with it, so you never re-explain where you are.'
   }
 ];
 
@@ -56,28 +51,26 @@ const COUNSELLOR_VALUE: ValueProp[] = [
   {
     icon: Compass,
     title: 'Your whole cohort, ranked',
-    body: 'Students sorted by what needs you today — stalled applications, missed deadlines, unanswered questions.',
-    tone: 'feature'
+    body: 'Students sorted by what needs you today — stalled applications, missed deadlines, unanswered questions.'
   },
   {
     icon: ClipboardList,
     title: 'Help requests with context',
-    body: 'Every question arrives attached to the student, the programme and the stage they are stuck on.',
-    tone: 'info'
+    body: 'Every question arrives attached to the student, the programme and the stage they are stuck on.'
   },
   {
     icon: CalendarClock,
     title: 'Deadlines across everyone',
-    body: 'One timeline for the whole roster, so a cohort-wide crunch is visible before it becomes one.',
-    tone: 'success'
+    body: 'One timeline for the whole roster, so a cohort-wide crunch is visible before it becomes one.'
   }
 ];
 
-const TONE_CLASS: Record<ValueProp['tone'], string> = {
-  info: 'bg-info-subtle text-info ring-info/25',
-  success: 'bg-success-subtle text-success ring-success/25',
-  feature: 'bg-feature-subtle text-feature ring-feature/25'
-};
+/**
+ * One swatch for every value prop. These carried info / success / feature — a
+ * three-hue rotation over three sales points, which is decoration, not status:
+ * nothing on this screen has succeeded or is pending. The icon differentiates.
+ */
+const VALUE_SWATCH = 'bg-primary/10 text-primary-ink ring-primary/15';
 
 /** What the student is actually agreeing to, stated before they start. */
 const SETUP_FACTS = [
@@ -172,7 +165,7 @@ export function WelcomeScreen({
                 <div
                   className={cn(
                     'flex h-11 w-11 items-center justify-center rounded-2xl ring-1',
-                    TONE_CLASS[value.tone]
+                    VALUE_SWATCH
                   )}
                 >
                   <Icon className="h-5 w-5" aria-hidden />

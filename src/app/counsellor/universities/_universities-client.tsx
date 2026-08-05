@@ -509,7 +509,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
       {/* ── Search panel ── */}
       <section className="surface-card space-y-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-info-subtle text-info ring-1 ring-info/25">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary-ink ring-1 ring-primary/15">
             <Search className="h-4 w-4" />
           </div>
           <div>
@@ -622,7 +622,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
         <section className="surface-card space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-feature-subtle text-feature ring-1 ring-feature/25">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary-ink ring-1 ring-primary/15">
                 <Layers className="h-4 w-4" />
               </div>
               <div>

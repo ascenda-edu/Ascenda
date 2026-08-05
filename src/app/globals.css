@@ -104,37 +104,54 @@
        at 26° while the tint stays a clean amber at 48°. Don't "correct" them into
        agreement; that reintroduces the olive.
 
-       The -subtle tints are the big change. The old set measured OKLab chroma
-       0.012–0.020 — arithmetically grey. They now run 0.044–0.084 (+146% to
-       +540%) and are BRIGHTER at the same time, because they're solved on chroma
-       at a held lightness rather than on luminance contrast. This is where the
-       app's colour actually reaches the eye: tone TEXT is capped by physics on a
-       white card, a tint isn't. */
-    --success: 156 90% 25.2%;
-    --success-fill: 156 88% 35.4%;
+       The -subtle tints have now been solved twice, and the second pass is the
+       one to keep. Pass one fixed a real bug: the original set measured OKLab
+       chroma 0.012–0.020, arithmetically grey. It fixed it by MAXIMISING chroma
+       under a saturation cap — which is an unbounded objective wearing a
+       seatbelt, and it returned #ffefad and #b8ffe2, a highlighter yellow and a
+       mint at 100% saturation. Red and violet physically cannot be chromatic
+       that close to white in sRGB, so they came back at 0.044. The set ran
+       0.044–0.084: a 1.9x spread across five tints that are meant to read as ONE
+       family and that appear on the same card at the same time.
+
+       That spread was the defect, not the average. A tint family is judged as a
+       set, and per-tint chroma-maximising structurally cannot see the set. Tints
+       are now solved to a uniform TARGET chroma (0.050 light / 0.078 dark) set
+       near what the least chromatic hue can comfortably reach, so nothing
+       strains and nothing runs away. Spread is 1.14x light, 1.11x dark, and
+       tone-solver.mjs fails the build if it widens again.
+
+       So: do NOT push a single tint up because it "looks weak" next to the
+       others — that is the loop that produced the highlighter. If a surface
+       needs more colour, use the -fill mark or the border. */
+    --success: 156 75% 27.4%;
+    --success-fill: 156 65% 40%;
     --success-foreground: 232 30% 13%;
-    --success-subtle: 156 100% 86%;
+    --success-subtle: 158 96% 91%;
 
-    --warning: 26 90% 35.6%;
-    --warning-fill: 40 88% 41.4%;
+    --warning: 26 75% 37%;
+    --warning-fill: 40 65% 45.2%;
     --warning-foreground: 232 30% 13%;
-    --warning-subtle: 48 100% 84%;
+    --warning-subtle: 47 94% 90%;
 
-    --danger: 356 90% 41.8%;
-    --danger-fill: 348 88% 62.2%;
+    --danger: 356 75% 44.4%;
+    --danger-fill: 348 65% 62.2%;
     --danger-foreground: 232 30% 13%;
     --danger-subtle: 348 100% 92.5%;
 
-    --info: 204 90% 36.2%;
-    --info-fill: 204 88% 50%;
+    --info: 204 75% 37.4%;
+    --info-fill: 204 65% 50%;
     --info-foreground: 232 30% 13%;
     --info-subtle: 196 100% 88.5%;
 
-    /* feature now takes ink like the other four — its fill is lighter than it was
-       (67.6% vs 60%), because chroma-maximising had pushed the old value to an
-       electric #7847eb that needed white on it. */
-    --feature: 262 90% 46%;
-    --feature-fill: 262 88% 67.6%;
+    /* feature takes ink like the other four. Its fill sits at 65% lightness and
+       65% saturation — chroma-maximising had it at an electric #7847eb that
+       needed white on it, then at #9964f5; both read as neon beside the indigo
+       brand. Note danger/info/feature-subtle are unchanged from the previous
+       pass: they were never the loud ones, and the target was chosen to meet
+       THEM rather than drag them up. */
+    --feature: 262 75% 46%;
+    --feature-fill: 262 65% 65%;
     --feature-foreground: 232 30% 13%;
     --feature-subtle: 262 96% 93%;
 
@@ -264,14 +281,16 @@
        That's required, not stylistic: a dark fill on a dark card can't clear 3:1.
 
        Verified ratios (text on card / fg on fill / text on own subtle):
-         success  8.87 / 9.36 / 4.82      warning  7.89 / 8.33 / 4.51
-         danger   6.95 / 7.34 / 4.50      info     7.72 / 8.15 / 4.51
-         feature  6.17 / 6.51 / 4.51      primary-ink 6.00 on card, 4.72 on popover
+         success  8.38 / 8.85 / 4.55      warning  7.90 / 8.34 / 4.52
+         danger   5.91 / 6.24 / 4.52      info     7.73 / 8.16 / 4.51
+         feature  5.76 / 6.08 / 4.56      primary-ink 6.00 on card, 4.72 on popover
 
-       Saturation is capped at 80% here, and at 62% for the tints. That is not a
+       Saturation is capped at 65% here, and at 62% for the tints. That is not a
        stylistic preference: a saturated accent on a dark ground halates, and
-       chroma-maximising without a ceiling returns a neon #00ff88. The old values
-       ran 84-92% saturation.
+       chroma-maximising without a ceiling returns a neon #00ff88. The values
+       before this pass ran 80% (and 84-92% before that); at 80% the tone TEXT
+       colours were still landing on #18da8c and #f28a9f, which is spring-green
+       and bubblegum, not "green" and "red".
 
        --primary stays a FILL value (white text on it is correct). It was only ever
        broken as text — which is what --primary-ink is for. `text-primary` measured
@@ -287,34 +306,43 @@
     /* In dark mode text and fill coincide, so -fill mirrors the tone value. Kept as
        an explicit declaration rather than an alias so both themes read the same way.
 
-       The -subtle tints moved from a flat 40% saturation at 16% lightness — which
-       on the OLD near-black card measured 1.01-1.31:1 and on the new, lighter card
-       would have been invisible outright — to ~62% saturation around 20-34%
-       lightness. Chroma roughly doubles (0.034-0.061 → 0.070-0.165). */
-    --success: 156 80% 47.4%;
-    --success-fill: 156 80% 47.4%;
+       The -subtle tints have been solved twice here too. They started at a flat
+       40% saturation / 16% lightness (1.01-1.31:1 on the old near-black card —
+       invisible on the current lighter one), then went to ~62% saturation, which
+       gave chroma 0.070-0.165. That top figure is --feature-subtle, and 0.165 is
+       2.4x --warning-subtle: an electric #36218c violet block sitting next to a
+       muted olive one, both nominally "the same kind of tint".
+
+       They are now solved to a uniform 0.078 target instead of per-tint maxima.
+       Only danger and feature actually moved — 62%→43% and 62%→35% saturation —
+       because they were the two runaways; the other three were already at or
+       near the target and are untouched. Saturation is no longer the knob that
+       governs a tint, the chroma target is; the 62% cap remains only as a
+       backstop. */
+    --success: 156 65% 50%;
+    --success-fill: 156 65% 50%;
     --success-foreground: 232 30% 13%;
     --success-subtle: 156 61% 20.5%;
 
-    --warning: 38 80% 56.8%;
-    --warning-fill: 38 80% 56.8%;
+    --warning: 38 65% 61%;
+    --warning-fill: 38 65% 61%;
     --warning-foreground: 232 30% 13%;
     --warning-subtle: 48 62% 20%;
 
-    --danger: 348 80% 74.6%;
-    --danger-fill: 348 80% 74.6%;
+    --danger: 348 65% 69%;
+    --danger-fill: 348 65% 69%;
     --danger-foreground: 232 30% 13%;
-    --danger-subtle: 356 62% 29%;
+    --danger-subtle: 353 43% 24%;
 
-    --info: 196 80% 60%;
-    --info-fill: 196 80% 60%;
+    --info: 196 65% 63.2%;
+    --info-fill: 196 65% 63.2%;
     --info-foreground: 232 30% 13%;
     --info-subtle: 204 62% 25.5%;
 
-    --feature: 262 80% 75%;
-    --feature-fill: 262 80% 75%;
+    --feature: 262 65% 71.8%;
+    --feature-fill: 262 65% 71.8%;
     --feature-foreground: 232 30% 13%;
-    --feature-subtle: 252 62% 34%;
+    --feature-subtle: 259 35% 25%;
 
     /* The ramp runs the other way on a dark card, and lives in a compressed upper
        band (60–90% rather than 30–79%) because anything below ~58% lightness

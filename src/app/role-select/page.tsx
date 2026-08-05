@@ -13,10 +13,10 @@ const ROLES = [
     label: 'Student',
     description: 'Track applications, explore universities, and manage your admissions journey.',
     icon: GraduationCap,
-    accent: 'info',
+    accent: 'primary',
     href: '/dashboard',
     badge: 'Applicant workspace',
-    badgeColor: 'bg-info-subtle text-info'
+    badgeColor: 'bg-primary/10 text-primary-ink'
   },
   {
     id: 'counsellor',
@@ -181,16 +181,16 @@ export default function RoleSelectPage() {
                 'hover-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 role.accent === 'feature'
                   ? 'hover:border-feature/60 hover:ring-1 hover:ring-feature/20'
-                  : 'hover:border-info/60 hover:ring-1 hover:ring-info/20',
+                  : 'hover:border-primary/60 hover:ring-1 hover:ring-primary/20',
                 isSelected && role.accent === 'feature' && 'border-feature/60 ring-1 ring-feature/30',
-                isSelected && role.accent === 'info' && 'border-info/60 ring-1 ring-info/30',
+                isSelected && role.accent === 'primary' && 'border-primary/60 ring-1 ring-primary/30',
                 isOther && 'opacity-40'
               )}
             >
               <div
                 className={cn(
                   'flex h-11 w-11 items-center justify-center rounded-2xl',
-                  role.accent === 'feature' ? 'bg-feature-subtle text-feature' : 'bg-info-subtle text-info'
+                  role.accent === 'feature' ? 'bg-feature-subtle text-feature' : 'bg-primary/10 text-primary-ink'
                 )}
               >
                 <Icon className="h-5 w-5" aria-hidden />
@@ -207,7 +207,7 @@ export default function RoleSelectPage() {
               <span
                 className={cn(
                   'flex items-center gap-1 text-sm font-medium transition-colors',
-                  role.accent === 'feature' ? 'text-feature' : 'text-info'
+                  role.accent === 'feature' ? 'text-feature' : 'text-primary-ink'
                 )}
               >
                 {isSelected && loading ? (

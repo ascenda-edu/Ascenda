@@ -48,7 +48,7 @@ export function CareerPanel({ course, hasOutcomes }: { course: CourseView; hasOu
       </div>
 
       {course.careerOutcomesOverview ? (
-        <SectionCard title="Career Outcomes Overview" icon={GraduationCap} iconClassName="text-success">
+        <SectionCard title="Career Outcomes Overview" icon={GraduationCap}>
           <RichText text={course.careerOutcomesOverview} forceBullets />
         </SectionCard>
       ) : null}

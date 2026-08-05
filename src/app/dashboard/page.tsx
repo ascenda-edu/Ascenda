@@ -531,7 +531,6 @@ export default async function DashboardPage() {
               eyebrow="Timeline"
               title="Upcoming deadlines"
               icon={CalendarClock}
-              iconClassName="bg-warning-subtle text-warning ring-warning/25"
               action={deadlines.length > 0 ? { label: 'Plan', href: '/applications' } : undefined}
             >
               <DeadlineTimeline
@@ -562,7 +561,6 @@ export default async function DashboardPage() {
               eyebrow="Tasks"
               title="Knock out today's list"
               icon={ListChecks}
-              iconClassName="bg-success-subtle text-success ring-success/25"
               action={{ label: 'All tasks', href: '/applications/tasks' }}
             >
               <TaskListPanel

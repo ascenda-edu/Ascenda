@@ -8,7 +8,21 @@ interface HubCardProps {
   eyebrow: string;
   title: string;
   icon: LucideIcon;
-  /** Tint classes for the icon swatch, e.g. 'bg-info-subtle text-info ring-info/25'. */
+  /**
+   * Tint classes for the icon swatch. LEAVE THIS UNSET unless the card's tone
+   * carries meaning — the default brand tint is the right answer for almost
+   * every cell.
+   *
+   * It was set on most of them once (deadlines amber, tasks emerald, pipeline
+   * sky) and that is what made the dashboard read as a colour chart: the header
+   * hue was fixed per card, so it described the card's POSITION, not its state,
+   * while the rows inside each card were already colouring themselves by real
+   * urgency. Two colour languages, one of them noise, and the noisy one wrapped
+   * the signal.
+   *
+   * The surviving exception is `feature` on counsellor-authored cards, which is
+   * a documented semantic (see globals.css: feature = counsellor-flavoured).
+   */
   iconClassName?: string;
   action?: { label: string; href: string };
   children: ReactNode;

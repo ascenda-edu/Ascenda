@@ -82,16 +82,21 @@ function FitRing({ value, tone, size = 40 }: { value: number; tone: string; size
     );
 }
 
-// Tinted monogram tile for universities without a logo, so no card is ever a
-// bare text stack. Tone is a stable hash of the name; hues from the app's
-// status palette.
-const MONOGRAM_TONES = [
-    'bg-info-subtle text-info',
-    'bg-feature-subtle text-feature',
-    'bg-success-subtle text-success',
-    'bg-warning-subtle text-warning',
-    'bg-danger-subtle text-danger',
-];
+/**
+ * Tinted monogram tile for universities without a logo, so no card is ever a
+ * bare text stack.
+ *
+ * This used to pick one of five STATUS tints by hashing the university name.
+ * The purpose was only "don't be blank", but the mechanism meant colour was a
+ * hash — literally random with respect to anything the reader cares about —
+ * drawn from the one palette where colour is supposed to mean urgency. A search
+ * grid came out as a rainbow of amber and rose tiles, none of which flagged
+ * anything, on the app's densest screen.
+ *
+ * The initials already differentiate one card from the next, which is what the
+ * hash was reaching for. So: one brand tint, no hash.
+ */
+const MONOGRAM_TONE = 'bg-primary/10 text-primary-ink';
 
 const MONOGRAM_STOP_WORDS = new Set(['of', 'the', 'and', 'for', 'at', 'de', 'la']);
 
@@ -102,12 +107,6 @@ const monogramFor = (name: string): string => {
         .map((w) => w[0]!.toUpperCase())
         .join('');
     return initials || 'U';
-};
-
-const monogramToneFor = (name: string): string => {
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
-    return MONOGRAM_TONES[hash % MONOGRAM_TONES.length];
 };
 
 function Stat({ label, value }: { label: string; value?: string | null }) {
@@ -173,7 +172,7 @@ export function UniversityCard({
                 className={cn(
                     sizeClass,
                     'flex shrink-0 items-center justify-center rounded-xl font-heading text-sm font-semibold',
-                    monogramToneFor(name)
+                    MONOGRAM_TONE
                 )}
             >
                 {monogramFor(name)}

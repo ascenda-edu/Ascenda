@@ -8,8 +8,7 @@
  * can regress silently:
  *
  *   - the subject suggestion must never block the student (`968b331`);
- *   - the unlocks ledger must never grade the student or count the catalogue
- *     (`be04bab`);
+ *   - the unlocks ledger stays REMOVED (2026-08-05);
  *   - the milestone must not fire on a half-typed field;
  *   - Ascendi must never take focus;
  *   - the inferred residence must say that it was inferred.
@@ -99,10 +98,6 @@ const labelled = (label: string) =>
   screen.getByLabelText(new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
 
 const rail = () => screen.getByRole('list', { name: 'Setup steps' });
-
-/** The ledger is a <section> with an eyebrow heading rather than a labelled region. */
-const ledgerSection = () =>
-  screen.getByText('What we can do with this so far').closest('section') as HTMLElement;
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -246,82 +241,22 @@ describe('the subject suggestion', () => {
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
-// THE UNLOCKS LEDGER
+// THE UNLOCKS LEDGER — REMOVED 2026-08-05
 // ═════════════════════════════════════════════════════════════════════════════
 
 describe('the unlocks ledger', () => {
-  it('starts empty and fills in as answers land', async () => {
-    const user = setup();
+  it('is gone from every step, ledger module included', () => {
+    // The "What we can do with this so far" panel was cut on request. Its seven
+    // rules (no catalogue counts, no grading the student, diff-not-mirror
+    // announcements) went with it, along with `lib/profile/wizard-unlocks.ts` and
+    // the `unlock-flash` keyframe. One assertion is kept so that reintroducing the
+    // panel is a deliberate act with a failing test to answer for, rather than
+    // something that drifts back in beside the form.
     renderForm();
-    expect(within(ledgerSection()).getByText('0/7')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('radio', { name: /Medicine & dentistry/ }));
-    await waitFor(() => expect(within(ledgerSection()).getByText('2/7')).toBeInTheDocument());
-  });
-
-  it('names the student\'s own choice back to them, without counting the catalogue', () => {
-    // `be04bab` reverted a live preview that turned a free-text `programs.field`
-    // lookup into a number shown to a student — three of the ten clusters had no
-    // corroborated label, so it could report ZERO programmes in the field they had
-    // just chosen. The ledger says what we will DO, never how many there are.
-    renderForm();
-    const text = ledgerSection().textContent ?? '';
-    expect(text).toContain('Rank 119,000 programmes by how well they fit you');
-    // No per-field count anywhere.
-    expect(text).not.toMatch(/\b\d+ programmes in\b/);
-  });
-
-  it('never grades the student', () => {
-    // The reverted preview told a straight-7 IB candidate their profile was "Weak",
-    // because the encouraging band was unreachable before the optional screens.
-    renderForm();
-    const text = (ledgerSection().textContent ?? '').toLowerCase();
-    ['weak', 'strong', 'poor', 'average', 'score', 'band', 'rating'].forEach((word) => {
-      expect(text).not.toContain(word);
-    });
-  });
-
-  it('keeps two entries behind the OPTIONAL screens, so they are visibly worth doing', () => {
-    renderForm();
-    const text = ledgerSection().textContent ?? '';
-    expect(text).toContain('the optional Activities section');
-    expect(text).toContain('the optional Life at university section');
-  });
-
-  it('announces only what NEWLY unlocked, not the whole list', async () => {
-    // Mirroring the list into a live region would read all seven entries aloud on
-    // every keystroke, which is worse than saying nothing.
-    const user = setup();
-    renderForm();
-    await user.click(screen.getByRole('radio', { name: /^Law/ }));
-
-    await waitFor(() => {
-      const announced = screen
-        .getAllByRole('status')
-        .map((n) => n.textContent ?? '')
-        .find((t) => t.startsWith('Unlocked:'));
-      expect(announced).toBeDefined();
-      expect(announced).toContain('Rank 119,000 programmes');
-      // The locked entries are NOT in the announcement.
-      expect(announced).not.toContain('fee status');
-    });
-  });
-
-  it('says nothing on mount for a returning student whose entries are already satisfied', async () => {
-    // A returning student arrives with several already unlocked. Reading those aloud
-    // would be a fanfare for work they did last week.
-    renderForm({ initialPayload: COMPLETE_PAYLOAD });
-    await new Promise((resolve) => setTimeout(resolve, 80));
-    const announcements = screen
-      .getAllByRole('status')
-      .map((n) => n.textContent ?? '')
-      .filter((t) => t.startsWith('Unlocked:'));
-    expect(announcements).toEqual([]);
-  });
-
-  it('is hidden on Review, where the summary already accounts for everything', () => {
-    renderForm({ initialStep: SCREEN.review });
     expect(screen.queryByText('What we can do with this so far')).not.toBeInTheDocument();
+    expect(
+      screen.queryAllByRole('status').some((n) => (n.textContent ?? '').startsWith('Unlocked:'))
+    ).toBe(false);
   });
 });
 

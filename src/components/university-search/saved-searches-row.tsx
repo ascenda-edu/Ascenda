@@ -18,7 +18,7 @@ export function SavedSearchesRow() {
   return (
     <section className="surface-card space-y-3" aria-label="Saved searches">
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-success-subtle text-success ring-1 ring-success/25">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary-ink ring-1 ring-primary/15">
           <Bookmark className="h-4 w-4" />
         </div>
         <div>
