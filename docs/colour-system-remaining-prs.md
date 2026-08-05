@@ -41,15 +41,34 @@ gotchas" sections. Several of these traps produce a green build and broken UI.
 
 ## PR 2 — Oxford palette values
 
-**Do not start until the palette direction is confirmed.** As of this writing Greg has asked for
-research on whether Oxford suits a teen audience; if a different direction wins, only the *values*
-in this PR change — its mechanics are identical.
+**The palette is decided: Periwinkle.** Oxford was rejected — see
+[colour-system-progress.md](./colour-system-progress.md) §2 for why, and why "avoid indigo" was also
+wrong.
 
-Solved values live in the session scratchpad at `identities.json` (key `oxford`), including the
-**APCA dark lifts**: +10–12 lightness on dark text tokens, which *raises* WCAG to 6.58:1, so
-nothing is traded away. If that file is gone, re-derive with `solve-identities.mjs` + `audit.mjs` +
-`solve-fixes.mjs` from the same directory, or re-solve from scratch against the gates in
-`scripts/tone-solver.mjs`.
+    hue 275°   chroma ~0.215   L 0.58 light / 0.70 dark
+    light #5a62f4    dark #8394ff    all 26 contrast checks pass
+
+L 0.58 is not a taste call — white text on a solid brand at this hue clears AA only at L ≤ 0.58
+(4.57:1 at 0.58, 4.20 at 0.60, 3.53 at 0.64). It is also Discord's exact lightness. **One rule: every
+solid brand fill carries a white label.**
+
+**One question remains open before this PR: the canvas.** The periwinkle renders used paper at the
+brand's own hue, which reproduces the monotone defect (shipped brand H 275°, shipped canvas H 279° —
+the greys are desaturated indigo). Warm paper at H 70 was tested separately and never combined with
+periwinkle. Render that first: `scratchpad/build-white.mjs`, set `paper: { H: 70, C: 0.010 }`.
+
+Regenerate values with `scratchpad/build-white.mjs`, which solves everything in OKLCH and prints the
+HSL triplets. `oklch.mjs` alongside it carries the colour maths, WCAG and APCA.
+
+Two further changes belong in this PR, decided after the plan was first written:
+
+- **The action strip is the BRAND, not `warning`.** `warning` means "act soon", which implies a
+  deadline an unfinished profile section does not have — it is a primary action. Gold was also doing
+  double duty against the genuinely-dated "Due Fri" on the same screen. Update
+  `.surface-action-strip` and `.surface-card--action` in `globals.css` to brand, change the glyph from
+  a clock to an arrow, and the label from "Needs you" to "Next up".
+- The **APCA dark lifts** (+10–12 lightness on dark text tokens, which *raises* WCAG to 6.58:1) still
+  apply and are still worth taking.
 
 **Four copies of the palette must move together.** Miss one and the failure is silent:
 
