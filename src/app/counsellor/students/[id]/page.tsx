@@ -5,8 +5,8 @@ import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import { PageHero } from '@/components/layout/page-hero';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Badge, type BadgeVariant } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
-import { PROGRESS_FILL, PROGRESS_TRACK } from '@/lib/theme/categories';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { loadStudentById, loadStudentEvolution } from '@/lib/counsellor/data';
 import { avatarColor } from '../../_components/avatar-palette';
@@ -164,17 +164,16 @@ export default async function StudentDetailPage(props: Props) {
                   action and therefore the brand's job. `warning-fill` is olive
                   besides (OKLCH hue 80°, and 1.55:1 against this very track in
                   dark) — see lib/theme/categories.ts. The MISSING list below is
-                  what carries the urgency, in words. */}
+                  what carries the urgency, in words.
+
+                  The bar itself is now the shared `<Progress>` primitive
+                  (components/ui/progress.tsx), which is where that one brand fill
+                  and the `role="progressbar"`/`aria-value*` set live. */}
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Profile completion</span>
                 <span className="font-semibold text-foreground">{completionPct}%</span>
               </div>
-              <div className={cn('h-1.5 overflow-hidden rounded-full', PROGRESS_TRACK)}>
-                <div
-                  className={cn('h-1.5 rounded-full transition-[width]', PROGRESS_FILL)}
-                  style={{ width: `${completionPct}%` }}
-                />
-              </div>
+              <Progress value={completionPct} label={`Profile completion for ${fullName}`} className="h-1.5" />
               <p className="text-xs text-muted-foreground">
                 Missing: {(['personal', 'academic', 'subjects', 'lifestyle'] as const)
                   .filter((step) => !student.profile.stepsComplete.includes(step))

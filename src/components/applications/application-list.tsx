@@ -4,8 +4,9 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { PROGRESS_FILL, TIER_VISUAL } from '@/lib/theme/categories';
+import { TIER_VISUAL } from '@/lib/theme/categories';
 import { HelpRequestModal, type HelpRequestModalApp } from './help-request-modal';
 
 export interface ApplicationRow {
@@ -175,15 +176,21 @@ export function ApplicationList({ rows }: Props) {
                       is rose: two vocabularies for one idea. And it read a count as a status,
                       where `warning` promises a deadline that a half-done task list does not have.
 
-                      Both sites now import PROGRESS_FILL instead of restating it, so the two
-                      cannot drift apart again. `transition-[background-color]` went with it —
-                      there is no longer a colour to transition. */}
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={cn('h-full rounded-full transition-[width]', PROGRESS_FILL)}
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
+                      Both sites are now the shared `<Progress>` primitive rather than two
+                      hand-rolled track/fill pairs, so the two cannot drift apart again — not in
+                      colour and not in accessibility. `transition-[background-color]` went with
+                      the ternary; there is no longer a colour to transition.
+
+                      `valueText` says "done", not "open", even though the readout beside it
+                      counts what is left: the BAR's length encodes completion, so announcing
+                      the open count would describe the opposite of what the bar draws. Same two
+                      numbers, phrased to match the encoding. */}
+                  <Progress
+                    value={progress}
+                    label={`Task progress for ${row.university}`}
+                    valueText={`${row.tasksTotal - row.tasksOpen} of ${row.tasksTotal} tasks done`}
+                    className="h-1.5 flex-1"
+                  />
                   <p className="shrink-0 text-label font-medium text-muted-foreground tabular-nums">
                     {row.tasksOpen} of {row.tasksTotal} tasks open
                   </p>

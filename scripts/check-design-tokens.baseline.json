@@ -11,6 +11,8 @@
     "template-classname": 20,
     "subfloor-type": 24,
     "named-step-as-arbitrary": 54,
+    "_quantity-as-status": "10 is the EARNED-EXCEPTION set, not debt: the essay length meter (4 - a real limit you can exceed), the deadline urgency bars and dots (5), and the notification count dot (1, a presence test rather than a band). Every progress/completion bar that used to be here was converted in 77193fe. Hand-added because the rule is new; --update-baseline may only lower a number.",
+    "quantity-as-status": 10,
     "dead-opacity": 0
   }
 }

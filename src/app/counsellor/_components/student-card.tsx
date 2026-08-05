@@ -3,7 +3,8 @@ import { AlertTriangle, Clock, CheckCircle2, BookOpen, Eye, Mail } from 'lucide-
 import { cn } from '@/lib/utils';
 import { daysUntil, parseLocalDate } from '@/lib/utils/dates';
 import type { CounsellorStudent } from '@/lib/counsellor/types';
-import { TIER_VISUAL, PROGRESS_FILL, PROGRESS_TRACK } from '@/lib/theme/categories';
+import { TIER_VISUAL } from '@/lib/theme/categories';
+import { Progress } from '@/components/ui/progress';
 import { avatarColor } from './avatar-palette';
 import { MessageStudentButton } from './message-student-button';
 
@@ -41,8 +42,9 @@ function getInitials(first: string, last: string) {
 // for `full` — so routing through the bands would draw a FINISHED profile in the
 // quietest grey on the card and a 99% one in full brand, i.e. the bar would get
 // paler as the student got closer. That is the banding error at its most literal:
-// a percentage is a quantity, and the LENGTH is the encoding. `PROGRESS_FILL` is
-// one solid brand fill at every value (see lib/theme/categories.ts).
+// a percentage is a quantity, and the LENGTH is the encoding. The shared
+// `<Progress>` primitive (components/ui/progress.tsx) now owns that fill, so
+// there is no per-call-site colour decision left to get wrong here.
 //
 // The bands still have a job — they pick the icon and name the ordinal buckets —
 // just not on a continuous bar over an arbitrary percentage.
@@ -193,12 +195,14 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
             {student.profile.completionPct}%
           </span>
         </div>
-        <div className={cn('h-1.5 overflow-hidden rounded-full', PROGRESS_TRACK)}>
-          <div
-            className={cn('h-1.5 rounded-full transition-[width]', PROGRESS_FILL)}
-            style={{ width: `${student.profile.completionPct}%` }}
-          />
-        </div>
+        {/* The percentage is already spelled out in the readout above, so the
+            primitive's own `aria-valuenow` says everything a `valueText` could —
+            there is no count behind this number to phrase more usefully. */}
+        <Progress
+          value={student.profile.completionPct}
+          label={`Profile completion for ${student.personal.firstName} ${student.personal.lastName}`}
+          className="h-1.5"
+        />
       </div>
 
       {/* Match tier pills */}

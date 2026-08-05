@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, FileSignature, Mail, PenLine, Send, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/toast';
 import { useSupabase } from '@/hooks/useSupabase';
 import { insertHelpRequest } from '@/lib/demo/help-request-client';
-import { PROGRESS_FILL } from '@/lib/theme/categories';
 import { parseLocalDate } from '@/lib/utils/dates';
 import type { RecLetterRequest, RecLetterStatus } from '@/lib/data/student-demo-data';
 
@@ -84,6 +84,11 @@ function formatDate(iso: string) {
 
 export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
   const completedCount = letters.filter((l) => l.status === 'uploaded' || l.status === 'signed').length;
+  // `0 / 0` is NaN on an empty list. That used to render `width: "NaN%"`, which the
+  // browser silently drops; the old guard here was a `letters.length ? … : 0`
+  // ternary. `<Progress>` runs its value through `Number.isFinite` before clamping,
+  // so NaN lands on 0 by contract and the division can be stated plainly.
+  const receivedPct = (completedCount / letters.length) * 100;
   const [reminders, setReminders] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const { showToast } = useToast();
@@ -185,17 +190,18 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
               mostly outstanding work. brand.md §4 rule 3 reserves `success` for genuine
               outcomes — an offer, not a tally — and §5 puts a progress bar on the brand.
               The per-letter STATUS_COLORS below are a real status ladder and keep their
-              tones; this bar is the sum of them, which is a quantity. */}
-          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
-            <motion.div
-              className={cn('h-2 rounded-full', PROGRESS_FILL)}
-              initial={{ width: 0 }}
-              // Guard the empty case: `0 / 0` is NaN, which renders as `width: "NaN%"`
-              // and silently drops the declaration. Pre-existing, found while retoning.
-              animate={{ width: `${letters.length ? (completedCount / letters.length) * 100 : 0}%` }}
-              transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
-            />
-          </div>
+              tones; this bar is the sum of them, which is a quantity.
+
+              The bar is the shared `<Progress>` primitive now, so the brand fill and the
+              `role="progressbar"`/`aria-value*` set come from one place. `valueText`
+              carries the exact sentence printed above it — "2 of 3 letters received" is
+              what a reader wants, not "67%". */}
+          <Progress
+            value={receivedPct}
+            label="Recommendation letters received"
+            valueText={`${completedCount} of ${letters.length} letters received`}
+            className="mt-2 h-2 w-full"
+          />
         </div>
       </div>
 
