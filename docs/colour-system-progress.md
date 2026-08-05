@@ -4,8 +4,9 @@
 [colour-palette-research.md](./colour-palette-research.md) where they disagree. PR mechanics are in
 [colour-system-remaining-prs.md](./colour-system-remaining-prs.md).
 
-Branch `chore/tone-desaturation` — three commits, **not pushed**.
-`51b3bed` tone desaturation · `4d54604` Signal placement · `0d6d0a1` residual brand fills.
+Branch `chore/tone-desaturation` — **not pushed**.
+`51b3bed` tone desaturation · `4d54604` Signal placement · `0d6d0a1` residual brand fills ·
+`6bc4619` **PR 2 — periwinkle on a true-neutral canvas**.
 
 ---
 
@@ -89,7 +90,74 @@ Greg disliked the yellow "Finish this step" strip, and it was a semantic error r
 
 Result: the profile screen carries **one hue**. Gold and red stay in "Next up" where items are dated.
 
-### ⚠ STILL OPEN — the canvas
+### ✅ RESOLVED — the canvas is a TRUE NEUTRAL (chroma 0.000)
+
+Rendered 5 Aug 2026: periwinkle on four canvases, brand held fixed, all four passing 26/26 contrast
+checks. Artifact `https://claude.ai/code/artifact/b5a00ec8-83f0-4116-8ee8-5af171e143b2`; JPGs in
+`~/Desktop/ascenda-canvas/` (`COMPARE-all-four.jpg` is the side-by-side — the only view that makes a
+chroma-0.010 difference judgeable, because the eye adapts within a second of looking at one alone).
+
+| | canvas | light page / card | verdict |
+|---|---|---|---|
+| — | paper at the brand's hue, H 275 C 0.006 | `#f5f6fb` / `#fdfdff` | the incumbent — the defect |
+| A | warm paper, H 70 C 0.010 | `#f8f2ec` / `#fff9f3` | recommended, not chosen |
+| **B** | **true neutral, C 0.000** | **`#f3f3f3` / `#fafafa`** | **CHOSEN** |
+| C | warmer paper, H 70 C 0.018 | `#f7ede2` / `#fff5ea` | the ceiling, ruled out on purpose |
+
+**Greg chose B over the recommendation of A.** B fixes the hue collision without committing the
+product to warmth — the correction without the taste bet.
+
+**Two findings from the render worth keeping:**
+
+1. **A white card cannot be warm — the sRGB gamut forbids it.** At OKLCH lightness 0.995, where the
+   card sat, the maximum achievable chroma is **0.004 at every hue**. Request 0.006 or 0.026 and you
+   get the identical `#fffdfb`; the request is silently clipped. Card 0.985 is the highest lightness
+   that delivers 0.010, and 0.975 the highest that delivers 0.018. So chroma and card lightness are
+   not independent dials, and "warmer paper" necessarily means "further off white".
+2. **Therefore B shipped at the SHIPPED lightness architecture, not the rendered plate.** The
+   comparison rendered B at card 0.985 (the plate the warm options needed). On an achromatic canvas
+   that 1.5% drop buys nothing and costs real gates: measured, light `success-fill` fell to 2.90:1 and
+   `warning-fill` to 2.88:1 against the card, both under the required 3:1, because a `#fafafa` card
+   has less contrast with a mid-tone fill than `#ffffff`. Fixing that would have meant re-solving the
+   status tones, which PR 2 deliberately holds fixed. **B's decision was the hue; the hue is what
+   moved.** Shipped card is `#ffffff`, page `#f4f4f4`.
+
+### What PR 2 actually landed (commit `6bc4619`)
+
+Full verification: typecheck 0 · lint **exactly 2/2** · 2036 tests / 89 suites · tone-solver **92/92** ·
+`lint:tokens` no regressions · production build green · all routes within bundle budget.
+
+- **The neutral is achromatic.** Hue 232 → hue 0, saturation 0. Only the hue moved.
+- **The brand is periwinkle.** Light `--primary: 236.8 89.5% 66.1%` (`#5b64f6`), dark
+  `232 100% 75.7%` (`#8394ff`). Note `#5b64f6`, not the `#5a62f4` recorded earlier — that hex was
+  OKLCH L 0.576, an artefact of an earlier solver's lift loop. True L 0.58 is `#5b64f6` at 4.58:1
+  under white.
+- **The dark button AA failure is fixed at the token** — 3.94:1 → **6.82:1**, dark ink on the lighter
+  L 0.70 fill.
+- **The verifier's blind spot is closed.** Its button check hard-coded white and then short-circuited
+  with `|| mode === 'dark'`, so the dark pair was *never measured* while the gate reported success.
+  It now tests the actual `--primary-foreground` in both modes. Still 92 checks. **Never write a gate
+  that exempts a mode.**
+- **The action rail and strip are the brand**, not `warning`; badge reads "Next up" with an arrow.
+- **`--ring` is an alias of `--primary`. `--series-3` deliberately is NOT** — pinning the ramp's
+  middle step to the brand forces it symmetric and measurably costs legibility: minimum adjacent step
+  1.32:1 → 1.21:1, span L 0.275 → 0.190, against the 1.3–1.5:1 spacing `globals.css` documents.
+- **Dark `--muted-foreground` took the APCA lift**, 60.1% → 70% (Lc 45 → 57, WCAG 4.79 → 6.62:1).
+- Light `--muted-foreground` 41.8% and `--primary-ink` 61.8% sit one tenth below their 41.9/61.9
+  floors on purpose, so a later half-point surface tweak cannot silently drop them under AA.
+
+### ⚠ `--accent` was NOT deleted — and must not be, yet
+
+The remaining-PRs doc says delete it in PR 2. **Doing so would have taken down the live homepage.**
+`--accent` is still used four times in `src/components/landing-preview/`, and `src/app/page.tsx`
+imports that folder — landing-preview *is* the live `/` (the Ascent). Two of those usages are
+`from-primary to-accent` under **`bg-clip-text text-transparent`**: Tailwind emits nothing for an
+unknown colour rather than erroring, so deleting the token renders the hero **headline invisible in
+production** on a green build. It is instead redefined as *the brand, lighter* (byte-identical to
+`--series-5` light / `--series-2` dark), so it is no longer a second indigo ΔE 37 away. **Delete it in
+PR 4**, with those four call sites.
+
+### Superseded note — the old canvas diagnosis
 
 **The final periwinkle renders used `paper: { H: 275, C: 0.006 }` — the same hue as the brand.** That
 was deliberate, to isolate the lightness variable, but it reproduces the defect diagnosed earlier:

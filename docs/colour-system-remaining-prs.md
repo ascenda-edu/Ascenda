@@ -39,6 +39,43 @@ gotchas" sections. Several of these traps produce a green build and broken UI.
 
 ---
 
+## ✅ PR 2 — DONE, commit `6bc4619`
+
+Landed as **periwinkle on a true-neutral canvas**. Greg chose canvas **B (true neutral, chroma 0.000)**
+over the recommended warm paper. See [colour-system-progress.md](./colour-system-progress.md) §2 for the
+measured token table and the canvas comparison, and **[brand.md](./brand.md)** — now written — for the
+durable guideline.
+
+**Four instructions below turned out to be wrong or unsafe. Corrected, with reasons:**
+
+1. **"Delete `--accent`" — DON'T, not yet.** The claim that its only remaining references are in
+   `components/landing*` and therefore "PR 4 territory" missed that **`src/app/page.tsx` imports
+   `landing-preview/` — that folder IS the live homepage**. Two of the four usages are
+   `from-primary to-accent` under `bg-clip-text text-transparent`, and Tailwind emits nothing for an
+   unknown colour, so deleting the token renders the **hero headline invisible in production** on a
+   fully green build. It is instead redefined as *the brand, lighter*. Delete it **in PR 4**, with the
+   call sites.
+2. **"Collapse `--ring` and `--series-3` into aliases of the brand" — only `--ring`.** Pinning the chart
+   ramp's middle step to the brand forces the ramp symmetric about it and measurably costs legibility:
+   minimum adjacent step 1.32:1 → **1.21:1**, span L 0.275 → 0.190, against the 1.3–1.5:1 spacing
+   `globals.css` documents as a property of the ramp. A focus ring genuinely *is* the brand; a chart ramp
+   has its own job.
+3. **The recorded brand hex was slightly off.** `#5a62f4` is OKLCH L 0.576 — an artefact of an earlier
+   solver's lift loop. True L 0.58 is **`#5b64f6`** (4.58:1 under white). Dark `#8394ff` was correct.
+4. **The action strip's glyph and label didn't exist as described.** "A clock and 'Needs you'" was the
+   *artifact replica*, not the app. In the real component the incomplete state had **no icon** and the
+   badge read **"Action"**. Applied faithfully to the real DOM: badge → "Next up", plus an `ArrowRight`
+   mirroring the `Check` on the complete state.
+
+**Also worth carrying forward:** the plate you render a canvas on is not free. The comparison rendered
+canvas B at card L 0.985 (the lightness warm paper *needs*, because at 0.995 the sRGB gamut caps chroma
+at 0.004 and warmth is silently clipped). Shipping that 1.5% drop on an achromatic canvas would have put
+light `success-fill` at 2.90:1 and `warning-fill` at 2.88:1, both under the required 3:1. **B's decision
+was the hue; only the hue moved.**
+
+<details>
+<summary>Original PR 2 instructions, kept for the reasoning</summary>
+
 ## PR 2 — Oxford palette values
 
 **The palette is decided: Periwinkle.** Oxford was rejected — see
@@ -101,6 +138,8 @@ Two further changes belong in this PR, decided after the plan was first written:
 
 **Expect the visible change here.** Everything so far has been placement on the existing indigo,
 which is why the app reads calmer but not different. This is the PR where the brand changes.
+
+</details>
 
 ---
 

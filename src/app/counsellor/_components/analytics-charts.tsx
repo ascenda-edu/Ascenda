@@ -410,7 +410,10 @@ export const CompletionBreakdown = ({ students, onSelect }: CompletionBreakdownP
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <span className="text-sm font-bold text-primary">{avg}% avg</span>
+        {/* text-primary-ink, not text-primary: --primary is the FILL value. It
+            happens to clear AA on a white card (4.58:1) but measures 3.88:1 on
+            bg-muted, so a later surface change here would silently break it. */}
+        <span className="text-sm font-bold text-primary-ink">{avg}% avg</span>
       </div>
       <div className="space-y-2.5">
         {buckets.map(({ label, count, color, hoverColor, tooltip, min, max: bucketMax }) => (
