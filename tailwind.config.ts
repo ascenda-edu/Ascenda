@@ -133,6 +133,14 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // --shadow was reachable only through the boxShadow ladder, so a modal
+        // scrim had nowhere tokenised to come from and ui/dialog.tsx used a raw
+        // `bg-black/50` — which does not move with the theme. Exposing the token
+        // as a colour is what lets the scrim be `bg-shadow/60` instead. Note
+        // Tailwind does NOT error on an unknown colour; it silently emits
+        // nothing, so a scrim written before this entry existed would simply
+        // have been transparent.
+        shadow: "hsl(var(--shadow) / <alpha-value>)",
         // Tone tokens, four values each: DEFAULT is the TEXT colour (>=4.5:1 on
         // neutral surfaces), `fill` is the vivid mark for bars and solid badges
         // (>=3:1 vs card), `foreground` is text on that fill, `subtle` is the tint.
@@ -156,18 +164,12 @@ const config: Config = {
           foreground: "hsl(var(--danger-foreground))",
           subtle: "hsl(var(--danger-subtle))",
         },
-        info: {
-          DEFAULT: "hsl(var(--info))",
-          fill: "hsl(var(--info-fill))",
-          foreground: "hsl(var(--info-foreground))",
-          subtle: "hsl(var(--info-subtle))",
-        },
-        feature: {
-          DEFAULT: "hsl(var(--feature))",
-          fill: "hsl(var(--feature-fill))",
-          foreground: "hsl(var(--feature-foreground))",
-          subtle: "hsl(var(--feature-subtle))",
-        },
+        // `info` and `feature` used to sit here. Both are gone: `info` marked
+        // "in progress", which is the absence of a state, and `feature` marked a
+        // category (essay / session / counsellor) wearing a status hue. Five tones
+        // could land on one card, and a reader cannot hold five meanings — so the
+        // set is the three that answer "does this need me?". Use `muted` where
+        // `info` was and the brand where `feature` was.
         // Categorical chart slots, assigned in fixed order — never cycled, and never
         // interchangeable with the tone tokens above. See globals.css for the
         // validation record and why there are five rather than eight.
@@ -192,9 +194,15 @@ const config: Config = {
       // Deliberately still `hsl(var(--shadow) / <alpha>)` per layer rather than
       // one var for the whole shadow: Tailwind builds `--tw-shadow-colored` by
       // substituting the colour out of this value, and it cannot substitute into
-      // a var it can't parse. `shadow-primary/20` composed on `shadow-e-2`
-      // (ui/button.tsx, chat/chatbot-widget.tsx, toolbox/chances-calculator.tsx)
+      // a var it can't parse, so a tinted shadow composed on top of one of these
       // would silently lose its tint.
+      //
+      // No call site relies on that any more: the three that did — ui/button.tsx,
+      // chat/chatbot-widget.tsx and toolbox/chances-calculator.tsx — have had
+      // their `shadow-primary/NN` removed. A tinted shadow is a chromatic fill
+      // wearing a blur, and it spends colour on depth, which the elevation ladder
+      // already conveys achromatically. Keep the per-layer form anyway: it costs
+      // nothing and it keeps the substitution working if a tint is ever wanted.
       boxShadow: {
         "e-1": "0 1px 2px hsl(var(--shadow) / calc(0.06 * var(--shadow-boost))), 0 1px 3px hsl(var(--shadow) / calc(0.04 * var(--shadow-boost)))",
         "e-2": "0 2px 4px hsl(var(--shadow) / calc(0.06 * var(--shadow-boost))), 0 4px 12px hsl(var(--shadow) / calc(0.06 * var(--shadow-boost)))",

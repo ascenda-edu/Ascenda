@@ -9,7 +9,7 @@ import type { RequirementRow, RequirementStatus, RequirementCategory } from '@/l
 
 const STATUS_CONFIG: Record<RequirementStatus, { icon: typeof CheckCircle2; color: string; bg: string; label: string; ring: string }> = {
   'complete': { icon: CheckCircle2, color: 'text-success', bg: 'bg-success-subtle', label: 'Complete', ring: 'stroke-success' },
-  'in-progress': { icon: Clock, color: 'text-info', bg: 'bg-info-subtle', label: 'In progress', ring: 'stroke-info' },
+  'in-progress': { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', label: 'In progress', ring: 'stroke-muted-foreground' },
   'missing': { icon: AlertTriangle, color: 'text-danger', bg: 'bg-danger-subtle', label: 'Missing', ring: 'stroke-danger' },
   'not-required': { icon: Minus, color: 'text-muted-foreground', bg: 'bg-muted/30', label: 'N/A', ring: 'stroke-muted-foreground' },
 };

@@ -626,7 +626,7 @@ function UnifiedSearchInner() {
           ) : error ? (
             <div
               role="alert"
-              className="rounded-4xl border border-dashed border-danger/25 bg-danger-subtle p-6 text-sm text-danger"
+              className="rounded-4xl border border-dashed border-border bg-card p-6 text-sm text-danger"
             >
               {error}
             </div>

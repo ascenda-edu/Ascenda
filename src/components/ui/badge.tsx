@@ -42,8 +42,10 @@ const badgeVariants = cva(
         success: 'border-success/25 bg-success-subtle text-success',
         warning: 'border-warning/25 bg-warning-subtle text-warning',
         danger: 'border-danger/25 bg-danger-subtle text-danger',
-        info: 'border-info/25 bg-info-subtle text-info',
-        feature: 'border-feature/25 bg-feature-subtle text-feature',
+        // `info` and `feature` variants used to live here. Neither had a single
+        // call site, and both tones are gone: `info` meant "in progress", which
+        // is the absence of a state, and `feature` was a category. Use `neutral`
+        // for the first and `primary` for the second.
         // primary-ink, not primary: --primary is tuned to carry white button
         // text and only measures 3.58:1 as text on a dark card.
         primary: 'border-primary/25 bg-primary/10 text-primary-ink',

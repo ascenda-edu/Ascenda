@@ -14,8 +14,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: `bg-primary text-primary-foreground shadow-e-2 shadow-primary/20 ${lift}`,
-        destructive: `bg-destructive text-destructive-foreground shadow-e-2 shadow-destructive/15 ${lift}`,
+        default: `bg-primary text-primary-foreground shadow-e-2 ${lift}`,
+        destructive: `bg-destructive text-destructive-foreground shadow-e-2 ${lift}`,
         // These three don't lift, but they must still respond. Moving the lift out of
         // the base class left outline/ghost/soft with NO hover state at all across 48
         // call sites (including the navbar sign-out) — a surface tint is the right
@@ -36,11 +36,13 @@ const buttonVariants = cva(
         outline:
           "border border-primary bg-transparent text-primary-ink hover:bg-primary/8",
         secondary:
-          `bg-secondary text-secondary-foreground shadow-e-2 shadow-secondary/15 ${lift}`,
+          `bg-secondary text-secondary-foreground shadow-e-2 ${lift}`,
         ghost: "text-foreground hover:bg-muted/60",
         link: "text-primary-ink underline-offset-4 hover:underline",
+        // Brand indigo, not `--accent`: that token is gone. Same three-step alpha
+        // ladder the rest of the app uses (/10 rest, /30 hover and edge).
         soft:
-          "bg-accent/15 text-foreground border border-accent/30 shadow-e-1 hover:bg-accent/25 hover:border-accent/50",
+          "bg-primary/10 text-foreground border border-primary/30 shadow-e-1 hover:bg-primary/30",
       },
       size: {
         default: "h-10 px-4 py-2",

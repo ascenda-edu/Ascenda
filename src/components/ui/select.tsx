@@ -210,7 +210,11 @@ const SelectItem = React.forwardRef<
       // Two separable states: highlighted (pointer/keyboard cursor) is a tint,
       // selected is weight + primary-ink + the check. A solid indigo band for
       // highlight would make the two indistinguishable once one row is both.
-      'data-[highlighted]:bg-accent/15 data-[highlighted]:text-foreground',
+      // A highlighted option is SELECTION, not status — transient, user-driven,
+      // one at a time — so a tint is the right instrument here. It moves off
+      // `--accent` (a redundant second indigo, being collapsed) onto the brand at
+      // the ladder's tint rung.
+      'data-[highlighted]:bg-primary/10 data-[highlighted]:text-foreground',
       'data-[state=checked]:font-medium data-[state=checked]:text-primary-ink',
       'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
       className

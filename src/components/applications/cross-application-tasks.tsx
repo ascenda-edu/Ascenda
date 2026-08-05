@@ -390,7 +390,7 @@ export function CrossApplicationTasks({ initialTasks, applicationOptions }: Cros
                             {task.name}
                           </p>
                           {task.status === 'doing' ? (
-                            <span className="shrink-0 rounded-full border border-info/25 bg-info-subtle px-2.5 py-0.5 text-label font-semibold text-info">
+                            <span className="shrink-0 rounded-full border border-border bg-muted px-2.5 py-0.5 text-label font-semibold text-muted-foreground">
                               In progress
                             </span>
                           ) : null}

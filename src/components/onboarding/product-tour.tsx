@@ -453,9 +453,9 @@ export function ProductTour({ steps, onDismiss, onComplete, signOff }: ProductTo
                 screen. Change one and change both. */}
             <div
               ref={avatarRef}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
             >
-              <Bot className="h-4 w-4 text-primary-ink" aria-hidden />
+              <Bot className="h-4 w-4 text-muted-foreground" aria-hidden />
             </div>
 
             <div className="min-w-0 flex-1">

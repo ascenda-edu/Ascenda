@@ -161,7 +161,7 @@ export function ChancesCalculator({ grades, universities }: ChancesCalculatorPro
               className="w-full h-2 rounded-full appearance-none cursor-pointer bg-muted/50 accent-primary
                 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5
                 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-e-2
-                [&::-webkit-slider-thumb]:shadow-primary/30 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background
+                [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background
                 [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110"
             />
             <div className="flex justify-between mt-1 px-0.5">

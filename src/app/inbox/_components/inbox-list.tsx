@@ -20,10 +20,11 @@ interface InboxListProps {
   profileId: string;
 }
 
-// Tone tokens (globals.css): info = open/in-flight, warning = pending work,
-// success = done. AA-verified in both themes, so no `dark:` variants.
+// Tone tokens (globals.css): warning = pending work, success = done. "Open" is
+// deliberately neutral — nothing is owed yet. AA-verified in both themes, so no
+// `dark:` variants.
 const STATUS_PILL: Record<HelpRequest['status'], { label: string; tone: string }> = {
-  open: { label: 'Open', tone: 'border-info/25 bg-info-subtle text-info' },
+  open: { label: 'Open', tone: 'border-border bg-muted text-muted-foreground' },
   accepted: { label: 'In progress', tone: 'border-warning/25 bg-warning-subtle text-warning' },
   resolved: { label: 'Resolved', tone: 'border-success/25 bg-success-subtle text-success' }
 };

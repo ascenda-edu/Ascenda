@@ -13,7 +13,7 @@ const RESULT_CONFIG: Record<OutcomeResult, { icon: typeof CheckCircle2; color: s
   accepted: { icon: CheckCircle2, color: 'text-success', bg: 'bg-success-subtle', label: 'Accepted' },
   rejected: { icon: XCircle, color: 'text-danger', bg: 'bg-danger-subtle', label: 'Rejected' },
   waitlisted: { icon: Clock, color: 'text-warning', bg: 'bg-warning-subtle', label: 'Waitlisted' },
-  pending: { icon: Clock, color: 'text-info', bg: 'bg-info-subtle', label: 'Pending' },
+  pending: { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', label: 'Pending' },
   withdrawn: { icon: MinusCircle, color: 'text-muted-foreground', bg: 'bg-muted/30', label: 'Withdrawn' },
 };
 
@@ -66,7 +66,7 @@ export function OutcomeDashboard({ outcomes, stats }: { outcomes: CounsellorOutc
           { label: 'Accepted', value: stats.accepted, color: 'text-success' },
           { label: 'Rejected', value: stats.rejected, color: 'text-danger' },
           { label: 'Waitlisted', value: stats.waitlisted, color: 'text-warning' },
-          { label: 'Pending', value: stats.pending, color: 'text-info' },
+          { label: 'Pending', value: stats.pending, color: 'text-muted-foreground' },
         ] as const).map((stat) => (
           <div key={stat.label} className="surface-subcard p-3 text-center">
             <p className={cn('text-xl font-bold', stat.color)}>{stat.value}</p>

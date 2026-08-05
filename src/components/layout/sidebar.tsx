@@ -122,12 +122,15 @@ export const Sidebar = () => {
           <div className="flex items-center gap-2.5">
             <div className="relative shrink-0">
               <div
-                // from-primary to-accent, matching the byte-identical avatar in
-                // dashboard/hub/counsellor-card.tsx. A gradient can only carry one
-                // text colour, so BOTH stops have to clear it: white on `feature` in
-                // dark mode measures 3.54:1 and fails, while primary (5.01) and
-                // accent (4.65) both pass in both themes.
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-label font-bold text-primary-foreground shadow-e-1"
+                // Flat `bg-primary`, matching the counsellor avatar in
+                // dashboard/hub/counsellor-card.tsx (same fill, one size up there).
+                // This was a `from-primary to-accent` gradient, and `--accent` no
+                // longer exists; a single
+                // stop also removes the constraint that BOTH ends had to clear the
+                // white monogram (primary measures 5.01:1 in both themes). It keeps
+                // brand colour because it is an identity mark holding INITIALS, not
+                // a tinted icon bubble.
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-label font-bold text-primary-foreground shadow-e-1"
                 aria-hidden
               >
                 {counsellorInitials}

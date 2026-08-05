@@ -36,7 +36,7 @@ const toMessage = (value: unknown, fallback: string): string => {
 };
 
 const ACTIONS: { key: Action; label: string; icon: typeof Sparkles; description: string; color: string }[] = [
-  { key: 'feedback', label: 'Get Feedback', icon: MessageSquare, description: 'AI reviews your draft with specific rewrites', color: 'text-feature bg-feature-subtle' },
+  { key: 'feedback', label: 'Get Feedback', icon: MessageSquare, description: 'AI reviews your draft with specific rewrites', color: 'text-primary-ink bg-primary/10' },
   { key: 'outline', label: 'Suggest Outline', icon: ListTree, description: 'Generate essay structure from your blocks', color: 'text-success bg-success-subtle' },
 ];
 
@@ -283,7 +283,7 @@ export function EssayAIPanel({ essay, platform, selectedBlocks, onInsertText }: 
                 <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-xl border border-danger/25 bg-danger-subtle p-3 space-y-2"
+                  className="rounded-xl border border-border bg-card p-3 space-y-2"
                 >
                   <p className="text-xs text-danger">{error}</p>
                   {activeAction && (

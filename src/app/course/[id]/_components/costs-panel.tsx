@@ -7,18 +7,24 @@ import { RichText } from './rich-text';
 import { BreakdownRow, MetricTile, PanelEmpty, PanelHeading, SectionCard } from './tiles';
 import type { CourseCosts, CourseView } from './types';
 
-/** Cost-of-living band → tone. Three known values out of the catalogue. */
+/**
+ * Cost-of-living band → tone. Three known values out of the catalogue.
+ *
+ * The 64px block this drives is a TILE, not a chip, so it does not take a tint — the
+ * tone stays on the HIGH/MEDIUM/LOW label, which is the word being read, and the
+ * block itself is a neutral surface.
+ */
 const COST_OF_LIFE_VISUAL: Record<string, { surface: string; copy: string }> = {
   HIGH: {
-    surface: 'bg-danger-subtle text-danger',
+    surface: 'bg-muted text-danger',
     copy: 'This location has a higher cost of living. Budget accordingly for accommodation, food, and general expenses.'
   },
   MEDIUM: {
-    surface: 'bg-warning-subtle text-warning',
+    surface: 'bg-muted text-warning',
     copy: 'This location has moderate living costs. Standard student budget recommended.'
   },
   LOW: {
-    surface: 'bg-success-subtle text-success',
+    surface: 'bg-muted text-success',
     copy: 'This location has a lower cost of living, making it more affordable for student life.'
   }
 };

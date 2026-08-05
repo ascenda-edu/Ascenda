@@ -147,7 +147,7 @@ export function ApplicationList({ rows }: Props) {
                         tasksRemaining: row.tasksOpen
                       })
                     }
-                    className="shrink-0 border-feature/25 bg-feature-subtle text-feature transition hover:bg-feature/15"
+                    className="shrink-0 border-primary/30 bg-primary/10 text-primary-ink transition hover:bg-primary/15"
                   >
                     <Sparkles className="mr-1.5 h-3.5 w-3.5" aria-hidden />
                     Need help
@@ -161,7 +161,7 @@ export function ApplicationList({ rows }: Props) {
                     <div
                       className={cn(
                         'h-full rounded-full transition-[width,background-color]',
-                        progress >= 75 ? 'bg-success-fill' : progress >= 40 ? 'bg-info-fill' : 'bg-warning-fill'
+                        progress >= 75 ? 'bg-success-fill' : progress >= 40 ? 'bg-muted-foreground' : 'bg-warning-fill'
                       )}
                       style={{ width: `${progress}%` }}
                     />

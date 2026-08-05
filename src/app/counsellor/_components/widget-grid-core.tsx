@@ -503,8 +503,8 @@ export function WidgetShell<Id extends string>({
           >
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10">
-            <Icon className="h-4 w-4 text-primary-ink" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl">
+            <Icon className="h-4 w-4 text-muted-foreground" />
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">{title}</p>

@@ -131,8 +131,8 @@ export function CoachInvitation({
           aria-label="Ascendi can show you around"
         >
           <div className="flex items-start gap-2.5">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
-              <Bot className="h-4 w-4 text-primary-ink" aria-hidden />
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+              <Bot className="h-4 w-4 text-muted-foreground" aria-hidden />
             </span>
             <div className="min-w-0 flex-1">
               <p className="font-heading text-sm font-semibold leading-tight text-foreground">

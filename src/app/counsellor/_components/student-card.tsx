@@ -118,7 +118,7 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
           </p>
         </div>
         {student.flags.length > 0 && (
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-warning-subtle">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
             <AlertTriangle className="h-3.5 w-3.5 text-warning" />
           </div>
         )}
@@ -150,8 +150,8 @@ export const StudentCard = ({ student, highlight = '' }: StudentCardProps) => {
         <span className={cn(
           'rounded-full border px-3 py-0.5 text-xs font-semibold',
           student.academic.programmeType === 'IB'
-            ? 'border-feature/25 bg-feature-subtle text-feature'
-            : 'border-info/25 bg-info-subtle text-info'
+            ? 'border-primary/30 bg-primary/10 text-primary-ink'
+            : 'border-border bg-muted text-muted-foreground'
         )}>
           {student.academic.programmeType === 'IB'
             ? student.academic.ibPoints ? `IB · ${student.academic.ibPoints} pts` : 'IB'

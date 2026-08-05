@@ -27,7 +27,7 @@ export async function CounsellorQuests({ profileId }: { profileId: string }) {
         eyebrow="From your counsellor"
         title={`Quest log · ${clearedCount}/${questCount} cleared`}
         icon={Scroll}
-        iconClassName="bg-feature-subtle text-feature ring-feature/25"
+        iconClassName="text-muted-foreground"
         action={{ label: 'Open quest log', href: '/university-search/quests' }}
       >
         <div className="grid gap-4 md:grid-cols-2">

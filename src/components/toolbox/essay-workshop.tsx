@@ -299,8 +299,8 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
                 {activities.length > 0 && (
                   <div>
                     <button onClick={() => setShowActivities(!showActivities)} className="flex items-center gap-1.5 w-full text-left mb-1">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-md bg-info-subtle"><Users className="h-3 w-3 text-info" /></div>
-                      <span className="text-label font-semibold flex-1 text-info">Activities</span>
+                      <div className="flex h-5 w-5 items-center justify-center rounded-md bg-muted"><Users className="h-3 w-3 text-muted-foreground" /></div>
+                      <span className="text-label font-semibold flex-1 text-muted-foreground">Activities</span>
                       <span className="text-label text-muted-foreground/50">{activities.length}</span>
                       <ChevronDown className={cn('h-3 w-3 text-muted-foreground/40 transition-transform', !showActivities && '-rotate-90')} />
                     </button>
@@ -313,7 +313,7 @@ export function EssayWorkshop({ blocks, prompts, activities = [] }: EssayWorksho
                                 className="w-full text-left rounded-lg px-2.5 py-1.5 text-xs hover:bg-muted/40 transition-colors group/act">
                                 <div className="flex items-center gap-1.5">
                                   <span className="font-medium text-foreground flex-1 truncate">{act.name}</span>
-                                  <ChevronRight className="h-3 w-3 text-muted-foreground/20 group-hover/act:text-info transition-colors shrink-0" />
+                                  <ChevronRight className="h-3 w-3 text-muted-foreground/20 group-hover/act:text-muted-foreground transition-colors shrink-0" />
                                 </div>
                                 <p className="text-label text-muted-foreground truncate">{act.role} · {act.organization}</p>
                               </button>

@@ -30,7 +30,7 @@ import { DEMO_COUNSELLOR } from '@/lib/demo/counsellor';
  * so no `dark:` variants are needed.
  */
 const TOPIC_VISUAL = {
-  swatch: 'flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary-ink ring-1 ring-primary/15',
+  swatch: 'flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground',
   activeBorder: 'border-primary/30 bg-primary/5',
   text: 'text-primary-ink'
 };

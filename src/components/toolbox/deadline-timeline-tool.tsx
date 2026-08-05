@@ -14,7 +14,7 @@ const TYPE_CONFIG: Record<TimelineDeadlineType, { color: string; bg: string; dot
   submission: { color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/30', dot: 'bg-primary', label: 'Submission' },
   exam: { color: 'text-warning', bg: 'bg-warning-subtle border-warning/25', dot: 'bg-warning-fill', label: 'Exam' },
   interview: { color: 'text-danger', bg: 'bg-danger-subtle border-danger/25', dot: 'bg-danger-fill', label: 'Interview' },
-  document: { color: 'text-info', bg: 'bg-info-subtle border-info/25', dot: 'bg-info-fill', label: 'Document' },
+  document: { color: 'text-muted-foreground', bg: 'bg-muted border-border', dot: 'bg-muted-foreground', label: 'Document' },
 };
 
 const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -115,7 +115,7 @@ export function DeadlineTimelineTool({ deadlines }: DeadlineTimelineToolProps) {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-danger/25 bg-danger-subtle p-4 flex items-start gap-3"
+          className="rounded-2xl border border-border bg-card p-4 flex items-start gap-3"
         >
           <AlertCircle className="h-5 w-5 text-danger shrink-0 mt-0.5" />
           <div>

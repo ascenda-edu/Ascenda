@@ -198,21 +198,22 @@ interface FullFunnelProps {
 }
 
 // Tone mapping mirrors APPLICATION_STATUS_VISUAL / STAGE_COLORS exactly, so the
-// funnel, the kanban and the drill-down can't disagree about a stage: planning=info,
-// inProgress=warning, submitted=success, decision=feature. It previously used grey
-// for planning and info for inProgress, which meant clicking the blue "In Progress"
-// bar opened a drill-down with an amber accent one click later — and clicking the
-// GREY "Planning" bar opened a blue-accented drill-down (that half survived the
-// first pass and was fixed only after driving all four bars).
+// funnel, the kanban and the drill-down can't disagree about a stage. Only the two
+// stages that ask something of someone keep a hue: inProgress=warning,
+// submitted=success. `planning` and `decision` are waiting states, so they are
+// neutral — the bar's own label is what identifies it, and a hue that just marks a
+// position in a sequence is telling the reader something they can already read.
 //
-// `textOnFill` is the tone's own -foreground, NOT `text-foreground`. This is the one
-// chart that still prints its value inside the mark, and near-white ink on a bright
-// fill measured 1.43:1 on "Submitted" in dark mode — the value was invisible.
+// `textOnFill` is ink chosen for the fill it sits on, NOT `text-foreground`. This is
+// the one chart that still prints its value inside the mark, and near-white ink on a
+// bright fill measured 1.43:1 on "Submitted" in dark mode — the value was invisible.
+// The neutral bars use `text-background` because `--muted-foreground` is dark in
+// light mode and light in dark mode, so `background` is the token that flips with it.
 const FUNNEL_STAGES = [
-  { key: 'planning' as const, label: 'Planning', color: 'bg-info-fill', hoverColor: 'hover:bg-info-fill/85', textColor: 'text-info', textOnFill: 'text-info-foreground' },
+  { key: 'planning' as const, label: 'Planning', color: 'bg-muted-foreground', hoverColor: 'hover:bg-muted-foreground/85', textColor: 'text-muted-foreground', textOnFill: 'text-background' },
   { key: 'inProgress' as const, label: 'In Progress', color: 'bg-warning-fill', hoverColor: 'hover:bg-warning-fill/85', textColor: 'text-warning', textOnFill: 'text-warning-foreground' },
   { key: 'submitted' as const, label: 'Submitted', color: 'bg-success-fill', hoverColor: 'hover:bg-success-fill/85', textColor: 'text-success', textOnFill: 'text-success-foreground' },
-  { key: 'decision' as const, label: 'Decision Received', color: 'bg-feature-fill', hoverColor: 'hover:bg-feature-fill/85', textColor: 'text-feature', textOnFill: 'text-feature-foreground' },
+  { key: 'decision' as const, label: 'Decision Received', color: 'bg-muted-foreground', hoverColor: 'hover:bg-muted-foreground/85', textColor: 'text-muted-foreground', textOnFill: 'text-background' },
   // enrolled = primary, matching APPLICATION_STATUS_VISUAL.enrolled. The terminal
   // stage of the funnel wears the brand accent rather than a sixth status hue.
   { key: 'enrolled' as const, label: 'Enrolled', color: 'bg-primary', hoverColor: 'hover:bg-primary/85', textColor: 'text-primary-ink', textOnFill: 'text-primary-foreground' }
@@ -262,7 +263,7 @@ export const FullFunnel = ({ funnel, onSelect }: FullFunnelProps) => {
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-label font-semibold transition',
             compareYoY
-              ? 'border-feature/40 bg-feature-subtle text-feature'
+              ? 'border-primary/30 bg-primary/10 text-primary-ink'
               : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:bg-muted/60 hover:text-foreground'
           )}
         >
@@ -333,9 +334,12 @@ export const MatchTierSummary = ({ tiers, onSelect }: MatchTierSummaryProps) => 
 
   const tierList = [
     // reach/match/safety is a status scale, matching TIER_VISUAL in lib/theme/categories.
-    { key: 'reach' as const, label: 'Reach', count: tiers.reach, color: 'bg-danger-fill', hoverColor: 'hover:bg-danger-fill/85', card: 'border-danger/25 bg-danger-subtle', hoverCard: 'hover-lift', text: 'text-danger' },
-    { key: 'match' as const, label: 'Match', count: tiers.match, color: 'bg-warning-fill', hoverColor: 'hover:bg-warning-fill/85', card: 'border-warning/25 bg-warning-subtle', hoverCard: 'hover-lift', text: 'text-warning' },
-    { key: 'safe' as const, label: 'Safe', count: tiers.safe, color: 'bg-success-fill', hoverColor: 'hover:bg-success-fill/85', card: 'border-success/25 bg-success-subtle', hoverCard: 'hover-lift', text: 'text-success' }
+    // The three tally CARDS below are plain surfaces, though — a tinted block is too
+    // much surface for a tier that the stacked bar above has already coloured. The
+    // tone stays on the count, which is the thing being read.
+    { key: 'reach' as const, label: 'Reach', count: tiers.reach, color: 'bg-danger-fill', hoverColor: 'hover:bg-danger-fill/85', card: 'border-border bg-card', hoverCard: 'hover-lift', text: 'text-danger' },
+    { key: 'match' as const, label: 'Match', count: tiers.match, color: 'bg-warning-fill', hoverColor: 'hover:bg-warning-fill/85', card: 'border-border bg-card', hoverCard: 'hover-lift', text: 'text-warning' },
+    { key: 'safe' as const, label: 'Safe', count: tiers.safe, color: 'bg-success-fill', hoverColor: 'hover:bg-success-fill/85', card: 'border-border bg-card', hoverCard: 'hover-lift', text: 'text-success' }
   ];
 
   return (
@@ -396,7 +400,7 @@ export const CompletionBreakdown = ({ students, onSelect }: CompletionBreakdownP
   // status colour untunable.)
   const buckets = [
     { label: '100%', count: students.filter((s) => s.pct === 100).length, color: 'bg-success-fill', hoverColor: 'hover:bg-success-fill/85', tooltip: 'Fully complete', min: 100, max: 100 },
-    { label: '75–99%', count: students.filter((s) => s.pct >= 75 && s.pct < 100).length, color: 'bg-info-fill', hoverColor: 'hover:bg-info-fill/85', tooltip: 'Almost complete', min: 75, max: 99 },
+    { label: '75–99%', count: students.filter((s) => s.pct >= 75 && s.pct < 100).length, color: 'bg-muted-foreground', hoverColor: 'hover:bg-muted-foreground/85', tooltip: 'Almost complete', min: 75, max: 99 },
     { label: '50–74%', count: students.filter((s) => s.pct >= 50 && s.pct < 75).length, color: 'bg-warning-fill', hoverColor: 'hover:bg-warning-fill/85', tooltip: 'Partially complete', min: 50, max: 74 },
     { label: '<50%', count: students.filter((s) => s.pct < 50).length, color: 'bg-danger-fill', hoverColor: 'hover:bg-danger-fill/85', tooltip: 'Needs attention', min: 0, max: 49 }
   ];

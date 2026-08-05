@@ -104,7 +104,7 @@ export const Navbar = () => {
                 // Assistant is a cross-cutting tool, not a journey step — it
                 // anchors the right edge behind a divider on every portal.
                 <div key={entry.item.href} className="flex items-center gap-5">
-                  <span className="h-4 w-px rounded-full bg-border dark:bg-white/15" aria-hidden />
+                  <span className="h-4 w-px rounded-full bg-border" aria-hidden />
                   <NavLink item={entry.item} />
                 </div>
               ) : (

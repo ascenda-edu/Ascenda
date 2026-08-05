@@ -40,21 +40,32 @@ const formatMeetingTime = (iso: string): string =>
     minute: '2-digit'
   });
 
-// Deliberately NOT a Badge variant: this tints a card surface, not a pill. The
-// tone values are the same five semantic tokens, but the geometry
-// (`rounded-2xl` card vs `rounded-full` chip) is not, and forcing badgeVariants
-// here would ship `inline-flex whitespace-nowrap` onto a multi-line article.
-const meetingToneClass = (status: HelpMeetingStatus): string => {
+// Deliberately NOT a Badge variant: this is a card, not a pill. The geometry
+// (`rounded-2xl` card vs `rounded-full` chip) is not a badge's, and forcing
+// badgeVariants here would ship `inline-flex whitespace-nowrap` onto a
+// multi-line article.
+//
+// The SURFACE is neutral in every state. It used to be tinted per status, which
+// made a meeting card a full-width block of colour carrying its title, its time
+// and its buttons — a tone tint cannot be a card surface. `cancelled` keeps the
+// muted wash and the strike-through because that is a de-emphasis, not a tone.
+const meetingToneClass = (status: HelpMeetingStatus): string =>
+  status === 'cancelled'
+    ? 'border-border/60 bg-muted/40 text-muted-foreground line-through'
+    : 'border-border bg-card';
+
+// ...and the tone lands here instead: the clock glyph and the one-word status
+// label under the time, which are the two places it is actually read.
+const meetingAccentClass = (status: HelpMeetingStatus): string => {
   switch (status) {
     case 'confirmed':
-      return 'border-success/25 bg-success-subtle text-success';
-    case 'cancelled':
-      return 'border-border/60 bg-muted/40 text-muted-foreground line-through';
+      return 'text-success';
     case 'completed':
-      return 'border-feature/25 bg-feature-subtle text-feature';
+      return 'text-primary-ink';
+    case 'cancelled':
     case 'proposed':
-      // Awaiting a decision — the same "in progress" tone the rest of the app uses.
-      return 'border-info/25 bg-info-subtle text-info';
+      // Proposed is awaiting a decision, which is the absence of a state.
+      return 'text-muted-foreground';
   }
 };
 
@@ -461,7 +472,7 @@ export function HelpThreadDrawer({ open, requestId, side, onClose }: HelpThreadD
                     variant="outline"
                     onClick={handleAccept}
                     disabled={busy}
-                    className="border-feature/25 text-feature"
+                    className="border-primary/30 text-primary-ink"
                   >
                     <Check className="mr-1 h-3 w-3" />
                     Accept request
@@ -601,18 +612,18 @@ function ThreadView({
               </div>
             ) : null}
             <div className={cn('flex items-end gap-2', isOwn ? 'flex-row-reverse' : 'flex-row')}>
-              {/* Avatar sits on the other side only, and only at the start of a run. */}
+              {/* Avatar sits on the other side only, and only at the start of a run.
+                  One identity treatment for both roles: this was success for a
+                  counsellor and `feature` for a student, which spent two hues on who
+                  is speaking — and "done-green" on a counsellor was the status
+                  palette used for its colour rather than its meaning. It keeps a
+                  brand tint because it holds INITIALS. */}
               {!isOwn ? (
                 groupedWithPrev ? (
                   <span className="w-7 shrink-0" aria-hidden />
                 ) : (
                   <span
-                    className={cn(
-                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-label font-semibold',
-                      entry.role === 'counsellor'
-                        ? 'bg-success-subtle text-success'
-                        : 'bg-feature-subtle text-feature'
-                    )}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-label font-semibold text-primary-ink"
                     aria-hidden
                   >
                     {getInitials(name)}
@@ -637,7 +648,7 @@ function ThreadView({
                     <p
                       className={cn(
                         'mt-1.5 inline-flex items-center gap-1 text-label uppercase tracking-[0.15em]',
-                        isOwn ? 'text-primary-foreground/70' : 'text-feature'
+                        isOwn ? 'text-primary-foreground/70' : 'text-primary-ink'
                       )}
                     >
                       <Sparkles className="h-3 w-3" />
@@ -876,14 +887,14 @@ function MeetingView({
                 key={m.id}
                 className={cn('flex items-start gap-3 rounded-2xl border p-3', meetingToneClass(m.status))}
               >
-                <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <Clock className={cn('mt-0.5 h-4 w-4 shrink-0', meetingAccentClass(m.status))} aria-hidden />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold">{m.title}</p>
                   <p className="text-xs">
                     {formatMeetingTime(m.scheduled_for)} · {m.duration_minutes} min
                     {m.location ? ` · ${m.location}` : null}
                   </p>
-                  <p className="mt-0.5 text-label uppercase tracking-[0.2em]">{m.status}</p>
+                  <p className={cn('mt-0.5 text-label uppercase tracking-[0.2em]', meetingAccentClass(m.status))}>{m.status}</p>
                   {actions.length ? (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {actions.map((action) => (

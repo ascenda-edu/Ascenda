@@ -76,7 +76,7 @@ export const DialogContent = React.forwardRef<
         <DialogPrimitive.Portal>
             <DialogPrimitive.Overlay
                 className={cn(
-                    'fixed inset-0 z-modal bg-black/50 backdrop-blur-sm',
+                    'fixed inset-0 z-modal bg-shadow/60 backdrop-blur-sm',
                     'data-[state=open]:animate-in data-[state=open]:fade-in-0',
                     'data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
                     TIMING

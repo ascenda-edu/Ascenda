@@ -27,7 +27,7 @@ export interface StageColor {
   text: string;
   /** translucent chip background */
   bg: string;
-  /** border-l-… accent for kanban cards */
+  /** border-l-… accent for kanban cards — neutral: a stage is not an urgency */
   borderLeft: string;
   /** solid bg-… for accent bars */
   accent: string;
@@ -51,7 +51,12 @@ const build = (status: ApplicationStatus): StageColor => {
     label: STAGE_LABEL[status],
     text: v.text,
     bg: v.bg,
-    borderLeft: v.accent,
+    // NOT `v.accent`. A coloured left rail is reserved for urgency — overdue work,
+    // the next thing due. An application stage is a CATEGORY: the card already
+    // names it, and the board already groups by it, so a per-stage hue on the rail
+    // told the reader nothing and made every card shout. The rail stays (it is
+    // load-bearing for the kanban's scannability) but goes neutral.
+    borderLeft: 'border-l-border',
     accent: v.bar,
   };
 };

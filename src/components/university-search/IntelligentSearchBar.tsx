@@ -578,10 +578,13 @@ export function IntelligentSearchBar({
                                                             )}
                                                             {item.location && <span className="text-label text-muted-foreground">{item.location}</span>}
                                                             {/* Kind tag. `bg-background` on a `bg-muted/40` row was a grey
-                                                                block on grey that said nothing; programme and university
-                                                                now take distinct tones so the tag is what tells the two
-                                                                lists apart at a glance. */}
-                                                            <span className="eyebrow mt-1 inline-flex w-fit rounded-full border border-feature/25 bg-feature-subtle px-2 py-0.5 text-feature">Program</span>
+                                                                block on grey that said nothing, so this carries the faint
+                                                                brand wash the rest of the app's neutral chips use (same
+                                                                recipe as the "Recent" tag above). Programme and university
+                                                                used to take two DIFFERENT tones; that spent colour on a
+                                                                two-item category, and the word in the tag already tells
+                                                                the two lists apart. */}
+                                                            <span className="eyebrow mt-1 inline-flex w-fit rounded-full border border-primary/15 bg-primary/8 px-2 py-0.5 text-foreground">Program</span>
                                                         </button>
                                                     );
                                                 })}
@@ -604,7 +607,7 @@ export function IntelligentSearchBar({
                                                         >
                                                             <span className="font-semibold text-foreground">{item.name}</span>
                                                             {item.location && <span className="text-label text-muted-foreground">{item.location}</span>}
-                                                            <span className="eyebrow mt-1 inline-flex w-fit rounded-full border border-info/25 bg-info-subtle px-2 py-0.5 text-info">University</span>
+                                                            <span className="eyebrow mt-1 inline-flex w-fit rounded-full border border-primary/15 bg-primary/8 px-2 py-0.5 text-foreground">University</span>
                                                         </button>
                                                     );
                                                 })}

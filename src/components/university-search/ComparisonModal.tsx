@@ -267,7 +267,7 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                         {isEmpty ? (
                             <div className="flex h-full items-center justify-center p-8">
                                 <div className="flex max-w-md flex-col items-center gap-4 rounded-4xl border border-dashed border-border/70 bg-card/60 p-10 text-center">
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary-ink ring-1 ring-primary/20">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-muted-foreground">
                                         <LayoutGrid className="h-5 w-5" />
                                     </div>
                                     <div className="space-y-1">
@@ -324,10 +324,10 @@ export function ComparisonModal({ isOpen, onClose, universities, onRemove, maxIt
                                                         <div
                                                             key={`${uni.id}-${row.id}`}
                                                             className={cn(
-                                                                'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-colors',
-                                                                isBest
-                                                                    ? 'border-success/25 bg-success-subtle'
-                                                                    : 'border-border/60 bg-card/60',
+                                                                // Neutral surface in both states: the "Best" chip below is
+                                                                // the signal, and a tinted cell repeated down every row of a
+                                                                // comparison grid stops reading as one.
+                                                                'flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/60 px-4 py-3 transition-colors',
                                                                 identical && !isBest && 'opacity-60'
                                                             )}
                                                         >

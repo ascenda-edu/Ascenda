@@ -24,24 +24,26 @@ const PILL_FOCUS =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
 /**
- * The active pill's non-moving half — border, weight, ink. The FILL is a
- * `layoutId` element instead (see below), so `.nav-pill-active` is no longer
- * applied here: it carries `bg-primary`, which would double-paint the slider.
+ * The active tab's non-moving half — weight and ink. The RULE is a `layoutId`
+ * element instead (see below), so `.nav-pill-active` is not applied here.
  *
  * Driven off `aria-current` rather than a plain conditional class for a
  * specificity reason: `.nav-pill` declares `hover:text-foreground` in
- * @layer components at (0,2,0), which outranks a bare `text-primary-foreground`
- * utility (0,1,0) regardless of source order — hovering the active pill would
- * swap its label to `foreground` on top of a `primary` fill. `aria-[current=…]`
- * compiles to class+attribute (0,2,0) in @layer utilities, so it ties on
- * specificity and wins on order. (`.nav-pill-active` lost this fight too; this
- * is a fix, not a new constraint.)
+ * @layer components at (0,2,0), which outranks a bare `text-primary-ink`
+ * utility (0,1,0) regardless of source order — hovering the active tab would
+ * swap its label back to `foreground`. `aria-[current=…]` compiles to
+ * class+attribute (0,2,0) in @layer utilities, so it ties on specificity and
+ * wins on order. Do NOT simplify these to plain utilities; that is the bug.
+ *
+ * The ink is `primary-ink`, not `primary-foreground`: there is no longer a fill
+ * for a foreground colour to sit on. `text-primary` would be wrong too — it is
+ * tuned to carry white button text and measures 3.58:1 in dark.
  *
  * `font-semibold` is deliberate and matches `<TabsTrigger>`: active is carried
- * by weight AND fill, so it survives a greyscale or CVD read.
+ * by weight AND rule, so it survives a greyscale or CVD read.
  */
 const PILL_ACTIVE =
-  'aria-[current=page]:border-primary/20 aria-[current=page]:font-semibold aria-[current=page]:text-primary-foreground aria-[current=page]:hover:text-primary-foreground';
+  'aria-[current=page]:font-semibold aria-[current=page]:text-primary-ink aria-[current=page]:hover:text-primary-ink';
 
 // Same curve as the landing nav's pill — see lib/motion.ts. `MotionConfig
 // reducedMotion="user"` (providers.tsx) drops the transform for users who ask
@@ -103,20 +105,22 @@ const SectionNavInner = ({ items, getIsActive }: SectionNavProps) => {
             aria-current={active ? 'page' : undefined}
             className={cn('nav-pill shrink-0', PILL_FOCUS, PILL_ACTIVE)}
           >
-            {/* The fill is a sibling of the label, and an absolutely-positioned
-                sibling paints above a statically-positioned one whatever the DOM
-                order — so the label needs its own stacking position or the pill
-                swallows its own text. Hence `relative z-raised` below. */}
+            {/* The indicator is a 2px RULE, not a fill. It keeps the same
+                `layoutId`, so it still slides between tabs — it just slides an
+                underline. Being 2px at the bottom edge it no longer overlaps the
+                label, so the label's old `relative z-raised` stacking guard
+                (which existed only because a full-bleed fill painted over it) is
+                gone. `inset-x-1` insets it from the pill's own px-3 so the rule
+                reads as belonging to the word, not to the padding box. */}
             {active ? (
               <motion.span
                 layoutId={indicatorId}
                 transition={INDICATOR_TRANSITION}
-                // Radius matches `.nav-pill`'s own `rounded-lg`.
-                className="absolute inset-0 rounded-lg bg-primary shadow-e-1"
+                className="absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-primary-ink"
                 aria-hidden
               />
             ) : null}
-            <span className="relative z-raised whitespace-nowrap">{item.label}</span>
+            <span className="whitespace-nowrap">{item.label}</span>
           </Link>
         );
       })}

@@ -64,10 +64,10 @@ export async function MatchesPeek({ profileId }: { profileId: string }) {
           {firstFlagged ? (
             <Link
               href="/matches"
-              className="hover-lift group flex items-center gap-3 rounded-xl border border-warning/25 bg-warning-subtle p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="hover-lift group flex items-center gap-3 rounded-xl border border-border bg-card p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <AlertTriangle className="h-4 w-4 shrink-0 text-warning" aria-hidden />
-              <p className="min-w-0 flex-1 truncate text-xs text-warning">
+              <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
                 <span className="font-semibold">Eligibility flag:</span> {firstFlagged.program.name} —{' '}
                 {firstFlagged.blockingReasons[0]}
                 {flaggedBeyondPeek.length > 1 ? ` · +${flaggedBeyondPeek.length - 1} more` : ''}

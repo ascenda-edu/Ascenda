@@ -5,21 +5,17 @@
 // in top-students.tsx. One list now, one accessor each for the two ways it is
 // indexed (stable per student id, or by list position).
 //
-// The colours are the CATEGORICAL series slots (--series-1..5), not the tone tokens
-// — an avatar carries identity, not status, so a "rose" student must never read as
-// urgent. Five slots for the reason chart-palette.ts documents: past five hues the
-// adjacent pairs stop being distinguishable, so a sixth carries no information.
-// Identity rides on the tint and the initials wear ink, which is what keeps them
-// legible in both themes (the old `text-violet-700 dark:text-violet-300` pairs had
-// no contrast pass at all).
+// There is ONE colour now. This used to rotate the categorical series slots
+// (--series-1..5) so each student got a different tint, but identity is not data:
+// the hue was derived from a name hash, so it distinguished nothing the initials
+// don't already say, and five tints of chrome competed with the tones that do mean
+// something. A single brand tint, with ink for the initials so it passes contrast
+// in both themes.
+//
+// The array shape and both accessors are kept so callers are unaffected; the
+// modulo simply always lands on the same entry.
 
-export const AVATAR_PALETTE = [
-  'bg-series-1/20 text-foreground',
-  'bg-series-2/20 text-foreground',
-  'bg-series-3/20 text-foreground',
-  'bg-series-4/20 text-foreground',
-  'bg-series-5/20 text-foreground',
-];
+export const AVATAR_PALETTE = ['bg-primary/10 text-primary-ink'];
 
 /** Stable colour for a student, derived from their id. */
 export function avatarColor(id: string) {

@@ -196,7 +196,7 @@ export const MatchList = ({ matches }: MatchListProps) => {
             return (selectedTier === 'All' ? totalDeduped > 0 : tier === selectedTier) ? (
               <motion.div
                 key={tier}
-                className={cn('surface-stage space-y-5 border-l-4', visual.border, visual.accent)}
+                className={cn('surface-stage space-y-5', visual.border)}
                 variants={tierCardVariants}
                 initial="hidden"
                 whileInView="show"

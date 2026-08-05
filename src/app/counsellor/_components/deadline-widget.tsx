@@ -33,7 +33,7 @@ const TYPE_LABELS: Record<string, string> = {
 function urgencyClass(days: number) {
   if (days <= 3) return 'text-danger bg-danger-subtle border-danger/25';
   if (days <= 7) return 'text-warning bg-warning-subtle border-warning/25';
-  return 'text-info bg-info-subtle border-info/25';
+  return 'text-muted-foreground bg-muted border-border';
 }
 
 function formatDate(iso: string) {

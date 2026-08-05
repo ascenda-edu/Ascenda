@@ -106,7 +106,7 @@ export function AscendiFlight({
 
   return createPortal(
     <motion.div
-      className="pointer-events-none fixed z-modal flex items-center justify-center rounded-full bg-primary text-primary-foreground shadow-e-4 shadow-primary/30"
+      className="pointer-events-none fixed z-modal flex items-center justify-center rounded-full bg-primary text-primary-foreground shadow-e-4"
       initial={{ top: from.top, left: from.left, width: SIZE, height: SIZE, opacity: 1 }}
       animate={{
         top: [from.top, midTop, target.top],

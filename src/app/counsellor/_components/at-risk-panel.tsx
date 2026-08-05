@@ -20,7 +20,7 @@ const RISK_CONFIG: Record<RiskType, { icon: typeof AlertTriangle; label: string;
 const URGENCY_CONFIG: Record<RiskUrgency, { color: string; bg: string; label: string }> = {
   critical: { color: 'text-danger', bg: 'bg-danger-fill', label: 'Critical' },
   high: { color: 'text-warning', bg: 'bg-warning-fill', label: 'High' },
-  medium: { color: 'text-info', bg: 'bg-info-fill', label: 'Medium' },
+  medium: { color: 'text-muted-foreground', bg: 'bg-muted-foreground', label: 'Medium' },
 };
 
 interface AtRiskPanelProps {
@@ -44,7 +44,7 @@ export function AtRiskPanel({ alerts }: AtRiskPanelProps) {
 
   if (alerts.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-success/25 bg-success-subtle p-6 text-center text-sm text-success">
+      <div className="rounded-2xl border border-dashed border-border bg-card p-6 text-center text-sm text-success">
         All students are on track. No at-risk flags detected.
       </div>
     );
@@ -95,9 +95,10 @@ export function AtRiskPanel({ alerts }: AtRiskPanelProps) {
                   {/* Urgency dot */}
                   <div className={cn('h-2.5 w-2.5 rounded-full shrink-0', urgency.bg)} />
 
-                  {/* Risk icon */}
-                  <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', risk.bg)}>
-                    <Icon className={cn('h-4 w-4', risk.color)} />
+                  {/* Risk icon — the box holds layout only; the risk TYPE is a
+                      category, so it is named by the chip below, not by a tint here. */}
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
                   </div>
 
                   {/* Content */}

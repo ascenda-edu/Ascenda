@@ -19,12 +19,14 @@ interface QuickLink {
  * hub cell, with live counts where the data exists (shortlist is
  * localStorage-synced, so this stays a client island).
  *
- * These are NAVIGATION, so every swatch wears the brand tint and the lucide icon
- * carries the identity. Each tile used to pick its own status hue — shortlist
+ * These are NAVIGATION, so every swatch is neutral and the lucide icon carries
+ * the identity on its own. Each tile used to pick its own status hue — shortlist
  * was `danger` because a heart is red, scholarships was `warning` because an
  * award is gold — which is icon-literalism, not semantics: it put the overdue
  * colour and the pending colour side by side on a row where nothing is overdue
- * or pending. Don't reintroduce it.
+ * or pending. A single shared brand tint replaced that and was no better: it
+ * still spent colour on a destination rather than on a state. Don't reintroduce
+ * either.
  */
 export function QuickLinks() {
   const reduced = useReducedMotion();
@@ -81,7 +83,7 @@ export function QuickLinks() {
               href={link.href}
               className="surface-card hover-lift group flex h-full items-center gap-3 !p-4 hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary-ink ring-1 ring-primary/15 transition-transform group-hover:scale-105">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-transform group-hover:scale-105">
                 <Icon className="h-[18px] w-[18px]" aria-hidden />
               </div>
               <div className="min-w-0 flex-1">

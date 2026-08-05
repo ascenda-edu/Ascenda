@@ -11,13 +11,16 @@ interface StudentAlertsProps {
   students: CounsellorStudent[];
 }
 
-const FLAG_CONFIG: Record<StudentFlag, { label: string; icon: typeof AlertTriangle; color: string; bg: string }> = {
-  profile_incomplete: { label: 'Profile incomplete', icon: UserX, color: 'text-warning', bg: 'bg-warning-subtle' },
-  deadline_urgent: { label: 'Deadline in ≤5 days', icon: Clock, color: 'text-danger', bg: 'bg-danger-subtle' },
-  no_matches: { label: 'No matches yet', icon: TrendingDown, color: 'text-info', bg: 'bg-info-subtle' },
+// No `bg` any more: the tint used to fill an icon bubble on every row, which is the
+// same colour said twice — the flag LABEL underneath already carries the tone, and
+// that is the part being read.
+const FLAG_CONFIG: Record<StudentFlag, { label: string; icon: typeof AlertTriangle; color: string }> = {
+  profile_incomplete: { label: 'Profile incomplete', icon: UserX, color: 'text-warning' },
+  deadline_urgent: { label: 'Deadline in ≤5 days', icon: Clock, color: 'text-danger' },
+  no_matches: { label: 'No matches yet', icon: TrendingDown, color: 'text-muted-foreground' },
   // `stalled` was the app's only orange; it is the same "needs a nudge" state as an
   // incomplete profile, so it wears `warning` too.
-  stalled: { label: 'Stalled — no recent activity', icon: AlertTriangle, color: 'text-warning', bg: 'bg-warning-subtle' }
+  stalled: { label: 'Stalled — no recent activity', icon: AlertTriangle, color: 'text-warning' }
 };
 
 export const StudentAlerts = ({ students }: StudentAlertsProps) => {
@@ -36,8 +39,8 @@ export const StudentAlerts = ({ students }: StudentAlertsProps) => {
   if (flagged.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
-        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-success-subtle">
-          <AlertTriangle className="h-5 w-5 text-success" />
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full">
+          <AlertTriangle className="h-5 w-5 text-muted-foreground" />
         </div>
         <p className="text-sm font-semibold text-foreground">All students on track</p>
         <p className="text-xs text-muted-foreground">No attention flags at this time.</p>
@@ -173,8 +176,8 @@ export const StudentAlerts = ({ students }: StudentAlertsProps) => {
                   )}
                 >
                   {isPinned && <Pin className="h-3 w-3 shrink-0 text-primary-ink/50" />}
-                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${cfg.bg}`}>
-                    <Icon className={`h-4 w-4 ${cfg.color}`} />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-foreground">

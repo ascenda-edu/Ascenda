@@ -91,7 +91,7 @@ export function DocumentsManager({ applications, documents }: DocumentsManagerPr
               key={doc.id}
               className="flex items-center gap-4 rounded-2xl border border-border/60 bg-background/60 px-5 py-4"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary-ink" aria-hidden>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground" aria-hidden>
                 <DocIcon className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">

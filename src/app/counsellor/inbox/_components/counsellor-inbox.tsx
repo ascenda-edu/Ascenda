@@ -26,7 +26,7 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 ];
 
 const STATUS_PILL: Record<HelpRequestStatus, { label: string; tone: string }> = {
-  open: { label: 'Open', tone: 'border-feature/25 bg-feature-subtle text-feature' },
+  open: { label: 'Open', tone: 'border-primary/30 bg-primary/10 text-primary-ink' },
   accepted: { label: 'In progress', tone: 'border-warning/25 bg-warning-subtle text-warning' },
   resolved: { label: 'Resolved', tone: 'border-success/25 bg-success-subtle text-success' }
 };
@@ -167,7 +167,7 @@ export function CounsellorInbox() {
           ))}
         </div>
       ) : loadFailed && items.length === 0 ? (
-        <div className="rounded-4xl border border-dashed border-danger/40 bg-danger-subtle p-12 text-center" role="alert">
+        <div className="rounded-4xl border border-dashed border-border bg-card p-12 text-center" role="alert">
           <Inbox className="mx-auto mb-3 h-8 w-8 text-danger/50" />
           <p className="font-semibold text-foreground">Couldn&apos;t load your inbox</p>
           <p className="mt-1 text-sm text-muted-foreground">

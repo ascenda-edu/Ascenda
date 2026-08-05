@@ -173,8 +173,8 @@ function PageCard({ snippet, onClick }: { snippet: PageSnippet; onClick: () => v
       onClick={onClick}
       className="flex w-full items-center gap-3 rounded-xl border border-border bg-background p-2.5 text-left transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-e-1"
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-        <Icon className="h-4 w-4 text-primary-ink" />
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+        <Icon className="h-4 w-4 text-muted-foreground" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-foreground">{snippet.name}</p>
@@ -552,7 +552,7 @@ export function ChatbotWidget() {
               }}
               exit={{ scale: 0, opacity: 0, transition: { duration: DURATION.exit, ease: EASE } }}
               onClick={() => setIsOpen(true)}
-              className="pointer-events-auto relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-e-3 shadow-primary/25 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-e-4 hover:shadow-primary/30 active:translate-y-0"
+              className="pointer-events-auto relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-e-3 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-e-4 active:translate-y-0"
               aria-label="Open Ascendi AI assistant"
             >
               <Bot className="h-5 w-5" />
@@ -588,8 +588,8 @@ export function ChatbotWidget() {
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                  <Bot className="h-4 w-4 text-primary-ink" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-full">
+                  <Bot className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div>
                   <p className="font-heading text-sm font-semibold text-foreground">Ascendi</p>
@@ -650,8 +650,8 @@ export function ChatbotWidget() {
             >
               {messages.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center text-center">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                    <Bot className="h-6 w-6 text-primary-ink" />
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full">
+                    <Bot className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <p className="font-heading text-sm font-semibold text-foreground">
                     Hey! I&apos;m Ascendi

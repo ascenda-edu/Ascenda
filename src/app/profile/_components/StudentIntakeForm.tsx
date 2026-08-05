@@ -1572,18 +1572,18 @@ export const StudentIntakeForm = ({
           className="surface-card min-w-0 flex-1 scroll-mt-20 overflow-visible rounded-3xl lg:max-w-[78rem] lg:self-start lg:scroll-mt-0"
         >
 
-          {/* Restored-draft notice. `info` tone rather than a primary tint: this
-            * is the app telling the student something, not asking for an action. */}
+          {/* Restored-draft notice. Neutral rather than a tinted surface: this is
+            * the app telling the student something, not asking for an action. */}
           {draftNotice ? (
             <motion.div
               role="status"
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: DURATION.fast, ease: EASE }}
-              className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-info/25 bg-info-subtle px-4 py-3 text-sm"
+              className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-border bg-muted px-4 py-3 text-sm"
             >
               <span className="flex items-center gap-2 font-medium text-foreground">
-                <Info className="h-4 w-4 shrink-0 text-info" aria-hidden />
+                <Info className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
                 Restored your in-progress draft.
               </span>
               <div className="flex shrink-0 items-center gap-1">
@@ -2787,12 +2787,11 @@ export const StudentIntakeForm = ({
                 'mt-6 rounded-xl px-4 py-3 text-sm font-medium',
                 statusIsError
                   ? 'border border-destructive/30 bg-destructive/10 text-danger'
-                  // The `info` tone, matching the restored-draft notice above: this is
-                  // the app telling the student something. It was `bg-muted
-                  // text-muted-foreground`, which paired the muted text token with the
-                  // muted surface token — the weakest pairing available, on a line
-                  // whose whole job is to be read.
-                  : 'border border-info/25 bg-info-subtle text-info'
+                  // Neutral, matching the restored-draft notice above: this is the app
+                  // telling the student something, so it gets a border and a surface to
+                  // be read against rather than a hue. Colour on this form is reserved
+                  // for the error branch above and the save moment below.
+                  : 'border border-border bg-muted text-foreground'
               )}
             >
               {statusMessage}

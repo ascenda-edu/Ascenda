@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { MessageSquare, Flag, RefreshCw, Pin, PinOff, EyeOff, Eye, Settings2, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
-import { NOTE_VISUAL } from '@/lib/theme/categories';
 
 interface ActivityItem {
   id: string;
@@ -21,12 +20,15 @@ interface ActivityFeedProps {
   activity: ActivityItem[];
 }
 
-// Colours from NOTE_VISUAL (the note/signal tone system of record); the icons stay
-// local because this feed uses RefreshCw for updates rather than the shared arrow.
+// No colour here any more. Activity TYPE is a category — the glyph names it — so the
+// tinted bubble each row used to carry was decoration, and three of them repeated
+// down a scrolling feed drowned out the parts of this dashboard that do mean "act".
+// The icons stay local because this feed uses RefreshCw for updates rather than the
+// shared arrow.
 const TYPE_CONFIG = {
-  session: { icon: MessageSquare, color: NOTE_VISUAL.session.text, bg: NOTE_VISUAL.session.bg, label: 'Session' },
-  flag: { icon: Flag, color: NOTE_VISUAL.flag.text, bg: NOTE_VISUAL.flag.bg, label: 'Flag' },
-  update: { icon: RefreshCw, color: NOTE_VISUAL.update.text, bg: NOTE_VISUAL.update.bg, label: 'Update' }
+  session: { icon: MessageSquare, label: 'Session' },
+  flag: { icon: Flag, label: 'Flag' },
+  update: { icon: RefreshCw, label: 'Update' }
 };
 
 function formatRelative(iso: string) {
@@ -196,8 +198,8 @@ export const ActivityFeed = ({ activity }: ActivityFeedProps) => {
                 {isPinned && (
                   <Pin className="mt-1 h-3 w-3 shrink-0 text-primary-ink/50" />
                 )}
-                <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl ${cfg.bg}`}>
-                  <Icon className={`h-3.5 w-3.5 ${cfg.color}`} />
+                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl">
+                  <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
                 <div className="min-w-0 flex-1 space-y-0.5">
                   <div className="flex items-center justify-between gap-2">

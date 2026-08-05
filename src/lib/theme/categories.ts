@@ -53,14 +53,19 @@ import { parseLocalDate } from '@/lib/utils/dates';
  *   - swatch: a single-line className for icon-in-box (h-9 w-9 rounded-2xl)
  */
 
-export type CategoryTone =
-  | 'rose'
-  | 'amber'
-  | 'emerald'
-  | 'sky'
-  | 'violet'
-  | 'primary'
-  | 'neutral';
+/**
+ * `sky` (info) and `violet` (feature) are gone. Five status hues could all land on
+ * one card, and the reader cannot hold five meanings — so the set is now the three
+ * that answer "does this need me?": rose (act now), amber (act soon), emerald
+ * (done, terminal). `info` was never a state, it was "in progress", which is the
+ * absence of a state; `feature` was a *category* wearing a status hue.
+ *
+ * Anything that used to be `sky` is neutral, and anything that used to be
+ * `violet` is the brand. Do not re-add either: the union is the enforcement, and
+ * every registry below is indexed without a cast so a missing member is a compile
+ * error rather than an `undefined.text` crash.
+ */
+export type CategoryTone = 'rose' | 'amber' | 'emerald' | 'primary' | 'neutral';
 
 export interface CategoryVisual {
   tone: CategoryTone;
@@ -141,30 +146,6 @@ const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
       'flex h-9 w-9 items-center justify-center rounded-2xl bg-success-subtle text-success ring-1 ring-success/25',
     bar: 'bg-success-fill'
   },
-  sky: {
-    text: 'text-info',
-    bg: 'bg-info-subtle',
-    border: 'border-info/25',
-    ring: 'ring-info/25',
-    accent: 'border-l-info',
-    chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-info-subtle text-info border border-info/25',
-    swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-info-subtle text-info ring-1 ring-info/25',
-    bar: 'bg-info-fill'
-  },
-  violet: {
-    text: 'text-feature',
-    bg: 'bg-feature-subtle',
-    border: 'border-feature/25',
-    ring: 'ring-feature/25',
-    accent: 'border-l-feature',
-    chip:
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-feature-subtle text-feature border border-feature/25',
-    swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-feature-subtle text-feature ring-1 ring-feature/25',
-    bar: 'bg-feature-fill'
-  },
   primary: {
     // primary-ink, not primary: --primary is tuned to carry white button text and
     // measures 3.58:1 as text on a dark card.
@@ -175,8 +156,13 @@ const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
     accent: 'border-l-primary',
     chip:
       'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-primary-ink border border-primary/25',
-    swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary-ink ring-1 ring-primary/25',
+    // No tint and no ring. A 36px filled box behind an icon is the single most
+    // repeated piece of category decoration in the app, and `primary`/`neutral`
+    // are exactly the tones the NOMINAL registries resolve to — so this swatch
+    // was a brand-tinted plate saying "this is a section", which the section's
+    // own heading already says. The ordinal tones (rose/amber/emerald) keep
+    // their tinted swatch: there the tint is a state, not a label.
+    swatch: 'flex h-9 w-9 items-center justify-center rounded-2xl text-muted-foreground',
     bar: 'bg-primary'
   },
   // Neutral is a TONE, not an absence of one. It used to be `bg-muted/60` +
@@ -193,8 +179,8 @@ const TONE: Record<CategoryTone, Omit<CategoryVisual, 'icon' | 'tone'>> = {
     accent: 'border-l-primary/30',
     chip:
       'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/8 text-foreground border border-primary/15',
-    swatch:
-      'flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/8 text-foreground ring-1 ring-primary/15',
+    // Untinted, for the same reason as `primary` above.
+    swatch: 'flex h-9 w-9 items-center justify-center rounded-2xl text-muted-foreground',
     // The BAR stays hueless, unlike the chip/swatch above. A bar is read by
     // comparison against its neighbours, and `bg-primary/30` differs from the
     // `primary` tone's own `bg-primary` only in alpha — so a neutral bar and a
@@ -248,7 +234,9 @@ export type ApplicationPriority = 'high' | 'medium' | 'watch';
 export const PRIORITY_VISUAL: Record<ApplicationPriority, CategoryVisual> = {
   high: make('rose', AlertTriangle),
   medium: make('amber', Target),
-  watch: make('sky', Compass)
+  // `watch` is the LOWEST priority — "keep an eye on". A hue here competed with
+  // the two above it for attention while asking for nothing.
+  watch: make('neutral', Compass)
 };
 export const PRIORITY_LABEL: Record<ApplicationPriority, string> = {
   high: 'High priority',
@@ -273,11 +261,23 @@ export type ApplicationStatusTone =
   | 'submitted'
   | 'decision'
   | 'enrolled';
+/* The five stages are ordinal, but only two of them ask anything of the student,
+   and those are the only two that keep a hue:
+
+     planning     nothing to do yet          → neutral
+     in_progress  being worked on now        → amber, act soon
+     submitted    your part is done          → emerald, terminal
+     decision     waiting on the university  → neutral (waiting is not a task)
+     enrolled     terminal state of the app  → the brand
+
+   `decision` was violet and `planning` was sky. Both were marking a *position in
+   a sequence*, which the stage label already does, so the hue was spent telling
+   the reader something they could already read. */
 export const APPLICATION_STATUS_VISUAL: Record<ApplicationStatusTone, CategoryVisual> = {
-  planning: make('sky', Compass),
+  planning: make('neutral', Compass),
   in_progress: make('amber', Timer),
   submitted: make('emerald', CheckCircle2),
-  decision: make('violet', Award),
+  decision: make('neutral', Award),
   enrolled: make('primary', GraduationCap)
 };
 
@@ -367,8 +367,10 @@ export type DeadlineUrgency = 'overdue' | 'this-week' | 'this-month' | 'later' |
 export const DEADLINE_VISUAL: Record<DeadlineUrgency, CategoryVisual> = {
   overdue: make('rose', AlertTriangle),
   'this-week': make('amber', CalendarClock),
-  'this-month': make('sky', Calendar),
-  later: make('emerald', Calendar),
+  // A month out is not something to do today. It was sky; the DATE carries the
+  // distance, so the hue was duplicating the text beside it.
+  'this-month': make('neutral', Calendar),
+  later: make('neutral', Calendar),
   unknown: make('neutral', Calendar)
 };
 
@@ -413,8 +415,11 @@ export const COMPLETION_VISUAL: Record<CompletionBand, CategoryVisual> = {
   // never via `classifyCompletion` — see both below.
   none: make('neutral', Circle),
   low: make('rose', AlertTriangle),
+  // `mid` and `high` are both "unfinished, keep going" — they differ in DEGREE,
+  // and the percentage beside them already carries the degree. `high` was sky,
+  // which read as a third meaning rather than as more of the second.
   mid: make('amber', Target),
-  high: make('sky', TrendingUp),
+  high: make('amber', TrendingUp),
   full: make('emerald', CheckCircle2)
 };
 

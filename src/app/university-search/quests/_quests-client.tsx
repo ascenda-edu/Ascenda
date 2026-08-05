@@ -96,12 +96,12 @@ export function QuestsClient({ decks }: { decks: StudentQuestDeck[] }) {
         {decks.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-3">
             <StatCard label="Quests cleared" value={`${totals.cleared}/${totals.quests}`} icon={CheckCircle2} tone="text-success" />
-            <StatCard label="Active decks" value={String(totals.decks)} icon={Scroll} tone="text-feature" />
+            <StatCard label="Active decks" value={String(totals.decks)} icon={Scroll} tone="text-primary-ink" />
             <StatCard
               label="Progress"
               value={totals.quests ? `${Math.round((totals.cleared / totals.quests) * 100)}%` : '—'}
               icon={Swords}
-              tone="text-info"
+              tone="text-muted-foreground"
             />
           </div>
         )}

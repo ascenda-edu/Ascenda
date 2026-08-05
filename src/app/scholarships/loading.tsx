@@ -38,7 +38,7 @@ export default function ScholarshipsLoading() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="rounded-2xl border border-l-4 border-border bg-card p-4 shadow-e-1 sm:p-5"
+              className="rounded-2xl border border-border bg-card p-4 shadow-e-1 sm:p-5"
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 flex-1 items-start gap-3">

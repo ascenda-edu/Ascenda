@@ -121,9 +121,9 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         student: s,
         detail: s.academic.subjects.slice(0, 3).join(', '),
         badge: programme === 'IB' && s.academic.ibPoints
-          ? { label: `${s.academic.ibPoints} pts`, color: 'bg-feature-subtle text-feature' }
+          ? { label: `${s.academic.ibPoints} pts`, color: 'bg-primary/10 text-primary-ink' }
           : s.academic.aLevelGrades
-            ? { label: s.academic.aLevelGrades, color: 'bg-info-subtle text-info' }
+            ? { label: s.academic.aLevelGrades, color: 'bg-muted text-muted-foreground' }
             : undefined
       }))
     });
@@ -170,7 +170,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
       items: group.map((s) => ({
         student: s,
         detail: s.academic.careerAspiration,
-        badge: { label: s.academic.programmeType === 'IB' ? 'IB' : 'A-Level', color: s.academic.programmeType === 'IB' ? 'bg-feature-subtle text-feature' : 'bg-info-subtle text-info' }
+        badge: { label: s.academic.programmeType === 'IB' ? 'IB' : 'A-Level', color: s.academic.programmeType === 'IB' ? 'bg-primary/10 text-primary-ink' : 'bg-muted text-muted-foreground' }
       }))
     });
   };
@@ -184,7 +184,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         items.push({
           student: s,
           detail: matchingApps.map((a) => `${a.university} — ${a.program}`).join(' · '),
-          badge: { label: `${matchingApps.length} app${matchingApps.length !== 1 ? 's' : ''}`, color: 'bg-info-subtle text-info' }
+          badge: { label: `${matchingApps.length} app${matchingApps.length !== 1 ? 's' : ''}`, color: 'bg-muted text-muted-foreground' }
         });
       }
     });
@@ -289,13 +289,13 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         setDrilldown({
           title: 'UK-Bound Students',
           subtitle: `${group.length} student${group.length !== 1 ? 's' : ''} targeting the United Kingdom`,
-          accentColor: 'bg-feature-fill',
+          accentColor: 'bg-primary',
           items: group.map((s) => {
             const ukMatches = s.matches.filter((m) => m.country === 'UK');
             return {
               student: s,
               detail: ukMatches.map((m) => m.university).join(', '),
-              badge: { label: `${ukMatches.length} UK`, color: 'bg-feature-subtle text-feature' }
+              badge: { label: `${ukMatches.length} UK`, color: 'bg-primary/10 text-primary-ink' }
             };
           })
         });
@@ -370,7 +370,7 @@ export function AnalyticsClient({ students, stats, fieldDistribution }: Analytic
         setDrilldown({
           title: 'Safe-Tier Coverage',
           subtitle: `${withSafe.length} of ${students.length} students have a Safe option`,
-          accentColor: 'bg-info-fill',
+          accentColor: 'bg-muted-foreground',
           items: all.map((s) => {
             const hasSafe = s.matches.some((m) => m.tier === 'Safe');
             const safeMatches = s.matches.filter((m) => m.tier === 'Safe');
@@ -549,6 +549,9 @@ function InsightsContent({
   totalReachMatches: number;
   safeCoverageCount: number;
 }) {
+  // Six tinted cards in a row cancelled each other out: when every tile is a
+  // coloured block, none of them is the one to look at. The cards are now plain
+  // surfaces and the tone survives where it is actually read — on the number.
   const insights = [
     {
       key: 'profile_gaps',
@@ -556,19 +559,19 @@ function InsightsContent({
       value: `${stats.flagged} student${stats.flagged !== 1 ? 's' : ''}`,
       detail: 'have incomplete profiles affecting match quality',
       color: 'text-warning',
-      bg: 'bg-warning-subtle',
-      border: 'border-warning/25',
-      hoverBorder: 'hover:border-warning/50'
+      bg: 'bg-card',
+      border: 'border-border',
+      hoverBorder: 'hover:border-muted-foreground'
     },
     {
       key: 'top_destination',
       label: 'Top destination',
       value: 'United Kingdom',
       detail: 'is the #1 preferred study destination across the cohort',
-      color: 'text-feature',
-      bg: 'bg-feature-subtle',
-      border: 'border-feature/25',
-      hoverBorder: 'hover:border-feature/50'
+      color: 'text-primary-ink',
+      bg: 'bg-card',
+      border: 'border-border',
+      hoverBorder: 'hover:border-muted-foreground'
     },
     {
       key: 'submission_rate',
@@ -576,9 +579,9 @@ function InsightsContent({
       value: `${Math.round((totalSubmittedApps / (totalApps || 1)) * 100)}%`,
       detail: 'of all applications have been submitted',
       color: 'text-success',
-      bg: 'bg-success-subtle',
-      border: 'border-success/25',
-      hoverBorder: 'hover:border-success/50'
+      bg: 'bg-card',
+      border: 'border-border',
+      hoverBorder: 'hover:border-muted-foreground'
     },
     {
       key: 'deadlines_week',
@@ -586,9 +589,9 @@ function InsightsContent({
       value: String(stats.deadlinesThisWeek),
       detail: `deadline${stats.deadlinesThisWeek !== 1 ? 's' : ''} require immediate attention`,
       color: 'text-danger',
-      bg: 'bg-danger-subtle',
-      border: 'border-danger/25',
-      hoverBorder: 'hover:border-danger/50'
+      bg: 'bg-card',
+      border: 'border-border',
+      hoverBorder: 'hover:border-muted-foreground'
     },
     {
       key: 'reach_apps',
@@ -596,19 +599,19 @@ function InsightsContent({
       value: `${totalReachMatches}`,
       detail: 'Reach-tier matches across cohort — worth monitoring closely',
       color: TIER_VISUAL.reach.text,
-      bg: TIER_VISUAL.reach.bg,
-      border: TIER_VISUAL.reach.border,
-      hoverBorder: 'hover:border-danger/50'
+      bg: 'bg-card',
+      border: 'border-border',
+      hoverBorder: 'hover:border-muted-foreground'
     },
     {
       key: 'safe_coverage',
       label: 'Safe coverage',
       value: `${safeCoverageCount} / ${stats.total}`,
       detail: 'students have at least one Safe-tier option',
-      color: 'text-info',
-      bg: 'bg-info-subtle',
-      border: 'border-info/25',
-      hoverBorder: 'hover:border-info/50'
+      color: 'text-muted-foreground',
+      bg: 'bg-card',
+      border: 'border-border',
+      hoverBorder: 'hover:border-muted-foreground'
     }
   ];
 

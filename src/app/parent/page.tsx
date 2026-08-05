@@ -200,7 +200,7 @@ export default async function ParentOverviewPage() {
               <p className="eyebrow">Counsellor</p>
               <p className="mb-4 text-lg font-semibold text-foreground">Latest update</p>
               {overview.latestCounsellorNote ? (
-                <blockquote className="rounded-xl border border-feature/25 bg-feature-subtle p-3 text-sm text-foreground">
+                <blockquote className="rounded-xl border border-primary/30 bg-primary/10 p-3 text-sm text-foreground">
                   <p className="line-clamp-4">{overview.latestCounsellorNote.body}</p>
                   <footer className="mt-2 text-xs text-muted-foreground">
                     {formatRelativeTime(overview.latestCounsellorNote.date)}
@@ -241,7 +241,7 @@ export default async function ParentOverviewPage() {
                     className={cn(
                       'flex items-center gap-2 rounded-xl border px-3 py-2 text-sm',
                       step.done
-                        ? 'border-success/25 bg-success-subtle text-foreground'
+                        ? 'border-border bg-card text-foreground'
                         : 'border-border bg-muted/20 text-muted-foreground'
                     )}
                   >
@@ -270,7 +270,7 @@ export default async function ParentOverviewPage() {
                     label: 'Open',
                     value: overview.openTasks,
                     icon: ClipboardCheck,
-                    tone: 'bg-info-subtle text-info',
+                    tone: 'bg-muted text-muted-foreground',
                   },
                   {
                     label: 'This week',

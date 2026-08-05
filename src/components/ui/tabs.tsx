@@ -117,11 +117,15 @@ const TabsTrigger = React.forwardRef<
       className={cn(
         'nav-pill shrink-0 disabled:pointer-events-none disabled:opacity-50',
         PILL_FOCUS,
-        // Active is carried by weight AND fill, not hue alone — the pill goes
-        // semibold as well as solid, so it survives a greyscale/CVD read.
-        'data-[state=active]:font-semibold data-[state=active]:border-primary/20 data-[state=active]:text-primary-foreground',
-        // Only paint the fill here when there's no morphing indicator to do it.
-        !ctx && 'data-[state=active]:bg-primary data-[state=active]:shadow-e-1',
+        // Active is carried by weight AND a rule, not hue alone, so it survives
+        // a greyscale/CVD read. The solid fill is gone: it was the only solid
+        // brand surface in the persistent frame, and chrome is not a state.
+        // Ink is `primary-ink` (a text value) now that there is no fill for a
+        // foreground colour to sit on.
+        'data-[state=active]:font-semibold data-[state=active]:text-primary-ink',
+        // Only paint the rule here when there's no morphing indicator to do it.
+        !ctx &&
+          'data-[state=active]:after:absolute data-[state=active]:after:inset-x-1 data-[state=active]:after:bottom-0 data-[state=active]:after:h-0.5 data-[state=active]:after:rounded-full data-[state=active]:after:bg-primary-ink data-[state=active]:after:content-[""]',
         className
       )}
       {...props}
@@ -130,12 +134,13 @@ const TabsTrigger = React.forwardRef<
         <motion.span
           layoutId={ctx.layoutId}
           transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-          // Radius matches `.nav-pill`'s own `rounded-lg`.
-          className="absolute inset-0 rounded-lg bg-primary shadow-e-1"
+          // A 2px rule, not a fill — see section-nav.tsx for the same change.
+          // Keeping `layoutId` means it still slides between triggers.
+          className="absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-primary-ink"
           aria-hidden
         />
       ) : null}
-      <span className="relative z-raised whitespace-nowrap">{children}</span>
+      <span className="whitespace-nowrap">{children}</span>
     </TabsPrimitive.Trigger>
   );
 });

@@ -20,7 +20,7 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
         <p className="eyebrow">Programme Type</p>
         <div className="flex h-6 overflow-hidden rounded-xl border border-border/50">
           <button
-            className="flex h-full items-center justify-center bg-feature-fill text-label font-bold text-feature-foreground transition-[width,background-color,filter] duration-700 hover:bg-feature-fill/90 hover:brightness-110"
+            className="flex h-full items-center justify-center bg-primary-ink text-label font-bold text-primary-foreground transition-[width,background-color,filter] duration-700 hover:bg-primary-ink/90 hover:brightness-110"
             style={{ width: `${ibPct}%` }}
             onClick={() => onNavigateProgramme?.('IB')}
             title={`View IB students (${programmeBreakdown.ib})`}
@@ -28,7 +28,7 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
             {ibPct > 10 ? `IB ${ibPct}%` : ''}
           </button>
           <button
-            className="flex h-full items-center justify-center bg-info-fill text-label font-bold text-info-foreground transition-[width,background-color,filter] duration-700 hover:bg-info-fill/90 hover:brightness-110"
+            className="flex h-full items-center justify-center bg-muted-foreground text-label font-bold text-background transition-[width,background-color,filter] duration-700 hover:bg-muted-foreground/90 hover:brightness-110"
             style={{ width: `${aLevelPct}%` }}
             onClick={() => onNavigateProgramme?.('A_LEVEL')}
             title={`View A-Level students (${programmeBreakdown.aLevel})`}
@@ -41,14 +41,14 @@ export const CohortBreakdown = ({ programmeBreakdown, fieldDistribution, onNavig
             onClick={() => onNavigateProgramme?.('IB')}
             className="flex items-center gap-1.5 hover:text-foreground transition"
           >
-            <span className="h-2.5 w-2.5 rounded-sm bg-feature-fill" />
+            <span className="h-2.5 w-2.5 rounded-sm bg-primary" />
             IB — {programmeBreakdown.ib} students
           </button>
           <button
             onClick={() => onNavigateProgramme?.('A_LEVEL')}
             className="flex items-center gap-1.5 hover:text-foreground transition"
           >
-            <span className="h-2.5 w-2.5 rounded-sm bg-info-fill" />
+            <span className="h-2.5 w-2.5 rounded-sm bg-muted-foreground" />
             A-Level — {programmeBreakdown.aLevel} students
           </button>
         </div>

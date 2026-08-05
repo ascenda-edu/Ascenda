@@ -509,7 +509,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
       {/* ── Search panel ── */}
       <section className="surface-card space-y-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary-ink ring-1 ring-primary/15">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground">
             <Search className="h-4 w-4" />
           </div>
           <div>
@@ -622,7 +622,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
         <section className="surface-card space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary-ink ring-1 ring-primary/15">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground">
                 <Layers className="h-4 w-4" />
               </div>
               <div>
@@ -839,7 +839,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                   type="button"
                   onClick={() => setAssignOpen(true)}
                   disabled={selectedDeck.cards.length === 0}
-                  className="flex items-center gap-1.5 rounded-full bg-feature-fill px-3.5 py-1.5 text-xs font-semibold text-feature-foreground transition hover:-translate-y-0.5 hover:bg-feature-fill/90 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-full bg-primary-ink px-3.5 py-1.5 text-xs font-semibold text-primary-foreground transition hover:-translate-y-0.5 hover:bg-primary-ink/90 disabled:opacity-50"
                 >
                   <Send className="h-3 w-3" /> Assign to students
                 </button>
@@ -851,14 +851,14 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                   {selectedDeck.assignees.map((a) => (
                     <span
                       key={a.assignmentId}
-                      className="flex items-center gap-1.5 rounded-full border border-feature/25 bg-feature-subtle py-1 pl-2.5 pr-1.5 text-xs font-medium text-feature"
+                      className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 py-1 pl-2.5 pr-1.5 text-xs font-medium text-primary-ink"
                     >
                       {a.flag} {a.name}
                       <button
                         type="button"
                         onClick={() => unassign(selectedDeck.id, a.assignmentId)}
                         aria-label={`Unassign ${a.name}`}
-                        className="rounded-full p-0.5 transition hover:bg-feature/20"
+                        className="rounded-full p-0.5 transition hover:bg-primary/20"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -908,7 +908,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
                         type="checkbox"
                         checked={assignSelection.has(s.id)}
                         onChange={() => toggleAssign(s.id)}
-                        className="h-4 w-4 rounded border-border accent-feature"
+                        className="h-4 w-4 rounded border-border accent-primary"
                       />
                       <span className="text-base">{s.flag}</span>
                       <span className="flex-1 text-sm font-medium text-foreground">{s.name}</span>
@@ -935,7 +935,7 @@ export function UniversitiesClient({ initialDecks, roster }: Props) {
               type="button"
               onClick={assignDeck}
               disabled={assignSelection.size === 0 || isAssigning}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-feature-fill px-4 py-2.5 text-sm font-semibold text-feature-foreground transition hover:-translate-y-0.5 hover:bg-feature-fill/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-primary-ink px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:-translate-y-0.5 hover:bg-primary-ink/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
             >
               {isAssigning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               Send quest to {assignSelection.size || 'selected'} student{assignSelection.size === 1 ? '' : 's'}

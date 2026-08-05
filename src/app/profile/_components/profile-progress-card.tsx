@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
+import { Check, Sparkles } from 'lucide-react';
 import { PROFILE_STEPS, type StepCompletionMap } from '@/lib/profile/steps';
 import { cn } from '@/lib/utils';
 import { DURATION, EASE } from '@/lib/motion';
@@ -95,28 +95,38 @@ export function ProfileProgressCard({
               href={`/profile/wizard?step=${step.key}`}
               className={cn(
                 'group surface-subcard relative overflow-hidden px-4 py-4 transition-transform duration-300 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                complete
-                  ? 'border-success/25 bg-success-subtle'
-                  : ''
+                // The card surface stays neutral in BOTH states. Colour goes to the
+                // step that still needs work — a warning rail plus the action strip
+                // below — so attention lands on what is unfinished rather than on
+                // what is already done.
+                !complete && 'surface-card--action'
               )}
             >
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-foreground">{step.title}</p>
                 <span
                   className={cn(
-                    'inline-flex items-center rounded-full px-3 py-1 text-label font-semibold uppercase tracking-[0.2em]',
+                    'inline-flex items-center gap-1 rounded-full px-3 py-1 text-label font-semibold uppercase tracking-[0.2em]',
                     complete
-                      ? 'bg-success-subtle text-success ring-1 ring-success/25'
+                      ? 'text-muted-foreground'
                       : 'bg-muted/70 text-muted-foreground ring-1 ring-border'
                   )}
                 >
+                  {complete ? <Check className="h-3 w-3 shrink-0" aria-hidden /> : null}
                   {complete ? 'Complete' : 'Action'}
                 </span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{step.description}</p>
-              <span className="eyebrow-accent mt-3 inline-flex items-center gap-2 opacity-80 transition group-hover:opacity-100">
-                Open
-              </span>
+              {complete ? (
+                <span className="eyebrow mt-3 inline-flex items-center gap-2 opacity-80 transition group-hover:opacity-100">
+                  Review
+                </span>
+              ) : (
+                <span className="surface-action-strip">
+                  <span>Finish this step</span>
+                  <span aria-hidden>Open →</span>
+                </span>
+              )}
             </Link>
           );
         })}
@@ -148,7 +158,7 @@ export function ProfileProgressCard({
               {confettiPieces.map((piece, index) => (
                 <motion.span
                   key={`${piece.left}-${piece.top}-${index}`}
-                  className="absolute h-2 w-4 rounded-full bg-gradient-to-r from-primary via-info to-success shadow-e-2"
+                  className="absolute h-2 w-4 rounded-full bg-gradient-to-r from-primary via-muted to-success shadow-e-2"
                   style={{ top: piece.top, left: piece.left }}
                   initial={{ y: -12, opacity: 0, rotate: -12 }}
                   animate={{ y: 12, opacity: [0.9, 1, 0.6, 0], rotate: [0, 8, -6, 12] }}

@@ -72,11 +72,15 @@ const VERDICT_COPY: Record<Verdict, { headline: string; detail: string; tone: 'g
   }
 };
 
+// The verdict panel is a CARD, so it does not take a tint: a whole tinted block is
+// more surface than a one-line verdict earns, and it competed with the composition
+// bar underneath — the part that actually shows the imbalance. The tone survives on
+// the icon and the headline, which is where it is read.
 const TONE_STYLES = {
-  good: { card: 'border-success/25 bg-success-subtle', icon: 'text-success', headline: 'text-success' },
-  warn: { card: 'border-warning/25 bg-warning-subtle', icon: 'text-warning', headline: 'text-warning' },
-  crit: { card: 'border-danger/25 bg-danger-subtle', icon: 'text-danger', headline: 'text-danger' },
-  info: { card: 'border-info/25 bg-info-subtle', icon: 'text-info', headline: 'text-info' }
+  good: { card: 'border-border bg-card', icon: 'text-success', headline: 'text-success' },
+  warn: { card: 'border-border bg-card', icon: 'text-warning', headline: 'text-warning' },
+  crit: { card: 'border-border bg-card', icon: 'text-danger', headline: 'text-danger' },
+  info: { card: 'border-border bg-card', icon: 'text-muted-foreground', headline: 'text-muted-foreground' }
 } as const;
 
 // Tier segments are TIER_VISUAL's; `untracked` is genuinely neutral (no tier has

@@ -81,10 +81,20 @@
 
        Semantics (mirrored from lib/theme/categories.ts, the tone system of record):
          danger  = urgent / overdue / reach      warning = todo / pending / match
-         success = done / submitted / safety     info    = in-progress / planning
-         feature = essay / session / counsellor-flavoured
+         success = done / submitted / safety
+
+       THREE tones, not five. `info` and `feature` were deleted: `info` meant
+       "in progress", which is the absence of a state, and `feature` marked a
+       CATEGORY (essay / session / counsellor) in a status hue. Anything that was
+       `info` is now neutral; anything that was `feature` is the brand.
+
+       Do not add a fourth. The test a tone has to pass is "does this ask the
+       reader to do something, or confirm they no longer need to?" — a position in
+       a sequence, a type of thing, and a section of a form all fail it.
+
        --destructive stays separate: it's for destructive *actions* (delete), red,
-       not the rose status tone. */
+       not the rose status tone. And note `danger` is still the status tone for
+       error FEEDBACK (see ui/toast.tsx) — the two are not interchangeable. */
     --primary-ink: 241 65% 55%;
 
     /* Each tone carries a TEXT value and a FILL value, and they are not the same
@@ -139,21 +149,7 @@
     --danger-foreground: 232 30% 13%;
     --danger-subtle: 348 100% 92.5%;
 
-    --info: 204 75% 37.4%;
-    --info-fill: 204 65% 50%;
-    --info-foreground: 232 30% 13%;
-    --info-subtle: 196 100% 88.5%;
 
-    /* feature takes ink like the other four. Its fill sits at 65% lightness and
-       65% saturation — chroma-maximising had it at an electric #7847eb that
-       needed white on it, then at #9964f5; both read as neon beside the indigo
-       brand. Note danger/info/feature-subtle are unchanged from the previous
-       pass: they were never the loud ones, and the target was chosen to meet
-       THEM rather than drag them up. */
-    --feature: 262 75% 46%;
-    --feature-fill: 262 65% 65%;
-    --feature-foreground: 232 30% 13%;
-    --feature-subtle: 262 96% 93%;
 
     /* ── Chart series: a monochrome brand ramp ──────────────────────────────
        ONE hue (the brand indigo) in five lightness steps, NOT five different
@@ -199,10 +195,15 @@
        stays in the config, and it stays expressed as hsl(var(--shadow) / <alpha>)
        rather than as one opaque var for the whole shadow. That matters: Tailwind
        derives `--tw-shadow-colored` by substituting the colour out of the shadow
-       value, and it cannot do that to a var it can't parse. Three call sites
-       compose `shadow-primary/20` on top of `shadow-e-2` (ui/button.tsx,
-       chat/chatbot-widget.tsx, toolbox/chances-calculator.tsx) and would silently
-       lose their tint.
+       value, and it cannot do that to a var it can't parse, so a tinted shadow
+       composed on one of these would silently lose its tint.
+
+       Nothing relies on that now. The three call sites that used to compose
+       `shadow-primary/20` on `shadow-e-2` — ui/button.tsx, chat/chatbot-widget.tsx,
+       toolbox/chances-calculator.tsx — no longer tint their shadows at all: a
+       coloured shadow is a chromatic fill wearing a blur, and depth is already
+       carried achromatically by this ladder. The per-layer form is kept regardless,
+       because it costs nothing and preserves the substitution.
 
        --shadow-boost multiplies every alpha in the ladder, so dark mode can be
        ~7x heavier without duplicating eight alpha values per theme.
@@ -334,15 +335,7 @@
     --danger-foreground: 232 30% 13%;
     --danger-subtle: 353 43% 24%;
 
-    --info: 196 65% 63.2%;
-    --info-fill: 196 65% 63.2%;
-    --info-foreground: 232 30% 13%;
-    --info-subtle: 204 62% 25.5%;
 
-    --feature: 262 65% 71.8%;
-    --feature-fill: 262 65% 71.8%;
-    --feature-foreground: 232 30% 13%;
-    --feature-subtle: 259 35% 25%;
 
     /* The ramp runs the other way on a dark card, and lives in a compressed upper
        band (60–90% rather than 30–79%) because anything below ~58% lightness
@@ -462,8 +455,14 @@
 
 
 @layer utilities {
+  /* Was `from-primary to-accent`. `--accent` is a second indigo sitting ΔE 37
+     from `--primary` — close enough to read as a mistake, far enough to see —
+     and it is being collapsed. `--primary-ink` is the honest partner: identical
+     to `--primary` in light (so the gradient is a flat brand wash there, which
+     is what it looked like anyway) and genuinely lighter in dark, where the
+     gradient actually reads. */
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-ink;
   }
 
   .scrollbar-thin::-webkit-scrollbar {
@@ -582,8 +581,42 @@
     @apply relative rounded-lg border border-transparent px-3 py-2 sm:py-1.5 text-xs sm:text-sm font-medium text-muted-foreground transition-[color,background-color,border-color,box-shadow] duration-200 hover:bg-muted/60 hover:text-foreground;
   }
 
+  /* The active tab used to be a SOLID brand fill. It was the only solid
+     `--primary` surface in the persistent frame, which meant every screen opened
+     with part of its colour budget already spent on chrome — and chrome is not a
+     state. Active is now carried by ink plus weight, with the 2px rule supplied
+     by the call site (section-nav's `layoutId` element, so the indicator still
+     slides between tabs; it slides a rule instead of a pill).
+
+     No background at all: `.nav-pill` already owns `hover:bg-muted/60`, and a
+     resting background here would fight it. */
   .nav-pill-active {
-    @apply border-primary/20 bg-primary text-primary-foreground shadow-e-1;
+    @apply border-transparent font-semibold text-primary-ink;
+  }
+
+  /* ── The action strip ─────────────────────────────────────────────────────
+     Colour marks the ONE card that wants work, and it marks it at the smallest
+     area that still reads: a 4px edge plus a tinted footer band. Not the card
+     surface — a tinted card says "this whole thing is a state", which is how
+     five completed sections ended up shouting louder than the one unfinished
+     one.
+
+     `border-l-4` is a named Tailwind step on purpose. `border-l-[3px]` would be
+     an arbitrary value, and `lint:tokens` ratchets `arbitrary-geometry` — it may
+     only go down. */
+  .surface-card--action {
+    @apply border-l-4 border-l-warning;
+  }
+
+  /* A small tinted zone at the foot of the card, INSET rather than bled to the
+     edges. The first version cancelled the parent's padding with `-mx-6 -mb-6`,
+     which silently assumed `.surface-card`'s `p-6 sm:p-7` — and the cards that
+     need this most are `.surface-subcard` at `p-5` and the profile step cards at
+     `px-4 py-4`, where those margins overhang. Staying inside the padding box
+     makes the class work at any card padding, which is what a shared class has
+     to do. */
+  .surface-action-strip {
+    @apply mt-4 flex items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning-subtle px-3 py-2 text-xs font-semibold text-warning;
   }
 
   .page-soft-bg {

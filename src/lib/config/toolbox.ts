@@ -23,17 +23,18 @@ import type { BlockCategory } from '@/lib/data/student-demo-data';
 // (CATEGORY_ORDER.map → filter by category). Nothing is interleaved, so there is
 // nothing for colour to disambiguate. The heading does that work already.
 //
-// So all six share the brand tint, except counsellor_insight, which keeps
-// `feature` because "this came from your counsellor" is a real distinction the
-// app makes everywhere (see globals.css: feature = counsellor-flavoured) — and
-// it now actually stands out, which it could not when all six were coloured.
+// So all six share the brand tint. counsellor_insight used to keep `feature` on
+// the grounds that "this came from your counsellor" is a real distinction — but
+// `feature` has been deleted (it was a category dressed as a tone), and the
+// authorship of a block is stated in its label, not its hue. The six are now
+// byte-identical: one tint, six icons, six headings.
 export const CATEGORY_CONFIG: Record<BlockCategory, { icon: typeof Globe; label: string; color: string; bg: string }> = {
   identity: { icon: User, label: 'Identity', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/25' },
   experience: { icon: Globe, label: 'Experience', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/25' },
   strength: { icon: Star, label: 'Strengths', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/25' },
   interest: { icon: Heart, label: 'Interests', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/25' },
   achievement: { icon: Trophy, label: 'Achievements', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/25' },
-  counsellor_insight: { icon: MessageSquare, label: 'Counsellor', color: 'text-feature', bg: 'bg-feature-subtle border-feature/25' },
+  counsellor_insight: { icon: MessageSquare, label: 'Counsellor', color: 'text-primary-ink', bg: 'bg-primary/10 border-primary/25' },
 };
 
 export const CATEGORY_ORDER: BlockCategory[] = ['identity', 'experience', 'strength', 'interest', 'achievement', 'counsellor_insight'];

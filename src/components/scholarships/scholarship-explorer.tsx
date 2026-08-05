@@ -288,9 +288,8 @@ export const ScholarshipExplorer = ({ scholarships }: ScholarshipExplorerProps) 
                   variants={cardVariants}
                   layout
                   className={cn(
-                    'hover-lift group relative overflow-hidden rounded-2xl border border-l-4 bg-card p-4 sm:p-5 shadow-e-1',
-                    visual.border,
-                    visual.accent
+                    'hover-lift group relative overflow-hidden rounded-2xl border bg-card p-4 sm:p-5 shadow-e-1',
+                    visual.border
                   )}
                 >
                   <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

@@ -86,9 +86,7 @@ export const TOKENS = {
     tones: {
       success: { text: '156 75% 27.4%', fill: '156 65% 40%',   subtle: '158 96% 91%',    fg: T(NEUTRAL, 30, 13) },
       warning: { text: '26 75% 37%',    fill: '40 65% 45.2%',  subtle: '47 94% 90%',     fg: T(NEUTRAL, 30, 13) },
-      danger:  { text: '356 75% 44.4%', fill: '348 65% 62.2%', subtle: '348 100% 92.5%', fg: T(NEUTRAL, 30, 13) },
-      info:    { text: '204 75% 37.4%', fill: '204 65% 50%',   subtle: '196 100% 88.5%', fg: T(NEUTRAL, 30, 13) },
-      feature: { text: '262 75% 46%',   fill: '262 65% 65%',   subtle: '262 96% 93%',    fg: T(NEUTRAL, 30, 13) }
+      danger:  { text: '356 75% 44.4%', fill: '348 65% 62.2%', subtle: '348 100% 92.5%', fg: T(NEUTRAL, 30, 13) }
     }
   },
   dark: {
@@ -115,14 +113,12 @@ export const TOKENS = {
     tones: {
       success: { text: '156 65% 50%',   fill: '156 65% 50%',   subtle: '156 61% 20.5%', fg: T(NEUTRAL, 30, 13) },
       warning: { text: '38 65% 61%',    fill: '38 65% 61%',    subtle: '48 62% 20%',    fg: T(NEUTRAL, 30, 13) },
-      danger:  { text: '348 65% 69%',   fill: '348 65% 69%',   subtle: '353 43% 24%',   fg: T(NEUTRAL, 30, 13) },
-      info:    { text: '196 65% 63.2%', fill: '196 65% 63.2%', subtle: '204 62% 25.5%', fg: T(NEUTRAL, 30, 13) },
-      feature: { text: '262 65% 71.8%', fill: '262 65% 71.8%', subtle: '259 35% 25%',   fg: T(NEUTRAL, 30, 13) }
+      danger:  { text: '348 65% 69%',   fill: '348 65% 69%',   subtle: '353 43% 24%',   fg: T(NEUTRAL, 30, 13) }
     }
   }
 };
 
-const TONE_NAMES = ['success', 'warning', 'danger', 'info', 'feature'];
+const TONE_NAMES = ['success', 'warning', 'danger'];
 
 // ── verify ──────────────────────────────────────────────────────────────────
 function verify() {
@@ -211,9 +207,7 @@ function verify() {
 const WINDOW = {
   success: { tint: [156, 166], text: [156, 166] },
   warning: { tint: [40, 48], text: [26, 38] },
-  danger: { tint: [348, 356], text: [348, 356] },
-  info: { tint: [196, 204], text: [196, 204] },
-  feature: { tint: [252, 262], text: [254, 262] }
+  danger: { tint: [348, 356], text: [348, 356] }
 };
 // Unbounded chroma-maximising returns #ff0011 and a neon #00ff88 — trap 2's
 // mirror image. Dark is capped hardest: saturated accents halate on a dark ground.
@@ -244,8 +238,8 @@ const TINT_C_TOL = 0.012;
 // Red and violet cannot be very chromatic this high in sRGB, so they get a
 // slightly lower floor rather than a worse colour.
 const TINT_L = {
-  light: { success: .945, warning: .945, danger: .915, info: .925, feature: .915 },
-  dark: { success: .355, warning: .355, danger: .340, info: .345, feature: .340 }
+  light: { success: .945, warning: .945, danger: .915 },
+  dark: { success: .355, warning: .355, danger: .340 }
 };
 
 const softestThenMostChromatic = (cands, slack) => {

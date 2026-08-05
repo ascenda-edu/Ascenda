@@ -13,7 +13,6 @@ const ROLES = [
     label: 'Student',
     description: 'Track applications, explore universities, and manage your admissions journey.',
     icon: GraduationCap,
-    accent: 'primary',
     href: '/dashboard',
     badge: 'Applicant workspace',
     badgeColor: 'bg-primary/10 text-primary-ink'
@@ -23,10 +22,9 @@ const ROLES = [
     label: 'Counsellor',
     description: 'Monitor your cohort, track student progress, and manage deadlines at scale.',
     icon: Briefcase,
-    accent: 'feature',
     href: '/counsellor',
     badge: 'Professional dashboard',
-    badgeColor: 'bg-feature-subtle text-feature'
+    badgeColor: 'bg-primary/10 text-primary-ink'
   }
 ] as const;
 
@@ -179,20 +177,16 @@ export default function RoleSelectPage() {
               className={cn(
                 'group relative flex flex-col items-start gap-4 rounded-2xl border bg-card/80 p-6 text-left shadow-e-1 backdrop-blur',
                 'hover-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                role.accent === 'feature'
-                  ? 'hover:border-feature/60 hover:ring-1 hover:ring-feature/20'
-                  : 'hover:border-primary/60 hover:ring-1 hover:ring-primary/20',
-                isSelected && role.accent === 'feature' && 'border-feature/60 ring-1 ring-feature/30',
-                isSelected && role.accent === 'primary' && 'border-primary/60 ring-1 ring-primary/30',
+                // Both roles now share the brand accent. They used to be told apart by
+                // hue (primary vs the deleted `feature`), which spent colour on a
+                // two-item category; the icon and the label already do that job, and
+                // the only real state on these cards is SELECTED.
+                'hover:border-primary/60 hover:ring-1 hover:ring-primary/20',
+                isSelected && 'border-primary/60 ring-1 ring-primary/30',
                 isOther && 'opacity-40'
               )}
             >
-              <div
-                className={cn(
-                  'flex h-11 w-11 items-center justify-center rounded-2xl',
-                  role.accent === 'feature' ? 'bg-feature-subtle text-feature' : 'bg-primary/10 text-primary-ink'
-                )}
-              >
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl text-muted-foreground">
                 <Icon className="h-5 w-5" aria-hidden />
               </div>
 
@@ -204,12 +198,7 @@ export default function RoleSelectPage() {
                 <p className="text-sm text-muted-foreground">{role.description}</p>
               </div>
 
-              <span
-                className={cn(
-                  'flex items-center gap-1 text-sm font-medium transition-colors',
-                  role.accent === 'feature' ? 'text-feature' : 'text-primary-ink'
-                )}
-              >
+              <span className="flex items-center gap-1 text-sm font-medium text-primary-ink transition-colors">
                 {isSelected && loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />

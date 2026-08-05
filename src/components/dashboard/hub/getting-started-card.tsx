@@ -57,11 +57,11 @@ export function GettingStartedCard({
     // correctly drop its first step for anyone who has already dismissed this.
     <div
       data-tour="getting-started"
-      className="surface-card surface-card--static rounded-4xl border-l-4 border-l-primary/60"
+      className="surface-card surface-card--static rounded-4xl"
     >
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary-ink ring-1 ring-primary/20">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-muted-foreground">
             <Rocket className="h-5 w-5" aria-hidden />
           </span>
           <div>

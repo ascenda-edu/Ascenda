@@ -189,7 +189,7 @@ export function CoursePageClient({ params, initialData }: { params: { id: string
 
   if (error) {
     return (
-      <div role="alert" className="rounded-2xl border border-danger/25 bg-danger-subtle px-4 py-3 text-sm text-danger">
+      <div role="alert" className="rounded-2xl border border-border bg-card px-4 py-3 text-sm text-danger">
         {error}
       </div>
     );

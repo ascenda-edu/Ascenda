@@ -29,10 +29,10 @@ const isSafeHref = (href?: string | null): href is string =>
 // Semantic Badge variants, not class bundles — the pill geometry now lives in
 // exactly one place (ui/badge.tsx) and this table says only what the tone MEANS.
 const KIND_TONE: Record<string, BadgeVariant> = {
-  help_request: 'feature',
+  help_request: 'primary',
   help_accepted: 'success',
   deck_assignment: 'warning',
-  default: 'info'
+  default: 'neutral'
 };
 
 const formatRelative = (iso: string): string => {

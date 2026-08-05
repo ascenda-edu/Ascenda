@@ -22,8 +22,8 @@ export function ProgramResultCard({ hit, mode }: ProgramResultCardProps) {
 
   const inner = (
     <>
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-        <GraduationCap className="h-4 w-4 text-primary-ink" />
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+        <GraduationCap className="h-4 w-4 text-muted-foreground" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-foreground">{hit.course}</p>

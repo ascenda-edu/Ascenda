@@ -252,12 +252,17 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
                     key={doc.id}
                     className={cn(
                       'rounded-2xl border px-4 py-3 hover-lift',
-                      doc.status === 'overdue' ? 'border-danger/25 bg-danger-subtle' : 'border-border/60 bg-background/60'
+                      // Overdue gets a firmer EDGE, not a red panel: the status chip
+                      // and the due-date already say it in the tone, and a tinted card
+                      // makes a whole column of documents read as one alarm.
+                      doc.status === 'overdue' ? 'border-border bg-background/60' : 'border-border/60 bg-background/60'
                     )}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', cfg.bg)}>
-                        <TypeIcon className={cn('h-4 w-4', cfg.color)} />
+                      {/* Document TYPE is a category, so the glyph is plain. Status
+                          lives in the chip on the right. */}
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
+                        <TypeIcon className="h-4 w-4 text-muted-foreground" />
                       </div>
                       <Link
                         href={`/counsellor/students/${studentId}?tab=applications`}
@@ -278,7 +283,7 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
                           </span>
                         )}
                         {nudge ? (
-                          <span className="flex items-center gap-1 rounded-full border border-info/25 bg-info-subtle px-2.5 py-1 text-label font-semibold text-info">
+                          <span className="flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 text-label font-semibold text-muted-foreground">
                             <Send className="h-3 w-3" />
                             Nudge sent · {formatNudgeAge(nudge.at)}
                           </span>
@@ -313,7 +318,7 @@ export function CounsellorDocumentBoard({ documents }: CounsellorDocumentBoardPr
                               className={cn(
                                 'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-label font-medium transition disabled:cursor-wait disabled:opacity-60',
                                 isActive
-                                  ? 'border-info/25 bg-info-subtle text-info'
+                                  ? 'border-border bg-muted text-foreground'
                                   : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:bg-muted/60 hover:text-foreground'
                               )}
                             >

@@ -29,7 +29,7 @@ const urgencyTone = (days: number | null): { dot: string; label: string; labelTo
   if (days === 1) return { dot: 'bg-danger-fill', label: 'Due tomorrow', labelTone: 'text-danger' };
   if (days <= 3) return { dot: 'bg-danger-fill', label: `Due in ${days} days`, labelTone: 'text-danger' };
   if (days <= 7) return { dot: 'bg-warning-fill', label: `Due in ${days} days`, labelTone: 'text-warning' };
-  return { dot: 'bg-info-fill', label: `Due in ${days} days`, labelTone: 'text-info' };
+  return { dot: 'bg-muted-foreground', label: `Due in ${days} days`, labelTone: 'text-muted-foreground' };
 };
 
 export function NextActionsList({ items }: Props) {
@@ -50,8 +50,8 @@ export function NextActionsList({ items }: Props) {
 
   if (ranked.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-success/25 bg-success-subtle p-6 text-center text-sm text-success">
-        <CheckCircle2 className="mx-auto mb-2 h-5 w-5" aria-hidden />
+      <div className="rounded-2xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
+        <CheckCircle2 className="mx-auto mb-2 h-5 w-5 text-success" aria-hidden />
         Nothing urgent right now. Everything tracked is on track.
       </div>
     );
@@ -100,7 +100,7 @@ export function NextActionsList({ items }: Props) {
                     tasksRemaining: item.tasksRemaining
                   })
                 }
-                className="shrink-0 border-feature/25 bg-feature-subtle text-feature transition hover:bg-feature/15"
+                className="shrink-0 border-primary/30 bg-primary/10 text-primary-ink transition hover:bg-primary/15"
               >
                 <Sparkles className="mr-1.5 h-3.5 w-3.5" aria-hidden />
                 Need help

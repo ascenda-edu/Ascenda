@@ -203,8 +203,8 @@ export function CustomWidgetBuilder({ open, onOpenChange, students, onCreate }: 
             <p className="text-xs font-semibold text-foreground">Live preview</p>
             <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
               <div className="mb-3 flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-primary/10">
-                  <Sparkles className="h-3.5 w-3.5 text-primary-ink" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-xl">
+                  <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
                 <p className="truncate text-sm font-semibold text-foreground">
                   {title.trim() || suggestCustomWidgetTitle(source, dimension)}

@@ -19,7 +19,7 @@ import { getFitScoreVisuals } from '@/lib/theme/fit-score';
 
 const stageTone = {
   Researching: 'bg-warning-subtle text-warning border-warning/25',
-  Shortlisted: 'bg-info-subtle text-info border-info/25',
+  Shortlisted: 'bg-muted text-muted-foreground border-border',
   Active: 'bg-success-subtle text-success border-success/25'
 };
 
@@ -142,7 +142,7 @@ export default function UniversitySearchShortlistPage() {
           <Card className="border-dashed border-border/70">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <span className="eyebrow">Next steps</span>
-              <Clock className="h-5 w-5 text-feature" aria-hidden />
+              <Clock className="h-5 w-5 text-primary-ink" aria-hidden />
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-semibold text-foreground">
@@ -187,10 +187,9 @@ export default function UniversitySearchShortlistPage() {
               return (
                 <Card
                   key={item.id}
-                  className={cn(
-                    'border border-l-4 bg-card hover-lift',
-                    visual ? cn(visual.border, visual.accent) : 'border-l-border'
-                  )}
+                  // No fit-tier rail: the tier is a category, and the swatch and
+                  // label below already name it.
+                  className="border border-border bg-card hover-lift"
                 >
                   <CardHeader className="space-y-2">
                     <div className="flex items-start justify-between gap-3">

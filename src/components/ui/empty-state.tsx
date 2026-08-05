@@ -61,9 +61,11 @@ export function EmptyState({
                 inline
                     ? "items-start p-4 text-left"
                     : "min-h-[280px] items-center justify-center p-8 text-center",
-                positive
-                    ? "border-success/30 bg-success-subtle"
-                    : "border-border/60 bg-muted/10",
+                // One neutral surface for both tones. A `positive` empty state is a
+                // 280px-tall panel, and a tone tint that large stops being a signal
+                // and becomes the background; the tone now lives on the glyph below,
+                // which is where it is actually read.
+                "border-border/60 bg-muted/10",
                 className
             )}
             initial={{ opacity: 0, y: 6 }}
@@ -74,14 +76,17 @@ export function EmptyState({
                 <div
                     aria-hidden
                     className={cn(
-                        "flex items-center justify-center rounded-2xl ring-1",
+                        "flex items-center justify-center rounded-2xl",
                         inline ? "h-9 w-9" : "h-12 w-12",
                         // Size and colour the passed element from here, so call sites
                         // stay `icon={<Inbox />}` with no styling of their own.
                         inline ? "[&>svg]:h-4 [&>svg]:w-4" : "[&>svg]:h-5 [&>svg]:w-5",
+                        // No fill and no ring: a bubble around a glyph is decoration,
+                        // and the only thing here worth a colour is the `positive` tone
+                        // itself, on the glyph.
                         positive
-                            ? "bg-success/10 ring-success/25 [&>svg]:text-success"
-                            : "bg-primary/5 ring-primary/10 [&>svg]:text-primary-ink/50"
+                            ? "[&>svg]:text-success"
+                            : "[&>svg]:text-muted-foreground"
                     )}
                 >
                     {icon}

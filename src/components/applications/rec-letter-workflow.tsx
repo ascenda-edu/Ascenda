@@ -43,16 +43,16 @@ const STATUS_INDEX: Record<RecLetterStatus, number> = {
 const STATUS_COLORS: Record<RecLetterStatus, string> = {
   draft: 'text-muted-foreground',
   requested: 'text-warning',
-  writing: 'text-info',
-  signed: 'text-feature',
+  writing: 'text-muted-foreground',
+  signed: 'text-primary-ink',
   uploaded: 'text-success'
 };
 
 const STATUS_BG: Record<RecLetterStatus, string> = {
   draft: 'bg-muted/60',
   requested: 'bg-warning-subtle',
-  writing: 'bg-info-subtle',
-  signed: 'bg-feature-subtle',
+  writing: 'bg-muted',
+  signed: 'bg-primary/10',
   uploaded: 'bg-success-subtle'
 };
 
@@ -220,8 +220,8 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
                     STATUS_BG[letter.status],
                     STATUS_COLORS[letter.status],
                     letter.status === 'uploaded' ? 'border-success/25' :
-                    letter.status === 'signed' ? 'border-feature/25' :
-                    letter.status === 'writing' ? 'border-info/25' :
+                    letter.status === 'signed' ? 'border-primary/30' :
+                    letter.status === 'writing' ? 'border-border' :
                     letter.status === 'requested' ? 'border-warning/25' :
                     'border-border'
                   )}
@@ -281,7 +281,7 @@ export function RecLetterWorkflow({ letters }: RecLetterWorkflowProps) {
               {(letter.status === 'requested' || letter.status === 'writing') ? (
                 <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
                   {reminders[letter.id] ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-info/25 bg-info-subtle px-3 py-1 text-label font-semibold text-info">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-label font-semibold text-muted-foreground">
                       <Send className="h-3 w-3" aria-hidden />
                       Counsellor notified · {formatReminderAge(reminders[letter.id])}
                     </span>

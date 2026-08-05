@@ -123,7 +123,7 @@ export function ProgressBoard({
                   <div
                     className={cn(
                       'h-full rounded-full transition-[width]',
-                      progress >= 75 ? 'bg-success-fill' : progress >= 40 ? 'bg-info-fill' : 'bg-warning-fill'
+                      progress >= 75 ? 'bg-success-fill' : progress >= 40 ? 'bg-muted-foreground' : 'bg-warning-fill'
                     )}
                     style={{ width: `${progress}%` }}
                   />

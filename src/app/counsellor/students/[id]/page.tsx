@@ -23,7 +23,10 @@ interface Props {
 const FLAG_BADGES: Record<string, { label: string; variant: BadgeVariant }> = {
   profile_incomplete: { label: 'Profile incomplete', variant: 'warning' },
   deadline_urgent: { label: 'Deadline urgent', variant: 'danger' },
-  no_matches: { label: 'No matches', variant: 'info' },
+  // `neutral`, not the old `info`: "no matches yet" is a fact about the data, not
+  // something the counsellor can act on, and it sits in a row beside flags that
+  // genuinely are actionable. A hue here competed with those for attention.
+  no_matches: { label: 'No matches', variant: 'neutral' },
   stalled: { label: 'Stalled', variant: 'warning' }
 };
 

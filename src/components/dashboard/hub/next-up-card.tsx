@@ -38,16 +38,16 @@ const TONE = {
     dot: 'bg-success-fill'
   },
   sky: {
-    chip: 'bg-info-subtle text-info',
-    heroBg: 'border-info/25 bg-info/3',
-    accent: 'border-l-info',
-    dot: 'bg-info-fill'
+    chip: 'bg-muted text-muted-foreground',
+    heroBg: 'border-border bg-muted-foreground/3',
+    accent: 'border-l-border',
+    dot: 'bg-muted-foreground'
   },
   violet: {
-    chip: 'bg-feature-subtle text-feature',
-    heroBg: 'border-feature/25 bg-feature/3',
-    accent: 'border-l-feature',
-    dot: 'bg-feature-fill'
+    chip: 'bg-primary/10 text-primary-ink',
+    heroBg: 'border-primary/30 bg-primary/3',
+    accent: 'border-l-primary/60',
+    dot: 'bg-primary'
   },
   primary: {
     chip: 'bg-primary/10 text-primary-ink',

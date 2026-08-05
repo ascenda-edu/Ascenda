@@ -36,16 +36,23 @@ export function CounsellorCard({ counsellor, openThreads, unreadTotal, latestSub
       eyebrow="Counsellor"
       title={`${counsellor.firstName}'s corner`}
       icon={MessageSquare}
-      iconClassName="bg-feature-subtle text-feature ring-feature/25"
       action={{ label: 'Open inbox', href: '/inbox' }}
     >
       <div className="flex h-full flex-col gap-3">
         <div className="flex items-center gap-3">
           <div className="relative shrink-0">
-            {/* from-primary to-accent (not violet-400 → primary): both ends carry
-                white at AA in BOTH themes, which a violet-400 stop does not. */}
+            {/* Flat, not a gradient: --accent was a second indigo a few degrees
+                off --primary and has been deleted.
+
+                The fill is --primary-INK, not --primary. --primary is tuned to
+                carry a white button label; in dark mode it sits at 64% lightness
+                and --primary-foreground is near-black, which measures 3.94:1 —
+                under AA. --primary-ink is identical to --primary in light and is
+                the lighter value in dark, so the same dark label clears 6.73:1.
+                Any solid brand fill that carries TEXT wants ink; a fill with
+                nothing on it (a dot, a bar, a rule) can stay --primary. */}
             <div
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-bold text-primary-foreground shadow-e-1"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-ink text-xs font-bold text-primary-foreground shadow-e-1"
               aria-hidden
             >
               {initials}
@@ -65,11 +72,11 @@ export function CounsellorCard({ counsellor, openThreads, unreadTotal, latestSub
           href="/inbox"
           className={cn(
             'hover-lift group flex items-center gap-3 rounded-xl border p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            unreadTotal > 0 ? 'border-feature/25 bg-feature-subtle' : 'border-border/70 bg-background/60'
+            unreadTotal > 0 ? 'border-primary/30 bg-primary/10' : 'border-border/70 bg-background/60'
           )}
         >
           <MailOpen
-            className={cn('h-4 w-4 shrink-0', unreadTotal > 0 ? 'text-feature' : 'text-muted-foreground/60')}
+            className={cn('h-4 w-4 shrink-0', unreadTotal > 0 ? 'text-primary-ink' : 'text-muted-foreground/60')}
             aria-hidden
           />
           <div className="min-w-0 flex-1">
@@ -84,8 +91,10 @@ export function CounsellorCard({ counsellor, openThreads, unreadTotal, latestSub
               {latestSubject ?? 'Ask about essays, shortlists or anything in between.'}
             </p>
           </div>
+          {/* --primary-ink, not --primary: this is a NUMBER on a solid fill, and
+              --primary cannot carry text at AA in dark. See the avatar above. */}
           {unreadTotal > 0 ? (
-            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-feature-fill px-1.5 text-label font-bold text-feature-foreground">
+            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary-ink px-1.5 text-label font-bold text-primary-foreground">
               {unreadTotal}
             </span>
           ) : null}

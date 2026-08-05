@@ -56,7 +56,7 @@ export function HelpRequestsWidget() {
       <div className="relative z-10 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-feature-subtle text-feature">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-muted-foreground">
               <Inbox className="h-5 w-5" aria-hidden />
             </div>
             <div>
@@ -103,15 +103,20 @@ export function HelpRequestsWidget() {
                       onClick={() => openRequest(req.id)}
                       className={cn(
                         'group flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left hover-lift',
+                        // Both rows used to be tinted, so the one already handled was
+                        // as loud as the one still waiting. Accepted goes neutral —
+                        // its tone survives on the glyph and the "Accepted" chip — and
+                        // the still-open request keeps the brand tint, because that is
+                        // the row that needs the counsellor to do something.
                         isAccepted
-                          ? 'border-success/25 bg-success-subtle hover:border-success/50'
-                          : 'border-feature/25 bg-feature-subtle hover:border-feature/50'
+                          ? 'border-border bg-card hover:bg-muted/40'
+                          : 'border-primary/30 bg-primary/10 hover:border-primary/50'
                       )}
                     >
                       <Sparkles
                         className={cn(
                           'mt-0.5 h-4 w-4 shrink-0',
-                          isAccepted ? 'text-success' : 'text-feature'
+                          isAccepted ? 'text-success' : 'text-primary-ink'
                         )}
                         aria-hidden
                       />

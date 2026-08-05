@@ -66,11 +66,13 @@ const COUNSELLOR_VALUE: ValueProp[] = [
 ];
 
 /**
- * One swatch for every value prop. These carried info / success / feature — a
- * three-hue rotation over three sales points, which is decoration, not status:
- * nothing on this screen has succeeded or is pending. The icon differentiates.
+ * One swatch for every value prop, and it carries no fill at all. These started
+ * as info / success / feature — a three-hue rotation over three sales points,
+ * which is decoration, not status: nothing on this screen has succeeded or is
+ * pending. Collapsing them to a single brand tint still spent colour on a
+ * category, so the glyph now stands on its own. The icon differentiates.
  */
-const VALUE_SWATCH = 'bg-primary/10 text-primary-ink ring-primary/15';
+const VALUE_SWATCH = 'text-muted-foreground';
 
 /** What the student is actually agreeing to, stated before they start. */
 const SETUP_FACTS = [
@@ -162,12 +164,7 @@ export function WelcomeScreen({
                 transition={{ duration: 0.4, delay: 0.1 + index * 0.08 }}
                 className="surface-card surface-card--static rounded-3xl"
               >
-                <div
-                  className={cn(
-                    'flex h-11 w-11 items-center justify-center rounded-2xl ring-1',
-                    VALUE_SWATCH
-                  )}
-                >
+                <div className={cn('flex h-11 w-11 items-center justify-center rounded-2xl', VALUE_SWATCH)}>
                   <Icon className="h-5 w-5" aria-hidden />
                 </div>
                 <p className="mt-4 text-base font-semibold leading-tight text-foreground">{value.title}</p>

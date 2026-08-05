@@ -118,7 +118,7 @@ export default async function ToolboxPage() {
         <div className="grid gap-4 sm:grid-cols-[1fr,auto]">
           {/* Next action card */}
           {nextDeadline && (
-            <Link href="/toolbox/timeline" className="block surface-card hover-lift border-l-4 border-l-primary hover:border-l-primary group overflow-hidden">
+            <Link href="/toolbox/timeline" className="block surface-card hover-lift group overflow-hidden">
               <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-primary/5 blur-2xl group-hover:bg-primary/10 transition-colors" />
               <div className="relative z-10 flex items-center gap-4">
                 <ToolboxCountdown days={daysUntilNext ?? 0} />
@@ -163,9 +163,8 @@ export default async function ToolboxPage() {
               <Link
                 href={tool.href}
                 className={cn(
-                  'surface-card hover-lift group relative flex h-full flex-col overflow-hidden border-l-4',
-                  visual.border,
-                  visual.accent
+                  'surface-card hover-lift group relative flex h-full flex-col overflow-hidden',
+                  visual.border
                 )}
               >
                 <div className="relative z-10 flex flex-1 flex-col gap-4">
