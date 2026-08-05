@@ -24,12 +24,14 @@ const inter = Inter({
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  // The resolved `--background` token (globals.css): light 232 28% 96.5%, dark
-  // 232 20% 9.5%. Keep in step with THEME_COLOR in components/theme/theme-provider.tsx,
-  // which overwrites this meta tag on the client once a preference is resolved.
+  // The resolved `--background` token (globals.css): light 0 0% 95.9%, dark
+  // 0 0% 8.3%. A meta tag cannot read a CSS var, so this is a hand-synced copy —
+  // one of FOUR (globals.css, scripts/tone-solver.mjs, here, and THEME_COLOR in
+  // components/theme/theme-provider.tsx, which overwrites this tag on the client
+  // once a preference is resolved). Change one, change all four.
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f4f4f9' },
-    { media: '(prefers-color-scheme: dark)', color: '#13151d' }
+    { media: '(prefers-color-scheme: light)', color: '#f4f4f4' },
+    { media: '(prefers-color-scheme: dark)', color: '#151515' }
   ]
 };
 

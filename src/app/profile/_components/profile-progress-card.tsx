@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, Sparkles } from 'lucide-react';
+import { ArrowRight, Check, Sparkles } from 'lucide-react';
 import { PROFILE_STEPS, type StepCompletionMap } from '@/lib/profile/steps';
 import { cn } from '@/lib/utils';
 import { DURATION, EASE } from '@/lib/motion';
@@ -118,8 +118,13 @@ export function ProfileProgressCard({
                       : 'bg-muted/70 text-muted-foreground ring-1 ring-border'
                   )}
                 >
-                  {complete ? <Check className="h-3 w-3 shrink-0" aria-hidden /> : null}
-                  {complete ? 'Complete' : 'Action'}
+                  {complete
+                    ? <Check className="h-3 w-3 shrink-0" aria-hidden />
+                    : <ArrowRight className="h-3 w-3 shrink-0" aria-hidden />}
+                  {/* An arrow, not a clock: a clock says HURRY, an arrow says GO.
+                      And "Next up" rather than "Action" — same information without
+                      the reproach, on a screen anxious students open. */}
+                  {complete ? 'Complete' : 'Next up'}
                 </span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{step.description}</p>
