@@ -329,6 +329,21 @@ jumped the row 14px; it now mirrors the pill's own recipe rather than a hardcode
 route. Now offset by `env(safe-area-inset-bottom)` + the nav height, stepping back at **`md:`** — not `sm:`,
 because `mobile-nav` is `md:hidden` and an `sm:` step-back re-buries it across the whole 640–768px band.
 
+### Two calls that were made deliberately — decided, not overlooked
+
+**`.nav-pill` is 46px, not 44.** This is the largest visual change in the G6 commit: every section nav and
+tab row is 12px taller on ~35 pages. Kept anyway, because two numbers in play is the failure mode this
+whole system keeps hitting — four hand-synced token copies, a wordmark in two faces, a ramp index in two
+places. `.form-input` and `SelectTrigger` were already 46 and already passing, so deriving a second value
+of 44 to recover 2px would re-introduce precisely that class of drift. If you revisit it, change all three
+together or none.
+
+**The widget delete badge is 28×28, not 44.** It clears the 24px AA floor. It is not larger because it sits
+over its own toggle in a `gap-2` grid and `deleteCustomWidget` fires with no confirm and no undo — so
+expanding it drops an unconfirmed destructive region onto a benign neighbour, making the worse error more
+likely. Target size is a means to fewer mis-taps, not an end in itself. **The real defect at that site is
+the missing confirmation, not the 16px.** Fix that and the target can grow.
+
 ### Still open — the 44px guideline, which needs a decision
 
 - **`Button size="sm"` is `h-9` = 36px across 100 call sites** (`ui/button.tsx:49`); `default` is 40, `xs` 28.
@@ -344,7 +359,11 @@ because `mobile-nav` is `md:hidden` and an `sm:` step-back re-buries it across t
   assistant panes are `h-[calc(100vh-220px)] min-h-[480px]`, which overflows the visual viewport on a
   390×664 iPhone and pushes the composer under the bottom nav.
 - **SectionNav and every `TabsList` still overflow invisibly** (`overflow-x-auto scrollbar-none`, items
-  `shrink-0`), with no gradient mask or arrows. The taller pills make this *more* visible, not less.
+  `shrink-0`), with no gradient mask or arrows. Note the `.nav-pill` change touched `py`, not `px`, so pill
+  *widths* and therefore the amount of overflow are **unchanged** — this is pre-existing, not a regression.
+  Longest section nav is 5 items (Toolbox), which overflows a 366px content width once "Essay Workshop" is
+  in the row. A fix needs either JS to detect scrollability or an always-on edge mask; both want a visual
+  check, and SectionNav sits behind auth.
 
 ### What already passed, before any of this
 
