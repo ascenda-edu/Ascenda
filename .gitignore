@@ -23,6 +23,10 @@ supabase/imports/**/*.csv
 # Supabase CLI local state (project ref, pooler URL, versions)
 supabase/.temp/
 
+# Resume state for scripts/bootstrap-staging.sh — which steps have run on THIS
+# machine. Local progress, not a fact about the project.
+.staging-bootstrap.state
+
 # Sibling repo, cloned separately — NOT a submodule of this repo (see PR: broke Vercel clones)
 Ascenda-Data-Collection/
 

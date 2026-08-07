@@ -102,6 +102,21 @@ SUPABASE_PROJECT_ID
 
 - **Production:** https://ascendaedu.com (and `www.`). This is the canonical URL.
 - **Vercel project:** `ascenda` under the `cxz5mw6fk2-6983s-projects` org.
+- **Staging** is a separate Supabase project plus this same Vercel project's
+  **Preview** environment — there is no second Vercel project. Full manual in
+  `docs/staging.md`; rationale in `docs/planning/staging-environment.md`.
+  - Build/resume it with `./scripts/bootstrap-staging.sh`.
+  - `db:apply` / `db:probe` take `--target staging|prod`. **`--target` defaults to
+    `prod`**, which prints the project ref and makes you type it back; `--target
+    staging` never prompts. `scripts/lib/db-target.ts` hard-refuses a staging URL
+    that resolves to the production ref.
+  - **Migrations apply to staging first**, verified with `db:probe`, then production.
+  - **The four seed scripts have no `--target`.** They read
+    `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`, which are production
+    in `.env.local` — running one without an explicit staging override creates
+    accounts in the live product.
+  - Every PR preview shares the one staging database. Supabase Branching is
+    deliberately not used (it needs the migration history this repo has diverged from).
 - `ascenda-ashy.vercel.app` was **deliberately disabled** and routed to `ascendaedu.com`; it now
   returns 404. Don't restore it or cite it — the mock address bar in
   `components/landing/hero-app-tour.tsx` already says `ascendaedu.com`.

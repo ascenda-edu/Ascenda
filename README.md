@@ -72,6 +72,26 @@ Run the schema and seed files using the Supabase SQL editor or CLI:
 6. Optional: run `npx ts-node scripts/validate-catalog.ts` to validate the live Supabase catalog via the API (requires service role key).
 4. Optional edge function scaffolding is located in `supabase/functions/update_deadlines`.
 
+### Staging
+
+Staging is a separate Supabase project plus the Vercel project's **Preview**
+environment — see [`docs/staging.md`](docs/staging.md) for the full manual.
+
+```bash
+./scripts/bootstrap-staging.sh     # build or resume; stops at each manual step
+```
+
+Two rules worth knowing before you touch a database from the command line:
+
+- **Migrations go to staging first**, then production
+  (`supabase/MIGRATIONS.md`). `npm run db:apply` and `npm run db:probe` take
+  `--target staging|prod`; `--target` defaults to `prod` and prompts before
+  writing there.
+- **The seed scripts have no `--target` flag.** They read
+  `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from `.env.local`,
+  which are production — run them with explicit staging overrides, or let
+  `bootstrap-staging.sh` do it.
+
 ### Development
 
 ```bash
@@ -118,6 +138,9 @@ The admin console (`/admin`) includes a CSV import panel for `universities`, `pr
 | `npm run typecheck` | Static type checking |
 | `npm test` | Run Jest unit tests |
 | `npm run seed` | Helper placeholder reminding how to run SQL seed |
+| `npm run db:apply -- --target staging <file>` | Apply one SQL file (defaults to `prod`, which prompts) |
+| `npm run db:probe -- --target staging` | Report which migrations are actually present |
+| `npm run db:sync-catalogue` | Copy the catalogue tables production → staging |
 | `npm run supabase:types` | Regenerate Supabase types (requires `SUPABASE_PROJECT_ID` and Supabase CLI) |
 
 ## Plan & Assumptions

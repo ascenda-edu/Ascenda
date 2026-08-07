@@ -159,6 +159,13 @@ staging-first rule), CLAUDE.md Deployment section.
 1. `db:probe --target staging` reports **35/35 markers present, 0 missing** — the
    same evidence standard `MIGRATIONS.md` sets for production ("belief is not
    evidence"). Staging launches with a proven schema, not an assumed one.
+
+   Be precise about what this proves: the probe carries **35 markers against 44
+   migration files**, because nine migrations create no distinguishable catalogue
+   object to look for (the file documents one such case, `20260801120000`, whose
+   only change is a `create or replace function` body). 35/35 means those 35
+   landed — not that all 44 did. It remains the only instrument there is, and the
+   one production is already judged by.
 2. Catalogue row counts match production.
 3. All four seeded accounts log in.
 4. A document upload round-trips through the bucket.
