@@ -40,6 +40,7 @@
     "seed:students": "tsx --tsconfig tsconfig.json scripts/seed-students.ts",
     "db:apply": "tsx --tsconfig tsconfig.json scripts/apply-sql.ts",
     "db:probe": "tsx --tsconfig tsconfig.json scripts/db-probe.ts",
+    "db:sync-catalogue": "tsx --tsconfig tsconfig.json scripts/sync-catalogue.ts",
     "supabase:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID --schema public,storage > src/lib/types/database.ts",
     "lint:datalayer": "node scripts/check-data-layer.mjs"
   },

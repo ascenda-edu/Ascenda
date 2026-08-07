@@ -16,13 +16,23 @@
  * CREATES NOTHING, CHANGES NOTHING. Safe on production, safe to re-run, and it
  * is the thing to run BEFORE any migration session and again after.
  *
- *   npm run db:probe
+ *   npm run db:probe                      # production (prints the ref it hit)
+ *   npm run db:probe -- --target staging  # the staging project
+ *
+ * It is also the acceptance test for a freshly built staging database: 35 of 35
+ * markers present, 0 missing, which is the same evidence standard
+ * supabase/MIGRATIONS.md sets for production ("belief is not evidence").
+ *
+ * Read-only, so it does NOT prompt on production the way apply-sql.ts does — the
+ * target is printed, not confirmed. Nothing here can write.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 
 import { Client } from 'pg';
+
+import { describeTarget, DbTargetError, parseTargetArgs, resolveTarget } from './lib/db-target';
 
 const loadEnvFile = (filename: string): void => {
   const filePath = path.resolve(process.cwd(), filename);
@@ -104,13 +114,12 @@ select case $2
 end as present`;
 
 const main = async () => {
-  const connectionString = process.env.SUPABASE_DB_URL;
-  if (!connectionString) {
-    console.error('SUPABASE_DB_URL is not set (source .env.local first).');
-    process.exit(1);
-  }
+  const { target } = parseTargetArgs(process.argv.slice(2));
+  const resolved = resolveTarget(target, process.env);
+  console.log(describeTarget(resolved));
+  console.log('');
 
-  const client = new Client({ connectionString, ssl: { rejectUnauthorized: false } });
+  const client = new Client({ connectionString: resolved.connectionString, ssl: { rejectUnauthorized: false } });
   await client.connect();
   try {
     const missing: string[] = [];
@@ -137,6 +146,10 @@ const main = async () => {
 };
 
 main().catch((err) => {
+  if (err instanceof DbTargetError) {
+    console.error(err.message);
+    process.exit(1);
+  }
   console.error('✗ probe failed:', err instanceof Error ? err.message : err);
   process.exit(1);
 });
