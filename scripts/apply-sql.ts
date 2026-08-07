@@ -1,16 +1,27 @@
 /**
- * Apply a single SQL file to the Supabase Postgres database over SUPABASE_DB_URL.
+ * Apply a single SQL file to a Supabase Postgres database.
  *
  * Deliberately bypasses `supabase db push`: the remote migration-history table is
  * out of sync with supabase/migrations (most were applied via the SQL editor), so
  * `db push` would try to replay already-applied migrations — including the
  * destructive catalogue normalize. This runs exactly one file, nothing else.
  *
- * Usage: SUPABASE_DB_URL=... tsx scripts/apply-sql.ts <path-to.sql>
+ * Usage: tsx scripts/apply-sql.ts [--target prod|staging] [--yes] <path-to.sql>
+ *
+ * `--target` defaults to `prod`, which then PROMPTS. See scripts/lib/db-target.ts
+ * for why the default is the risky one and the safety lives in the prompt.
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { Client } from 'pg';
+
+import {
+  confirmProduction,
+  describeTarget,
+  DbTargetError,
+  parseTargetArgs,
+  resolveTarget,
+} from './lib/db-target';
 
 // ── Hard refusal: supabase/migrations/_applied_archive/ ──────────────────────
 // Those files are APPLIED and DESTRUCTIVE ON REPLAY — 20250308120000 renames the
@@ -51,34 +62,38 @@ const refuseIfArchived = (candidate: string) => {
   }
 })();
 
-const file = process.argv[2];
-if (!file) {
-  console.error('Usage: tsx scripts/apply-sql.ts <path-to.sql>');
-  process.exit(1);
-}
-
-refuseIfArchived(file);
-
-const connectionString = process.env.SUPABASE_DB_URL;
-if (!connectionString) {
-  console.error('SUPABASE_DB_URL is not set (source .env.local first).');
-  process.exit(1);
-}
-
-const sql = readFileSync(file, 'utf8');
-
 const main = async () => {
-  const client = new Client({ connectionString, ssl: { rejectUnauthorized: false } });
+  const { target, assumeYes, rest } = parseTargetArgs(process.argv.slice(2));
+
+  const file = rest[0];
+  if (!file) {
+    console.error('Usage: tsx scripts/apply-sql.ts [--target prod|staging] [--yes] <path-to.sql>');
+    process.exit(1);
+  }
+
+  refuseIfArchived(file);
+
+  const resolved = resolveTarget(target, process.env);
+  console.log(describeTarget(resolved));
+  await confirmProduction(resolved, { assumeYes, action: `apply ${file}` });
+
+  const sql = readFileSync(file, 'utf8');
+  const client = new Client({ connectionString: resolved.connectionString, ssl: { rejectUnauthorized: false } });
   await client.connect();
   try {
     await client.query(sql);
-    console.log(`✓ Applied ${file}`);
+    console.log(`✓ Applied ${file} to ${resolved.projectRef ?? 'the configured database'}`);
   } finally {
     await client.end();
   }
 };
 
 main().catch((err) => {
+  // A refusal is a decision, not a crash — print it without a stack trace.
+  if (err instanceof DbTargetError) {
+    console.error(err.message);
+    process.exit(1);
+  }
   console.error('✗ Failed to apply SQL:');
   console.error(err?.message ?? err);
   process.exit(1);

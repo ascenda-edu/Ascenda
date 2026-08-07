@@ -11,6 +11,35 @@ already-applied files including the destructive catalogue normalize
 npm run db:apply supabase/migrations/<file>.sql     # needs SUPABASE_DB_URL
 ```
 
+## STAGING FIRST — the procedure, not a suggestion
+
+**Every new migration applies to staging before it applies to production.**
+
+```bash
+npm run db:probe -- --target staging                       # before
+npm run db:apply -- --target staging supabase/migrations/<file>.sql
+npm run db:probe -- --target staging                       # after: marker present?
+
+npm run db:apply supabase/migrations/<file>.sql            # then production; it prompts
+```
+
+`--target` defaults to `prod`, so the bare command still goes where it always
+went — but it now prints the project ref and makes you type it back before
+touching production. `--target staging` does not prompt: friction belongs where
+the danger is. See `scripts/lib/db-target.ts` for why round that way.
+
+Two things make this worth the extra minute. It is the only rehearsal a migration
+gets against a database that has real catalogue data in it — the CI `database` job
+proves replay-safety against an *empty* throwaway Postgres, which is a different
+question. And skipping it is how staging drifts: two migrations behind and it
+stops being a thing anyone trusts, which is worse than not having a staging
+environment at all.
+
+`npm run db:probe -- --target staging` is also the acceptance test for a rebuilt
+staging database. It carries **35 markers against 44 migration files** — nine
+migrations create no distinguishable catalogue object — so 35/35 means those 35
+landed, not that all 44 did.
+
 Because no tool tracks what has run, **every migration must be idempotent**
 (`if not exists`, `drop policy if exists`, `create or replace`) and every one
 must be safe to apply twice. The CI `database` job replays the whole directory
